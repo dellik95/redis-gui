@@ -1,8 +1,19 @@
 ﻿namespace RedisGUI.Domain.Primitives;
 
+/// <summary>
+/// Represents an error with a code and message
+/// </summary>
+/// <param name="Code">The error code</param>
+/// <param name="Message">The error message</param>
 public record Error(string Code, string Message)
 {
-    public static Error None = new Error(string.Empty, string.Empty);
+	/// <summary>
+	/// Represents a null or empty error
+	/// </summary>
+	public static Error None = new(string.Empty, string.Empty);
 
-    public static Error NullValue = new Error("Error.NullValue", "Null value was provided");
+	/// <summary>
+	/// Represents an error when a null value is provided
+	/// </summary>
+	public static Error NullValue = new("Error.NullValue", "Null value was provided");
 }

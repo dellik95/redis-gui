@@ -15,6 +15,17 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "web", "web", "{0E67F9E9-E23
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RedisGUI.Infrastructure", "RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj", "{1291B62A-9ADD-40F9-9A33-96F340BE1713}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{96048A78-ED9B-4E9A-9A07-FA5B2EBA33B2}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{F2D04CD7-D5A6-4768-A8A3-973C2B02FAEF}"
+EndProject
+Project("{E53339B2-1760-4266-BCC7-CA923CBCF16C}") = "docker-compose", "docker-compose.dcproj", "{F55039B8-F395-45FE-8EA2-512A570ED73A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A657094B-6D28-45CA-B5BD-3ABCE4F87020}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,6 +54,8 @@ Global
 		{1291B62A-9ADD-40F9-9A33-96F340BE1713}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1291B62A-9ADD-40F9-9A33-96F340BE1713}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1291B62A-9ADD-40F9-9A33-96F340BE1713}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F55039B8-F395-45FE-8EA2-512A570ED73A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F55039B8-F395-45FE-8EA2-512A570ED73A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -50,6 +63,10 @@ Global
 	GlobalSection(NestedProjects) = preSolution
 		{AAA407C8-65F2-48AB-BF71-7A68F63A816E} = {0E67F9E9-E239-48CF-9F73-2E8B8B47C56D}
 		{70D9A797-C698-434B-95EB-4B5856B0DB23} = {0E67F9E9-E239-48CF-9F73-2E8B8B47C56D}
+		{A280735E-F36B-4B26-B9A1-A4CBC764E568} = {F2D04CD7-D5A6-4768-A8A3-973C2B02FAEF}
+		{497F94BB-9390-4649-BB73-C923473AF5E2} = {F2D04CD7-D5A6-4768-A8A3-973C2B02FAEF}
+		{0E67F9E9-E239-48CF-9F73-2E8B8B47C56D} = {F2D04CD7-D5A6-4768-A8A3-973C2B02FAEF}
+		{1291B62A-9ADD-40F9-9A33-96F340BE1713} = {F2D04CD7-D5A6-4768-A8A3-973C2B02FAEF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {865B6DDD-F197-43F6-950F-D16CB4E592CF}

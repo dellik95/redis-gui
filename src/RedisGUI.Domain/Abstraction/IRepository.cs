@@ -1,12 +1,33 @@
-﻿using RedisGUI.Domain.Primitives;
+using RedisGUI.Domain.Primitives;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RedisGUI.Domain.Abstraction;
 
-public interface IRepository<T> where T : Entity
+/// <summary>
+/// Represent repository contract for specified entity type
+/// </summary>
+/// <typeparam name="T">Entity type</typeparam>
+public interface IRepository<in T> where T : Entity
 {
-    void Add(T connection);
+	/// <summary>
+	/// Add entity
+	/// </summary>
+	/// <param name="entity">Entity to add</param>
+	void Add(T entity);
 
-    Task<Result> DeleteAsync(Guid id, CancellationToken token = default);
+	/// <summary>
+	/// Delete entity async
+	/// </summary>
+	/// <param name="id">Entity id</param>
+	/// <param name="token">Cancellation token</param>
+	/// <returns>A Result indicating success or failure of the deletion operation</returns>
+	Task<Result> DeleteAsync(Guid id, CancellationToken token = default);
 
-    void Update(T connection);
+	/// <summary>
+	/// Update entity
+	/// </summary>
+	/// <param name="entity">Entity to update</param>
+	void Update(T entity);
 }

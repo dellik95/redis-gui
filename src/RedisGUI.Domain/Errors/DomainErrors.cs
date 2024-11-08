@@ -1,36 +1,78 @@
-﻿using RedisGUI.Domain.Primitives;
+﻿
 
-namespace RedisGUI.Domain.Errors
+using RedisGUI.Domain.Primitives;
+
+
+
+namespace RedisGUI.Domain.Errors;
+
+/// <summary>
+/// Contains domain error
+/// </summary>
+public static class DomainErrors
 {
-	public static class DomainErrors
+	/// <summary>
+	/// Connection errors
+	/// </summary>
+	public static class Connection
 	{
-		public static class Connection
-		{
-			public static Error ConnectionNotFound => new("Connection.NotFound", "The connection not found.");
+		/// <summary>
+		/// Connection not found
+		/// </summary>
+		public static Error ConnectionNotFound => new("Connection.NotFound", "The connection not found.");
 
-			public static Error ConnectionNotEstablished => new("Connection.otEstablished", "The connection can not be established.");
-		}
+		/// <summary>
+		/// Not established connection
+		/// </summary>
+		public static Error ConnectionNotEstablished => new("Connection.NotEstablished", "The connection can not be established.");
+	}
 
-		public static class ConnectionName
-		{
-			public static Error LongerThanAllowed => new("Name.LongerThanAllowed", "The connection name is longer than allowed.");
-		}		
-		public static class ConnectionHost
-		{
-			public static Error LongerThanAllowed => new("Value.LongerThanAllowed", "The host is longer than allowed.");
+	/// <summary>
+	/// Connection name errors
+	/// </summary>
+	public static class ConnectionName
+	{
+		/// <summary>
+		/// Longer than error
+		/// </summary>
+		public static Error LongerThanAllowed => new("Name.LongerThanAllowed", "The connection name is longer than allowed.");
+	}
 
-			public static Error InvalidFormat => new("Value.InvalidFormat", "The host has invalid format.");
-		}
+	/// <summary>
+	/// Connection host name
+	/// </summary>
+	public static class ConnectionHost
+	{
+		/// <summary>
+		/// Longer than error
+		/// </summary>
+		public static Error LongerThanAllowed => new("Value.LongerThanAllowed", "The host is longer than allowed.");
 
-		public static class ConnectionPort
-		{
-			public static Error LessThanAllowed => new("Port.InvalidNumber", "The port has invalid value. Port should be greater than 0.");
-		}
+		/// <summary>
+		/// Invalid format error
+		/// </summary>
+		public static Error InvalidFormat => new("Value.InvalidFormat", "The host has invalid format.");
+	}
 
-		public class ConnectionCredentials
-		{
-			public static Error UserNameAndPasswordInvalid => new("Credentials.ameAndPasswordInvalid", "UserName and Password should be specified.");
+	/// <summary>
+	/// Connection port errors
+	/// </summary>
+	public static class ConnectionPort
+	{
+		/// <summary>
+		/// Less than error
+		/// </summary>
+		public static Error LessThanAllowed => new("Port.InvalidNumber", "The port has invalid value. Port should be greater than 0.");
+	}
 
-		}
+	/// <summary>
+	/// Connection credentials error
+	/// </summary>
+	public class ConnectionCredentials
+	{
+		/// <summary>
+		/// Invalid user credentials error
+		/// </summary>
+		public static Error UsernameAndPasswordInvalid => new("Credentials.UsernameAndPasswordInvalid", "Username and Password should be specified.");
 	}
 }

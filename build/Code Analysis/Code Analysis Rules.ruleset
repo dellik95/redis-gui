@@ -1,0 +1,105 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RuleSet Name="CodeAnalysisRules" Description="Default code analysis rules for all projects" ToolsVersion="17.0">
+  <IncludeAll Action="Error" />
+  <Rules AnalyzerId="Microsoft.Analyzers.ManagedCodeAnalysis" RuleNamespace="Microsoft.Rules.Managed">
+    <Rule Id="CA1000" Action="None" />
+    <Rule Id="CA1002" Action="None" />
+    <Rule Id="CA1006" Action="None" />
+    <Rule Id="CA1007" Action="None" />
+    <Rule Id="CA1009" Action="None" />
+    <Rule Id="CA1014" Action="None" />
+    <Rule Id="CA1019" Action="None" />
+    <Rule Id="CA1020" Action="None" />
+    <Rule Id="CA1021" Action="None" />
+    <Rule Id="CA1024" Action="None" />
+    <Rule Id="CA1026" Action="None" />
+    <Rule Id="CA1031" Action="None" />
+    <Rule Id="CA1032" Action="None" />
+    <Rule Id="CA1033" Action="None" />
+    <Rule Id="CA1045" Action="None" />
+    <Rule Id="CA1059" Action="None" />
+    <Rule Id="CA1062" Action="None" />
+    <Rule Id="CA1063" Action="None" />
+    <Rule Id="CA1303" Action="None" />
+    <Rule Id="CA1304" Action="None" />
+    <Rule Id="CA1305" Action="None" />
+    <Rule Id="CA1500" Action="None" />
+    <Rule Id="CA1702" Action="None" />
+    <Rule Id="CA1703" Action="None" />
+    <Rule Id="CA1704" Action="None" />
+    <Rule Id="CA1709" Action="None" />
+    <Rule Id="CA1710" Action="None" />
+    <Rule Id="CA1711" Action="None" />
+    <Rule Id="CA1716" Action="None" />
+    <Rule Id="CA1720" Action="None" />
+    <Rule Id="CA1721" Action="None" />
+    <Rule Id="CA1725" Action="None" />
+    <Rule Id="CA1806" Action="None" />
+    <Rule Id="CA1810" Action="None" />
+    <Rule Id="CA1811" Action="None" />
+    <Rule Id="CA1812" Action="None" />
+    <Rule Id="CA2000" Action="None" />
+    <Rule Id="CA2001" Action="None" />
+    <Rule Id="CA2100" Action="None" />
+    <Rule Id="CA2104" Action="None" />
+    <Rule Id="CA2204" Action="None" />
+    <Rule Id="CA2210" Action="None" />
+    <Rule Id="CA2233" Action="None" />
+    <Rule Id="CA2240" Action="None" />
+  </Rules>
+  <Rules AnalyzerId="Microsoft.AspNetCore.App.Analyzers" RuleNamespace="Microsoft.AspNetCore.App.Analyzers">
+    <Rule Id="ASP0018" Action="None" />
+  </Rules>
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.CSharp.Features" RuleNamespace="Microsoft.CodeAnalysis.CSharp.Features">
+    <Rule Id="IDE0001" Action="None" />
+    <Rule Id="IDE0290" Action="None" />
+  </Rules>
+  <Rules AnalyzerId="Microsoft.CodeAnalysis.NetAnalyzers" RuleNamespace="Microsoft.CodeAnalysis.NetAnalyzers">
+    <Rule Id="CA1416" Action="Info" />
+    <Rule Id="CA1822" Action="Warning" />
+    <Rule Id="CA1860" Action="Warning" />
+    <Rule Id="CA1869" Action="Warning" />
+    <Rule Id="CA2208" Action="Warning" />
+  </Rules>
+  <Rules AnalyzerId="SonarAnalyzer.CSharp" RuleNamespace="SonarAnalyzer.CSharp">
+    <Rule Id="S107" Action="Warning" />
+    <Rule Id="S1135" Action="Info" />
+    <Rule Id="S1144" Action="Warning" />
+    <Rule Id="S2342" Action="Warning" />
+    <Rule Id="S2436" Action="Warning" />
+    <Rule Id="S3267" Action="Info" />
+    <Rule Id="S3776" Action="Warning" />
+    <Rule Id="S3885" Action="None" />
+    <Rule Id="S4487" Action="Warning" />
+    <Rule Id="S6602" Action="Info" />
+    <Rule Id="S6608" Action="Info" />
+  </Rules>
+  <Rules AnalyzerId="StyleCop.Analyzers" RuleNamespace="StyleCop.Analyzers">
+    <Rule Id="SA0001" Action="None" />
+    <Rule Id="SA0002" Action="Hidden" />
+    <Rule Id="SA1028" Action="None" />
+    <Rule Id="SA1118" Action="None" />
+    <Rule Id="SA1124" Action="None" />
+    <Rule Id="SA1130" Action="None" />
+    <Rule Id="SA1133" Action="None" />
+    <Rule Id="SA1200" Action="Warning" />
+    <Rule Id="SA1201" Action="None" />
+    <Rule Id="SA1202" Action="None" />
+    <Rule Id="SA1203" Action="None" />
+    <Rule Id="SA1204" Action="None" />
+    <Rule Id="SA1205" Action="None" />
+    <Rule Id="SA1206" Action="None" />
+    <Rule Id="SA1207" Action="None" />
+    <Rule Id="SA1210" Action="None" />
+    <Rule Id="SA1212" Action="None" />
+    <Rule Id="SA1213" Action="None" />
+    <Rule Id="SA1515" Action="None" />
+    <Rule Id="SA1615" Action="None" />
+    <Rule Id="SA1623" Action="None" />
+    <Rule Id="SA1624" Action="None" />
+    <Rule Id="SA1633" Action="None" />
+  </Rules>
+  <Rules AnalyzerId="System.Text.RegularExpressions.Generator" RuleNamespace="System.Text.RegularExpressions.Generator">
+    <Rule Id="SYSLIB1045" Action="Warning" />
+  </Rules>
+</RuleSet>

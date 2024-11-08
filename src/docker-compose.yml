@@ -1,0 +1,34 @@
+services:
+  # redisgui.server:
+  #   image: ${DOCKER_REGISTRY-}redisguiserver
+  #   build:
+  #     context: .
+  #     dockerfile: RedisGUI.Server/Dockerfile
+  db:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'redis-gui'
+      MYSQL_USER: 'admin'
+      MYSQL_PASSWORD: 'admin'
+      MYSQL_ROOT_PASSWORD: 'admin'
+    ports:
+      - '3306:3306'
+    expose:
+      - '3306'
+    volumes:
+      - my-db:/var/lib/mysql
+
+  phpmyadmin:
+    depends_on:
+      - db
+    image: phpmyadmin
+    restart: always
+    ports:
+      - "8090:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: admin
+
+volumes:
+  my-db:

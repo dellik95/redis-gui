@@ -1,18 +1,32 @@
-﻿using RedisGUI.Domain.Errors;
+using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Guards;
 
 namespace RedisGUI.Domain.Connection;
 
+/// <summary>
+/// Represents a connection port value object
+/// </summary>
 public sealed class ConnectionPort
 {
-	public int Value { get; init; }
-
+	/// <summary>
+	/// Creates a new instance of ConnectionPort
+	/// </summary>
+	/// <param name="port">The port number</param>
 	public ConnectionPort(int port)
 	{
-		Ensure.IsNot(() => port > 0, DomainErrors.ConnectionPort.LessThanAllowed);
+		Ensure.Is(() => port >= 0, DomainErrors.ConnectionPort.LessThanAllowed);
 
 		Value = port;
 	}
 
-	public override string ToString() => Value.ToString();
+	/// <summary>
+	/// Gets the port number value
+	/// </summary>
+	public int Value { get; init; }
+
+	/// <inheritdoc />
+	public override string ToString()
+	{
+		return Value.ToString();
+	}
 }

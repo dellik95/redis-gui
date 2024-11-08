@@ -1,4 +1,4 @@
-﻿using Asp.Versioning;
+using Asp.Versioning;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,13 +14,26 @@ using RedisGUI.Infrastructure.Redis;
 
 namespace RedisGUI.Infrastructure;
 
+/// <summary>
+/// Extension methods for configuring infrastructure services in the DI container
+/// </summary>
 public static class DependencyInjection
 {
+	/// <summary>
+	/// Adds infrastructure services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
+	/// <returns>The service collection for chaining</returns>
 	public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
 	{
 		services.AddSingleton<PasswordEncryptor>();
 		services.AddSingleton<IPasswordDecryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
 		services.AddSingleton<IPasswordEncryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
+
+
+		services.AddOptions<ConnectionPoolOptions>()
+			.Bind(configuration.GetSection(ConnectionPoolOptions.Key));
 
 		services.AddSingleton<IConnectionPool, ConnectionPool>();
 		services.AddScoped<IConnectionService, ConnectionService>();
@@ -38,6 +51,11 @@ public static class DependencyInjection
 		return services;
 	}
 
+	/// <summary>
+	/// Adds security services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
 	private static void AddSecurity(IServiceCollection services, IConfiguration configuration)
 	{
 		services.AddOptions<CryptographyConfiguration>()
@@ -48,6 +66,11 @@ public static class DependencyInjection
 		services.AddScoped<IPasswordEncryptor, PasswordEncryptor>();
 	}
 
+	/// <summary>
+	/// Adds persistence services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
 	private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
 	{
 		services.Configure<DatabaseConfiguration>(configuration.GetSection(DatabaseConfiguration.Key));
@@ -62,16 +85,17 @@ public static class DependencyInjection
 				return;
 			}
 
-			cgf.UseSqlServer(config.ConnectionString, builder =>
-			{
-				builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-			});
-
+			cgf.UseMySQL(config.ConnectionString, builder => { builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); });
 		});
 		services.AddTransient<IRedisConnectionRepository, RedisConnectionRepository>();
 		services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<ApplicationDbContext>());
 	}
 
+	/// <summary>
+	/// Adds health check services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
 	private static void AddHealthChecks(IServiceCollection services, IConfiguration configuration)
 	{
 		//TODO: add health Checks
@@ -79,9 +103,15 @@ public static class DependencyInjection
 		// 2. Cache
 	}
 
+	/// <summary>
+	/// Adds API versioning services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
 	private static void AddApiVersioning(IServiceCollection services)
 	{
-		services.AddApiVersioning(options =>
+		services
+			.AddEndpointsApiExplorer()
+			.AddApiVersioning(options =>
 			{
 				options.DefaultApiVersion = new ApiVersion(1);
 				options.ReportApiVersions = true;
@@ -90,7 +120,6 @@ public static class DependencyInjection
 					new UrlSegmentApiVersionReader(),
 					new HeaderApiVersionReader("X-Api-Version"));
 			})
-			.AddMvc()
 			.AddApiExplorer(options =>
 			{
 				options.GroupNameFormat = "'v'V";
@@ -98,8 +127,18 @@ public static class DependencyInjection
 			});
 	}
 
+	/// <summary>
+	/// Adds background job services to the service collection
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
+	/// <remarks>
+	/// Currently a placeholder for future implementation of background jobs including:
+	/// - Database maintenance jobs
+	/// - Cache cleanup jobs
+	/// </remarks>
 	private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
 	{
-		//TODO: Add background job to check redis state
+		// TODO: Implement background job registration
 	}
 }

@@ -5,8 +5,14 @@ using RedisGUI.Domain.Errors;
 
 namespace RedisGUI.Application.Connections.CreateConnection;
 
-public class CreateConnectionCommandValidation : AbstractValidator<CreateConnectionCommand>
+/// <summary>
+/// Validates the parameters for creating a new Redis connection.
+/// </summary>
+internal sealed class CreateConnectionCommandValidation : AbstractValidator<CreateConnectionCommand>
 {
+	/// <summary>
+	/// Initializes validation rules for connection creation.
+	/// </summary>
 	public CreateConnectionCommandValidation()
 	{
 		RuleFor(x => x.Name).MaximumLength(ConnectionName.MaxLength)
