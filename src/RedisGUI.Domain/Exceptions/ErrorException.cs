@@ -1,21 +1,41 @@
-﻿using RedisGUI.Domain.Extensions;
+using RedisGUI.Domain.Extensions;
 using RedisGUI.Domain.Primitives;
+using System;
+using System.Collections.Generic;
 
 namespace RedisGUI.Domain.Exceptions;
 
+/// <summary>
+/// Represents an exception that wraps one or more domain errors
+/// </summary>
 public class ErrorException : Exception
 {
-	private readonly List<Error> _errors = new List<Error>();
+	private readonly List<Error> errors = [];
 
-	public ErrorException(Error error) : base($"An error occured: {error.Code}")
+	/// <summary>
+	/// Creates a new instance of ErrorException with a single error
+	/// </summary>
+	/// <param name="error">The error that caused this exception</param>
+	public ErrorException(Error error) : base($"An error occurred: {error.Code}")
 	{
-		this._errors.Add(error);
+		errors.Add(error);
 	}
 
-	public ErrorException(params Error[] errors) : base($"An errors occured: {errors.ToCodeString()}")
+	/// <summary>
+	/// Creates a new instance of ErrorException with multiple errors
+	/// </summary>
+	/// <param name="errors">The collection of errors that caused this exception</param>
+	public ErrorException(params Error[] errors) : base($"An error occurred: {errors.ToCodeString()}")
 	{
-		this._errors = errors.ToList();
+		this.errors = [.. errors];
 	}
 
-	public override string ToString() => this._errors.ToFormattedMessage();
+	/// <summary>
+	/// Returns a formatted string representation of all errors in this exception
+	/// </summary>
+	/// <returns>A multi-line string containing all error codes and messages</returns>
+	public override string ToString()
+	{
+		return errors.ToFormattedMessage();
+	}
 }

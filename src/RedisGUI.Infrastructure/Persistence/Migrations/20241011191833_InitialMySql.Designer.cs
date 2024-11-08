@@ -2,7 +2,6 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RedisGUI.Infrastructure.Persistence;
@@ -12,8 +11,8 @@ using RedisGUI.Infrastructure.Persistence;
 namespace RedisGUI.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20240917200838_Initial")]
-    partial class Initial
+    [Migration("20241011191833_InitialMySql")]
+    partial class InitialMySql
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -21,15 +20,13 @@ namespace RedisGUI.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "8.0.8")
-                .HasAnnotation("Relational:MaxIdentifierLength", 128);
-
-            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+                .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnection", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
+                        .HasColumnType("char(36)");
 
                     b.Property<int>("Database")
                         .HasColumnType("int");
@@ -37,25 +34,46 @@ namespace RedisGUI.Infrastructure.Persistence.Migrations
                     b.Property<string>("Host")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
+                        .HasColumnType("varchar(256)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(256)
-                        .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("PasswordHash")
-                        .HasColumnType("nvarchar(max)");
+                        .HasColumnType("varchar(256)");
 
                     b.Property<int>("Port")
                         .HasColumnType("int");
 
-                    b.Property<string>("Username")
-                        .HasColumnType("nvarchar(max)");
-
                     b.HasKey("Id");
 
                     b.ToTable("Connections");
+                });
+
+            modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnection", b =>
+                {
+                    b.OwnsOne("RedisGUI.Domain.Connection.ConnectionCredentials", "Credentials", b1 =>
+                        {
+                            b1.Property<Guid>("RedisConnectionId")
+                                .HasColumnType("char(36)");
+
+                            b1.Property<string>("PasswordHash")
+                                .IsRequired()
+                                .HasColumnType("longtext");
+
+                            b1.Property<string>("UserName")
+                                .IsRequired()
+                                .HasColumnType("longtext");
+
+                            b1.HasKey("RedisConnectionId");
+
+                            b1.ToTable("Connections");
+
+                            b1.WithOwner()
+                                .HasForeignKey("RedisConnectionId");
+                        });
+
+                    b.Navigation("Credentials")
+                        .IsRequired();
                 });
 #pragma warning restore 612, 618
         }

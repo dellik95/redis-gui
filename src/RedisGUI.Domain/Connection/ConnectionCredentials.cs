@@ -2,41 +2,66 @@
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Primitives;
 
-namespace RedisGUI.Domain.Connection
+
+namespace RedisGUI.Domain.Connection;
+
+/// <summary>
+/// Represent class with user credentials <see cref="ConnectionCredentials"/>
+/// </summary>
+public class ConnectionCredentials
 {
-	public class ConnectionCredentials
+	/// <summary>
+	/// Create new instance of <see cref="ConnectionCredentials"/>
+	/// </summary>
+	private ConnectionCredentials()
 	{
-		public string UserName { get; init; }
+		PasswordHash = string.Empty;
+		UserName = string.Empty;
+	}
 
-		public string PasswordHash { get; init; }
+	/// <summary>
+	/// Create new instance of <see cref="ConnectionCredentials"/>
+	/// </summary>
+	/// <param name="username">User name</param>
+	/// <param name="passwordHash">Password hash</param>
+	private ConnectionCredentials(string username, string passwordHash)
+	{
+		UserName = username;
+		PasswordHash = passwordHash;
+	}
 
-		private ConnectionCredentials()
+	/// <summary>
+	/// User name
+	/// </summary>
+	public string UserName { get; init; }
+
+	/// <summary>
+	/// Password hash
+	/// </summary>
+	public string PasswordHash { get; init; }
+
+	/// <summary>
+	/// Create new instance of <see cref="ConnectionCredentials"/>
+	/// </summary>
+	/// <param name="username">User name</param>
+	/// <param name="password">User password</param>
+	/// <param name="passwordEncryptor">Password encryptor</param>
+	/// <returns></returns>
+	public static Result<ConnectionCredentials> Create(string username, string password, IPasswordEncryptor passwordEncryptor)
+	{
+		if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
 		{
-			
+			return Result.Success(new ConnectionCredentials());
 		}
 
-		private ConnectionCredentials(string username, string passwordHash)
+		if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
 		{
-			UserName = username;
-			PasswordHash = passwordHash;
+			return Result.Failure<ConnectionCredentials>(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
 		}
 
-		public static Result<ConnectionCredentials> Create(string username, string password, IPasswordEncryptor passwordEncryptor)
-		{
-			if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
-			{
-				return Result.Success<ConnectionCredentials>(null);
-			}
+		var passwordHash = passwordEncryptor.EncryptPassword(password);
 
-			if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
-			{
-				return Result.Failure<ConnectionCredentials>(DomainErrors.ConnectionCredentials.UserNameAndPasswordInvalid);
-			}
-
-			var passwordHash = passwordEncryptor.EncryptPassword(password);
-
-			var credentials = new ConnectionCredentials(username, passwordHash);
-			return credentials;
-		}
+		var credentials = new ConnectionCredentials(username, passwordHash);
+		return credentials!;
 	}
 }

@@ -1,0 +1,28 @@
+<Project>
+
+  <PropertyGroup Label="Package Information Properties">
+    <AssemblyTitle>$(MSBuildProjectName)</AssemblyTitle>
+    <AssemblyName>$(MSBuildProjectName)</AssemblyName>
+    <PackageId>$(MSBuildProjectName)</PackageId>
+    <Nullable>disable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build Properties">
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <GenerateAssemblyVersionAttribute>true</GenerateAssemblyVersionAttribute>
+    <GenerateAssemblyFileVersionAttribute>true</GenerateAssemblyFileVersionAttribute>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Code Analysis Properties">
+    <CodeAnalysisRuleSet>..\..\build\Code Analysis\Code Analysis Rules.ruleset</CodeAnalysisRuleSet>
+    <Features>IOperation</Features>
+  </PropertyGroup>
+
+  <ItemGroup Label="Code Analysis Files">
+    <AdditionalFiles Include="..\..\build\Code Analysis\StyleCop.json" Link="StyleCop.json" />
+    <CodeAnalysisDictionary Include="..\..\build\Code Analysis\CustomDictionary.xml">
+      <Link>Properties\CustomDictionary.xml</Link>
+    </CodeAnalysisDictionary>
+  </ItemGroup>
+</Project>

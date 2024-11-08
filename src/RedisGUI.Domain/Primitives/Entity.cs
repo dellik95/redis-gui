@@ -1,26 +1,68 @@
-﻿using RedisGUI.Domain.Abstraction;
+using RedisGUI.Domain.Abstraction;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace RedisGUI.Domain.Primitives;
 
+/// <summary>
+/// Base class for all domain entities
+/// </summary>
 public abstract class Entity : IEquatable<Entity>
 {
-	private readonly List<IDomainEvent> _domainEvents = [];
+	/// <summary>
+	/// Gets the unique identifier for this entity
+	/// </summary>
+	public Guid Id { get; init; }
 
-	protected Entity(Guid id) => Id = id;
+	/// <summary>
+	/// Gets the collection of domain events for this entity
+	/// </summary>
+	private readonly List<IDomainEvent> domainEvents = new();
 
+	/// <summary>
+	/// Initializes a new instance of the Entity class
+	/// </summary>
+	/// <param name="id">The unique identifier for this entity</param>
+	protected Entity(Guid id)
+	{
+		this.Id = id;
+	}
+
+	/// <summary>
+	/// Initializes a new instance of the Entity class
+	/// </summary>
 	protected Entity()
 	{
 
 	}
 
-	public Guid Id { get; init; }
+	/// <summary>
+	/// Gets the domain events associated with this entity
+	/// </summary>
+	/// <returns>Collection of domain events</returns>
+	public IReadOnlyCollection<IDomainEvent> GetDomainEvents() => domainEvents.ToList();
 
-	public IReadOnlyCollection<IDomainEvent> GetDomainEvents() => _domainEvents.ToList();
+	/// <summary>
+	/// Clears all domain events associated with this entity
+	/// </summary>
+	public void ClearDomainEvents() => domainEvents.Clear();
 
-	public void ClearDomainEvents() => _domainEvents.Clear();
+	/// <summary>
+	/// Raises a new domain event
+	/// </summary>
+	/// <param name="domainEvent">The domain event to raise</param>
+	protected void RaiseDomainEvent(IDomainEvent domainEvent)
+	{
+		domainEvents.Add(domainEvent);
+	}
 
-	protected void RaiseDomainEvent(IDomainEvent domainEvent) => _domainEvents.Add(domainEvent);
-
+	/// <summary>
+	/// Checks if two entities are equal
+	/// </summary>
+	/// <param name="a">First entity</param>
+	/// <param name="b">Second entity</param>
+	/// <returns>True if entities are equal, false otherwise</returns>
 	public static bool operator ==(Entity a, Entity b)
 	{
 		if (a is null && b is null)
@@ -36,7 +78,16 @@ public abstract class Entity : IEquatable<Entity>
 		return a.Equals(b);
 	}
 
-	public static bool operator !=(Entity a, Entity b) => !(a == b);
+	/// <summary>
+	/// Checks if two entities are not equal
+	/// </summary>
+	/// <param name="a">First entity</param>
+	/// <param name="b">Second entity</param>
+	/// <returns>True if entities are not equal, false otherwise</returns>
+	public static bool operator !=(Entity a, Entity b)
+	{
+		return !(a == b);
+	}
 
 	/// <inheritdoc />
 	public bool Equals(Entity other)
@@ -67,7 +118,7 @@ public abstract class Entity : IEquatable<Entity>
 			return false;
 		}
 
-		if (!(obj is Entity other))
+		if (obj is not Entity other)
 		{
 			return false;
 		}
@@ -80,5 +131,12 @@ public abstract class Entity : IEquatable<Entity>
 		return Id == other.Id;
 	}
 
-	public override int GetHashCode() => HashCode.Combine(Id, _domainEvents);
+	/// <summary>
+	/// Returns a hash code for this entity
+	/// </summary>
+	/// <returns>A hash code value generated from the entity's Id and domain events</returns>
+	public override int GetHashCode()
+	{
+		return HashCode.Combine(Id, domainEvents);
+	}
 }

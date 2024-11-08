@@ -10,3 +10,5 @@ The following steps were used to generate this project:
 Migrations
 	Create migration
 		- dotnet ef migrations add Initial -p .\RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj -s .\RedisGUI.Server\RedisGUI.Server.csproj -o  .\Persistence\Migrations
+	Remove last migration
+		- dotnet ef migrations remove -p .\RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj -s .\RedisGUI.Server\RedisGUI.Server.csproj

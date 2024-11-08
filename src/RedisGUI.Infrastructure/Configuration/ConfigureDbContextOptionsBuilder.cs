@@ -1,17 +1,31 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace RedisGUI.Infrastructure.Configuration;
 
+/// <summary>
+/// Configures Entity Framework DbContext options
+/// </summary>
 public sealed class ConfigureDbContextOptionsBuilder : IConfigureOptions<DbContextOptionsBuilder>
 {
-	private readonly DatabaseConfiguration _options;
+	/// <summary>
+	/// The database configuration options
+	/// </summary>
+	private readonly DatabaseConfiguration options;
 
+	/// <summary>
+	/// Initializes a new instance of ConfigureDbContextOptionsBuilder
+	/// </summary>
+	/// <param name="options">Database configuration options</param>
 	public ConfigureDbContextOptionsBuilder(IOptions<DatabaseConfiguration> options)
 	{
-		_options = options.Value;
+		this.options = options.Value;
 	}
 
+	/// <summary>
+	/// Configures the DbContext options based on configuration settings
+	/// </summary>
+	/// <param name="options">The options builder to configure</param>
 	public void Configure(DbContextOptionsBuilder options)
 	{
 		if (options.IsConfigured)
@@ -19,13 +33,13 @@ public sealed class ConfigureDbContextOptionsBuilder : IConfigureOptions<DbConte
 			return;
 		}
 
-		if (this._options.IsInMemory)
+		if (this.options.IsInMemory)
 		{
 			options.UseInMemoryDatabase("ApplicationDbContext");
 			return;
 		}
 
-		options.UseSqlServer(this._options.ConnectionString, builder =>
+		options.UseMySQL(this.options.ConnectionString, builder =>
 		{
 			builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 		});
