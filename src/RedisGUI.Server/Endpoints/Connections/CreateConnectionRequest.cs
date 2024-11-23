@@ -1,7 +1,7 @@
 namespace RedisGUI.Server.Endpoints.Connections;
 
 /// <summary>
-///     Represent connection request class.
+///     Represent create connection request class.
 /// </summary>
 /// <param name="Name">Connection name</param>
 /// <param name="Host">Connection host</param>

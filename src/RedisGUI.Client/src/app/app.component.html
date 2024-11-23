@@ -1,24 +1,48 @@
-﻿<h1 id="tableLabel">Weather forecast</h1>
+<loading></loading>
 
-<p>This component demonstrates fetching data from the server.</p>
+<div class="layout-container" [class.is-mobile]="mobileQuery.matches">
 
-<p *ngIf="!forecasts"><em>Loading... Please refresh once the ASP.NET backend has started. See <a href="https://aka.ms/jspsintegrationangular">https://aka.ms/jspsintegrationangular</a> for more details.</em></p>
+    <mat-toolbar class="loyout-toolbar" color="primary">
 
-<table *ngIf="forecasts">
-    <thead>
-        <tr>
-            <th>Date</th>
-            <th>Temp. (C)</th>
-            <th>Temp. (F)</th>
-            <th>Summary</th>
-        </tr>
-    </thead>
-    <tbody>
-        <tr *ngFor="let forecast of forecasts">
-            <td>{{ forecast.date }}</td>
-            <td>{{ forecast.temperatureC }}</td>
-            <td>{{ forecast.temperatureF }}</td>
-            <td>{{ forecast.summary }}</td>
-        </tr>
-    </tbody>
-</table>
+        <mat-toolbar-row>
+            <button mat-icon-button (click)="snav.toggle()">
+                <mat-icon>menu</mat-icon>
+            </button>
+            <h1 class="header-company-name">RedisGUI</h1>
+        </mat-toolbar-row>
+
+    </mat-toolbar>
+
+    <mat-sidenav-container class="sidenav-container" [style.marginTop.px]="mobileQuery.matches ? 56 : 0">
+        <mat-sidenav class="sidenav-menu" #snav opened="true" [mode]="mobileQuery.matches ? 'over' : 'side'"
+                     [fixedInViewport]="mobileQuery.matches" fixedTopGap="56">
+            <mat-nav-list class="sidenav-menu_items">
+
+                <mat-list-item class="sidenav-menu__item" *ngFor="let link of (sideNavService.sideNavLinks$ | async)"
+                               [routerLink]="[link.href]" routerLinkActive="mdc-list-item--activated"
+                               [routerLinkActiveOptions]="{exact: true}">
+
+                    <div class="sidenav-menu__content">
+                        <mat-icon class="sidenav-menu_icon" *ngIf="link.icon" aria-hidden="false"
+                                  [fontIcon]="link.icon"></mat-icon>
+                        <div class="sidenav-menu__title">
+                            {{ link.title }}
+                        </div>
+                    </div>
+
+                </mat-list-item>
+            </mat-nav-list>
+        </mat-sidenav>
+
+        <mat-sidenav-content>
+            <div class="main-content">
+	            <div class="section-actions-container">
+		            <app-breadcrumb></app-breadcrumb>
+		            <app-section-actions></app-section-actions>
+	            </div>
+                <router-outlet></router-outlet>
+            </div>
+        </mat-sidenav-content>
+    </mat-sidenav-container>
+
+</div>

@@ -15,7 +15,7 @@ public sealed class RedisConnection : Entity
 	/// </summary>
 	private RedisConnection()
 	{
-		
+
 	}
 
 	/// <summary>
@@ -32,13 +32,13 @@ public sealed class RedisConnection : Entity
 		Ensure.NotNull(connectionName, "Connection name is required", nameof(connectionName));
 		Ensure.NotNull(serverHost, "Server host is required", nameof(serverHost));
 		Ensure.NotNull(serverPort, "Server port is required", nameof(serverPort));
-		
+
 		ConnectionName = connectionName;
 		ServerHost = serverHost;
 		ServerPort = serverPort;
 		DatabaseNumber = databaseNumber;
 		ConnectionCredentials = connectionCredentials;
-		
+
 		RaiseDomainEvent(new ConnectionCreatedDomainEvent(id, connectionName.Value));
 	}
 
@@ -66,11 +66,6 @@ public sealed class RedisConnection : Entity
 	/// The Redis database number to connect to
 	/// </summary>
 	public int DatabaseNumber { get; private set; }
-
-	/// <summary>
-	/// Indicates whether the connection is currently established
-	/// </summary>
-	public bool IsConnected { get; private set; }
 
 	/// <summary>
 	/// Creates a new Redis connection configuration
@@ -139,7 +134,7 @@ public sealed class RedisConnection : Entity
 			ServerHost = newHost;
 			ServerPort = newPort;
 			DatabaseNumber = newDatabaseNumber;
-			
+
 			return Result.Success();
 		}
 		catch (Exception ex)
@@ -151,31 +146,14 @@ public sealed class RedisConnection : Entity
 	}
 
 	/// <summary>
-	/// Marks the connection as established
-	/// </summary>
-	public void MarkAsConnected()
-	{
-		IsConnected = true;
-		RaiseDomainEvent(new ConnectionEstablishedDomainEvent(Id));
-	}
-
-	/// <summary>
-	/// Marks the connection as disconnected
-	/// </summary>
-	public void MarkAsDisconnected()
-	{
-		IsConnected = false;
-	}
-
-	/// <summary>
 	/// Builds the Redis connection string from the configuration
 	/// </summary>
 	/// <returns>A formatted Redis connection string</returns>
 	public string BuildConnectionString()
 	{
 		var connectionString = $"{ServerHost}:{ServerPort}";
-		
-		if (ConnectionCredentials?.UserName is not null && 
+
+		if (ConnectionCredentials?.UserName is not null &&
 			ConnectionCredentials?.PasswordHash is not null)
 		{
 			connectionString = $"{ConnectionCredentials.UserName}:{ConnectionCredentials.PasswordHash}@{connectionString}";

@@ -41,6 +41,7 @@ public class Program
 			app.UseSwagger();
 			app.UseSwaggerUI();
 			app.ApplyMigrations();
+			app.SeedFakeData();
 		}
 
 		app.UseAuthorization();

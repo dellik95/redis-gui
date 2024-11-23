@@ -1,13 +1,13 @@
-﻿using RedisGUI.Domain.Abstraction.Cryptography;
-using RedisGUI.Domain.Connection;
 using System;
+using RedisGUI.Domain.Abstraction.Cryptography;
+using RedisGUI.Domain.Connection;
 
-namespace RedisGUI.Application.Connections.GetConnectionById;
+namespace RedisGUI.Application.Connections.Shared;
 
 /// <summary>
 /// Response object containing Redis connection details.
 /// </summary>
-public sealed class GetConnectionByIdResponse
+public sealed class GetConnectionResponse
 {
 	/// <summary>
 	/// The unique identifier of the connection.
@@ -40,17 +40,12 @@ public sealed class GetConnectionByIdResponse
 	public int Database { get; private set; }
 
 	/// <summary>
-	/// Indicates whether the connection is currently active.
-	/// </summary>
-	public bool IsConnected { get; private set; }
-
-	/// <summary>
 	/// Creates a response object from a Redis connection entity.
 	/// </summary>
 	/// <param name="connection">The Redis connection entity</param>
 	/// <param name="passwordDecryptor">Service for password decryption</param>
 	/// <returns>A new response object containing the connection details</returns>
-	public static GetConnectionByIdResponse FromRedisConnection(
+	public static GetConnectionResponse FromRedisConnection(
 		RedisConnection connection, 
 		IPasswordDecryptor passwordDecryptor)
 	{
@@ -58,7 +53,7 @@ public sealed class GetConnectionByIdResponse
 			? passwordDecryptor.DecryptPassword(connection.ConnectionCredentials.PasswordHash)
 			: string.Empty;
 
-		return new GetConnectionByIdResponse
+		return new GetConnectionResponse
 		{
 			Id = connection.Id,
 			Name = connection.ConnectionName?.Value ?? string.Empty,
@@ -66,7 +61,6 @@ public sealed class GetConnectionByIdResponse
 			Username = connection.ConnectionCredentials?.UserName ?? string.Empty,
 			Password = password,
 			Database = connection.DatabaseNumber,
-			IsConnected = connection.IsConnected
 		};
 	}
 }

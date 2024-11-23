@@ -88,6 +88,7 @@ public static class DependencyInjection
 			cgf.UseMySQL(config.ConnectionString, builder => { builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); });
 		});
 		services.AddTransient<IRedisConnectionRepository, RedisConnectionRepository>();
+		services.AddTransient(typeof(IRepository<>), typeof(RepositoryBase<>));
 		services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<ApplicationDbContext>());
 	}
 

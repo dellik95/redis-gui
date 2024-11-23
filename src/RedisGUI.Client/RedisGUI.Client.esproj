@@ -7,4 +7,12 @@
     <!-- Folder where production build objects will be placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist\RedisGUI.Client\browser\</BuildOutputFolder>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="src\shared\loader\**" />
+    <TypeScriptConfiguration Remove="src\shared\loader\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="src\shared\auth\" />
+    <Folder Include="src\shared\notifications\" />
+  </ItemGroup>
 </Project>
