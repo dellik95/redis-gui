@@ -1,4 +1,4 @@
-﻿using RedisGUI.Domain.Abstraction.Cryptography;
+using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Primitives;
 
@@ -51,7 +51,7 @@ public class ConnectionCredentials
 	{
 		if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
 		{
-			return Result.Success(new ConnectionCredentials());
+			return Result.Success<ConnectionCredentials>(null);
 		}
 
 		if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))

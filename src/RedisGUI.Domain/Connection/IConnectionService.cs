@@ -73,7 +73,7 @@ public interface IConnectionService
 	Task<Result<bool>> DeleteKey(RedisConnection connection, string key);
 
 	/// <summary>
-	/// Get the type of a key in redis
+	/// Get the type of key in redis
 	/// </summary>
 	/// <param name="connection">Redis connection</param>
 	/// <param name="key">Key to get the type of</param>

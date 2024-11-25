@@ -8,12 +8,12 @@ namespace RedisGUI.Domain.Connection;
 /// <summary>
 /// Represents a Redis connection configuration
 /// </summary>
-public sealed class RedisConnection : Entity
+public abstract class RedisConnection : Entity
 {
 	/// <summary>
 	/// Creates a new instance of <see cref="RedisConnection"/>
 	/// </summary>
-	private RedisConnection()
+	protected RedisConnection()
 	{
 
 	}
@@ -21,13 +21,12 @@ public sealed class RedisConnection : Entity
 	/// <summary>
 	/// Creates a new instance of <see cref="RedisConnection"/>
 	/// </summary>
-	private RedisConnection(
+	protected RedisConnection(
 		Guid id,
 		ConnectionName connectionName,
 		ConnectionHost serverHost,
 		ConnectionPort serverPort,
-		int databaseNumber,
-		ConnectionCredentials connectionCredentials = null) : base(id)
+		int databaseNumber) : base(id)
 	{
 		Ensure.NotNull(connectionName, "Connection name is required", nameof(connectionName));
 		Ensure.NotNull(serverHost, "Server host is required", nameof(serverHost));
@@ -37,7 +36,6 @@ public sealed class RedisConnection : Entity
 		ServerHost = serverHost;
 		ServerPort = serverPort;
 		DatabaseNumber = databaseNumber;
-		ConnectionCredentials = connectionCredentials;
 
 		RaiseDomainEvent(new ConnectionCreatedDomainEvent(id, connectionName.Value));
 	}
@@ -56,11 +54,6 @@ public sealed class RedisConnection : Entity
 	/// The Redis server port number
 	/// </summary>
 	public ConnectionPort ServerPort { get; private set; }
-
-	/// <summary>
-	/// The authentication credentials for the Redis server
-	/// </summary>
-	public ConnectionCredentials ConnectionCredentials { get; private set; }
 
 	/// <summary>
 	/// The Redis database number to connect to
@@ -85,13 +78,27 @@ public sealed class RedisConnection : Entity
 	{
 		try
 		{
-			var connection = new RedisConnection(
-				Guid.NewGuid(),
-				connectionName,
-				serverHost,
-				serverPort,
-				databaseNumber,
-				connectionCredentials);
+			RedisConnection connection = null;
+			var id = Guid.NewGuid();
+			if (connectionCredentials == null)
+			{
+				connection = new AnonymousRedisConnection(
+					Guid.NewGuid(),
+					connectionName,
+					serverHost,
+					serverPort,
+					databaseNumber);
+			}
+			else
+			{
+				connection = new RedisConnectionWithCredentials(
+					id,
+					connectionName,
+					serverHost,
+					serverPort,
+					databaseNumber,
+					connectionCredentials);
+			}
 
 			return Result.Success(connection);
 		}
@@ -103,16 +110,6 @@ public sealed class RedisConnection : Entity
 		}
 	}
 
-	/// <summary>
-	/// Updates the authentication credentials for the Redis server
-	/// </summary>
-	/// <param name="newCredentials">The new authentication credentials</param>
-	/// <returns>A result indicating the success or failure of the update operation</returns>
-	public Result UpdateCredentials(ConnectionCredentials newCredentials)
-	{
-		ConnectionCredentials = newCredentials;
-		return Result.Success();
-	}
 
 	/// <summary>
 	/// Updates the connection details for the Redis server
@@ -143,6 +140,7 @@ public sealed class RedisConnection : Entity
 				"ConnectionUpdateFailed",
 				ex.Message));
 		}
+
 	}
 
 	/// <summary>
@@ -151,19 +149,19 @@ public sealed class RedisConnection : Entity
 	/// <returns>A formatted Redis connection string</returns>
 	public string BuildConnectionString()
 	{
-		var connectionString = $"{ServerHost}:{ServerPort}";
+		var baseConnectionString = $"{GetBaseConnectionString()}allowAdmin=True,connectTimeout=30,abortConnect=False";
 
-		if (ConnectionCredentials?.UserName is not null &&
-			ConnectionCredentials?.PasswordHash is not null)
+		if (!baseConnectionString.Contains("database") && DatabaseNumber > 0)
 		{
-			connectionString = $"{ConnectionCredentials.UserName}:{ConnectionCredentials.PasswordHash}@{connectionString}";
+			baseConnectionString = $"{baseConnectionString}/database={DatabaseNumber}";
 		}
 
-		if (DatabaseNumber > 0)
-		{
-			connectionString = $"{connectionString}/database={DatabaseNumber}";
-		}
-
-		return connectionString;
+		return baseConnectionString;
 	}
+
+	/// <summary>
+	/// Returns base connection string which contains information provided by child implementation
+	/// </summary>
+	/// <returns></returns>
+	protected abstract string GetBaseConnectionString();
 }

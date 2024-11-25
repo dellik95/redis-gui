@@ -1,6 +1,7 @@
 using System;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
+using static RedisGUI.Domain.Connection.RedisConnection;
 
 namespace RedisGUI.Application.Connections.Shared;
 
@@ -46,19 +47,27 @@ public sealed class GetConnectionResponse
 	/// <param name="passwordDecryptor">Service for password decryption</param>
 	/// <returns>A new response object containing the connection details</returns>
 	public static GetConnectionResponse FromRedisConnection(
-		RedisConnection connection, 
+		RedisConnection connection,
 		IPasswordDecryptor passwordDecryptor)
 	{
-		var password = connection.ConnectionCredentials != null 
-			? passwordDecryptor.DecryptPassword(connection.ConnectionCredentials.PasswordHash)
-			: string.Empty;
+		var password = string.Empty;
+		var userName = string.Empty;
+
+		if (connection as RedisConnectionWithCredentials != null)
+		{
+			var connectionWithCredentials = (RedisConnectionWithCredentials)connection;
+
+			password = passwordDecryptor.DecryptPassword(connectionWithCredentials.ConnectionCredentials.PasswordHash);
+			userName = connectionWithCredentials.ConnectionCredentials.UserName;
+		}
+
 
 		return new GetConnectionResponse
 		{
 			Id = connection.Id,
 			Name = connection.ConnectionName?.Value ?? string.Empty,
 			Host = $"{connection.ServerHost}:{connection.ServerPort}",
-			Username = connection.ConnectionCredentials?.UserName ?? string.Empty,
+			Username = userName,
 			Password = password,
 			Database = connection.DatabaseNumber,
 		};

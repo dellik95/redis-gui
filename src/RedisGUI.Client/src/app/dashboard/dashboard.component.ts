@@ -5,6 +5,7 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { DashboardSectionActionsComponent } from './dashboard-section-actions/dashboard-section-actions.component';
 import { SectionConfigType } from '../../shared/types/section-config.type';
 import { ConnectionType } from '../../shared/types/connection.type';
+import { sectionConfig } from './dashboard-section.config';
 
 @Component({
   selector: 'app-dashboard',
@@ -19,25 +20,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   private sectionActionsPortalService = inject(SectionActionsPortalService);
 
-  connectionListConfig: SectionConfigType<ConnectionType> = [
-    {
-      name: "id",
-      title: "Id",
-      hidden: true
-    },
-    {
-      name: "name",
-      title: "Name",
-    },
-    {
-      name: "host",
-      title: "Address"
-    },
-    {
-      name: "database",
-      title: "Database number"
-    }
-  ];
+  connectionListConfig: SectionConfigType<ConnectionType> = sectionConfig;
 
   ngOnInit(): void {
     this.showActions();

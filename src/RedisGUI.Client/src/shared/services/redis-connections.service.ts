@@ -1,8 +1,8 @@
 import { inject, Injectable } from "@angular/core";
-import { Observable } from "rxjs";
+import { Observable, takeLast } from "rxjs";
 import { ConnectionType } from "../types/connection.type";
 import { HttpClient } from "@angular/common/http";
-import { CreateConnectionRequest } from "../types/create-connectionrequest.type";
+import { CheckConnectionRequest, CreateConnectionRequest } from "../types/connection-request.types";
 
 @Injectable({
     providedIn: "root"
@@ -14,11 +14,15 @@ export class RedisConnectionsService {
         return this.httpClient.get<ConnectionType[]>("/api/v1/connections");
     }
 
-    saveConnection(connection: Partial<CreateConnectionRequest>): Observable<any> {
-        return this.httpClient.post<any>("/api/v1/connections", connection);
+    saveConnection(connection: CreateConnectionRequest): Observable<any> {
+        return this.httpClient.post<any>("/api/v1/connections", connection).pipe(takeLast(1));
     }
 
     deleteRecord(id: string): Observable<any> {
-        return this.httpClient.delete(`/api/v1/connections/${id}`);
+        return this.httpClient.delete(`/api/v1/connections/${id}`).pipe(takeLast(1));
+    }
+
+    checkConnection(connection: Partial<CheckConnectionRequest>): Observable<any> {
+        return this.httpClient.post<any>("/api/v1/connections/check", connection).pipe(takeLast(1));
     }
 }

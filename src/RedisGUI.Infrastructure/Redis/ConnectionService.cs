@@ -8,7 +8,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using RedisValue = RedisGUI.Domain.Redis.RedisValue;
-using RedisGUI.Infrastructure.Redis.Extensions;
 
 namespace RedisGUI.Infrastructure.Redis;
 
@@ -38,7 +37,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async Task<Result> CheckConnection(RedisConnection connection)
 	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
 
 		if (multiplexerResult.IsFailure)
 		{
@@ -58,7 +57,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async ValueTask<IEnumerable<string>> GetKeys(RedisConnection connection)
 	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for keys");
@@ -78,7 +77,7 @@ public class ConnectionService : IConnectionService
 	/// <returns>Number of keys deleted</returns>
 	public async Task<long> DeleteKeys(RedisConnection connection, string[] keys)
 	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for delete keys");
@@ -98,7 +97,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async Task<Result> SetValue(RedisConnection connection, string key, string value, TimeSpan? ttl = null)
 	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for set value");
@@ -125,7 +124,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async Task<Result<RedisValue>> GetValue(RedisConnection connection, string key)
 	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexerResult.Value.GetDatabase(connection.DatabaseNumber);
 
 		var type = await database.KeyTypeAsync(key);
@@ -179,7 +178,7 @@ public class ConnectionService : IConnectionService
 		int? pageSize = null,
 		int? pageNumber = null)
 	{
-		var multiplexer = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexer = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexer.Value.GetDatabase(connection.DatabaseNumber);
 
 		var server = multiplexer.Value.GetServer(connection.BuildConnectionString());
@@ -230,7 +229,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async Task<Result<bool>> DeleteKey(RedisConnection connection, string key)
 	{
-		var multiplexer = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexer = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexer.Value.GetDatabase(connection.DatabaseNumber);
 
 		var deleted = await database.KeyDeleteAsync(key);
@@ -242,7 +241,7 @@ public class ConnectionService : IConnectionService
 	/// </summary>
 	public async Task<Result<string>> GetKeyType(RedisConnection connection, string key)
 	{
-		var multiplexer = await connectionPool.GetConnection(connection.ToConfigurationOptions());
+		var multiplexer = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexer.Value.GetDatabase(connection.DatabaseNumber);
 
 		var type = await database.KeyTypeAsync(key);

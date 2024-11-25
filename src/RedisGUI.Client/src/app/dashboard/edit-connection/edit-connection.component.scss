@@ -1,0 +1,39 @@
+mat-form-field {
+    display: flex;
+}
+
+form {
+    margin: 5px;
+    padding: 5px;
+
+    .host-details {
+        display: flex;
+
+        mat-form-field:not(:last-child) {
+            margin-right: 5px;
+        }
+    }
+
+    .credentials-details {
+        margin-top: 15px;
+    }
+
+    .database-details {
+        display: flex;
+        justify-content: space-between;
+
+        >.database-chekbox {
+            margin-bottom: 15px;
+        }
+    }
+
+    .editor-actions {
+        margin-top: 15px;
+        display: flex;
+        justify-content: space-between;
+    }
+}
+
+.animate {
+    transition: color 0.5s ease;
+}

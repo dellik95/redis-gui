@@ -1,9 +1,11 @@
 import { Component, inject } from '@angular/core';
-import { MatButton, MatButtonModule } from '@angular/material/button';
+import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatIcon, MatIconModule } from '@angular/material/icon';
+import { MatIconModule } from '@angular/material/icon';
 import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
-import { catchError } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { EditConnectionComponent } from '../edit-connection/edit-connection.component';
+import { takeLast } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard-section-actions',
@@ -15,21 +17,25 @@ import { catchError } from 'rxjs';
   styleUrl: './dashboard-section-actions.component.scss'
 })
 export class DashboardSectionActionsComponent {
-  connectionService = inject(RedisConnectionsService);
+  readonly connectionService = inject(RedisConnectionsService);
+  readonly dialog = inject(MatDialog);
 
-  addClick() {
-    this.connectionService.saveConnection({
-      name: "string",
-      host: "string",
-      port: 0,
-      database: 0,
-      username: "string",
-      password: "string"
-    })
-      .pipe(catchError(error => {
-        return error;
-      }))
-      .subscribe();
+
+  editConnection() {
+    this.openDialog('300ms', '150ms');
   }
+
+
+  private openDialog(enterAnimationDuration: string, exitAnimationDuration: string): void {
+    let dialogRef = this.dialog.open(EditConnectionComponent, {
+      enterAnimationDuration,
+      exitAnimationDuration,
+    });
+
+    dialogRef.afterClosed().pipe(takeLast(1)).subscribe(result => {
+      // TODO: Add reload for table
+    });
+  }
+
 
 }

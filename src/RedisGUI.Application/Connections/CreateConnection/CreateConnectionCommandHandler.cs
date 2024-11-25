@@ -52,11 +52,6 @@ internal sealed class CreateConnectionCommandHandler : ICommandHandler<CreateCon
 			request.Password,
 			passwordEncryptor);
 
-		if (credentialsResult.IsFailure)
-		{
-			return Result.Failure<Guid>(credentialsResult.Error);
-		}
-
 		// Create connection with value objects
 		var connectionResult = RedisConnection.Create(
 			new ConnectionName(request.Name),
