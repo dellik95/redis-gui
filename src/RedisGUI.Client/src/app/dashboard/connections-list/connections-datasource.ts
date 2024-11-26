@@ -2,7 +2,7 @@ import { DataSource } from '@angular/cdk/collections';
 import { MatPaginator } from '@angular/material/paginator';
 import { MatSort, Sort } from '@angular/material/sort';
 import { Observable, BehaviorSubject, Subscription } from 'rxjs';
-import { ConnectionType } from '../../../shared/types/connection.type';
+import { Connection as ConnectionType } from '../../../shared/types/connection.type';
 import { inject } from '@angular/core';
 import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
 

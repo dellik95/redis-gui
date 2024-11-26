@@ -14,12 +14,12 @@ namespace RedisGUI.Application.Connections.GetAllConnections
 	internal sealed class GetAllConnectionsQueryHandler : IQueryHandler<GetAllConnectionsQuery, IEnumerable<GetConnectionResponse>>
 	{
 		private readonly IRedisConnectionRepository redisConnectionRepository;
-		private readonly IPasswordDecryptor passwordDecryptor;
+		private readonly IPasswordDecrypt passwordDecrypt;
 
-		public GetAllConnectionsQueryHandler(IRedisConnectionRepository redisConnectionRepository, IPasswordDecryptor passwordDecryptor)
+		public GetAllConnectionsQueryHandler(IRedisConnectionRepository redisConnectionRepository, IPasswordDecrypt passwordDecrypt)
 		{
 			this.redisConnectionRepository = redisConnectionRepository;
-			this.passwordDecryptor = passwordDecryptor;
+			this.passwordDecrypt = passwordDecrypt;
 		}
 
 
@@ -27,7 +27,7 @@ namespace RedisGUI.Application.Connections.GetAllConnections
 		{
 			var connectionsResult = await this.redisConnectionRepository.GetAsync(null, false, request.PageNumber, request.PageSize);
 
-			return connectionsResult.Map(connections => connections.Select(c => GetConnectionResponse.FromRedisConnection(c, passwordDecryptor)));
+			return connectionsResult.Map(connections => connections.Select(c => GetConnectionResponse.FromRedisConnection(c, passwordDecrypt)));
 		}
 	}
 }

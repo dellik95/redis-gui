@@ -46,8 +46,8 @@ public class Program
 
 		app.UseAuthorization();
 
-		app.RegisterConnectionsEndpoints();
-		app.RegisterRedisEndpoints();
+		app.MapConnectionsEndpoints();
+		app.MapRedisEndpoints();
 
 		app.Run();
 	}

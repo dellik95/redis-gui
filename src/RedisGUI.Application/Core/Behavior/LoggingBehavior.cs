@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace RedisGUI.Application.Core.Behavior;
 
 /// <summary>
-/// MediatR pipeline behavior that adds logging around command execution
+/// Mediator pipeline behavior that adds logging around command execution
 /// </summary>
 /// <typeparam name="TRequest">The type of request being handled</typeparam>
 /// <typeparam name="TResponse">The type of response from the handler</typeparam>

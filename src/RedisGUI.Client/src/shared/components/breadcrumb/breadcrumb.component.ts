@@ -3,7 +3,7 @@ import { Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { BreadcrumbService } from '../../services/breadcrumb.service';
 import { Observable } from 'rxjs';
-import { BreadcrumbType } from '../../types/breadcrumb.type';
+import { Breadcrumb as BreadcrumbType } from '../../types/breadcrumb.type';
 
 @Component({
   selector: 'app-breadcrumb',

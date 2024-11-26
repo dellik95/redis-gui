@@ -1,6 +1,6 @@
-export type SectionConfigType<TEntity> = ColumnDefinitionType<TEntity>[];
+export type SectionConfig<TEntity> = ColumnDefinition<TEntity>[];
 
-export type ColumnDefinitionType<TEntity>  = {
+export type ColumnDefinition<TEntity>  = {
   name: string;
   title?: string;
   hidden?: boolean;

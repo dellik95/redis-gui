@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Options;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using System;
 using System.Security.Cryptography;
@@ -9,18 +9,22 @@ namespace RedisGUI.Infrastructure.Cryptography;
 /// <summary>
 ///     Represents the password encryption/decryption
 /// </summary>
-internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecryptor
+internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecrypt
 {
-	private const int SaltSize = 16;
-	private const int KeySize = 32;
-	private const int IvSize = 16;
-	private const int Iterations = 10000;
+	private readonly int saltSize = 16;
+	private readonly int keySize = 32;
+	private readonly int ivSize = 16;
+	private readonly int iterations = 10000;
 
-	private readonly CryptographyConfiguration _config;
+	private readonly CryptographyConfiguration config;
 
+	/// <summary>
+	/// Creates a new instance of PasswordEncryptor
+	/// </summary>
+	/// <param name="options"></param>
 	public PasswordEncryptor(IOptions<CryptographyConfiguration> options)
 	{
-		_config = options.Value;
+		config = options.Value;
 	}
 
 	/// <inheritdoc />
@@ -33,13 +37,13 @@ internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecryptor
 
 		var cipherTextBytesWithSalt = Convert.FromBase64String(encryptedValue);
 
-		var salt = new byte[SaltSize];
-		Buffer.BlockCopy(cipherTextBytesWithSalt, 0, salt, 0, SaltSize);
+		var salt = new byte[saltSize];
+		Buffer.BlockCopy(cipherTextBytesWithSalt, 0, salt, 0, saltSize);
 
-		var (aesKey, aesIv) = GenerateKeyAndIv(_config.SecurityKey, salt);
+		var (aesKey, aesIv) = GenerateKeyAndIv(config.SecurityKey, salt);
 
-		var encryptedBytes = new byte[cipherTextBytesWithSalt.Length - SaltSize];
-		Buffer.BlockCopy(cipherTextBytesWithSalt, SaltSize, encryptedBytes, 0, encryptedBytes.Length);
+		var encryptedBytes = new byte[cipherTextBytesWithSalt.Length - saltSize];
+		Buffer.BlockCopy(cipherTextBytesWithSalt, saltSize, encryptedBytes, 0, encryptedBytes.Length);
 
 		byte[] decryptedBytes;
 
@@ -48,9 +52,9 @@ internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecryptor
 			aesAlg.Key = aesKey;
 			aesAlg.IV = aesIv;
 
-			using (var decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV))
+			using (var decrypt = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV))
 			{
-				decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+				decryptedBytes = decrypt.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
 			}
 		}
 
@@ -66,7 +70,7 @@ internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecryptor
 		}
 
 		var salt = GenerateSalt();
-		var (aesKey, aesIv) = GenerateKeyAndIv(_config.SecurityKey, salt);
+		var (aesKey, aesIv) = GenerateKeyAndIv(config.SecurityKey, salt);
 		byte[] encryptedBytes;
 
 		using (var aesAlg = Aes.Create())
@@ -81,27 +85,27 @@ internal sealed class PasswordEncryptor : IPasswordEncryptor, IPasswordDecryptor
 			}
 		}
 
-		var result = new byte[SaltSize + encryptedBytes.Length];
-		Buffer.BlockCopy(salt, 0, result, 0, SaltSize);
-		Buffer.BlockCopy(encryptedBytes, 0, result, SaltSize, encryptedBytes.Length);
+		var result = new byte[saltSize + encryptedBytes.Length];
+		Buffer.BlockCopy(salt, 0, result, 0, saltSize);
+		Buffer.BlockCopy(encryptedBytes, 0, result, saltSize, encryptedBytes.Length);
 
 		return Convert.ToBase64String(result);
 	}
 
 
-	private static byte[] GenerateSalt()
+	private byte[] GenerateSalt()
 	{
-		var salt = new byte[SaltSize];
+		var salt = new byte[saltSize];
 		using var rng = RandomNumberGenerator.Create();
 		rng.GetBytes(salt);
 		return salt;
 	}
 
-	private static (byte[] Key, byte[] IV) GenerateKeyAndIv(string key, byte[] salt)
+	private (byte[] Key, byte[] IV) GenerateKeyAndIv(string key, byte[] salt)
 	{
-		using var keyDerivationFunction = new Rfc2898DeriveBytes(key, salt, Iterations, HashAlgorithmName.SHA256);
-		var aesKey = keyDerivationFunction.GetBytes(KeySize);
-		var aesIv = keyDerivationFunction.GetBytes(IvSize);
+		using var keyDerivationFunction = new Rfc2898DeriveBytes(key, salt, iterations, HashAlgorithmName.SHA256);
+		var aesKey = keyDerivationFunction.GetBytes(keySize);
+		var aesIv = keyDerivationFunction.GetBytes(ivSize);
 		return (aesKey, aesIv);
 	}
 }

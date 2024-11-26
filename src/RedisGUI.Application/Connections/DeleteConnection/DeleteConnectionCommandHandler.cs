@@ -1,4 +1,3 @@
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Application.Abstraction.Messaging;
@@ -28,7 +27,7 @@ internal class DeleteConnectionCommandHandler : ICommandHandler<DeleteConnection
 	}
 	public async Task<Result> Handle(DeleteConnectionCommand command, CancellationToken cancellationToken)
 	{
-		var result = await this.connectionRepository.DeleteAsync(command.Id, cancellationToken); ;
+		var result = await this.connectionRepository.DeleteAsync(command.Id, cancellationToken);
 
 		if (result.IsSuccess)
 		{

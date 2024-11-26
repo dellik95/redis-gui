@@ -2,15 +2,15 @@ import { Injectable } from '@angular/core';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { filter } from 'rxjs/operators';
-import { BreadcrumbType } from '../types/breadcrumb.type';
+import { Breadcrumb } from '../types/breadcrumb.type';
 
 @Injectable({
   providedIn: 'root',
 })
 export class BreadcrumbService {
 
-  private breadcrumbs: BehaviorSubject<Array<BreadcrumbType>> = new BehaviorSubject<Array<BreadcrumbType>>([])
-  breadcrumbs$: Observable<Array<BreadcrumbType>> = this.breadcrumbs.asObservable();
+	private breadcrumbs: BehaviorSubject<Array<Breadcrumb>> = new BehaviorSubject<Array<Breadcrumb>>([]);
+	breadcrumbs$: Observable<Array<Breadcrumb>> = this.breadcrumbs.asObservable();
 
   constructor(private router: Router, private activatedRoute: ActivatedRoute) {
     this.router.events.pipe(

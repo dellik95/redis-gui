@@ -9,7 +9,6 @@ using RedisGUI.Application.Connections.GetConnectionById;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Domain.Primitives;
 using System;
-using Microsoft.AspNetCore.Mvc;
 using RedisGUI.Application.Connections.GetAllConnections;
 using RedisGUI.Application.Connections.DeleteConnection;
 
@@ -25,7 +24,7 @@ public static class ConnectionsEndpoints
 	/// </summary>
 	/// <param name="routerBuilder">The router builder to add endpoints to</param>
 	/// <returns>The router builder for method chaining</returns>
-	public static IEndpointRouteBuilder RegisterConnectionsEndpoints(this IEndpointRouteBuilder routerBuilder)
+	public static IEndpointRouteBuilder MapConnectionsEndpoints(this IEndpointRouteBuilder routerBuilder)
 	{
 		var apiVersionSet = routerBuilder.NewApiVersionSet()
 			.HasApiVersion(new ApiVersion(1.0))

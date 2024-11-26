@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, model, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal, model, OnInit, signal } from '@angular/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -23,6 +23,18 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CommonModule } from '@angular/common';
 import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
 import { CreateConnectionRequest } from '../../../shared/types/connection-request.types';
+import { ConnectionDialogData } from '../types/connection-dialog-data.type';
+import { Connection as ConnectionType } from '../../../shared/types/connection.type';
+
+const defaultFormValue = {
+  name: null,
+  host: null,
+  username: null,
+  password: null,
+  database: null,
+  port: 6379
+}
+
 
 @Component({
   selector: 'app-edit-connection',
@@ -45,8 +57,9 @@ import { CreateConnectionRequest } from '../../../shared/types/connection-reques
   templateUrl: './edit-connection.component.html',
   styleUrl: './edit-connection.component.scss'
 })
-export class EditConnectionComponent {
-  readonly data = inject(MAT_DIALOG_DATA);
+export class EditConnectionComponent implements OnInit {
+
+  readonly data = inject<ConnectionDialogData>(MAT_DIALOG_DATA);
   readonly connectionService = inject(RedisConnectionsService);
   readonly dialogRef = inject(MatDialogRef<EditConnectionComponent>);
 
@@ -55,22 +68,53 @@ export class EditConnectionComponent {
 
   private fb = inject(FormBuilder);
 
-  readonly form: FormGroup = this.fb.group({
-    name: [null, [Validators.required], []],
-    host: [null, [Validators.required], []],
-    port: [6379, [], []],
-    database: [0, [], []],
-    userName: [null, [], []],
-    password: [null, [], []],
-  });
+  form!: FormGroup;
 
   togglePasswordMode(event: MouseEvent) {
     this.hidePasswordMode.set(!this.hidePasswordMode());
     event.stopPropagation();
   }
 
+
+  ngOnInit(): void {
+
+    let connection = this.data.connection;
+    let port = this.getPort(connection);
+    let host = this.getHost(connection);
+
+    this.form = this.fb.group({
+      name: [connection?.name, [Validators.required], []],
+      host: [host, [Validators.required], []],
+      port: [port, [], []],
+      database: [connection?.database, [], []],
+      userName: [connection?.username, [], []],
+      password: [connection?.password, [], []],
+    });
+    console.log(this.data);
+  }
+
+
+  getHost(connection: ConnectionType): string | null {
+
+    if (connection == null || connection == undefined) {
+      return null;
+    }
+
+    const url = new URL(connection.host);
+    return url.hostname;
+  }
+
+  getPort(connection: ConnectionType): number {
+    if (connection == null || connection == undefined) {
+      return 6379;
+    }
+
+    const url = new URL(connection.host);
+    return parseInt(url.port);
+  }
+
   checkConnections() {
-    var value = this.form.value;
+    var value = this.form?.value;
 
     this.connectionService.checkConnection({
       ...value
@@ -78,14 +122,14 @@ export class EditConnectionComponent {
       .subscribe({
         next: () => {
           // TODO: Add sucessful notification
-         },
+        },
         error: () => { }
       });
   }
 
 
   saveConnection() {
-    if (this.form.valid) {
+    if (this.form?.valid) {
 
       let formValue = this.form.value;
       let connection: CreateConnectionRequest = {

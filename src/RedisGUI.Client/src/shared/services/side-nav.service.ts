@@ -1,5 +1,5 @@
 import { Injectable } from "@angular/core";
-import { SideNavType } from "../types/side-nav.type";
+import { SideNavLinkDefinition } from "../types/side-nav.type";
 import { BehaviorSubject } from "rxjs";
 
 @Injectable({
@@ -7,7 +7,7 @@ import { BehaviorSubject } from "rxjs";
 })
 export class SideNavService {
 
-	private sideNavLinks: BehaviorSubject<SideNavType[]> = new BehaviorSubject<SideNavType[]>([]);
+	private sideNavLinks: BehaviorSubject<SideNavLinkDefinition[]> = new BehaviorSubject<SideNavLinkDefinition[]>([]);
 
 	sideNavLinks$ = this.sideNavLinks.asObservable();
 

@@ -1,4 +1,4 @@
-export type ConnectionType = {
+export type Connection = {
     id: string;
     name: string;
     host: string;

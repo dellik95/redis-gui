@@ -11,8 +11,8 @@ namespace RedisGUI.Application.Redis.Commands.SetRedisValue;
 /// </summary>
 internal sealed class SetRedisValueCommandHandler : ICommandHandler<SetRedisValueCommand>
 {
-    private readonly IRedisConnectionRepository _connectionRepository;
-    private readonly IConnectionService _connectionService;
+    private readonly IRedisConnectionRepository connectionRepository;
+    private readonly IConnectionService connectionService;
 
     /// <summary>
     /// Initializes a new instance of the SetRedisValueCommandHandler.
@@ -23,8 +23,8 @@ internal sealed class SetRedisValueCommandHandler : ICommandHandler<SetRedisValu
         IRedisConnectionRepository connectionRepository,
         IConnectionService connectionService)
     {
-        _connectionRepository = connectionRepository;
-        _connectionService = connectionService;
+        this.connectionRepository = connectionRepository;
+        this.connectionService = connectionService;
     }
 
     /// <summary>
@@ -35,13 +35,13 @@ internal sealed class SetRedisValueCommandHandler : ICommandHandler<SetRedisValu
     /// <returns>A Result indicating success or failure.</returns>
     public async Task<Result> Handle(SetRedisValueCommand request, CancellationToken cancellationToken)
     {
-        var connectionResult = await _connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+        var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
         
         if (connectionResult.IsFailure)
         {
             return Result.Failure(connectionResult.Error);
         }
 
-        return await _connectionService.SetValue(connectionResult.Value, request.Key, request.Value, request.Ttl);
+        return await connectionService.SetValue(connectionResult.Value, request.Key, request.Value, request.Ttl);
     }
 } 

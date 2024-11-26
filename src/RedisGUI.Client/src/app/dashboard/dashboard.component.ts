@@ -1,17 +1,17 @@
 import { Component, inject, OnDestroy, OnInit } from '@angular/core';
-import { RedisConnectionsListComponent as RedisConnectionsComponent } from "./redis-connections-list/redis-connections-list.component";
+import { ConnectionsListComponent } from "./connections-list/connections-list.component";
 import { SectionActionsPortalService } from '../../shared/services/section-actions-portal.service';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { DashboardSectionActionsComponent } from './dashboard-section-actions/dashboard-section-actions.component';
-import { SectionConfigType } from '../../shared/types/section-config.type';
-import { ConnectionType } from '../../shared/types/connection.type';
+import { SectionConfig as SectionConfigType } from '../../shared/types/section-config.type';
+import { Connection as ConnectionType } from '../../shared/types/connection.type';
 import { sectionConfig } from './dashboard-section.config';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
   imports: [
-    RedisConnectionsComponent
+    ConnectionsListComponent
   ],
   templateUrl: './dashboard.component.html',
   styleUrl: './dashboard.component.scss'

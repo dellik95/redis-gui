@@ -1,9 +1,9 @@
 namespace RedisGUI.Domain.Abstraction.Cryptography;
 
 /// <summary>
-///     Password decryptor contact
+///     Password decrypt contact
 /// </summary>
-public interface IPasswordDecryptor
+public interface IPasswordDecrypt
 {
 	/// <summary>
 	///     Decrypt value.

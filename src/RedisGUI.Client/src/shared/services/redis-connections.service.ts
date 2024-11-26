@@ -1,6 +1,6 @@
 import { inject, Injectable } from "@angular/core";
 import { Observable, takeLast } from "rxjs";
-import { ConnectionType } from "../types/connection.type";
+import { Connection as ConnectionType } from "../types/connection.type";
 import { HttpClient } from "@angular/common/http";
 import { CheckConnectionRequest, CreateConnectionRequest } from "../types/connection-request.types";
 

@@ -28,7 +28,7 @@ public static class DependencyInjection
 	public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
 	{
 		services.AddSingleton<PasswordEncryptor>();
-		services.AddSingleton<IPasswordDecryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
+		services.AddSingleton<IPasswordDecrypt>(svc => svc.GetRequiredService<PasswordEncryptor>());
 		services.AddSingleton<IPasswordEncryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
 
 

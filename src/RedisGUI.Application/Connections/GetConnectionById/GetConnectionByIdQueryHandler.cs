@@ -15,17 +15,17 @@ namespace RedisGUI.Application.Connections.GetConnectionById;
 internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectionByIdQuery, GetConnectionResponse>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IPasswordDecryptor passwordDecryptor;
+	private readonly IPasswordDecrypt passwordDecrypt;
 
 	/// <summary>
 	/// Initializes a new instance of the GetConnectionByIdQueryHandler.
 	/// </summary>
 	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="passwordDecryptor">Service for password decryption</param>
-	public GetConnectionByIdQueryHandler(IRedisConnectionRepository connectionRepository, IPasswordDecryptor passwordDecryptor)
+	/// <param name="passwordDecrypt">Service for password decryption</param>
+	public GetConnectionByIdQueryHandler(IRedisConnectionRepository connectionRepository, IPasswordDecrypt passwordDecrypt)
 	{
 		this.connectionRepository = connectionRepository;
-		this.passwordDecryptor = passwordDecryptor;
+		this.passwordDecrypt = passwordDecrypt;
 	}
 
 	/// <summary>
@@ -36,7 +36,7 @@ internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectio
 	/// <returns>Result containing the connection details if found</returns>
 	public async Task<Result<GetConnectionResponse>> Handle(GetConnectionByIdQuery request, CancellationToken cancellationToken)
 	{
-		var connection = await connectionRepository.GetConnectionByIdAsync(request.id, cancellationToken);
-		return connection.Map(x => GetConnectionResponse.FromRedisConnection(x, passwordDecryptor));
+		var connection = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
+		return connection.Map(x => GetConnectionResponse.FromRedisConnection(x, passwordDecrypt));
 	}
 }

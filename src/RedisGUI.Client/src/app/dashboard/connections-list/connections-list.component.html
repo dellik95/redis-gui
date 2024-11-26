@@ -11,7 +11,7 @@
       <th mat-header-cell *matHeaderCellDef aria-label="row actions">&nbsp;</th>
       <td mat-cell *matCellDef="let row">
         <div class="item-actions-container">
-          <button mat-mini-fab>
+          <button mat-mini-fab (click)="editRecord(row)">
             <mat-icon>edit</mat-icon>
           </button>
           <button mat-mini-fab (click)="deleteRecord(row.id)">
