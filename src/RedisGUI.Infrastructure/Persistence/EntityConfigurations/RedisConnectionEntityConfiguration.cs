@@ -15,6 +15,8 @@ public class RedisConnectionEntityConfiguration : IEntityTypeConfiguration<Redis
 	/// <param name="builder">The entity type builder used to configure the entity</param>
 	public void Configure(EntityTypeBuilder<RedisConnection> builder)
 	{
+		builder.UseTpcMappingStrategy();
+
 		builder.HasKey(x => x.Id);
 
 		builder.Property(x => x.ServerHost)
@@ -30,7 +32,5 @@ public class RedisConnectionEntityConfiguration : IEntityTypeConfiguration<Redis
 		builder.Property(x => x.ServerPort)
 			.IsRequired()
 			.HasConversion(x => x.Value, x => new ConnectionPort(x));
-
-		builder.OwnsOne(x => x.ConnectionCredentials);
 	}
 }

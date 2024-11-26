@@ -23,7 +23,7 @@ public static class RedisEndpoints
     /// </summary>
     /// <param name="routerBuilder">The router builder to add endpoints to</param>
     /// <returns>The router builder for method chaining</returns>
-    public static IEndpointRouteBuilder RegisterRedisEndpoints(this IEndpointRouteBuilder routerBuilder)
+    public static IEndpointRouteBuilder MapRedisEndpoints(this IEndpointRouteBuilder routerBuilder)
     {
         var apiVersionSet = routerBuilder.NewApiVersionSet()
             .HasApiVersion(new ApiVersion(1.0))

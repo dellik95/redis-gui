@@ -1,8 +1,4 @@
-﻿
-
 using RedisGUI.Domain.Primitives;
-
-
 
 namespace RedisGUI.Domain.Errors;
 
@@ -11,6 +7,17 @@ namespace RedisGUI.Domain.Errors;
 /// </summary>
 public static class DomainErrors
 {
+	/// <summary>
+	/// Storage errors
+	/// </summary>
+	public static class Storage
+	{
+		/// <summary>
+		/// Item not found in storage
+		/// </summary>
+		public static Error ItemNotFound => new("Storage.NotFound", "The item(s) not found.");
+	}
+
 	/// <summary>
 	/// Connection errors
 	/// </summary>

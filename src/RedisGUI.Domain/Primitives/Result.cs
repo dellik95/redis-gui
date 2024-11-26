@@ -1,6 +1,4 @@
 using System;
-using System.Diagnostics.CodeAnalysis;
-
 
 
 namespace RedisGUI.Domain.Primitives;
@@ -125,7 +123,6 @@ public class Result<TValue> : Result
 	/// <summary>
 	///     Return value from result
 	/// </summary>
-	[NotNull]
 	public TValue Value => (IsSuccess
 		? value
 		: throw new InvalidOperationException("The value of a failure result can not be accessed."))!;

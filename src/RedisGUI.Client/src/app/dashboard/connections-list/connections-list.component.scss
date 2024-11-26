@@ -1,0 +1,32 @@
+.table-container {
+	height: 100%;
+	max-width: 100%;
+	overflow: auto;
+	display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.full-width-table {
+	width: 100%;
+}
+
+.mat-paginator-sticky {
+	bottom: 0px;
+	position: sticky;
+	z-index: 10;
+}
+
+.item-actions-container {
+    > button:not(:last-child) {
+		margin-right: 10px;
+	}
+}
+
+@media (max-width: 880px) {
+    .item-actions-container {
+        > button {
+            margin-bottom: 5px;
+        }
+    }
+}

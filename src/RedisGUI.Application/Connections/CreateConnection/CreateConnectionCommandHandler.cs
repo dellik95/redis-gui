@@ -48,14 +48,9 @@ internal sealed class CreateConnectionCommandHandler : ICommandHandler<CreateCon
 	{
 		// Create and validate credentials
 		var credentialsResult = ConnectionCredentials.Create(
-			request.UserName, 
-			request.Password, 
+			request.UserName,
+			request.Password,
 			passwordEncryptor);
-
-		if (credentialsResult.IsFailure)
-		{
-			return Result.Failure<Guid>(credentialsResult.Error);
-		}
 
 		// Create connection with value objects
 		var connectionResult = RedisConnection.Create(

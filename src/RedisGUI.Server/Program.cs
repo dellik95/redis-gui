@@ -41,12 +41,13 @@ public class Program
 			app.UseSwagger();
 			app.UseSwaggerUI();
 			app.ApplyMigrations();
+			app.SeedFakeData();
 		}
 
 		app.UseAuthorization();
 
-		app.RegisterConnectionsEndpoints();
-		app.RegisterRedisEndpoints();
+		app.MapConnectionsEndpoints();
+		app.MapRedisEndpoints();
 
 		app.Run();
 	}

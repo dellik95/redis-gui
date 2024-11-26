@@ -13,8 +13,8 @@ namespace RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 internal sealed class GetAllRedisValuesQueryHandler 
     : IQueryHandler<GetAllRedisValuesQuery, GetAllRedisValuesResponse>
 {
-    private readonly IRedisConnectionRepository _connectionRepository;
-    private readonly IConnectionService _connectionService;
+    private readonly IRedisConnectionRepository connectionRepository;
+    private readonly IConnectionService connectionService;
 
     /// <summary>
     /// Initializes a new instance of the GetAllRedisValuesQueryHandler.
@@ -25,8 +25,8 @@ internal sealed class GetAllRedisValuesQueryHandler
         IRedisConnectionRepository connectionRepository,
         IConnectionService connectionService)
     {
-        _connectionRepository = connectionRepository;
-        _connectionService = connectionService;
+        this.connectionRepository = connectionRepository;
+        this.connectionService = connectionService;
     }
 
     /// <summary>
@@ -39,7 +39,7 @@ internal sealed class GetAllRedisValuesQueryHandler
         GetAllRedisValuesQuery request, 
         CancellationToken cancellationToken)
     {
-        var connectionResult = await _connectionRepository.GetConnectionByIdAsync(
+        var connectionResult = await connectionRepository.GetConnectionByIdAsync(
             request.ConnectionId, 
             cancellationToken);
         
@@ -48,7 +48,7 @@ internal sealed class GetAllRedisValuesQueryHandler
             return Result.Failure<GetAllRedisValuesResponse>(connectionResult.Error);
         }
 
-        var result = await _connectionService.GetAllValues(
+        var result = await connectionService.GetAllValues(
             connectionResult.Value, 
             request.Pattern,
             request.PageSize,

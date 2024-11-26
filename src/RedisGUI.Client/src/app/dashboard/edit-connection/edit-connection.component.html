@@ -1,0 +1,79 @@
+<h2 mat-dialog-title>Connection editor</h2>
+<mat-dialog-content>
+    <form [formGroup]="form">
+
+        <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name">
+        </mat-form-field>
+
+        <div class="host-details">
+
+            <mat-form-field appearance="outline">
+                <mat-label>Host</mat-label>
+                <input matInput formControlName="host">
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+                <mat-label>Port</mat-label>
+                <input type="number" matInput formControlName="port">
+            </mat-form-field>
+
+        </div>
+        <div class="database-details">
+
+            <mat-checkbox class="database-chekbox" [(ngModel)]="allDatabasesSelected"
+                [ngModelOptions]="{standalone: true}">All
+                databases</mat-checkbox>
+
+            @if (!allDatabasesSelected()) {
+
+            <mat-form-field appearance="outline">
+                <mat-label>Database</mat-label>
+                <input type="number" matInput formControlName="database">
+            </mat-form-field>
+            }
+        </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="credentials-details">
+            <mat-accordion>
+                <mat-expansion-panel hideToggle>
+
+                    <mat-expansion-panel-header>
+                        <mat-panel-title> Connection credentials (optional) </mat-panel-title>
+                    </mat-expansion-panel-header>
+
+                    <mat-form-field appearance="outline">
+                        <mat-label>User name</mat-label>
+                        <input matInput formControlName="userName">
+                    </mat-form-field>
+
+                    <mat-form-field appearance="outline">
+                        <mat-label>Enter your password</mat-label>
+                        <input matInput [type]="hidePasswordMode() ? 'password' : 'text'" formControlName="password" />
+                        <button mat-icon-button matSuffix (click)="togglePasswordMode($event)">
+                            <mat-icon>{{ hidePasswordMode() ? 'visibility_off' : 'visibility' }}</mat-icon>
+                        </button>
+                    </mat-form-field>
+
+                </mat-expansion-panel>
+            </mat-accordion>
+        </div>
+
+        <div class="editor-actions">
+
+            <button mat-fab extended color="accent" (click)="checkConnections()">
+                <mat-icon>check_circle_outline</mat-icon>
+                Check connection
+            </button>
+
+            <button mat-fab extended [disabled]="form.invalid" (click)="saveConnection()">
+                <mat-icon>favorite</mat-icon>
+                Save
+            </button>
+
+        </div>
+    </form>
+</mat-dialog-content>

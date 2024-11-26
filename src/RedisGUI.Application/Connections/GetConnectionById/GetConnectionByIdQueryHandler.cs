@@ -1,30 +1,31 @@
-﻿using RedisGUI.Application.Abstraction.Messaging;
+using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Domain.Primitives;
 using System.Threading;
 using System.Threading.Tasks;
+using RedisGUI.Application.Connections.Shared;
 
 namespace RedisGUI.Application.Connections.GetConnectionById;
 
 /// <summary>
 /// Handles the retrieval of Redis connections by their unique identifier.
 /// </summary>
-internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectionByIdQuery, GetConnectionByIdResponse>
+internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectionByIdQuery, GetConnectionResponse>
 {
-	private readonly IRedisConnectionRepository _connectionRepository;
-	private readonly IPasswordDecryptor _passwordDecryptor;
+	private readonly IRedisConnectionRepository connectionRepository;
+	private readonly IPasswordDecrypt passwordDecrypt;
 
 	/// <summary>
 	/// Initializes a new instance of the GetConnectionByIdQueryHandler.
 	/// </summary>
 	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="passwordDecryptor">Service for password decryption</param>
-	public GetConnectionByIdQueryHandler(IRedisConnectionRepository connectionRepository, IPasswordDecryptor passwordDecryptor)
+	/// <param name="passwordDecrypt">Service for password decryption</param>
+	public GetConnectionByIdQueryHandler(IRedisConnectionRepository connectionRepository, IPasswordDecrypt passwordDecrypt)
 	{
-		_connectionRepository = connectionRepository;
-		_passwordDecryptor = passwordDecryptor;
+		this.connectionRepository = connectionRepository;
+		this.passwordDecrypt = passwordDecrypt;
 	}
 
 	/// <summary>
@@ -33,9 +34,9 @@ internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectio
 	/// <param name="request">The connection retrieval query</param>
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>Result containing the connection details if found</returns>
-	public async Task<Result<GetConnectionByIdResponse>> Handle(GetConnectionByIdQuery request, CancellationToken cancellationToken)
+	public async Task<Result<GetConnectionResponse>> Handle(GetConnectionByIdQuery request, CancellationToken cancellationToken)
 	{
-		var connection = await _connectionRepository.GetConnectionByIdAsync(request.id, cancellationToken);
-		return connection.Map(x => GetConnectionByIdResponse.FromRedisConnection(x, _passwordDecryptor));
+		var connection = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
+		return connection.Map(x => GetConnectionResponse.FromRedisConnection(x, passwordDecrypt));
 	}
 }

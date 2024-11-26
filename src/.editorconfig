@@ -9,8 +9,9 @@ charset = utf-8
 end_of_line = crlf
 insert_final_newline = true
 trim_trailing_whitespace: true
+dotnet_style_operator_placement_when_wrapping = beginning_of_line
 
-[*.{js,json,props,csproj,xml}]
+[*.{js,ts,json,props,csproj,xml,html}]
 indent_size = 4
 tab_width = 4
 

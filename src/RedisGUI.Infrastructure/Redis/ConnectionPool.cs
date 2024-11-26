@@ -41,15 +41,13 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>A Result containing either a ConnectionMultiplexer or an error</returns>
 	public async Task<Result<ConnectionMultiplexer>> GetConnection(
-		ConfigurationOptions configuration,
+		string configuration,
 		CancellationToken cancellationToken = default)
 	{
 		try
 		{
-			var key = configuration.ToString();
-
 			var lazyConnection = connections.GetOrAdd(
-				key,
+				configuration,
 				_ => new Lazy<Task<ConnectionMultiplexer>>(
 					() => CreateConnectionAsync(configuration, cancellationToken)));
 
@@ -60,7 +58,7 @@ internal sealed class ConnectionPool : IConnectionPool
 				return Result.Success(connection);
 			}
 
-			await RemoveConnectionAsync(key);
+			await RemoveConnectionAsync(configuration);
 			return Result.Failure<ConnectionMultiplexer>(DomainErrors.Connection.ConnectionNotEstablished);
 
 		}
@@ -86,7 +84,7 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// Creates a new Redis connection with the specified configuration
 	/// </summary>
 	private async Task<ConnectionMultiplexer> CreateConnectionAsync(
-		ConfigurationOptions configuration,
+		string configuration,
 		CancellationToken cancellationToken)
 	{
 		var connection = await ConnectionMultiplexer.ConnectAsync(configuration)
@@ -97,7 +95,7 @@ internal sealed class ConnectionPool : IConnectionPool
 		connection.ErrorMessage += OnErrorMessage;
 
 		// Monitor connection state and remove if idle
-		_ = Task.Run(async () => 
+		_ = Task.Run(async () =>
 		{
 			while (!disposed && connection.IsConnected)
 			{
@@ -118,15 +116,15 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// </summary>
 	private async Task RemoveConnectionAsync(string key)
 	{
-		if (connections.TryRemove(key, out var lazyConnection) && 
+		if (connections.TryRemove(key, out var lazyConnection) &&
 			lazyConnection.IsValueCreated)
 		{
 			var connection = await lazyConnection.Value;
-			
+
 			connection.ConnectionFailed -= OnConnectionFailed;
 			connection.ConnectionRestored -= OnConnectionRestored;
 			connection.ErrorMessage -= OnErrorMessage;
-			
+
 			await connection.CloseAsync();
 			await connection.DisposeAsync();
 		}

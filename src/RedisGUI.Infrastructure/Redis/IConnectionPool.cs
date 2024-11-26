@@ -18,6 +18,6 @@ public interface IConnectionPool : IDisposable, IAsyncDisposable
     /// <param name="cancellationToken">Cancellation token for the operation</param>
     /// <returns>A Result containing either a successful ConnectionMultiplexer or an error</returns>
     Task<Result<ConnectionMultiplexer>> GetConnection(
-        ConfigurationOptions configuration,
+        string configuration,
         CancellationToken cancellationToken = default);
 }

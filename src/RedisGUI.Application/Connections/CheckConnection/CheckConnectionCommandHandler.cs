@@ -41,10 +41,6 @@ internal sealed class CheckConnectionCommandHandler : ICommandHandler<CheckConne
 			request.Password, 
 			passwordEncryptor);
 
-		if (credentialsResult.IsFailure)
-		{
-			return Result.Failure(credentialsResult.Error);
-		}
 
 		var connection = RedisConnection.Create(
 			new ConnectionName("Test Connection"),
@@ -54,11 +50,6 @@ internal sealed class CheckConnectionCommandHandler : ICommandHandler<CheckConne
 			credentialsResult.Value);
 
 		var result = await connectionService.CheckConnection(connection);
-		
-		if (result.IsSuccess)
-		{
-			connection.Value.MarkAsConnected();
-		}
 
 		return result;
 	}
