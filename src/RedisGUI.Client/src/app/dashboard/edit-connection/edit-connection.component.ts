@@ -38,7 +38,6 @@ const defaultFormValue = {
 
 @Component({
   selector: 'app-edit-connection',
-  standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,

@@ -5,7 +5,6 @@ import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-section-actions',
-  standalone: true,
   imports: [
     PortalModule
   ],

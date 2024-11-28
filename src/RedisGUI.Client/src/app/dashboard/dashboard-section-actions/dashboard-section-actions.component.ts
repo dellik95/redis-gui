@@ -6,7 +6,6 @@ import { EditConnectionDialogService } from '../services/edit-connection-dialog.
 
 @Component({
   selector: 'app-dashboard-section-actions',
-  standalone: true,
   imports: [
     MatButtonModule, MatDividerModule, MatIconModule
   ],
