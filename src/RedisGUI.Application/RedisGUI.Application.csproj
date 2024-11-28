@@ -1,27 +1,21 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-	<Import Project="..\..\build\Common.props" Condition="Exists('..\..\build\Common.props')" />
-
-	<PropertyGroup>
-		<TargetFramework>net8.0</TargetFramework>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.10.0" />
-		<PackageReference Include="MediatR" Version="12.4.1" />
-		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
-		<PackageReference Include="SonarAnalyzer.CSharp" Version="9.32.0.97167">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-		</PackageReference>
-	</ItemGroup>
-
-	<ItemGroup>
-		<ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Connections\GetConnectionById\" />
-	</ItemGroup>
-
+  <Import Project="..\..\build\Common.props" Condition="Exists('..\..\build\Common.props')" />
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="MediatR" Version="12.4.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.0" />
+    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.3.0.106239">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Connections\GetConnectionById\" />
+  </ItemGroup>
 </Project>
