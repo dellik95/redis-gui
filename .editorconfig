@@ -60,7 +60,7 @@ dotnet_diagnostic.IDE0005.severity = suggestion
 dotnet_diagnostic.SA1124.severity = none
 
 # IDE0290: Use primary constructor
-csharp_style_prefer_primary_constructors = none
+csharp_style_prefer_primary_constructors = true:suggestion
 
 # S4487: Unread "private" fields should be removed
 dotnet_diagnostic.S4487.severity = none
@@ -77,3 +77,17 @@ dotnet_naming_style.notunderscored.required_prefix =
 dotnet_naming_rule.private_fields_notunderscored.symbols = private_fields
 dotnet_naming_rule.private_fields_notunderscored.style = notunderscored
 dotnet_naming_rule.private_fields_notunderscored.severity = error
+csharp_indent_labels = one_less_than_current
+csharp_using_directive_placement = outside_namespace:silent
+csharp_prefer_simple_using_statement = true:suggestion
+csharp_prefer_braces = true:silent
+csharp_style_namespace_declarations = block_scoped:silent
+csharp_style_prefer_method_group_conversion = true:silent
+csharp_style_prefer_top_level_statements = true:silent
+csharp_prefer_system_threading_lock = true:suggestion
+csharp_style_expression_bodied_methods = false:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_operators = false:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent

@@ -3,7 +3,7 @@ services:
   #   image: ${DOCKER_REGISTRY-}redisguiserver
   #   build:
   #     context: .
-  #     dockerfile: RedisGUI.Server/Dockerfile
+  #     dockerfile: ..\..\src\RedisGUI.Server/Dockerfile
   db:
     image: mysql:latest
     restart: always
