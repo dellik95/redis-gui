@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, OnInit, input } from '@angular/core';
 import { LoadingService } from './loading.service';
 import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, RouteConfigLoadEnd, RouteConfigLoadStart, Router } from "@angular/router";
 import { MatProgressSpinner } from '@angular/material/progress-spinner';
@@ -8,16 +8,13 @@ import { NgIf, AsyncPipe } from '@angular/common';
   selector: 'loading',
   templateUrl: './loading.component.html',
   styleUrls: ['./loading.component.css'],
-  standalone: true,
   imports: [NgIf, MatProgressSpinner, AsyncPipe]
 })
 export class LoadingComponent implements OnInit {
 
-  @Input()
-  routing: boolean = false;
+  readonly routing = input<boolean>(false);
 
-  @Input()
-  detectRoutingOngoing: boolean = false;
+  readonly detectRoutingOngoing = input<boolean>(false);
 
   constructor(public loadingService: LoadingService, private router: Router) {
 
@@ -25,7 +22,7 @@ export class LoadingComponent implements OnInit {
 
   ngOnInit() {
 
-    if (this.detectRoutingOngoing) {
+    if (this.detectRoutingOngoing()) {
       this.router.events.subscribe(event => {
         if (
           event instanceof NavigationStart

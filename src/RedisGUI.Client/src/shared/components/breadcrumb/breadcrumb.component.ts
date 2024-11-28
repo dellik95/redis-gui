@@ -7,7 +7,6 @@ import { Breadcrumb as BreadcrumbType } from '../../types/breadcrumb.type';
 
 @Component({
   selector: 'app-breadcrumb',
-  standalone: true,
   imports: [
     CommonModule,
     RouterLink

@@ -15,7 +15,6 @@ import { SectionActionsComponent } from "../shared/components/section-actions/se
 
 @Component({
   selector: "app-root",
-  standalone: true,
   imports: [
     RouterOutlet,
     LoadingComponent,

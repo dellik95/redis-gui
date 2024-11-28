@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.784122">
+<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.2060508">
   <PropertyGroup>
     <StartupCommand>npm start</StartupCommand>
     <JavaScriptTestFramework>Jasmine</JavaScriptTestFramework>
@@ -7,12 +7,4 @@
     <!-- Folder where production build objects will be placed -->
     <BuildOutputFolder>$(MSBuildProjectDirectory)\dist\RedisGUI.Client\browser\</BuildOutputFolder>
   </PropertyGroup>
-  <ItemGroup>
-    <None Remove="src\shared\loader\**" />
-    <TypeScriptConfiguration Remove="src\shared\loader\**" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="src\shared\auth\" />
-    <Folder Include="src\shared\notifications\" />
-  </ItemGroup>
 </Project>

@@ -1,4 +1,4 @@
-import { AfterViewInit, Component, inject, input, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, inject, input, viewChild } from '@angular/core';
 import { MatTableModule, MatTable } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatSortModule, MatSort } from '@angular/material/sort';
@@ -16,7 +16,6 @@ import { EditConnectionDialogService } from '../services/edit-connection-dialog.
   selector: 'app-connections',
   templateUrl: './connections-list.component.html',
   styleUrls: ['./connections-list.component.scss'],
-  standalone: true,
   imports: [MatTableModule, MatPaginatorModule, MatSortModule, CommonModule, MatIcon, MatButtonModule]
 })
 export class ConnectionsListComponent implements AfterViewInit {
@@ -24,15 +23,15 @@ export class ConnectionsListComponent implements AfterViewInit {
   readonly dataSource = new RedisConnectionsDataSource(this.connectionService);
   readonly connectionDialogService = inject(EditConnectionDialogService)
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
-  @ViewChild(MatSort) sort!: MatSort;
-  @ViewChild(MatTable) table!: MatTable<ConnectionType>;
+  readonly paginator = viewChild.required(MatPaginator);
+  readonly sort = viewChild.required(MatSort);
+  readonly table = viewChild.required(MatTable);
 
   config = input.required<SectionConfigType<ConnectionType>>();
 
   ngAfterViewInit(): void {
     this.dataSource.connect().subscribe(data => {
-      this.table.dataSource = data;
+      this.table().dataSource = data;
     });
   }
 
