@@ -149,7 +149,7 @@ public abstract class RedisConnection : Entity
 	/// <returns>A formatted Redis connection string</returns>
 	public string BuildConnectionString()
 	{
-		var baseConnectionString = $"{GetBaseConnectionString()}allowAdmin=True,connectTimeout=30,abortConnect=False";
+		var baseConnectionString = $"{GetBaseConnectionString()},allowAdmin=True,connectTimeout=30,abortConnect=False";
 
 		if (!baseConnectionString.Contains("database") && DatabaseNumber > 0)
 		{

@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RedisGUI.Application;
 using RedisGUI.Infrastructure;
+using RedisGUI.Infrastructure.SignalR.Hubs;
 using RedisGUI.Server.Endpoints.Connections;
 using RedisGUI.Server.Endpoints.Redis;
 using RedisGUI.Server.Extensions;
@@ -15,6 +16,7 @@ namespace RedisGUI.Server;
 /// </summary>
 public class Program
 {
+	public const string DefaultCorsPolicyName = "DefaultCorsPolicy";
 	/// <summary>
 	/// Application entry point that configures and runs the web application
 	/// </summary>
@@ -23,8 +25,6 @@ public class Program
 	{
 		var builder = WebApplication.CreateBuilder(args);
 
-		builder.Services.AddAuthorization();
-
 		builder.Services.AddSwaggerGen();
 		builder.Services.AddApplication();
 		builder.Services.AddInfrastructure(builder.Configuration);
@@ -32,7 +32,6 @@ public class Program
 		builder.Services.ConfigureOptions<ConfigureSwaggerUiOptions>();
 
 		var app = builder.Build();
-
 		app.UseDefaultFiles();
 		app.UseStaticFiles();
 
@@ -41,13 +40,13 @@ public class Program
 			app.UseSwagger();
 			app.UseSwaggerUI();
 			app.ApplyMigrations();
-			app.SeedFakeData();
+			//app.SeedFakeData();
 		}
 
-		app.UseAuthorization();
-
+		app.MapHub<RedisMetricsHub>("/hub/metrics");
 		app.MapConnectionsEndpoints();
 		app.MapRedisEndpoints();
+
 
 		app.Run();
 	}

@@ -15,7 +15,7 @@ namespace RedisGUI.Infrastructure.Redis;
 /// </summary>
 internal sealed class ConnectionPool : IConnectionPool
 {
-	private readonly ConcurrentDictionary<string, Lazy<Task<ConnectionMultiplexer>>> connections;
+	private readonly ConcurrentDictionary<string, Task<ConnectionMultiplexer>> connections = [];
 	private readonly ILogger<ConnectionPool> logger;
 	private readonly ConnectionPoolOptions options;
 	private bool disposed;
@@ -31,7 +31,6 @@ internal sealed class ConnectionPool : IConnectionPool
 	{
 		this.logger = logger;
 		this.options = options.Value;
-		connections = new ConcurrentDictionary<string, Lazy<Task<ConnectionMultiplexer>>>();
 	}
 
 	/// <summary>
@@ -46,12 +45,9 @@ internal sealed class ConnectionPool : IConnectionPool
 	{
 		try
 		{
-			var lazyConnection = connections.GetOrAdd(
+			var connection = await connections.GetOrAdd(
 				configuration,
-				_ => new Lazy<Task<ConnectionMultiplexer>>(
-					() => CreateConnectionAsync(configuration, cancellationToken)));
-
-			var connection = await lazyConnection.Value;
+				_ => CreateConnectionAsync(configuration, cancellationToken));
 
 			if (connection.IsConnected)
 			{
@@ -95,18 +91,18 @@ internal sealed class ConnectionPool : IConnectionPool
 		connection.ErrorMessage += OnErrorMessage;
 
 		// Monitor connection state and remove if idle
-		_ = Task.Run(async () =>
-		{
-			while (!disposed && connection.IsConnected)
-			{
-				await Task.Delay(options.IdleTimeout, cancellationToken);
-				if (connection.GetCounters().TotalOutstanding == 0)
-				{
-					await RemoveConnectionAsync(configuration.ToString());
-					break;
-				}
-			}
-		}, cancellationToken);
+		//_ = Task.Run(async () =>
+		//{
+		//	while (!disposed && connection.IsConnected)
+		//	{
+		//		await Task.Delay(options.IdleTimeout, cancellationToken);
+		//		if (connection.GetCounters().TotalOutstanding == 0)
+		//		{
+		//			await RemoveConnectionAsync(configuration.ToString());
+		//			break;
+		//		}
+		//	}
+		//}, cancellationToken);
 
 		return connection;
 	}
@@ -116,17 +112,24 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// </summary>
 	private async Task RemoveConnectionAsync(string key)
 	{
-		if (connections.TryRemove(key, out var lazyConnection) &&
-			lazyConnection.IsValueCreated)
+		if (connections.TryRemove(key, out var connection))
 		{
-			var connection = await lazyConnection.Value;
+			ConnectionMultiplexer multiplexer;
+			if (!connection.IsCompleted)
+			{
+				multiplexer = await connection;
+			}
+			else
+			{
+				multiplexer = connection.Result;
+			}
 
-			connection.ConnectionFailed -= OnConnectionFailed;
-			connection.ConnectionRestored -= OnConnectionRestored;
-			connection.ErrorMessage -= OnErrorMessage;
+			multiplexer.ConnectionFailed -= OnConnectionFailed;
+			multiplexer.ConnectionRestored -= OnConnectionRestored;
+			multiplexer.ErrorMessage -= OnErrorMessage;
 
-			await connection.CloseAsync();
-			await connection.DisposeAsync();
+			await multiplexer.CloseAsync();
+			await multiplexer.DisposeAsync();
 		}
 	}
 
@@ -162,15 +165,21 @@ internal sealed class ConnectionPool : IConnectionPool
 
 		foreach (var connection in connections.Values)
 		{
-			if (connection.IsValueCreated)
+			ConnectionMultiplexer multiplexer;
+			if (!connection.IsCompleted)
 			{
-				var multiplexer = await connection.Value;
-				multiplexer.ConnectionFailed -= OnConnectionFailed;
-				multiplexer.ConnectionRestored -= OnConnectionRestored;
-				multiplexer.ErrorMessage -= OnErrorMessage;
-				await multiplexer.CloseAsync();
-				await multiplexer.DisposeAsync();
+				multiplexer = await connection;
 			}
+			else
+			{
+				multiplexer = connection.Result;
+			}
+
+			multiplexer.ConnectionFailed -= OnConnectionFailed;
+			multiplexer.ConnectionRestored -= OnConnectionRestored;
+			multiplexer.ErrorMessage -= OnErrorMessage;
+			await multiplexer.CloseAsync();
+			await multiplexer.DisposeAsync();
 		}
 
 		connections.Clear();
@@ -187,15 +196,13 @@ internal sealed class ConnectionPool : IConnectionPool
 
 		foreach (var connection in connections.Values)
 		{
-			if (connection.IsValueCreated)
-			{
-				var multiplexer = connection.Value.GetAwaiter().GetResult();
-				multiplexer.ConnectionFailed -= OnConnectionFailed;
-				multiplexer.ConnectionRestored -= OnConnectionRestored;
-				multiplexer.ErrorMessage -= OnErrorMessage;
-				multiplexer.Close();
-				multiplexer.Dispose();
-			}
+			var multiplexer = !connection.IsCompleted ? connection.GetAwaiter().GetResult() : connection.Result;
+
+			multiplexer.ConnectionFailed -= OnConnectionFailed;
+			multiplexer.ConnectionRestored -= OnConnectionRestored;
+			multiplexer.ErrorMessage -= OnErrorMessage;
+			multiplexer.Close();
+			multiplexer.Dispose();
 		}
 
 		connections.Clear();

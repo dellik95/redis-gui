@@ -7,6 +7,7 @@ namespace RedisGUI.Domain.Errors;
 /// </summary>
 public static class DomainErrors
 {
+
 	/// <summary>
 	/// Storage errors
 	/// </summary>
@@ -82,4 +83,11 @@ public static class DomainErrors
 		/// </summary>
 		public static Error UsernameAndPasswordInvalid => new("Credentials.UsernameAndPasswordInvalid", "Username and Password should be specified.");
 	}
+
+	/// <summary>
+	/// Create Error for Invalid value.
+	/// </summary>
+	/// <param name="errorMessage"></param>
+	/// <returns></returns>
+	public static Error InvalidValue(string errorMessage) => new("Value.Invalid", errorMessage);
 }

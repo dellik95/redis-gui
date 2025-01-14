@@ -33,6 +33,16 @@
 
 .loyout-toolbar {
 	background: var(--mat-sys-primary-fixed);
+
+	.spacer {
+		flex: 1 1 auto;
+	}
+
+	.github-logo {
+		margin-right: 8px;
+		width: 24px;
+		height: 24px;
+	}
 }
 
 .is-mobile .loyout-toolbar {
@@ -63,5 +73,17 @@ h1.header-company-name {
 	align-items: center;
 	gap: 10px;
 	border-bottom: 1px solid #c4c6d0;
-    margin-bottom: 10px;
+	margin-bottom: 10px;
+}
+
+.company-dedails {
+	display: flex;
+	align-content: center;
+	align-items: center;
+
+	.header-company-name {
+		display: flex;
+		align-items: center;
+		font-size: 1rem;
+	}
 }

@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using RedisGUI.Infrastructure.Persistence;
 
@@ -16,8 +17,10 @@ namespace RedisGUI.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.8")
+                .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
+
+            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
             modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnection", b =>
                 {
@@ -25,52 +28,65 @@ namespace RedisGUI.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<int>("Database")
+                    b.Property<string>("ConnectionName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
+
+                    b.Property<int>("DatabaseNumber")
                         .HasColumnType("int");
 
-                    b.Property<string>("Host")
+                    b.Property<string>("ServerHost")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("varchar(256)");
 
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<int>("Port")
+                    b.Property<int>("ServerPort")
                         .HasColumnType("int");
 
                     b.HasKey("Id");
 
-                    b.ToTable("Connections", (string)null);
+                    b.ToTable((string)null);
+
+                    b.UseTpcMappingStrategy();
                 });
 
-            modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnection", b =>
+            modelBuilder.Entity("RedisGUI.Domain.Connection.AnonymousRedisConnection", b =>
                 {
-                    b.OwnsOne("RedisGUI.Domain.Connection.RedisConnection.Credentials#RedisGUI.Domain.Connection.ConnectionCredentials", "Credentials", b1 =>
+                    b.HasBaseType("RedisGUI.Domain.Connection.RedisConnection");
+
+                    b.ToTable("AnonymousRedisConnection");
+                });
+
+            modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnectionWithCredentials", b =>
+                {
+                    b.HasBaseType("RedisGUI.Domain.Connection.RedisConnection");
+
+                    b.ToTable("RedisConnectionWithCredentials");
+                });
+
+            modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnectionWithCredentials", b =>
+                {
+                    b.OwnsOne("RedisGUI.Domain.Connection.ConnectionCredentials", "ConnectionCredentials", b1 =>
                         {
-                            b1.Property<Guid>("RedisConnectionId")
+                            b1.Property<Guid>("RedisConnectionWithCredentialsId")
                                 .HasColumnType("char(36)");
 
                             b1.Property<string>("PasswordHash")
-                                .IsRequired()
                                 .HasColumnType("longtext");
 
                             b1.Property<string>("UserName")
-                                .IsRequired()
                                 .HasColumnType("longtext");
 
-                            b1.HasKey("RedisConnectionId");
+                            b1.HasKey("RedisConnectionWithCredentialsId");
 
-                            b1.ToTable("Connections", (string)null);
+                            b1.ToTable("RedisConnectionWithCredentials");
 
                             b1.WithOwner()
-                                .HasForeignKey("RedisConnectionId");
+                                .HasForeignKey("RedisConnectionWithCredentialsId");
                         });
 
-                    b.Navigation("Credentials")
-                        .IsRequired();
+                    b.Navigation("ConnectionCredentials");
                 });
 #pragma warning restore 612, 618
         }

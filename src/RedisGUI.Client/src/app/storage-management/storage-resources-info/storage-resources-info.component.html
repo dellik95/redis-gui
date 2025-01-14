@@ -1,0 +1,35 @@
+@if (resourseInfo$ | async; as resourseInfo) {
+    <div class="storage-resources-cards">
+
+        <div class="resource-card">
+            <mat-icon class="resource-card-icon" fontIcon="speed"></mat-icon>
+            <div class="resource-value">{{ resourseInfo.cpu }}</div>
+            <!-- <div class="resource-unit">{{ resourseInfo.cpu.unit }}</div> -->
+        </div>
+    
+        <div class="divider"></div>
+    
+        <div class="resource-card">
+            <mat-icon class="resource-card-icon" fontIcon="memory"></mat-icon>
+            <div class="resource-value">{{ resourseInfo.memoryUsage }}</div>
+            <!-- <div class="resource-unit">{{ resourseInfo.memory.unit }}</div> -->
+        </div>
+    
+        <div class="divider"></div>
+    
+        <div class="resource-card">
+            <mat-icon class="resource-card-icon" fontIcon="network_check"></mat-icon>
+            <div class="resource-value">{{ resourseInfo.networkSpeed }}</div>
+            <!-- <div class="resource-unit">{{ resourseInfo.network.unit }}</div> -->
+        </div>
+        
+        <div class="divider"></div>
+    
+        <div class="resource-card">
+            <mat-icon class="resource-card-icon" fontIcon="key"></mat-icon>
+            <div class="resource-value">{{ resourseInfo.keyCount }}</div>
+        </div>
+    </div>
+} @else {
+  <div class="empty-result">Can not retieve resourse usage!</div>
+}

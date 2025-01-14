@@ -1,0 +1,10 @@
+.stotage-container {
+    display: flex;
+    height: 100%;
+    gap: 15px;
+    app-storage-values-list,
+    app-storage-value-editor {
+        width: 50%;
+        height: 100%;
+    }
+}

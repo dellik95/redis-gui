@@ -4,18 +4,18 @@ import { MatSort, Sort } from '@angular/material/sort';
 import { Observable, BehaviorSubject, Subscription } from 'rxjs';
 import { Connection as ConnectionType } from '../../../shared/types/connection.type';
 import { inject } from '@angular/core';
-import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
+import { StorageConnectionsService } from '../../../shared/services/storage-connections.service';
 
 export interface RedisConnectionsItem {
   name: string;
   id: number;
 }
 
-export class RedisConnectionsDataSource extends DataSource<ConnectionType> {
+export class StorageConnectionsDataSource extends DataSource<ConnectionType> {
   private dataSubject = new BehaviorSubject<ConnectionType[]>([]);
   subscription: Subscription | null = null;
 
-  constructor(private connectionService: RedisConnectionsService) {
+  constructor(private connectionService: StorageConnectionsService) {
     super();
     this.reloadData();
   }

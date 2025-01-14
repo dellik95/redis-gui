@@ -79,4 +79,6 @@ public interface IConnectionService
 	/// <param name="key">Key to get the type of</param>
 	/// <returns></returns>
 	Task<Result<string>> GetKeyType(RedisConnection connection, string key);
+
+	Task<Result<RedisMetrics.RedisMetrics>> GetMetrics(RedisConnection connection);
 }
