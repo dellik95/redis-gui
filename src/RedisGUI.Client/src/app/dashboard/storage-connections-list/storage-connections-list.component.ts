@@ -2,26 +2,29 @@ import { AfterViewInit, Component, inject, input, viewChild } from '@angular/cor
 import { MatTableModule, MatTable } from '@angular/material/table';
 import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatSortModule, MatSort } from '@angular/material/sort';
-import { RedisConnectionsDataSource } from './connections-datasource';
+import { StorageConnectionsDataSource } from './storage-connections-datasource';
 import { ColumnDefinition as ColumnDefinitionType, SectionConfig as SectionConfigType } from '../../../shared/types/section-config.type';
 import { Connection as ConnectionType } from '../../../shared/types/connection.type';
 import { CommonModule } from '@angular/common';
 import { MatIcon } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
+import { StorageConnectionsService } from '../../../shared/services/storage-connections.service';
 import { takeLast } from 'rxjs';
 import { EditConnectionDialogService } from '../services/edit-connection-dialog.servce';
+import { ActivatedRoute, Router } from '@angular/router';
 
 @Component({
   selector: 'app-connections',
-  templateUrl: './connections-list.component.html',
-  styleUrls: ['./connections-list.component.scss'],
+  templateUrl: './storage-connections-list.component.html',
+  styleUrls: ['./storage-connections-list.component.scss'],
   imports: [MatTableModule, MatPaginatorModule, MatSortModule, CommonModule, MatIcon, MatButtonModule]
 })
-export class ConnectionsListComponent implements AfterViewInit {
-  readonly connectionService = inject(RedisConnectionsService);
-  readonly dataSource = new RedisConnectionsDataSource(this.connectionService);
-  readonly connectionDialogService = inject(EditConnectionDialogService)
+export class StorageConnectionsListComponent implements AfterViewInit {
+  readonly connectionService = inject(StorageConnectionsService);
+  readonly dataSource = new StorageConnectionsDataSource(this.connectionService);
+  readonly connectionDialogService = inject(EditConnectionDialogService);
+  readonly router = inject(Router);
+  readonly route = inject(ActivatedRoute);
 
   readonly paginator = viewChild.required(MatPaginator);
   readonly sort = viewChild.required(MatSort);
@@ -35,17 +38,21 @@ export class ConnectionsListComponent implements AfterViewInit {
     });
   }
 
-  deleteRecord(id: string) {
+  deleteRecord(id: string, event: Event) {
+    event.stopPropagation();
     this.connectionService.deleteRecord(id).pipe(takeLast(1)).subscribe(() => {
       this.dataSource.reloadData();
     })
-    console.log("Id:", id)
   }
 
-  editRecord(connection: ConnectionType) {
+  editRecord(connection: ConnectionType, event: Event) {
+    event.stopPropagation();
     this.connectionDialogService.showEditConnectionDialog(connection);
   }
 
+  rowClick(id: string) {
+    this.router.navigate(["/storage", id]);
+  }
 
   getColumnValue(definition: ColumnDefinitionType<ConnectionType>, row: any): any {
     if (definition?.transformer) {

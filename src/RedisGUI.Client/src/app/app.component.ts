@@ -34,7 +34,7 @@ import { SectionActionsComponent } from "../shared/components/section-actions/se
 })
 export class AppComponent {
 
-  title = "RedisGUI.Client";
+  title = "Wunderwaffe";
   mobileQuery: MediaQueryList;
   sideNavService = inject(SideNavService);
 

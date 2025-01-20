@@ -11,6 +11,13 @@ export const routes: Routes = [
         }
     },
     {
+        path: "storage/:id",
+        loadComponent: () => import("./storage-management/storage-management.component").then(x => x.StorageManagementComponent),
+        data: {
+            breadcrumb: "Storage manager"
+        }
+    },
+    {
         path: 'info', 
         component: InfoComponent,
         data: {

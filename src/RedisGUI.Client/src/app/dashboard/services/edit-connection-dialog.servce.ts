@@ -1,7 +1,7 @@
 import { inject, Injectable } from "@angular/core";
 import { MatDialog } from "@angular/material/dialog";
 import { takeLast } from "rxjs";
-import { RedisConnectionsService } from "../../../shared/services/redis-connections.service";
+import { StorageConnectionsService } from "../../../shared/services/storage-connections.service";
 import { EditConnectionComponent } from "../edit-connection/edit-connection.component";
 import { ConnectionDialogMode } from "../types/connection-dialog-mode.enum";
 import { Connection as ConnectionType } from "../../../shared/types/connection.type";
@@ -10,7 +10,7 @@ import { Connection as ConnectionType } from "../../../shared/types/connection.t
     providedIn: "root"
 })
 export class EditConnectionDialogService {
-    readonly connectionService = inject(RedisConnectionsService);
+    readonly connectionService = inject(StorageConnectionsService);
     readonly dialog = inject(MatDialog);
 
 

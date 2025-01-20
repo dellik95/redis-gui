@@ -18,6 +18,7 @@ public class ConnectionService : IConnectionService
 {
 	private readonly IConnectionPool connectionPool;
 	private readonly ILogger<ConnectionService> logger;
+	private readonly Dictionary<string, double> lastValues = new();
 
 	/// <summary>
 	/// Create new instance of <see cref="ConnectionService"/>
@@ -172,7 +173,7 @@ public class ConnectionService : IConnectionService
 	/// <summary>
 	/// Retrieves all values from Redis with optional pagination
 	/// </summary>
-	public async Task<Result<(IEnumerable<Domain.Connection.RedisValue> Values, int TotalCount, int PageNumber, int PageSize)>> GetAllValues(
+	public async Task<Result<List<RedisValue>>> GetAllValues(
 		RedisConnection connection,
 		string pattern = "*",
 		int? pageSize = null,
@@ -181,7 +182,7 @@ public class ConnectionService : IConnectionService
 		var multiplexer = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexer.Value.GetDatabase(connection.DatabaseNumber);
 
-		var server = multiplexer.Value.GetServer(connection.BuildConnectionString());
+		var server = multiplexer.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
 		var keys = server.Keys(database.Database, pattern ?? "*").ToList();
 
 		var totalCount = keys.Count;
@@ -208,7 +209,7 @@ public class ConnectionService : IConnectionService
 				ttl));
 		}
 
-		return null;  //Result.Success(new (values, totalCount, currentPage, itemsPerPage));
+		return Result.Create(values);
 	}
 
 	private static async Task<string> GetValueByType(IDatabase database, string key, RedisType type)

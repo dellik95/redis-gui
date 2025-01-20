@@ -1,0 +1,32 @@
+.storage-resources-cards {
+    display: flex;
+}
+
+.resource-card {
+    margin-right: 15px;
+    display: flex;
+    flex-direction: row;
+    justify-items: center;
+    flex-wrap: nowrap;
+    align-items: center;
+
+    .resource-card-icon {
+        margin-right: 5px;
+    }
+
+    .resource-unit,
+    .resource-value {
+        font-style: italic;
+        width: max-content;
+    }
+}
+
+.divider {
+    width: 2px;
+    background-color: #c4c6d0;
+    margin: 0px 10px 0px 0px;
+}
+
+.empty-result {
+    width: max-content;
+}

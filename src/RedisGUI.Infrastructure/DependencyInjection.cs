@@ -6,11 +6,15 @@ using Microsoft.Extensions.Options;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.RedisMetrics.Abstractions;
+using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Cryptography;
 using RedisGUI.Infrastructure.Persistence;
 using RedisGUI.Infrastructure.Persistence.Repositories;
 using RedisGUI.Infrastructure.Redis;
+using RedisGUI.Infrastructure.RedisMetrics;
+using RedisGUI.Infrastructure.SignalR;
 
 namespace RedisGUI.Infrastructure;
 
@@ -31,7 +35,6 @@ public static class DependencyInjection
 		services.AddSingleton<IPasswordDecrypt>(svc => svc.GetRequiredService<PasswordEncryptor>());
 		services.AddSingleton<IPasswordEncryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
 
-
 		services.AddOptions<ConnectionPoolOptions>()
 			.Bind(configuration.GetSection(ConnectionPoolOptions.Key));
 
@@ -46,7 +49,11 @@ public static class DependencyInjection
 
 		AddApiVersioning(services);
 
-		AddBackgroundJobs(services, configuration);
+		AddBackgroundJobs(services);
+
+		AddSignalR(services);
+
+		AddRedisMetrics(services, configuration);
 
 		return services;
 	}
@@ -74,6 +81,7 @@ public static class DependencyInjection
 	private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
 	{
 		services.Configure<DatabaseConfiguration>(configuration.GetSection(DatabaseConfiguration.Key));
+
 		services.AddDbContext<ApplicationDbContext>((sp, cgf) =>
 		{
 			var options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
@@ -85,7 +93,7 @@ public static class DependencyInjection
 				return;
 			}
 
-			cgf.UseMySQL(config.ConnectionString, builder => { builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); });
+			cgf.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder => { builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); });
 		});
 		services.AddTransient<IRedisConnectionRepository, RedisConnectionRepository>();
 		services.AddTransient(typeof(IRepository<>), typeof(RepositoryBase<>));
@@ -128,18 +136,22 @@ public static class DependencyInjection
 			});
 	}
 
-	/// <summary>
-	/// Adds background job services to the service collection
-	/// </summary>
-	/// <param name="services">The service collection to add services to</param>
-	/// <param name="configuration">Application configuration</param>
-	/// <remarks>
-	/// Currently a placeholder for future implementation of background jobs including:
-	/// - Database maintenance jobs
-	/// - Cache cleanup jobs
-	/// </remarks>
-	private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
+
+	private static void AddBackgroundJobs(IServiceCollection services)
 	{
-		// TODO: Implement background job registration
+		services.AddHostedService<RedisMetricsBackgroundJob>();
+	}
+
+	private static void AddSignalR(IServiceCollection services)
+	{
+		services.AddSingleton<INotificationService, NotificationService>();
+		services.AddSingleton<IHubSubscribersManager, HubSubscribersManager>();
+		services.AddSignalR();
+	}
+
+	private static void AddRedisMetrics(IServiceCollection services, IConfiguration configuration)
+	{
+		services.Configure<MetricsCollectorOptions>(configuration.GetSection(MetricsCollectorOptions.Key));
+		services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
 	}
 }

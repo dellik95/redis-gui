@@ -15,7 +15,4 @@
   <ItemGroup>
     <ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Connections\GetConnectionById\" />
-  </ItemGroup>
 </Project>

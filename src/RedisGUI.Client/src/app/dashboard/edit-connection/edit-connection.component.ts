@@ -21,7 +21,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { CommonModule } from '@angular/common';
-import { RedisConnectionsService } from '../../../shared/services/redis-connections.service';
+import { StorageConnectionsService } from '../../../shared/services/storage-connections.service';
 import { CreateConnectionRequest } from '../../../shared/types/connection-request.types';
 import { ConnectionDialogData } from '../types/connection-dialog-data.type';
 import { Connection as ConnectionType } from '../../../shared/types/connection.type';
@@ -59,7 +59,7 @@ const defaultFormValue = {
 export class EditConnectionComponent implements OnInit {
 
   readonly data = inject<ConnectionDialogData>(MAT_DIALOG_DATA);
-  readonly connectionService = inject(RedisConnectionsService);
+  readonly connectionService = inject(StorageConnectionsService);
   readonly dialogRef = inject(MatDialogRef<EditConnectionComponent>);
 
   readonly allDatabasesSelected = model(true);
@@ -89,7 +89,6 @@ export class EditConnectionComponent implements OnInit {
       userName: [connection?.username, [], []],
       password: [connection?.password, [], []],
     });
-    console.log(this.data);
   }
 
 

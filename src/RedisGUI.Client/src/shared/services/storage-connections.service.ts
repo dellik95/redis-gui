@@ -7,7 +7,7 @@ import { CheckConnectionRequest, CreateConnectionRequest } from "../types/connec
 @Injectable({
     providedIn: "root"
 })
-export class RedisConnectionsService {
+export class StorageConnectionsService {
     private httpClient: HttpClient = inject(HttpClient);
 
     getConnections(): Observable<ConnectionType[]> {

@@ -1,6 +1,8 @@
-import { Injectable, ComponentRef } from '@angular/core';
+import { Injectable, ComponentRef, InjectionToken } from '@angular/core';
 import { ComponentPortal } from '@angular/cdk/portal';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject } from 'rxjs';
+
+export const PORTAL_DATA = new InjectionToken<Map<string, string>>('PORTAL_DATA');
 
 @Injectable({
   providedIn: 'root'
