@@ -4,7 +4,6 @@ using Microsoft.Extensions.Hosting;
 using RedisGUI.Application;
 using RedisGUI.Infrastructure;
 using RedisGUI.Infrastructure.SignalR.Hubs;
-using RedisGUI.Server.BackgroundServices;
 using RedisGUI.Server.Endpoints.Connections;
 using RedisGUI.Server.Endpoints.Redis;
 using RedisGUI.Server.Extensions;
@@ -30,7 +29,6 @@ public class Program
 		builder.Services.AddInfrastructure(builder.Configuration);
 		builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 		builder.Services.ConfigureOptions<ConfigureSwaggerUiOptions>();
-		builder.Services.AddHostedService<RedisMetricsBackgroundService>();
 
 		var app = builder.Build();
 		app.UseDefaultFiles();

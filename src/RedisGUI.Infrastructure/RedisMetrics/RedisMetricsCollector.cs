@@ -22,11 +22,9 @@ public class RedisMetricsCollector : IMetricsCollector
 	private readonly IOptions<MetricsCollectorOptions> options;
 	private readonly ILogger<RedisMetricsCollector> logger;
 
-	public RedisMetricsCollector(IServiceProvider serviceProvider, IOptions<MetricsCollectorOptions> options, ILogger<RedisMetricsCollector> logger)
+	public RedisMetricsCollector(IConnectionPool connectionPool, IOptions<MetricsCollectorOptions> options, ILogger<RedisMetricsCollector> logger)
 	{
-		var scope = serviceProvider.CreateScope();
-		this.connectionPool = scope.ServiceProvider.GetRequiredService<IConnectionPool>();
-		scope.ServiceProvider.GetRequiredService<IRedisConnectionRepository>();
+		this.connectionPool = connectionPool;
 		this.options = options;
 		this.logger = logger;
 	}

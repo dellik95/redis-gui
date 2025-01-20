@@ -7,6 +7,7 @@ using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
+using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Cryptography;
 using RedisGUI.Infrastructure.Persistence;
@@ -48,6 +49,8 @@ public static class DependencyInjection
 
 		AddApiVersioning(services);
 
+		AddBackgroundJobs(services);
+
 		AddSignalR(services);
 
 		AddRedisMetrics(services, configuration);
@@ -78,6 +81,7 @@ public static class DependencyInjection
 	private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
 	{
 		services.Configure<DatabaseConfiguration>(configuration.GetSection(DatabaseConfiguration.Key));
+
 		services.AddDbContext<ApplicationDbContext>((sp, cgf) =>
 		{
 			var options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
@@ -130,6 +134,12 @@ public static class DependencyInjection
 				options.GroupNameFormat = "'v'V";
 				options.SubstituteApiVersionInUrl = true;
 			});
+	}
+
+
+	private static void AddBackgroundJobs(IServiceCollection services)
+	{
+		services.AddHostedService<RedisMetricsBackgroundJob>();
 	}
 
 	private static void AddSignalR(IServiceCollection services)

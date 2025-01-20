@@ -60,14 +60,14 @@ internal sealed class GetAllRedisValuesQueryHandler
         }
 
         var response = new GetAllRedisValuesResponse(
-            result.Value.Values.Select(v => new RedisKeyValuePair(
+            result.Value.Select(v => new RedisKeyValuePair(
                 v.Key,
                 v.Value,
                 v.Type,
                 v.TimeToLive)),
-            result.Value.TotalCount,
-            result.Value.PageNumber,
-            result.Value.PageSize);
+            0,
+            0,
+            0);
 
         return Result.Success(response);
     }

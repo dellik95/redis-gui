@@ -33,7 +33,8 @@ export class StorageManagementComponent {
     let dataMap = new Map<string, string>([
       ["id", this.id()]
     ]);
-    console.log(dataMap);
+    
+    debugger;
 
     let childInjector = this.createInjector<Map<string, string>>(dataMap);
     const portal = new ComponentPortal(StorageResourcesInfoComponent, null, childInjector);

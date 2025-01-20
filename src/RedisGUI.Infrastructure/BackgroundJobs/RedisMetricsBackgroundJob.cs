@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
@@ -9,16 +10,16 @@ using RedisGUI.Application.RedisMetrics.Queries;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.SignalR;
 
-namespace RedisGUI.Server.BackgroundServices;
+namespace RedisGUI.Infrastructure.BackgroundJobs;
 
-public class RedisMetricsBackgroundService : BackgroundService
+public class RedisMetricsBackgroundJob : BackgroundService
 {
 	private readonly IServiceProvider serviceProvider;
 	private readonly INotificationService notificationService;
 	private readonly IHubSubscribersManager hubSubscribersManager;
 	private readonly IOptions<MetricsCollectorOptions> options;
 
-	public RedisMetricsBackgroundService(
+	public RedisMetricsBackgroundJob(
 		IServiceProvider serviceProvider,
 		INotificationService notificationService,
 		IHubSubscribersManager hubSubscribersManager,
@@ -37,12 +38,18 @@ public class RedisMetricsBackgroundService : BackgroundService
 		var sender = scope.ServiceProvider.GetRequiredService<ISender>();
 		while (!stoppingToken.IsCancellationRequested)
 		{
-			foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap())
+			foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 			{
-				var metrics = await sender.Send(new GetRedisMetricsQuery(subscriber.Value), stoppingToken);
-				if (metrics.IsSuccess)
+				var metrics = await sender.Send(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
+
+				if (!metrics.IsSuccess)
 				{
-					await this.notificationService.NotifyUser(subscriber.Key, metrics.Value);
+					continue;
+				}
+
+				foreach (var pair in subscriber)
+				{
+					await this.notificationService.NotifyUser(pair.Key, metrics.Value);
 				}
 			}
 
