@@ -7,7 +7,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using RedisGUI.Domain.RedisMetrics;
 using RedisValue = RedisGUI.Domain.Redis.RedisValue;
 
 namespace RedisGUI.Infrastructure.Redis;
@@ -19,6 +18,7 @@ public class ConnectionService : IConnectionService
 {
 	private readonly IConnectionPool connectionPool;
 	private readonly ILogger<ConnectionService> logger;
+	private readonly Dictionary<string, double> lastValues = new();
 
 	/// <summary>
 	/// Create new instance of <see cref="ConnectionService"/>
@@ -173,7 +173,7 @@ public class ConnectionService : IConnectionService
 	/// <summary>
 	/// Retrieves all values from Redis with optional pagination
 	/// </summary>
-	public async Task<Result<(IEnumerable<Domain.Connection.RedisValue> Values, int TotalCount, int PageNumber, int PageSize)>> GetAllValues(
+	public async Task<Result<List<RedisValue>>> GetAllValues(
 		RedisConnection connection,
 		string pattern = "*",
 		int? pageSize = null,
@@ -182,7 +182,7 @@ public class ConnectionService : IConnectionService
 		var multiplexer = await connectionPool.GetConnection(connection.BuildConnectionString());
 		var database = multiplexer.Value.GetDatabase(connection.DatabaseNumber);
 
-		var server = multiplexer.Value.GetServer(connection.BuildConnectionString());
+		var server = multiplexer.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
 		var keys = server.Keys(database.Database, pattern ?? "*").ToList();
 
 		var totalCount = keys.Count;
@@ -209,7 +209,7 @@ public class ConnectionService : IConnectionService
 				ttl));
 		}
 
-		return null;  //Result.Success(new (values, totalCount, currentPage, itemsPerPage));
+		return Result.Create(values);
 	}
 
 	private static async Task<string> GetValueByType(IDatabase database, string key, RedisType type)
@@ -247,37 +247,5 @@ public class ConnectionService : IConnectionService
 
 		var type = await database.KeyTypeAsync(key);
 		return Result.Success(type.ToString());
-	}
-
-	/// <summary>
-	/// Gets Redis server metrics including CPU, memory, network usage and key count
-	/// </summary>
-	public async Task<Result<RedisMetrics>> GetMetrics(RedisConnection connection)
-	{
-		var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString());
-		if (multiplexerResult.IsFailure)
-		{
-			logger.LogError("Failed to get connection for metrics");
-			return Result.Failure<RedisMetrics>(multiplexerResult.Error);
-		}
-
-		var multiplexer = multiplexerResult.Value;
-		var server = multiplexer.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
-
-		var info = await server.InfoAsync();
-		var stats = info.SelectMany(x => x.Where(y => 
-			y.Key is "used_cpu_sys" or "used_memory" or "total_net_input_bytes" or "total_net_output_bytes" or "connected_clients"))
-			.ToDictionary(x => x.Key, x => x.Value);
-
-		var cpu = double.Parse(stats.GetValueOrDefault("used_cpu_sys", "0"));
-		var usedMemory = double.Parse(stats.GetValueOrDefault("used_memory", "0"));
-		var networkBytesIn = double.Parse(stats.GetValueOrDefault("total_net_input_bytes", "0"));
-		var networkBytesOut = double.Parse(stats.GetValueOrDefault("total_net_output_bytes", "0"));
-		var connectedClients = int.Parse(stats.GetValueOrDefault("connected_clients", "0"));
-		var keyCount = await server.DatabaseSizeAsync(connection.DatabaseNumber);
-
-		var metrics = RedisMetrics.Create(cpu, usedMemory, connectedClients, networkBytesIn, keyCount);
-
-		return Result.Success(metrics);
 	}
 }

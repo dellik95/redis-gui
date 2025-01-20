@@ -3,7 +3,7 @@
 
         <div class="resource-card">
             <mat-icon class="resource-card-icon" fontIcon="speed"></mat-icon>
-            <div class="resource-value">{{ resourseInfo.cpu }}</div>
+            <div class="resource-value">{{ resourseInfo.cpuUsageInPercent | number }} %</div>
             <!-- <div class="resource-unit">{{ resourseInfo.cpu.unit }}</div> -->
         </div>
     
@@ -11,7 +11,7 @@
     
         <div class="resource-card">
             <mat-icon class="resource-card-icon" fontIcon="memory"></mat-icon>
-            <div class="resource-value">{{ resourseInfo.memoryUsage }}</div>
+            <div class="resource-value">{{ resourseInfo.memoryUsage | formatBytes }}</div>
             <!-- <div class="resource-unit">{{ resourseInfo.memory.unit }}</div> -->
         </div>
     
@@ -19,7 +19,7 @@
     
         <div class="resource-card">
             <mat-icon class="resource-card-icon" fontIcon="network_check"></mat-icon>
-            <div class="resource-value">{{ resourseInfo.networkSpeed }}</div>
+            <div class="resource-value">{{ resourseInfo.networkSpeedIn | number }} Kb/sec</div>
             <!-- <div class="resource-unit">{{ resourseInfo.network.unit }}</div> -->
         </div>
         
@@ -31,5 +31,5 @@
         </div>
     </div>
 } @else {
-  <div class="empty-result">Can not retieve resourse usage!</div>
+  <div class="empty-result">N/A</div>
 }

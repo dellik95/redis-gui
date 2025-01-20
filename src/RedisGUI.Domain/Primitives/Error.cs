@@ -1,4 +1,4 @@
-﻿namespace RedisGUI.Domain.Primitives;
+namespace RedisGUI.Domain.Primitives;
 
 /// <summary>
 /// Represents an error with a code and message

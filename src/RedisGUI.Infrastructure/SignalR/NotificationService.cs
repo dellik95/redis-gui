@@ -1,6 +1,5 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
-using RedisGUI.Application.RedisMetrics.Queries.GetRedisMetrics;
 using RedisGUI.Infrastructure.SignalR.Hubs;
 
 namespace RedisGUI.Infrastructure.SignalR;
@@ -14,7 +13,7 @@ public class NotificationService : INotificationService
 		this.hubContext = hubContext;
 	}
 
-	public async Task NotifyUser(string clientId, GetRedisMetricsResponse metrics)
+	public async Task NotifyUser(string clientId, Domain.RedisMetrics.RedisMetrics metrics)
 	{
 		await hubContext.Clients.Client(clientId).NotifyUserAsync(metrics);
 	}

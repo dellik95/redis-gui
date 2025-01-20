@@ -1,14 +1,15 @@
-import { Component, inject, Input } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { Observable, switchMap } from 'rxjs';
 import { StorageResourseDetailsService } from '../services/storage-resourse-details.service';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, DecimalPipe } from '@angular/common';
 import { PORTAL_DATA } from '../../../shared/services/section-actions-portal.service';
 import { SystemMetrics } from "../types/system-metrics.type"
+import { FormatBytesPipe } from "../../../shared/pipes/format-bytes.pipe"
 
 @Component({
   selector: 'app-storage-resources-info',
-  imports: [MatIconModule, AsyncPipe],
+  imports: [MatIconModule, AsyncPipe, DecimalPipe, FormatBytesPipe],
   templateUrl: './storage-resources-info.component.html',
   styleUrl: './storage-resources-info.component.scss'
 })
@@ -21,9 +22,10 @@ export class StorageResourcesInfoComponent {
 
   ngOnInit() {
     let id = this.data.get("id") ?? "";
-    this.resourseInfo$ = this.resourseDetailsService.startConnection(id).pipe(switchMap(() => {
-      return this.resourseDetailsService.receiveMessage();
-    }));
+    this.resourseInfo$ = this.resourseDetailsService.startConnection(id).pipe(
+      switchMap(() => {
+        return this.resourseDetailsService.receiveMessage();
+      }));
   }
 
   ngOnDestroy() {

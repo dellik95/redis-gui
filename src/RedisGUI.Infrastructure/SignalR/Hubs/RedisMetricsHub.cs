@@ -6,12 +6,12 @@ namespace RedisGUI.Infrastructure.SignalR.Hubs;
 
 public class RedisMetricsHub : Hub<IClientMethods>
 {
-	private readonly IRedisMetricsHubConnectionManager connectionManager;
+	private readonly IHubSubscribersManager hubSubscribersManager;
 
-	public RedisMetricsHub(IRedisMetricsHubConnectionManager connectionManager)
-    {
-        this.connectionManager = connectionManager;
-    }
+	public RedisMetricsHub(IHubSubscribersManager hubSubscribersManager)
+	{
+		this.hubSubscribersManager = hubSubscribersManager;
+	}
 
 	public override Task OnConnectedAsync()
 	{
@@ -20,16 +20,16 @@ public class RedisMetricsHub : Hub<IClientMethods>
 
 		if (Guid.TryParse(connectionId, out var id))
 		{
-			connectionManager.AddConnection(Context.ConnectionId, id);
+			hubSubscribersManager.AddConnection(Context.ConnectionId, id);
 		}
 
 		return base.OnConnectedAsync();
 	}
 
 	public override Task OnDisconnectedAsync(Exception exception)
-    {
-	    connectionManager.RemoveConnection(Context.ConnectionId);
+	{
+		hubSubscribersManager.RemoveConnection(Context.ConnectionId);
 
 		return base.OnConnectedAsync();
 	}
-} 
+}

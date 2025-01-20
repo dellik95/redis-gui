@@ -2,6 +2,7 @@ using RedisGUI.Domain.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using RedisGUI.Domain.Redis;
 
 namespace RedisGUI.Domain.Connection;
 
@@ -58,7 +59,7 @@ public interface IConnectionService
 	/// <param name="pageSize">Number of items per page</param>
 	/// <param name="pageNumber">Page number</param>
 	/// <returns></returns>
-	Task<Result<(IEnumerable<RedisValue> Values, int TotalCount, int PageNumber, int PageSize)>> GetAllValues(
+	Task<Result<List<RedisValue>>> GetAllValues(
 		RedisConnection connection,
 		string pattern = "*",
 		int? pageSize = null,
@@ -79,6 +80,4 @@ public interface IConnectionService
 	/// <param name="key">Key to get the type of</param>
 	/// <returns></returns>
 	Task<Result<string>> GetKeyType(RedisConnection connection, string key);
-
-	Task<Result<RedisMetrics.RedisMetrics>> GetMetrics(RedisConnection connection);
 }

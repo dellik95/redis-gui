@@ -6,12 +6,13 @@ using Microsoft.Extensions.Options;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Cryptography;
 using RedisGUI.Infrastructure.Persistence;
 using RedisGUI.Infrastructure.Persistence.Repositories;
 using RedisGUI.Infrastructure.Redis;
-using RedisGUI.Infrastructure.BackgroundServices;
+using RedisGUI.Infrastructure.RedisMetrics;
 using RedisGUI.Infrastructure.SignalR;
 
 namespace RedisGUI.Infrastructure;
@@ -47,9 +48,9 @@ public static class DependencyInjection
 
 		AddApiVersioning(services);
 
-		AddBackgroundJobs(services, configuration);
-
 		AddSignalR(services);
+
+		AddRedisMetrics(services, configuration);
 
 		return services;
 	}
@@ -131,25 +132,16 @@ public static class DependencyInjection
 			});
 	}
 
-	/// <summary>
-	/// Adds background job services to the service collection
-	/// </summary>
-	/// <param name="services">The service collection to add services to</param>
-	/// <param name="configuration">Application configuration</param>
-	/// <remarks>
-	/// Currently a placeholder for future implementation of background jobs including:
-	/// - Database maintenance jobs
-	/// - Cache cleanup jobs
-	/// </remarks>
-	private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
-	{
-		services.AddHostedService<RedisMetricsBackgroundService>();
-	}
-
 	private static void AddSignalR(IServiceCollection services)
 	{
-		services.AddSignalR();
 		services.AddSingleton<INotificationService, NotificationService>();
-		services.AddSingleton<IRedisMetricsHubConnectionManager, RedisMetricsHubConnectionManager>();
+		services.AddSingleton<IHubSubscribersManager, HubSubscribersManager>();
+		services.AddSignalR();
+	}
+
+	private static void AddRedisMetrics(IServiceCollection services, IConfiguration configuration)
+	{
+		services.Configure<MetricsCollectorOptions>(configuration.GetSection(MetricsCollectorOptions.Key));
+		services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
 	}
 }

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Hosting;
 using RedisGUI.Application;
 using RedisGUI.Infrastructure;
 using RedisGUI.Infrastructure.SignalR.Hubs;
+using RedisGUI.Server.BackgroundServices;
 using RedisGUI.Server.Endpoints.Connections;
 using RedisGUI.Server.Endpoints.Redis;
 using RedisGUI.Server.Extensions;
@@ -16,7 +17,6 @@ namespace RedisGUI.Server;
 /// </summary>
 public class Program
 {
-	public const string DefaultCorsPolicyName = "DefaultCorsPolicy";
 	/// <summary>
 	/// Application entry point that configures and runs the web application
 	/// </summary>
@@ -30,6 +30,7 @@ public class Program
 		builder.Services.AddInfrastructure(builder.Configuration);
 		builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 		builder.Services.ConfigureOptions<ConfigureSwaggerUiOptions>();
+		builder.Services.AddHostedService<RedisMetricsBackgroundService>();
 
 		var app = builder.Build();
 		app.UseDefaultFiles();
