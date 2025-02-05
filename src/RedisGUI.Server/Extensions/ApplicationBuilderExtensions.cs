@@ -27,13 +27,14 @@ public static class ApplicationBuilderExtensions
 	public static void ApplyMigrations(this IApplicationBuilder app)
 	{
 		using var scope = app.ApplicationServices.CreateScope();
-		var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 		var dbConfig = scope.ServiceProvider.GetRequiredService<IOptions<DatabaseConfiguration>>();
 
 		if (dbConfig.Value.IsInMemory)
 		{
 			return;
 		}
+
+		using var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
 		if (context.Database.GetPendingMigrations().Any())
 		{
