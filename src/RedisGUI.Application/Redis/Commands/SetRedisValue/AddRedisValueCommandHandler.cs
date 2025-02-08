@@ -9,17 +9,17 @@ namespace RedisGUI.Application.Redis.Commands.SetRedisValue;
 /// <summary>
 /// Handles the command to set a Redis key-value pair.
 /// </summary>
-internal sealed class SetRedisValueCommandHandler : ICommandHandler<SetRedisValueCommand>
+internal sealed class AddRedisValueCommandHandler : ICommandHandler<AddRedisValueCommand>
 {
     private readonly IRedisConnectionRepository connectionRepository;
     private readonly IConnectionService connectionService;
 
     /// <summary>
-    /// Initializes a new instance of the SetRedisValueCommandHandler.
+    /// Initializes a new instance of the AddRedisValueCommandHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
     /// <param name="connectionService">Service for Redis connection operations.</param>
-    public SetRedisValueCommandHandler(
+    public AddRedisValueCommandHandler(
         IRedisConnectionRepository connectionRepository,
         IConnectionService connectionService)
     {
@@ -33,7 +33,7 @@ internal sealed class SetRedisValueCommandHandler : ICommandHandler<SetRedisValu
     /// <param name="request">The command request containing the key, value, and optional TTL.</param>
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A Result indicating success or failure.</returns>
-    public async Task<Result> Handle(SetRedisValueCommand request, CancellationToken cancellationToken)
+    public async Task<Result> Handle(AddRedisValueCommand request, CancellationToken cancellationToken)
     {
         var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
         

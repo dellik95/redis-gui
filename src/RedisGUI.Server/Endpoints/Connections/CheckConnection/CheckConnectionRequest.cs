@@ -1,4 +1,4 @@
-namespace RedisGUI.Server.Endpoints.Connections;
+namespace RedisGUI.Server.Endpoints.Connections.CheckConnection;
 
 /// <summary>
 ///     Represent request to check check database connection.
