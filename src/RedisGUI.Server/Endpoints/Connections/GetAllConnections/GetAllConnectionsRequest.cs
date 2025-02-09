@@ -1,4 +1,4 @@
-namespace RedisGUI.Server.Endpoints.Connections;
+namespace RedisGUI.Server.Endpoints.Connections.GetAllConnections;
 
 /// <summary>
 ///    Represent create connection request class.

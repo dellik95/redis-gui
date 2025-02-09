@@ -1,11 +1,10 @@
+using Asp.Versioning;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using RedisGUI.Application;
 using RedisGUI.Infrastructure;
 using RedisGUI.Infrastructure.SignalR.Hubs;
-using RedisGUI.Server.Endpoints.Connections;
-using RedisGUI.Server.Endpoints.Redis;
 using RedisGUI.Server.Extensions;
 using RedisGUI.Server.OpenApi;
 
@@ -29,6 +28,7 @@ public class Program
 		builder.Services.AddInfrastructure(builder.Configuration);
 		builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 		builder.Services.ConfigureOptions<ConfigureSwaggerUiOptions>();
+		builder.Services.AddEndpoints(typeof(Program).Assembly);
 
 		var app = builder.Build();
 		app.UseDefaultFiles();
@@ -43,9 +43,17 @@ public class Program
 		}
 
 		app.MapHub<RedisMetricsHub>("/hub/metrics");
-		app.MapConnectionsEndpoints();
-		app.MapRedisEndpoints();
 
+
+		var apiVersionSet = app.NewApiVersionSet()
+			.HasApiVersion(new ApiVersion(1.0))
+			.ReportApiVersions()
+			.Build();
+
+		var group = app.MapGroup("api/v{version:apiVersion}")
+			.WithApiVersionSet(apiVersionSet);
+
+		app.MapEndpoints(group);
 
 		app.Run();
 	}

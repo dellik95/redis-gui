@@ -1,11 +1,11 @@
 using System;
 
-namespace RedisGUI.Server.Endpoints.Redis.Requests;
+namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue;
 
 /// <summary>
 /// Request model for setting Redis value
 /// </summary>
-public sealed class SetRedisValueRequest
+public sealed class AddRedisValueRequest
 {
     /// <summary>
     /// Redis key

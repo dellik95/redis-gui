@@ -11,7 +11,7 @@ namespace RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 /// Handles the query to retrieve all Redis values with optional filtering and pagination.
 /// </summary>
 internal sealed class GetAllRedisValuesQueryHandler 
-    : IQueryHandler<GetAllRedisValuesQuery, GetAllRedisValuesResponse>
+    : IQueryHandler<GetAllRedisKeysQuery, GetAllRedisValuesResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
     private readonly IConnectionService connectionService;
@@ -36,7 +36,7 @@ internal sealed class GetAllRedisValuesQueryHandler
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>A Result containing the Redis values response or an error.</returns>
     public async Task<Result<GetAllRedisValuesResponse>> Handle(
-        GetAllRedisValuesQuery request, 
+        GetAllRedisKeysQuery request, 
         CancellationToken cancellationToken)
     {
         var connectionResult = await connectionRepository.GetConnectionByIdAsync(
