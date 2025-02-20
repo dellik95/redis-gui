@@ -11,7 +11,10 @@ using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Cryptography;
 using RedisGUI.Infrastructure.Persistence;
+using RedisGUI.Infrastructure.Persistence.Cache;
+using RedisGUI.Infrastructure.Persistence.Interceptors;
 using RedisGUI.Infrastructure.Persistence.Repositories;
+using RedisGUI.Infrastructure.Persistence.SqlProcessor;
 using RedisGUI.Infrastructure.Redis;
 using RedisGUI.Infrastructure.RedisMetrics;
 using RedisGUI.Infrastructure.SignalR;
@@ -55,6 +58,8 @@ public static class DependencyInjection
 
 		AddRedisMetrics(services, configuration);
 
+		AddCaching(services, configuration);
+
 		return services;
 	}
 
@@ -81,20 +86,28 @@ public static class DependencyInjection
 	private static void AddPersistence(IServiceCollection services, IConfiguration configuration)
 	{
 		services.Configure<DatabaseConfiguration>(configuration.GetSection(DatabaseConfiguration.Key));
+		services.AddSingleton<IDbCommandInterceptorProcessor, DbCommandInterceptorProcessor>();
+		services.AddSingleton<ISqlCommandsProcessor, SqlCommandsProcessor>();
+		services.AddSingleton<ICacheKeyProvider, CacheKeyProvider>();
+		services.AddScoped<CachingInterceptor>();
 
 		services.AddDbContext<ApplicationDbContext>((sp, cgf) =>
-		{
-			var options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
-			var config = options.Value;
-
-			if (config.IsInMemory)
 			{
-				cgf.UseInMemoryDatabase("ApplicationDbContext");
-				return;
-			}
+				var options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
+				var config = options.Value;
 
-			cgf.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder => { builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery); });
-		});
+				if (config.IsInMemory)
+				{
+					cgf.UseInMemoryDatabase("ApplicationDbContext");
+					return;
+				}
+
+				cgf.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder =>
+				{
+					builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+				}).AddInterceptors(sp.GetRequiredService<CachingInterceptor>());
+			});
+
 		services.AddTransient<IRedisConnectionRepository, RedisConnectionRepository>();
 		services.AddTransient(typeof(IRepository<>), typeof(RepositoryBase<>));
 		services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<ApplicationDbContext>());
@@ -109,7 +122,6 @@ public static class DependencyInjection
 	{
 		//TODO: add health Checks
 		// 1. Database
-		// 2. Cache
 	}
 
 	/// <summary>
@@ -153,5 +165,16 @@ public static class DependencyInjection
 	{
 		services.Configure<MetricsCollectorOptions>(configuration.GetSection(MetricsCollectorOptions.Key));
 		services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
+	}
+
+
+	private static void AddCaching(IServiceCollection services, IConfiguration configuration)
+	{
+		services.AddOptions<CacheConfiguration>()
+			.Bind(configuration.GetSection(CacheConfiguration.Key))
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+
+		services.AddFusionCache();
 	}
 }

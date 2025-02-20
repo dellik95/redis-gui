@@ -36,6 +36,7 @@ public abstract class RedisConnection : Entity
 		ServerHost = serverHost;
 		ServerPort = serverPort;
 		DatabaseNumber = databaseNumber;
+		
 
 		RaiseDomainEvent(new ConnectionCreatedDomainEvent(id, connectionName.Value));
 	}
@@ -59,6 +60,11 @@ public abstract class RedisConnection : Entity
 	/// The Redis database number to connect to
 	/// </summary>
 	public int DatabaseNumber { get; private set; }
+
+	/// <summary>
+	/// Indicates whether connection is established.
+	/// </summary>
+	public bool IsAvailable { get; set; }
 
 	/// <summary>
 	/// Creates a new Redis connection configuration
@@ -141,6 +147,16 @@ public abstract class RedisConnection : Entity
 				ex.Message));
 		}
 
+	}
+
+	/// <summary>
+	/// Change availability state of connection.
+	/// </summary>
+	/// <param name="isAvailable"></param>
+	public void UpdateAvailability(bool isAvailable)
+	{
+		this.IsAvailable = isAvailable;
+		this.RaiseDomainEvent(new ConnectionAvailabilityChanged(this.Id, this.IsAvailable));
 	}
 
 	/// <summary>

@@ -10,11 +10,19 @@ using RedisGUI.Server.Abstraction;
 namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 {
 	/// <summary>
-	/// Endpoint which represents adding value to redis command.
+	/// Endpoint for adding or updating values in Redis storage.
+	/// Handles setting key-value pairs with optional TTL.
 	/// </summary>
 	public class AddRedisValueEndpoint : IEndpoint
 	{
-		/// <inheritdoc />
+		/// <summary>
+		/// Maps the POST endpoint for adding Redis values.
+		/// </summary>
+		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
+		/// <remarks>
+		/// POST /storage/{connectionId}
+		/// Adds or updates a Redis key-value pair and returns OK if successful, BadRequest if operation fails.
+		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapPost("storage/{connectionId:guid}", async (

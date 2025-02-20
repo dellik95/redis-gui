@@ -32,5 +32,9 @@ public class RedisConnectionEntityConfiguration : IEntityTypeConfiguration<Redis
 		builder.Property(x => x.ServerPort)
 			.IsRequired()
 			.HasConversion(x => x.Value, x => new ConnectionPort(x));
+
+		builder.Property(x => x.IsAvailable)
+			.IsRequired()
+			.HasDefaultValue(false);
 	}
 }
