@@ -10,11 +10,19 @@ using RedisGUI.Server.Abstraction;
 namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 {
 	/// <summary>
-	/// Endpoint which represents getting value from redis query.
+	/// Endpoint for retrieving values from Redis storage.
+	/// Fetches the value associated with a specific key.
 	/// </summary>
 	public class GetRedisValueEndpoint : IEndpoint
 	{
-		/// <inheritdoc />
+		/// <summary>
+		/// Maps the GET endpoint for retrieving Redis values.
+		/// </summary>
+		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
+		/// <remarks>
+		/// GET /storage/{connectionId}/{key}
+		/// Retrieves the value for the specified key and returns OK with the value if successful, BadRequest if operation fails.
+		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapGet("storage/{connectionId:guid}/{key}", async (

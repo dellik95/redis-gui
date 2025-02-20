@@ -6,6 +6,7 @@ using RedisGUI.Domain.Primitives;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using RedisGUI.Domain.Extensions;
 
 namespace RedisGUI.Application.Connections.CreateConnection;
 
@@ -53,19 +54,20 @@ internal sealed class CreateConnectionCommandHandler : ICommandHandler<CreateCon
 			passwordEncryptor);
 
 		// Create connection with value objects
-		var connectionResult = RedisConnection.Create(
+		var connectionResult = await RedisConnection.Create(
 			new ConnectionName(request.Name),
 			new ConnectionHost(request.Host),
 			new ConnectionPort(request.Port),
 			request.Database,
-			credentialsResult.Value);
-
-		// Test the connection before saving
-		var connectionTest = await connectionService.CheckConnection(connectionResult);
-		if (connectionTest.IsFailure)
+			credentialsResult.Value)
+			.Bind(async connection =>
 		{
-			return Result.Failure<Guid>(connectionTest.Error);
-		}
+			var testResult = await connectionService.CheckConnection(connection);
+
+			connection.UpdateAvailability(testResult.IsSuccess);
+
+			return Result.Create(connection);
+		});
 
 		// Save to repository
 		connectionRepository.Add(connectionResult);

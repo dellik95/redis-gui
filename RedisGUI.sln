@@ -26,6 +26,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitattributes = .gitattributes
 		.gitignore = .gitignore
+		src\RedisGUI.Server\CHANGELOG.md = src\RedisGUI.Server\CHANGELOG.md
 		build\Code Analysis\Code Analysis Rules.ruleset = build\Code Analysis\Code Analysis Rules.ruleset
 		build\Common.props = build\Common.props
 		build\Code Analysis\CustomDictionary.xml = build\Code Analysis\CustomDictionary.xml

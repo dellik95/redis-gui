@@ -12,7 +12,7 @@ using RedisGUI.Domain.Connection;
 namespace RedisGUI.Server.Extensions;
 
 /// <summary>
-/// Provides extension methods for IApplicationBuilder
+/// Provides extension methods for IApplicationBuilder to configure application startup behavior.
 /// </summary>
 public static class ApplicationBuilderExtensions
 {
@@ -22,7 +22,7 @@ public static class ApplicationBuilderExtensions
 	/// <param name="app">The application builder instance</param>
 	/// <remarks>
 	/// Only applies migrations if there are pending migrations and the database is not in-memory.
-	/// This method should be called during application startup.
+	/// This method should be called during application startup to ensure the database schema is up to date.
 	/// </remarks>
 	public static void ApplyMigrations(this IApplicationBuilder app)
 	{
@@ -44,9 +44,13 @@ public static class ApplicationBuilderExtensions
 
 
 	/// <summary>
-	/// Add dummy data to storage in testing purpose
+	/// Seeds the database with fake data for testing purposes
 	/// </summary>
 	/// <param name="app">The application builder instance</param>
+	/// <remarks>
+	/// Creates 100 random Redis connection entries using the Bogus library.
+	/// This method is intended for development and testing environments only.
+	/// </remarks>
 	public static void SeedFakeData(this IApplicationBuilder app)
 	{
 		using var scope = app.ApplicationServices.CreateScope();

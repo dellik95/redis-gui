@@ -10,11 +10,19 @@ using RedisGUI.Server.Abstraction;
 namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 {
 	/// <summary>
-	/// Endpoint which represents deleting value from redis command.
+	/// Endpoint for deleting values from Redis storage.
+	/// Removes key-value pairs from the Redis database.
 	/// </summary>
 	public class DeleteRedisValueEndpoint : IEndpoint
 	{
-		/// <inheritdoc />
+		/// <summary>
+		/// Maps the DELETE endpoint for removing Redis values.
+		/// </summary>
+		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
+		/// <remarks>
+		/// DELETE /storage/{connectionId}/{key}
+		/// Deletes the specified key-value pair and returns OK if successful, NotFound if key doesn't exist, or BadRequest if operation fails.
+		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapDelete("storage/{connectionId:guid}/{key}", async (

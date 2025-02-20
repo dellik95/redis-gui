@@ -12,6 +12,9 @@ using RedisGUI.Infrastructure.SignalR;
 
 namespace RedisGUI.Infrastructure.BackgroundJobs;
 
+/// <summary>
+/// Background service that periodically collects Redis metrics and broadcasts them to connected clients
+/// </summary>
 public class RedisMetricsBackgroundJob : BackgroundService
 {
 	private readonly IServiceProvider serviceProvider;
@@ -19,6 +22,13 @@ public class RedisMetricsBackgroundJob : BackgroundService
 	private readonly IHubSubscribersManager hubSubscribersManager;
 	private readonly IOptions<MetricsCollectorOptions> options;
 
+	/// <summary>
+	/// Initializes a new instance of the RedisMetricsBackgroundJob
+	/// </summary>
+	/// <param name="serviceProvider">Service provider for creating scoped services</param>
+	/// <param name="notificationService">Service for sending notifications to clients</param>
+	/// <param name="hubSubscribersManager">Manager for hub subscriber connections</param>
+	/// <param name="options">Configuration options for metrics collection</param>
 	public RedisMetricsBackgroundJob(
 		IServiceProvider serviceProvider,
 		INotificationService notificationService,
@@ -31,7 +41,11 @@ public class RedisMetricsBackgroundJob : BackgroundService
 		this.options = options;
 	}
 
-	/// <inheritdoc />
+	/// <summary>
+	/// Executes the background job that collects and broadcasts Redis metrics
+	/// </summary>
+	/// <param name="stoppingToken">Token that can be used to stop the background job</param>
+	/// <returns>A task representing the background operation</returns>
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		using var scope = this.serviceProvider.CreateScope();

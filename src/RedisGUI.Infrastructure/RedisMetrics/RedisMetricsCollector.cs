@@ -14,6 +14,9 @@ using RedisGUI.Infrastructure.Redis;
 
 namespace RedisGUI.Infrastructure.RedisMetrics;
 
+/// <summary>
+/// Collects and processes metrics from Redis servers
+/// </summary>
 public class RedisMetricsCollector : IMetricsCollector
 {
 	private readonly IConnectionPool connectionPool;
@@ -21,6 +24,12 @@ public class RedisMetricsCollector : IMetricsCollector
 	private readonly IOptions<MetricsCollectorOptions> options;
 	private readonly ILogger<RedisMetricsCollector> logger;
 
+	/// <summary>
+	/// Initializes a new instance of the RedisMetricsCollector
+	/// </summary>
+	/// <param name="connectionPool">Pool of Redis connections</param>
+	/// <param name="options">Configuration options for metrics collection</param>
+	/// <param name="logger">Logger for the metrics collector</param>
 	public RedisMetricsCollector(IConnectionPool connectionPool, IOptions<MetricsCollectorOptions> options, ILogger<RedisMetricsCollector> logger)
 	{
 		this.connectionPool = connectionPool;
@@ -28,6 +37,12 @@ public class RedisMetricsCollector : IMetricsCollector
 		this.logger = logger;
 	}
 
+	/// <summary>
+	/// Collects metrics from a specified Redis connection
+	/// </summary>
+	/// <param name="connection">The Redis connection to collect metrics from</param>
+	/// <param name="cancellationToken">Token to cancel the operation</param>
+	/// <returns>A Result containing the collected Redis metrics or an error</returns>
 	public async Task<Result<Domain.RedisMetrics.RedisMetrics>> CollectMetrics(RedisConnection connection, CancellationToken cancellationToken = default)
 	{
 		try
