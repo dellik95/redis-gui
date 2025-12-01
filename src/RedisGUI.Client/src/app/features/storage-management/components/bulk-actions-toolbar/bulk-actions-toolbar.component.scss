@@ -1,0 +1,16 @@
+.bulk-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 16px;
+  border: 1px solid var(--mat-sys-outline, #e0e0e0);
+  border-radius: 6px;
+  background: var(--mat-sys-surface, #fafafa);
+  font-size: 13px;
+  &.has-selection { background: var(--mat-sys-primary-container, #fff8e1); border-color: var(--mat-sys-primary, #ffe082); }
+}
+.left-group, .right-group { display:flex; align-items:center; gap:12px; }
+.count { font-weight:600; color:#bf360c; }
+.placeholder { opacity:.6; font-style:italic; }
+button mat-icon { margin-right:6px; }

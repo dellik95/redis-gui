@@ -1,12 +1,12 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Extensions;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Application.Connections.CreateConnection;
 

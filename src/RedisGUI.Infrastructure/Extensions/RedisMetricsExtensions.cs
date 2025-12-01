@@ -1,10 +1,8 @@
-using System;
-using System.Collections.Generic;
+using RedisGUI.Domain.RedisMetrics;
+using RedisGUI.Domain.RedisMetrics.Attributes;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using RedisGUI.Domain.RedisMetrics;
-using RedisGUI.Domain.RedisMetrics.Attributes;
 
 namespace RedisGUI.Infrastructure.Extensions;
 

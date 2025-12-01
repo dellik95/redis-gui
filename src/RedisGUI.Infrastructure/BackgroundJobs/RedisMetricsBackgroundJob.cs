@@ -1,14 +1,10 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using RedisGUI.Application.RedisMetrics.Queries;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.SignalR;
+using RedisGUI.Shared.Mediator;
+using System.Linq;
 
 namespace RedisGUI.Infrastructure.BackgroundJobs;
 
@@ -49,12 +45,12 @@ public class RedisMetricsBackgroundJob : BackgroundService
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		using var scope = this.serviceProvider.CreateScope();
-		var sender = scope.ServiceProvider.GetRequiredService<ISender>();
+		var sender = scope.ServiceProvider.GetRequiredService<IMediator>(); // Replace ISender with ICustomSender
 		while (!stoppingToken.IsCancellationRequested)
 		{
 			foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 			{
-				var metrics = await sender.Send(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
+				var metrics = await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
 
 				if (!metrics.IsSuccess)
 				{

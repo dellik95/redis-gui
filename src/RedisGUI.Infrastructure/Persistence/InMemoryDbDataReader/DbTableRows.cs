@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -44,7 +42,7 @@ public class DbTableRows
     /// Gets or sets the collection of table rows
     /// </summary>
     [DataMember]
-    public IList<DbTableRow> Rows { get; set; } = new List<DbTableRow>();
+    public IList<DbTableRow> Rows { get; set; } = [];
 
     /// <summary>
     /// Gets or sets the column information dictionary

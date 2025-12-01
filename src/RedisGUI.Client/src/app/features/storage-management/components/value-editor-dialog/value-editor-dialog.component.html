@@ -1,0 +1,188 @@
+<div class="value-editor-dialog">
+  <h2 mat-dialog-title>{{ data.isNew ? 'Add New Key' : 'Edit Key' }}</h2>
+  
+  <mat-dialog-content>
+    <form [formGroup]="form" class="editor-form">
+      <!-- Key Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Key</mat-label>
+        <input matInput formControlName="key" placeholder="Enter key name">
+        <mat-icon matPrefix>vpn_key</mat-icon>
+      </mat-form-field>
+
+      <!-- Type Selector -->
+      @if (data.isNew) {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Type</mat-label>
+          <mat-select formControlName="type" (selectionChange)="onTypeChange($event.value)">
+            <mat-option [value]="RedisDataType.String">String</mat-option>
+            <mat-option [value]="RedisDataType.List">List</mat-option>
+            <mat-option [value]="RedisDataType.Set">Set</mat-option>
+            <mat-option [value]="RedisDataType.Hash">Hash</mat-option>
+            <mat-option [value]="RedisDataType.SortedSet">Sorted Set</mat-option>
+            <mat-option [value]="RedisDataType.Stream">Stream</mat-option>
+          </mat-select>
+          <mat-icon matPrefix>category</mat-icon>
+        </mat-form-field>
+      }
+
+      <!-- TTL -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>TTL (seconds)</mat-label>
+        <input matInput type="number" formControlName="ttl" placeholder="Leave empty for no expiration">
+        <mat-icon matPrefix>schedule</mat-icon>
+      </mat-form-field>
+
+      <!-- JSON Editor Toggle -->
+      <div class="editor-mode-toggle">
+        <mat-slide-toggle 
+          [checked]="useJsonEditor()" 
+          (change)="toggleJsonEditor()"
+          color="primary">
+          <mat-icon>code</mat-icon>
+          Use JSON Editor
+        </mat-slide-toggle>
+      </div>
+
+      <!-- Type-specific editors -->
+      <div class="value-editor">
+        @if (useJsonEditor()) {
+          <!-- JSON Editor Mode -->
+          <div class="json-editor-container">
+            <app-json-editor
+              #jsonEditor
+              [value]="jsonEditorValue()"
+              (valueChange)="onJsonEditorChange($event)"
+              (valid)="onJsonEditorValid($event)"
+              [height]="'400px'"
+            ></app-json-editor>
+          </div>
+        } @else {
+          <!-- Visual Editor Mode -->
+          
+          <!-- String Editor -->
+          @if (selectedType() === RedisDataType.String) {
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Value</mat-label>
+              <textarea matInput formControlName="stringValue" rows="10" placeholder="Enter string value"></textarea>
+            </mat-form-field>
+          }
+
+          <!-- List/Set Editor -->
+          @if (selectedType() === RedisDataType.List || selectedType() === RedisDataType.Set) {
+            <div class="collection-editor">
+              <h4>{{ selectedType() === RedisDataType.List ? 'List Items' : 'Set Members' }}</h4>
+              <div class="add-item-container">
+                <mat-form-field appearance="outline" class="flex-grow">
+                  <mat-label>New Item</mat-label>
+                  <input matInput [(ngModel)]="newListItem" [ngModelOptions]="{standalone: true}" 
+                         (keyup.enter)="addListItem()" placeholder="Enter item">
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="addListItem()">
+                  <mat-icon>add</mat-icon>
+                  Add
+                </button>
+              </div>
+              <mat-chip-listbox class="items-list">
+                @for (item of listItems(); track item) {
+                  <mat-chip [removable]="true" (removed)="removeListItem(item)">
+                    {{ item }}
+                    <button matChipRemove>
+                      <mat-icon>cancel</mat-icon>
+                    </button>
+                  </mat-chip>
+                }
+              </mat-chip-listbox>
+            </div>
+          }
+
+          <!-- Hash Editor -->
+          @if (selectedType() === RedisDataType.Hash) {
+            <div class="hash-editor">
+              <h4>Hash Fields</h4>
+              <div class="add-field-container">
+                <mat-form-field appearance="outline">
+                  <mat-label>Field Name</mat-label>
+                  <input matInput [(ngModel)]="newHashKey" [ngModelOptions]="{standalone: true}" placeholder="Key">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Field Value</mat-label>
+                  <input matInput [(ngModel)]="newHashValue" [ngModelOptions]="{standalone: true}" 
+                         (keyup.enter)="addHashField()" placeholder="Value">
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="addHashField()">
+                  <mat-icon>add</mat-icon>
+                  Add
+                </button>
+              </div>
+              <div class="fields-list">
+                <mat-chip-listbox>
+                  @for (field of hashFields(); track field) {
+                    <mat-chip [removable]="true" (removed)="removeHashField(field)">
+                      <strong>{{ field.key }}:</strong> {{ field.value }}
+                      <button matChipRemove>
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip>
+                  }
+                </mat-chip-listbox>
+              </div>
+            </div>
+          }
+
+          <!-- Sorted Set Editor -->
+          @if (selectedType() === RedisDataType.SortedSet) {
+            <div class="sorted-set-editor">
+              <h4>Sorted Set Members</h4>
+              <div class="add-member-container">
+                <mat-form-field appearance="outline">
+                  <mat-label>Member</mat-label>
+                  <input matInput [(ngModel)]="newSortedMember" [ngModelOptions]="{standalone: true}" placeholder="Member">
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Score</mat-label>
+                  <input matInput type="number" [(ngModel)]="newSortedScore" [ngModelOptions]="{standalone: true}" 
+                         (keyup.enter)="addSortedSetMember()" placeholder="Score">
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="addSortedSetMember()">
+                  <mat-icon>add</mat-icon>
+                  Add
+                </button>
+              </div>
+              <div class="members-list">
+                <mat-chip-listbox>
+                  @for (member of sortedSetMembers(); track member) {
+                    <mat-chip [removable]="true" (removed)="removeSortedSetMember(member)">
+                      <strong>{{ member.member }}</strong> ({{ member.score }})
+                      <button matChipRemove>
+                        <mat-icon>cancel</mat-icon>
+                      </button>
+                    </mat-chip>
+                  }
+                </mat-chip-listbox>
+              </div>
+            </div>
+          }
+
+          <!-- Stream Editor (Simplified) -->
+          @if (selectedType() === RedisDataType.Stream) {
+            <div class="stream-editor">
+              <p class="info-message">
+                <mat-icon>info</mat-icon>
+                Stream editing is simplified in this interface. Use Redis CLI for advanced stream operations.
+              </p>
+            </div>
+          }
+        }
+      </div>
+    </form>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="onSave()" 
+            [disabled]="form.invalid || (useJsonEditor() && !jsonEditorValid())">
+      {{ data.isNew ? 'Create' : 'Save' }}
+    </button>
+  </mat-dialog-actions>
+</div>

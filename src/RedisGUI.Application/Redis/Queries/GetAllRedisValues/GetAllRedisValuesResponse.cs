@@ -10,11 +10,17 @@ namespace RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 /// <param name="TotalCount">Total number of records.</param>
 /// <param name="PageNumber">Current page number.</param>
 /// <param name="PageSize">Number of items per page.</param>
+/// <param name="TotalPages">Total number of pages.</param>
+/// <param name="HasPreviousPage">Indicates if there is a previous page.</param>
+/// <param name="HasNextPage">Indicates if there is a next page.</param>
 public sealed record GetAllRedisValuesResponse(
     IEnumerable<RedisKeyValuePair> Values,
     int TotalCount,
     int PageNumber,
-    int PageSize);
+    int PageSize,
+    int TotalPages,
+    bool HasPreviousPage,
+    bool HasNextPage);
 
 /// <summary>
 /// Represents a Redis key-value pair with its metadata.

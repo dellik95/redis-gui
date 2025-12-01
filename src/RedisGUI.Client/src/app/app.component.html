@@ -15,11 +15,13 @@
 
             <span class="spacer"></span>
 
+            
+
             <a mat-button target="_blank" href="https://github.com/dellik95/redis-gui" aria-label="GitHub Repository">
                 <span matButtonIcon [ngTemplateOutlet]="githubIcon"></span>
                 GitHub
             </a>
-
+			<theme-picker></theme-picker>
             <button mat-icon-button>
                 <mat-icon>info</mat-icon>
             </button>
@@ -41,8 +43,14 @@
                     <div class="sidenav-menu__content">
                         <mat-icon class="sidenav-menu_icon" *ngIf="link.icon" aria-hidden="false"
                             [fontIcon]="link.icon"></mat-icon>
-                        <div class="sidenav-menu__title">
-                            {{ link.title }}
+                        <div class="sidenav-menu__text">
+                            <div class="sidenav-menu__title">
+                                {{ link.title }}
+                                <span class="sidenav-menu__badge" *ngIf="link.badge">{{ link.badge }}</span>
+                            </div>
+                            <div class="sidenav-menu__description" *ngIf="link.description">
+                                {{ link.description }}
+                            </div>
                         </div>
                     </div>
 

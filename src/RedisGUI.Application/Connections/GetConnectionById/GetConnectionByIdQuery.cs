@@ -1,6 +1,6 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using System;
 using RedisGUI.Application.Connections.Shared;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Application.Connections.GetConnectionById;
 

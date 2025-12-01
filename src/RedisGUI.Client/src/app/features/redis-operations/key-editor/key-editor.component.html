@@ -1,0 +1,176 @@
+
+@if (details()) {
+  <mat-card class="key-editor">
+    <mat-card-header>
+      <mat-card-title>{{ details()!.key }}</mat-card-title>
+      <mat-card-subtitle>{{ details()!.type | uppercase }} • TTL: {{ details()!.ttl }}s • Size: {{ details()!.size }} bytes</mat-card-subtitle>
+      <span class="spacer"></span>
+      <button mat-icon-button color="warn" (click)="deleteKey()" matTooltip="Delete key"><mat-icon>delete</mat-icon></button>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (error()) {
+        <div class="error">{{ error() }}</div>
+      }
+      @if (loading()) {
+        <div class="loading">Loading...</div>
+      }
+
+      <!-- STRING -->
+      @if (details()!.type === 'string') {
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Value</mat-label>
+          <textarea matInput rows="6" #strVal>{{ details()!.value }}</textarea>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="updateString(strVal.value)" [disabled]="saving()">Save</button>
+      }
+      <!-- HASH -->
+      @if (details()!.type === 'hash') {
+        <div class="hash-editor">
+          @for (field of (details()!.value | keyvalue); track field.key) {
+            <div class="hash-row">
+              <mat-form-field appearance="outline" class="field-name">
+                <mat-label>Field</mat-label>
+                <input matInput [value]="field.key" disabled />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="field-value">
+                <mat-label>Value</mat-label>
+                <input matInput [value]="field.value" (change)="updateHashField(field.key, $event.target.value + '')" />
+              </mat-form-field>
+              <button mat-icon-button color="warn" (click)="deleteHashField(field.key + '')" matTooltip="Remove field"><mat-icon>close</mat-icon></button>
+            </div>
+          }
+          <div class="add-hash-field">
+            <mat-form-field appearance="outline" class="field-name">
+              <mat-label>New Field</mat-label>
+              <input matInput [ngModel]="newHashField()" (ngModelChange)="newHashField.set($event)" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="field-value">
+              <mat-label>New Value</mat-label>
+              <input matInput [ngModel]="newHashValue()" (ngModelChange)="newHashValue.set($event)" />
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="addHashField()" [disabled]="!newHashField().trim()">Add</button>
+          </div>
+        </div>
+      }
+      <!-- LIST -->
+      @if (details()!.type === 'list') {
+        <div class="list-editor">
+          <div class="list-items">
+            @for (item of details()!.value; track item) {
+              <div class="list-item">
+                <span class="idx">{{ details()!.value.indexOf(item) }}</span>
+                <span>{{ item }}</span>
+              </div>
+            }
+          </div>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>New List Item</mat-label>
+          <input matInput [ngModel]="newListItem()" (ngModelChange)="newListItem.set($event)" />
+        </mat-form-field>
+        <div class="actions">
+          <button mat-button (click)="pushList('left')" [disabled]="!newListItem().trim()">LPUSH</button>
+          <button mat-button (click)="pushList('right')" [disabled]="!newListItem().trim()">RPUSH</button>
+          <button mat-button (click)="popList('left')" [disabled]="details()!.value.length===0">LPOP</button>
+          <button mat-button (click)="popList('right')" [disabled]="details()!.value.length===0">RPOP</button>
+        </div>
+      }
+      <!-- SET -->
+      @if (details()!.type === 'set') {
+        <div class="set-editor">
+          <div class="set-members">
+            @for (member of details()!.value; track member) {
+              <div class="set-member">{{ member }} <button mat-icon-button (click)="removeSetMember(member)" matTooltip="Remove"><mat-icon>close</mat-icon></button></div>
+            }
+          </div>
+        </div>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>New Member</mat-label>
+          <input matInput [ngModel]="newSetMember()" (ngModelChange)="newSetMember.set($event)" />
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="addSetMember()" [disabled]="!newSetMember().trim()">Add Member</button>
+      }
+      <!-- ZSET -->
+      @if (details()!.type === 'zset') {
+        <div class="zset-editor">
+          <table class="zset-table">
+            <thead><tr><th>Member</th><th>Score</th><th></th></tr></thead>
+            <tbody>
+              @for (zitem of details()!.value; track zitem.member) {
+                <tr>
+                  <td>{{ zitem.member }}</td>
+                  <td><input type="number" [value]="zitem.score" (change)="updateZSetScore(zitem.member, +$event.target.value)" /></td>
+                  <td><button mat-icon-button color="warn" (click)="removeZSetMember(zitem.member)" matTooltip="Remove"><mat-icon>close</mat-icon></button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          <div class="add-zset">
+            <mat-form-field appearance="outline">
+              <mat-label>Member</mat-label>
+              <input matInput [ngModel]="newZSetMember()" (ngModelChange)="newZSetMember.set($event)" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Score</mat-label>
+              <input matInput type="number" [ngModel]="newZSetScore()" (ngModelChange)="newZSetScore.set($event)" />
+            </mat-form-field>
+            <button mat-raised-button color="primary" (click)="addZSetMember()" [disabled]="!newZSetMember().trim()">Add / Update</button>
+          </div>
+        </div>
+      }
+      <!-- STREAM -->
+      @if (details()!.type === 'stream') {
+        <div class="stream-editor">
+          <div class="stream-entries">
+            @for (entry of details()!.value; track entry.id) {
+              <div class="stream-entry">
+                <div class="entry-id">ID: {{ entry.id }}</div>
+                <div class="entry-fields">
+                  @for (kv of (entry.fields | keyvalue); track kv.key) {
+                    <span>{{ kv.key }}= {{ kv.value }}</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+          <div class="new-stream-entry">
+            @for (field of streamNewFields(); track field) {
+              <div class="fields">
+                <mat-form-field appearance="outline">
+                  <mat-label>Field</mat-label>
+                  <input matInput [ngModel]="field.field" (ngModelChange)="field.field = $event" />
+                </mat-form-field>
+                <mat-form-field appearance="outline">
+                  <mat-label>Value</mat-label>
+                  <input matInput [ngModel]="field.value" (ngModelChange)="field.value = $event" />
+                </mat-form-field>
+                @if (streamNewFields().length>1) {
+                  <button mat-icon-button color="warn" (click)="removeStreamField(streamNewFields().indexOf(field))" matTooltip="Remove field"><mat-icon>close</mat-icon></button>
+                }
+              </div>
+            }
+            <button mat-button (click)="addStreamField()">Add Field</button>
+            <button mat-raised-button color="primary" (click)="createStreamEntry()">Add Entry</button>
+          </div>
+        </div>
+      }
+      <!-- TTL EDIT -->
+      <div class="ttl-editor">
+        <mat-form-field appearance="outline">
+          <mat-label>TTL (seconds)</mat-label>
+          <input matInput type="number" [value]="details()!.ttl" (change)="updateTTL(+$event.target.value)" />
+        </mat-form-field>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      @if (saving()) {
+        <span class="status">Saving...</span>
+      }
+      <button mat-button (click)="load()" [disabled]="loading()">Reload</button>
+    </mat-card-actions>
+  </mat-card>
+} @else {
+  <mat-card appearance="outlined"><mat-card-content>No key selected.</mat-card-content></mat-card>
+}

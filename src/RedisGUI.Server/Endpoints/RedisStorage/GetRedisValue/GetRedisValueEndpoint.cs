@@ -1,11 +1,12 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetRedisValue;
+using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Server.Extensions;
+using System;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 {
@@ -21,17 +22,19 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
 		/// <remarks>
 		/// GET /storage/{connectionId}/{key}
-		/// Retrieves the value for the specified key and returns OK with the value if successful, BadRequest if operation fails.
+		/// Returns structured error response on failure.
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapGet("storage/{connectionId:guid}/{key}", async (
-				ISender sender,
+				IMediator sender,
+				HttpContext httpContext,
 				Guid connectionId,
 				string key) =>
 			{
 				var query = new GetRedisValueQuery(connectionId, key);
-				return await sender.Send(query).Match(Results.Ok, Results.BadRequest);
+				var result = await sender.Send<GetRedisValueResponse>(query);
+				return result.MatchHttp(Results.Ok, httpContext);
 			}).WithOpenApi();
 		}
 	}

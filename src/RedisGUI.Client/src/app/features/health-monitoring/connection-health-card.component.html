@@ -1,0 +1,46 @@
+<mat-card class="health-card" appearance="outlined">
+  <mat-card-header>
+    <mat-card-title>Connection Health</mat-card-title>
+    <mat-card-subtitle>{{ connectionId() }}</mat-card-subtitle>
+    <div class="status-chip" [ngClass]="statusClass()" matTooltip="Current status">{{ health()?.status || 'Unknown' }}</div>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="metrics-row">
+      <div class="metric">
+        <label>Latency</label>
+        <span>{{ health()?.responseTimeMs ?? '–' }} ms</span>
+      </div>
+      <div class="metric">
+        <label>Failure Streak</label>
+        <span>{{ health()?.failureStreak ?? 0 }}</span>
+      </div>
+      <div class="metric">
+        <label>Last Checked</label>
+        <span>{{ health()?.checkedAt | date:'mediumTime' }}</span>
+      </div>
+    </div>
+
+    <div class="sparkline" *ngIf="latencyHistory().length > 0">
+      <svg [attr.width]="200" [attr.height]="40">
+        <path [attr.d]="svgPath()" stroke="currentColor" fill="none" stroke-width="2" />
+      </svg>
+    </div>
+
+    <div class="error" *ngIf="lastError()">Error: {{ lastError() }}</div>
+  </mat-card-content>
+
+  <mat-card-actions align="end">
+    <mat-select [(ngModel)]="autoRefreshMs" (selectionChange)="clearHistory()" placeholder="Interval" class="interval-select">
+      <mat-option [value]="5000">5s</mat-option>
+      <mat-option [value]="10000">10s</mat-option>
+      <mat-option [value]="30000">30s</mat-option>
+    </mat-select>
+    <button mat-icon-button color="primary" (click)="refresh()" [disabled]="loading()" matTooltip="Manual refresh">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <button mat-button (click)="start()" [disabled]="active()" matTooltip="Resume auto polling">Start</button>
+    <button mat-button (click)="stop()" [disabled]="!active()" matTooltip="Pause auto polling">Stop</button>
+    <button mat-button (click)="clearHistory()" matTooltip="Clear latency history">Clear</button>
+  </mat-card-actions>
+</mat-card>

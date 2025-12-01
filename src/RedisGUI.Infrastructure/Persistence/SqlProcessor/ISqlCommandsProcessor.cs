@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using Microsoft.EntityFrameworkCore;
-
 namespace RedisGUI.Infrastructure.Persistence.SqlProcessor;
 
 /// <summary>

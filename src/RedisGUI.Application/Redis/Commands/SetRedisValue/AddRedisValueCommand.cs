@@ -1,5 +1,5 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using System;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Application.Redis.Commands.SetRedisValue;
 

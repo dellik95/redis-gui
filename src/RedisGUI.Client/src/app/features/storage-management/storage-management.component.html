@@ -1,0 +1,13 @@
+<div class="storage-container">
+    <app-storage-values-list 
+        [connectionId]="id()"
+        (keySelected)="onKeySelected($event)">
+    </app-storage-values-list>
+    
+    <app-inline-value-editor
+        [selectedKey]="selectedKey()"
+        [loading]="isSaving()"
+        (save)="onSave($event)"
+        (cancel)="onCancel()">
+    </app-inline-value-editor>
+</div>

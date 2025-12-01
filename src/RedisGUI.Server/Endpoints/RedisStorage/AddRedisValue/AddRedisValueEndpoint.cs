@@ -1,11 +1,11 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.SetRedisValue;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Shared.Mediator;
+using System;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 {
@@ -26,7 +26,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapPost("storage/{connectionId:guid}", async (
-				ISender sender,
+				IMediator sender,
 				Guid connectionId,
 				AddRedisValueRequest request) =>
 			{

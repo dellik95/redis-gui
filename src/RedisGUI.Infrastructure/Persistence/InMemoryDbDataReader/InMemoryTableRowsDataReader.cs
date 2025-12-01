@@ -1,11 +1,9 @@
-using System;
+using RedisGUI.Infrastructure.Extensions;
 using System.Collections;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Globalization;
 using System.Linq;
-using RedisGUI.Infrastructure.Extensions;
 
 namespace RedisGUI.Infrastructure.Persistence.InMemoryDbDataReader;
 
@@ -19,7 +17,7 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	private readonly Dictionary<int, Type> valueTypes;
 	private int currentRow;
 	private bool isClosed;
-	private IList<object> rowValues = new List<object>();
+	private IList<object> rowValues = [];
 
 	/// <summary>
 	/// Initializes a new instance of the InMemoryTableRowsDataReader

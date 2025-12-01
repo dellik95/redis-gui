@@ -1,11 +1,8 @@
 using Asp.Versioning;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using RedisGUI.Domain.Abstraction;
+using Microsoft.Extensions.Hosting;
 using RedisGUI.Domain.Abstraction.Cryptography;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Configuration;
@@ -18,6 +15,7 @@ using RedisGUI.Infrastructure.Persistence.SqlProcessor;
 using RedisGUI.Infrastructure.Redis;
 using RedisGUI.Infrastructure.RedisMetrics;
 using RedisGUI.Infrastructure.SignalR;
+using System.Linq;
 
 namespace RedisGUI.Infrastructure;
 
@@ -152,6 +150,11 @@ public static class DependencyInjection
 	private static void AddBackgroundJobs(IServiceCollection services)
 	{
 		services.AddHostedService<RedisMetricsBackgroundJob>();
+		services.AddHostedService<ConnectionHealthMonitor>();
+		services.AddSingleton<IConnectionHealthMonitor>(sp => 
+			sp.GetServices<IHostedService>()
+				.OfType<ConnectionHealthMonitor>()
+				.First());
 	}
 
 	private static void AddSignalR(IServiceCollection services)

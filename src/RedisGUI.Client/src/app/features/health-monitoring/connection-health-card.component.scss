@@ -1,0 +1,46 @@
+.health-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 320px;
+}
+
+.status-chip {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  background: #444;
+  color: var(--mat-sys-on-primary, #fff);
+}
+.status-chip.healthy { background: var(--mat-sys-secondary-container, #2e7d32); }
+.status-chip.degraded { background: var(--mat-sys-tertiary-container, #ed6c02); }
+.status-chip.unhealthy { background: var(--mat-sys-error, #c62828); }
+.status-chip.unknown { background: var(--mat-sys-outline, #616161); }
+
+.metrics-row {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.metric {
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+  label {
+    font-size: 11px;
+    text-transform: uppercase;
+    opacity: .7;
+    margin-bottom: 2px;
+  }
+  span { font-weight: 500; }
+}
+
+.sparkline { margin: 4px 0 8px; }
+.error { color: #c62828; font-size: 12px; margin-top: 4px; }
+
+mat-card-actions { display: flex; align-items: center; gap: 8px; }
+.interval-select { width: 90px; }

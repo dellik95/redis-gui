@@ -1,0 +1,17 @@
+.storage-container {
+    display: flex;
+    height: 100%;
+    gap: 16px;
+    
+    app-storage-values-list {
+        flex: 1;
+        min-width: 400px;
+        height: 100%;
+    }
+
+    app-inline-value-editor {
+        flex: 1;
+        min-width: 400px;
+        height: 100%;
+    }
+}

@@ -1,6 +1,6 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,15 +59,19 @@ internal sealed class GetAllRedisValuesQueryHandler
             return Result.Failure<GetAllRedisValuesResponse>(result.Error);
         }
 
+        var pagedValues = result.Value;
         var response = new GetAllRedisValuesResponse(
-            result.Value.Select(v => new RedisKeyValuePair(
+            pagedValues.Values.Select(v => new RedisKeyValuePair(
                 v.Key,
                 v.Value,
                 v.Type,
                 v.TimeToLive)),
-            0,
-            0,
-            0);
+            pagedValues.TotalCount,
+            pagedValues.PageNumber,
+            pagedValues.PageSize,
+            pagedValues.TotalPages,
+            pagedValues.HasPreviousPage,
+            pagedValues.HasNextPage);
 
         return Result.Success(response);
     }

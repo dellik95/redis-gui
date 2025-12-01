@@ -1,0 +1,16 @@
+.lua-console { display: flex; flex-direction: column; gap: 1rem; }
+.builder { display: flex; gap: 1.25rem; flex-wrap: wrap; }
+.script-editor { flex: 2; min-width: 340px; display: flex; flex-direction: column; gap: 0.5rem; }
+.full-width { width: 100%; }
+.editor-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.keys-args { flex: 1; min-width: 280px; display: flex; flex-direction: column; gap: 1rem; }
+.list-group h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; }
+.items { display: flex; flex-direction: column; gap: 4px; }
+.kv-row { display: flex; gap: 4px; align-items: flex-end; }
+.mini-field { width: 100%; }
+.saved { margin-top: 0.5rem; }
+.result { border-top: 1px solid var(--mat-sys-outline); padding-top: 0.75rem; }
+.output { background: var(--mat-sys-surface-dim); color: var(--mat-sys-on-surface); padding: 8px; border-radius: 4px; max-height: 240px; overflow: auto; font-size: 13px; }
+.ok { color: var(--mat-sys-secondary); }
+.fail { color: var(--mat-sys-error, #c62828); }
+@media (max-width: 900px){ .builder { flex-direction: column; } }

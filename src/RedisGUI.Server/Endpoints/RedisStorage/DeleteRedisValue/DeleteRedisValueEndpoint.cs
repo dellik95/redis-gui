@@ -1,11 +1,11 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Shared.Mediator;
+using System;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 {
@@ -26,7 +26,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapDelete("storage/{connectionId:guid}/{key}", async (
-				ISender sender,
+				IMediator sender,
 				Guid connectionId,
 				string key) =>
 			{

@@ -1,0 +1,37 @@
+.transaction-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.operations {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.operation-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 1fr auto;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+.operation-row .value-field { grid-column: span 1; }
+.operation-row .row-actions {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+@media (max-width: 900px) {
+  .operation-row { grid-template-columns: 110px 1fr 1fr; }
+  .operation-row .row-actions { grid-column: span 3; }
+}
+
+.toolbar { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.result { border-top: 1px solid var(--mat-sys-outline); padding-top: 0.75rem; }
+.result ul { list-style: none; padding-left: 0; margin: 0.5rem 0 0; }
+.result li { font-family: monospace; font-size: 13px; padding: 2px 0; }
+.result { border-top: 1px solid var(--mat-sys-outline); padding-top: 0.75rem; }
+.result .ok { color: var(--mat-sys-secondary); }
+.result .fail { color: var(--mat-sys-error); }

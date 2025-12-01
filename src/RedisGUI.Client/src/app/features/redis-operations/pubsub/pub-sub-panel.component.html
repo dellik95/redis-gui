@@ -1,0 +1,69 @@
+<mat-card class="pubsub-panel" aria-label="Redis Pub/Sub Panel">
+  <mat-card-title>Pub/Sub</mat-card-title>
+  <mat-card-subtitle>Subscribe, publish and inspect channel activity</mat-card-subtitle>
+
+  <div class="actions-row">
+    <form (ngSubmit)="subscribe()" class="subscribe-form" aria-label="Subscribe to channel form">
+      <mat-form-field appearance="outline" class="channel-field">
+        <mat-label>Channel</mat-label>
+        <input matInput [ngModel]="subscribeChannel()" (ngModelChange)="updateSubscribeChannel($event)" name="subscribeChannel" placeholder="e.g. notifications" />
+      </mat-form-field>
+      <button mat-raised-button color="primary" type="submit" aria-label="Subscribe button">
+        <mat-icon>add</mat-icon>
+        Subscribe
+      </button>
+    </form>
+
+    <div class="publish-form" aria-label="Publish message form">
+      <mat-form-field appearance="outline" class="channel-field">
+        <mat-label>Publish Channel</mat-label>
+        <input matInput [ngModel]="publishChannel()" (ngModelChange)="updatePublishChannel($event)" name="publishChannel" placeholder="channel" />
+      </mat-form-field>
+      <mat-form-field appearance="outline" class="message-field">
+        <mat-label>Message</mat-label>
+        <input matInput [ngModel]="publishMessage()" (ngModelChange)="updatePublishMessage($event)" name="publishMessage" placeholder="Enter message" />
+      </mat-form-field>
+      <button mat-raised-button color="accent" (click)="publish()" [disabled]="!isSubscribedToPublishChannel" matTooltip="Must subscribe to channel before publishing">
+        <mat-icon>send</mat-icon>
+        Publish
+      </button>
+      <button mat-icon-button (click)="clearMessages()" matTooltip="Clear messages" aria-label="Clear messages">
+        <mat-icon>clear_all</mat-icon>
+      </button>
+      <button mat-icon-button (click)="autoScroll.set(!autoScroll())" [color]="autoScroll() ? 'primary' : undefined" matTooltip="Toggle auto-scroll" aria-label="Toggle auto scroll">
+        <mat-icon>{{ autoScroll() ? 'south' : 'pan_tool' }}</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (subscriptions().length > 0) {
+    <div class="subscriptions" aria-label="Active subscriptions">
+      <mat-chip-listbox>
+        @for (s of subscriptions(); track s.subscriptionId) {
+          <mat-chip [removable]="true" (removed)="unsubscribe(s.subscriptionId)" color="primary" selected>
+            {{ s.channel }}
+            <button matChipRemove aria-label="Unsubscribe from {{s.channel}}">
+              <mat-icon>close</mat-icon>
+            </button>
+          </mat-chip>
+        }
+      </mat-chip-listbox>
+    </div>
+  }
+
+  <mat-card class="messages-card" aria-label="Channel messages">
+    <mat-card-subtitle>Messages (local publish only - real-time TODO)</mat-card-subtitle>
+    <div class="messages-viewport cdk-virtual-scroll-viewport" itemSize="42">
+      <div *cdkVirtualFor="let msg of messages(); trackBy: trackByMsg" class="message-row" [class.outgoing]="msg.outgoing" aria-label="Message row">
+        <div class="meta">
+          <span class="channel">#{{ msg.channel }}</span>
+          <span class="time">{{ msg.timestamp | date:'HH:mm:ss' }}</span>
+        </div>
+        <div class="text">{{ msg.message }}</div>
+      </div>
+      @if (messages().length === 0) {
+        <div class="empty" aria-label="No messages">No messages yet.</div>
+      }
+    </div>
+  </mat-card>
+</mat-card>

@@ -1,12 +1,14 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.CreateConnection;
 using RedisGUI.Domain.Extensions;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Endpoints.Connections.CreateConnection
 {
@@ -26,7 +28,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CreateConnection
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapPost("connections", async (ISender sender, CreateConnectionRequest request) =>
+			routerBuilder.MapPost("connections", async (IMediator sender, CreateConnectionRequest request, CancellationToken token) =>
 				{
 					var createConnectionCommand = new CreateConnectionCommand(
 						request.Name,
@@ -35,9 +37,15 @@ namespace RedisGUI.Server.Endpoints.Connections.CreateConnection
 						request.Database,
 						request.UserName, request.Password);
 
-					return await sender.Send<Result<Guid>>(createConnectionCommand).Match(Results.Ok, Results.BadRequest);
+					return await sender.Send(createConnectionCommand, token).Match(Results.Ok, Results.BadRequest);
 				})
-				.WithOpenApi();
+				.AddOpenApiOperationTransformer((opperation, context, ct) =>
+				{
+					opperation.Summary = "Create a new Redis connection";
+					opperation.Description = "Creates";
+
+					return Task.CompletedTask;
+				});
 		}
 	}
 }

@@ -1,0 +1,76 @@
+<mat-card class="transaction-builder" aria-label="Redis Transaction Builder">
+  <mat-card-title>Transaction Builder</mat-card-title>
+  <mat-card-subtitle>Compose an ordered MULTI/EXEC sequence</mat-card-subtitle>
+
+  <div class="operations">
+    @for (operation of operations(); track operation) {
+      <div class="operation-row" aria-label="Operation row">
+        <mat-form-field appearance="outline" class="command-field">
+          <mat-label>Command</mat-label>
+          <mat-select [(ngModel)]="operation.command" (ngModelChange)="updateCommand(operation, $event)">
+            <mat-option value="SET">SET</mat-option>
+            <mat-option value="GET">GET</mat-option>
+            <mat-option value="DEL">DEL</mat-option>
+            <mat-option value="INCR">INCR</mat-option>
+            <mat-option value="DECR">DECR</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="key-field">
+          <mat-label>Key</mat-label>
+          <input matInput [(ngModel)]="operation.key" (ngModelChange)="updateKey(operation, $event)" placeholder="redis key" />
+        </mat-form-field>
+
+        @if (operation.command === 'SET') {
+          <mat-form-field appearance="outline" class="value-field">
+            <mat-label>Value</mat-label>
+            <input matInput [(ngModel)]="operation.value" (ngModelChange)="updateValue(operation, $event)" placeholder="string value" />
+          </mat-form-field>
+        }
+
+        <div class="row-actions">
+          <button mat-icon-button (click)="moveUp(operation)" [disabled]="operation === operations()[0]" matTooltip="Move up" aria-label="Move up">
+            <mat-icon>arrow_upward</mat-icon>
+          </button>
+          <button mat-icon-button (click)="moveDown(operation)" [disabled]="operation === operations()[operations().length-1]" matTooltip="Move down" aria-label="Move down">
+            <mat-icon>arrow_downward</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="removeOperation(operation)" [disabled]="operations().length===1" matTooltip="Remove" aria-label="Remove operation">
+            <mat-icon>delete</mat-icon>
+          </button>
+          <button mat-icon-button (click)="addOperation(operation)" matTooltip="Add below" aria-label="Add operation below">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <div class="toolbar">
+    <button mat-raised-button color="primary" (click)="execute()" [disabled]="executing()" aria-label="Execute transaction">
+      <mat-icon>play_arrow</mat-icon>
+      Execute
+    </button>
+    <button mat-button (click)="addOperation()" aria-label="Add operation">
+      <mat-icon>add</mat-icon>
+      Add Operation
+    </button>
+    <button mat-button (click)="clear()" aria-label="Clear operations">
+      <mat-icon>clear_all</mat-icon>
+      Reset
+    </button>
+  </div>
+
+  @if (result()) {
+    <div class="result" aria-label="Transaction result">
+      <h3>Result</h3>
+      <p>Status: <strong [class.ok]="result()?.success" [class.fail]="!result()?.success">{{ result()?.success ? 'Success' : 'Failure' }}</strong></p>
+      <p>Executed: {{ result()?.operationsExecuted }}</p>
+      <ul>
+        @for (res of (result()?.results ?? []); track res) {
+          <li>{{ res || '(nil)' }}</li>
+        }
+      </ul>
+    </div>
+  }
+</mat-card>

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using RedisGUI.Infrastructure.Configuration;
@@ -8,6 +7,7 @@ using RedisGUI.Infrastructure.Persistence;
 using System.Linq;
 using Bogus;
 using RedisGUI.Domain.Connection;
+using Microsoft.EntityFrameworkCore;
 
 namespace RedisGUI.Server.Extensions;
 

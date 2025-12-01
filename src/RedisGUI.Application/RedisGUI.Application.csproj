@@ -1,18 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\build\Common.props" />
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.0.0-preview1" />
-    <PackageReference Include="MediatR" Version="12.4.1" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.1" />
-    <PackageReference Include="SonarAnalyzer.CSharp" Version="10.6.0.109712">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
-  </ItemGroup>
+	<Import Project="..\..\build\Common.props" />
+	<ItemGroup>
+		<InternalsVisibleTo Include="RedisGUI.Application.Tests" />
+	</ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+		<ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
+	</ItemGroup>
+	<ItemGroup>
+		<PackageReference Include="FluentValidation" />
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+	</ItemGroup>
 </Project>

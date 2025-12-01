@@ -1,7 +1,6 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
-
 #nullable disable
+
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace RedisGUI.Infrastructure.Persistence.Migrations
 {

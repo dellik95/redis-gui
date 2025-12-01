@@ -1,6 +1,6 @@
 using System.Collections.Generic;
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Application.Connections.Shared;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Application.Connections.GetAllConnections;
 

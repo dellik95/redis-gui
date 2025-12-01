@@ -4,8 +4,9 @@ import { provideRouter, withComponentInputBinding, withDebugTracing, withRouterC
 import { routes } from "./app.routes";
 import { provideAnimationsAsync } from "@angular/platform-browser/animations/async";
 import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from "@angular/common/http";
-import { ErrorInterceptor } from "../shared/interceptors/error.interceptor";
-import { LoaderInterceptor } from "../shared/interceptors/loader.interceptor";
+import { ErrorInterceptor } from "./core/interceptors/error.interceptor";
+import { LoaderInterceptor } from "./core/interceptors/loader.interceptor";
+import { RetryInterceptor } from "./core/interceptors/retry.interceptor";
 
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -15,6 +16,12 @@ export const appConfig: ApplicationConfig = {
       withComponentInputBinding()
     ),
     provideAnimationsAsync(),
+    // Interceptors are executed in order: Retry -> Error -> Loader
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: RetryInterceptor,
+      multi: true
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: ErrorInterceptor,
@@ -28,3 +35,4 @@ export const appConfig: ApplicationConfig = {
     provideAnimationsAsync()
   ]
 };
+ 

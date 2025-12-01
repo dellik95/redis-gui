@@ -1,7 +1,3 @@
-﻿using Microsoft.EntityFrameworkCore;
-using RedisGUI.Domain.Abstraction;
-using RedisGUI.Domain.Connection;
-
 namespace RedisGUI.Infrastructure.Persistence;
 
 /// <summary>

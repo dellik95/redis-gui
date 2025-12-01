@@ -1,0 +1,85 @@
+<mat-card class="lua-console" aria-label="Lua Script Console">
+  <mat-card-title>Lua Script Console</mat-card-title>
+  <mat-card-subtitle>Execute Redis Lua scripts (EVAL/EVALSHA)</mat-card-subtitle>
+
+  <div class="builder">
+    <div class="script-editor">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Script</mat-label>
+          <textarea matInput rows="10" [ngModel]="scriptText()" (ngModelChange)="scriptText.set($event)" placeholder="-- Write Lua script here"></textarea>
+      </mat-form-field>
+      <div class="editor-actions">
+        <button mat-button color="primary" (click)="execute()" [disabled]="executing()">
+          <mat-icon>play_arrow</mat-icon>
+          Run
+        </button>
+        <button mat-button (click)="saveScript()">
+          <mat-icon>save</mat-icon>
+          Save
+        </button>
+        <button mat-button (click)="clearAll()">
+          <mat-icon>layers_clear</mat-icon>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="keys-args">
+      <div class="list-group">
+        <h4>KEYS</h4>
+        <div class="items">
+          <div class="kv-row" *ngFor="let k of keys(); let i = index">
+            <mat-form-field appearance="outline" class="mini-field">
+              <mat-label>Key {{i+1}}</mat-label>
+                <input matInput [ngModel]="keys()[i]" (ngModelChange)="updateKey(i,$event)" />
+            </mat-form-field>
+            <button mat-icon-button color="warn" (click)="removeKey(i)" matTooltip="Remove key">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+          <button mat-button (click)="addKey()" aria-label="Add key">
+            <mat-icon>add</mat-icon>
+            Add Key
+          </button>
+        </div>
+      </div>
+      <div class="list-group">
+        <h4>ARGV</h4>
+        <div class="items">
+          <div class="kv-row" *ngFor="let a of args(); let i = index">
+            <mat-form-field appearance="outline" class="mini-field">
+              <mat-label>Arg {{i+1}}</mat-label>
+                <input matInput [ngModel]="args()[i]" (ngModelChange)="updateArg(i,$event)" />
+            </mat-form-field>
+            <button mat-icon-button color="warn" (click)="removeArg(i)" matTooltip="Remove arg">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+          <button mat-button (click)="addArg()" aria-label="Add argument">
+            <mat-icon>add</mat-icon>
+            Add Arg
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="saved" *ngIf="savedScripts().length > 0">
+    <h4>Saved Scripts</h4>
+    <mat-chip-listbox>
+      <mat-chip *ngFor="let s of savedScripts()" [class.selected]="selectedScriptId()===s.id" (click)="loadScript(s.id)" [removable]="true" (removed)="deleteScript(s.id)" matTooltip="Hash: {{s.hash || 'N/A'}}">
+        {{ s.name }}
+        <button matChipRemove aria-label="Delete script">
+          <mat-icon>close</mat-icon>
+        </button>
+      </mat-chip>
+    </mat-chip-listbox>
+  </div>
+
+  <div *ngIf="result() as r" class="result" aria-label="Script result">
+    <h4>Result</h4>
+    <p>Status: <strong [class.ok]="r.success" [class.fail]="!r.success">{{ r.success ? 'Success' : 'Failure' }}</strong></p>
+    <p *ngIf="r.scriptHash">SHA1: <code>{{ r.scriptHash }}</code></p>
+    <pre class="output">{{ r.result }}</pre>
+  </div>
+</mat-card>

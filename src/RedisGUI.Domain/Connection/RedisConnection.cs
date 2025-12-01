@@ -2,6 +2,7 @@ using RedisGUI.Domain.Guards;
 using RedisGUI.Domain.Primitives;
 using System;
 using RedisGUI.Domain.Connection.Events;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Domain.Connection;
 

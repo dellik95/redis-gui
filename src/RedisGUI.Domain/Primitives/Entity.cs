@@ -18,7 +18,7 @@ public abstract class Entity : IEquatable<Entity>
 	/// <summary>
 	/// Gets the collection of domain events for this entity
 	/// </summary>
-	private readonly List<IDomainEvent> domainEvents = new();
+	private readonly List<IDomainEvent> domainEvents = [];
 
 	/// <summary>
 	/// Initializes a new instance of the Entity class

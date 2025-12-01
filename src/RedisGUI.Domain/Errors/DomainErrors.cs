@@ -30,6 +30,11 @@ public static class DomainErrors
 		public static Error ConnectionNotFound => new("Connection.NotFound", "The connection not found.");
 
 		/// <summary>
+		/// Connection not found by ID
+		/// </summary>
+		public static Error NotFound => new("Connection.NotFound", "The connection with the specified ID was not found.");
+
+		/// <summary>
 		/// Not established connection
 		/// </summary>
 		public static Error ConnectionNotEstablished => new("Connection.NotEstablished", "The connection can not be established.");

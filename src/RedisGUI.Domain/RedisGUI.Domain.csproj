@@ -1,13 +1,6 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <Import Project="..\..\build\Common.props" />
-  <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-  </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
-    <PackageReference Include="MediatR.Contracts" Version="2.0.1" />
-  </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Exceptions\" />
-  </ItemGroup>
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\..\build\Common.props" />
+	<ItemGroup>
+		<ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
+	</ItemGroup>
 </Project>

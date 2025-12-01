@@ -1,31 +1,33 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 	<Import Project="..\..\build\Common.props" />
-	<PropertyGroup>
-		<TargetFramework>net9.0</TargetFramework>
-	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Asp.Versioning.Http" Version="8.1.0" />
-		<PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" Version="8.1.0" />
-		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" Version="9.0.1" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.0">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.0" />
-		<PackageReference Include="MySql.EntityFrameworkCore" Version="9.0.0" />
-		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="9.0.0">
+		<PackageReference Include="Asp.Versioning.Http" />
+		<PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+		<PackageReference Include="Microsoft.AspNetCore.Cryptography.KeyDerivation" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Design">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="9.0.1" />
-		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="9.0.1" />
-		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="9.0.1" />
-		<PackageReference Include="NRedisStack" Version="0.13.2" />
-		<PackageReference Include="ZiggyCreatures.FusionCache" Version="2.1.0" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+		<PackageReference Include="MySql.EntityFrameworkCore" />
+		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
+		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" />
+		<PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
+		<PackageReference Include="NRedisStack" />
+		<PackageReference Include="ZiggyCreatures.FusionCache" />
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\RedisGUI.Application\RedisGUI.Application.csproj" />
+		<ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+		<ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
 	</ItemGroup>
 </Project>

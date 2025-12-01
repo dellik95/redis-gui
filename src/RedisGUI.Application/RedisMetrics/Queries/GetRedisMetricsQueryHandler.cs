@@ -1,9 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.RedisMetrics.Queries
 {
@@ -17,7 +17,6 @@ namespace RedisGUI.Application.RedisMetrics.Queries
 			this.metricsCollector = metricsCollector;
 			this.connectionRepository = connectionRepository;
 		}
-
 
 		public async Task<Result<Domain.RedisMetrics.RedisMetrics>> Handle(GetRedisMetricsQuery request, CancellationToken cancellationToken)
 		{

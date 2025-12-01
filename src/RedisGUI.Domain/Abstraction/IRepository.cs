@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;

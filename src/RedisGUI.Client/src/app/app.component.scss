@@ -12,10 +12,19 @@
 	right: 0;
 }
 
+// Use Material system surface tokens so backgrounds change with prebuilt theme
+html, body {
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  height: 100%;
+}
+
 .sidenav-menu {
-	border-right: 1px solid #c4c6d0;
+	border-right: 1px solid var(--mat-sys-outline);
 	border-radius: 0;
 	padding: 3px;
+	background: var(--mat-sys-surface);
+	color: var(--mat-sys-on-surface);
 }
 
 .sidenav-menu__item:not(:nth-last-child(1)) {
@@ -24,15 +33,52 @@
 
 .sidenav-menu__content {
 	display: flex;
+	align-items: center;
+	width: 100%;
 
-	>.sidenav-menu__title {
-		margin-left: 5px;
-		font-size: large;
+	> .sidenav-menu_icon {
+		flex-shrink: 0;
+	}
+
+	> .sidenav-menu__text {
+		margin-left: 12px;
+		flex: 1;
+		min-width: 0;
+
+		.sidenav-menu__title {
+			font-size: 14px;
+			font-weight: 500;
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+
+		.sidenav-menu__description {
+			font-size: 12px;
+			opacity: 0.7;
+			margin-top: 2px;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		.sidenav-menu__badge {
+			display: inline-block;
+			background: var(--mat-sys-primary);
+			color: var(--mat-sys-on-primary);
+			padding: 2px 8px;
+			border-radius: 12px;
+			font-size: 11px;
+			font-weight: 600;
+			line-height: 1.2;
+		}
 	}
 }
 
 .loyout-toolbar {
-	background: var(--mat-sys-primary-fixed);
+	// Prefer Material 3 system tokens when available so toolbar contrasts with background.
+	background: var(--mat-sys-primary-container);
+	color: var(--mat-sys-on-primary-container);
 
 	.spacer {
 		flex: 1 1 auto;
@@ -63,17 +109,27 @@ h1.header-company-name {
 }
 
 .main-content {
-	margin: 10px;
-	box-sizing: border-box;
-	height: calc(100% - 100px);
+		margin: 10px;
+		box-sizing: border-box;
+		height: calc(100% - 100px);
+	background: var(--mat-sys-surface);
+	color: var(--mat-sys-on-surface);
 }
 
-.section-actions-container {
-	display: flex;
-	align-items: center;
-	gap: 10px;
-	border-bottom: 1px solid #c4c6d0;
-	margin-bottom: 10px;
+.mat-table, .mat-cell, .mat-header-cell {
+	background: transparent;
+}
+
+.cdk-virtual-scroll-viewport {
+	background: var(--mat-sys-surface, var(--mat-surface, transparent));
+}
+
+	.section-actions-container {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		border-bottom: 1px solid var(--mat-sys-outline);
+		margin-bottom: 10px;
 }
 
 .company-dedails {
@@ -84,4 +140,55 @@ h1.header-company-name {
 	img {
 		width: 200px;
 	}
+}
+
+/* Toolbar should use primary container for prominence */
+.loyout-toolbar {
+	background: var(--mat-sys-primary-container);
+	color: var(--mat-sys-on-primary-container);
+}
+
+/* Nav list and items inherit surface / on-surface */
+.sidenav-menu .mat-nav-list, .sidenav-menu .mat-list-item {
+	background: transparent;
+	color: inherit;
+}
+
+/* Tables: use surface and variant for headers */
+.mat-table {
+	background: transparent;
+	color: inherit;
+}
+.mat-header-row, .mat-header-cell {
+	background: var(--mat-sys-surface-variant);
+	color: var(--mat-sys-on-surface);
+}
+.mat-row, .mat-cell {
+	background: transparent;
+}
+
+/* Virtual scroll viewport: match surface */
+.cdk-virtual-scroll-viewport {
+	background: transparent;
+}
+
+/* Density helpers */
+.density-default {
+	--app-density-scale: 0px;
+}
+.density-comfortable {
+	--app-density-scale: -4px;
+}
+.density-compact {
+	--app-density-scale: -8px;
+}
+
+/* Apply density to some components as example */
+.density-compact .mat-toolbar, .density-comfortable .mat-toolbar {
+	height: calc(64px + var(--app-density-scale));
+}
+
+.breadcrumb, app-breadcrumb {
+  border-radius: 4px;
+  padding: 4px 12px;
 }

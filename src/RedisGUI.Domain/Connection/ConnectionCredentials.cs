@@ -1,6 +1,6 @@
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
 
 
 namespace RedisGUI.Domain.Connection;

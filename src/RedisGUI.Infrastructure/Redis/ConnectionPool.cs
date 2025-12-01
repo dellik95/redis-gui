@@ -1,12 +1,6 @@
-using Microsoft.Extensions.Logging;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Domain.Primitives;
 using StackExchange.Redis;
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 
 namespace RedisGUI.Infrastructure.Redis;
 

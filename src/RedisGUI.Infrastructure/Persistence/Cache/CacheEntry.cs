@@ -1,4 +1,3 @@
-using System;
 using RedisGUI.Infrastructure.Persistence.InMemoryDbDataReader;
 
 namespace RedisGUI.Infrastructure.Persistence.Cache;

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System;
 
 namespace RedisGUI.Infrastructure.SignalR
 {

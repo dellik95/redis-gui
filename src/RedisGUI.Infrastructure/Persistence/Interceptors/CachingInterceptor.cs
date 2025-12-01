@@ -1,9 +1,6 @@
-using System;
-using System.Data.Common;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using RedisGUI.Infrastructure.Persistence.Cache;
+using System.Data.Common;
 
 namespace RedisGUI.Infrastructure.Persistence.Interceptors;
 

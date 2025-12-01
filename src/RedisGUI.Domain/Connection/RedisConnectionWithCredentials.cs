@@ -31,6 +31,15 @@ public sealed class RedisConnectionWithCredentials : RedisConnection
 	/// </summary>
 	public ConnectionCredentials ConnectionCredentials { get; private set; }
 
+	/// <summary>
+	/// Updates the connection credentials
+	/// </summary>
+	/// <param name="newCredentials">The new credentials</param>
+	public void UpdateCredentials(ConnectionCredentials newCredentials)
+	{
+		this.ConnectionCredentials = newCredentials;
+	}
+
 
 	/// <inheritdoc />
 	protected override string GetBaseConnectionString() => $"{ConnectionCredentials.UserName}:{ConnectionCredentials.PasswordHash}@{ServerHost}:{ServerPort}";

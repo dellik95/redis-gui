@@ -1,7 +1,7 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
 using System.Threading;
 using System.Threading.Tasks;
 

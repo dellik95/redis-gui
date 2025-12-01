@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using RedisGUI.Application.Core.Behavior;
 
 namespace RedisGUI.Application;
@@ -13,15 +13,19 @@ public static class DependencyInjection
 	/// </summary>
 	/// <param name="services">The service collection to add services to</param>
 	/// <returns>The service collection for chaining</returns>
+	public static IServiceCollection AddApplicationMediator(this IServiceCollection services)
+	{
+		// Invoke shared mediator registration with no additional behaviors.
+		RedisGUI.Shared.Mediator.ServiceCollectionExtensions.AddCustomMediator(services, static config =>
+		{
+			config.RegisterHandlersFromAssembly(typeof(DependencyInjection).Assembly);
+		});
+		return services;
+	}
+
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
-		services.AddMediatR(config =>
-		{
-			config.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
-			config.AddOpenBehavior(typeof(LoggingBehavior<,>));
-			config.AddOpenBehavior(typeof(ValidationBehavior<,>));
-		});
-
+		services.AddApplicationMediator();
 		return services;
 	}
 }

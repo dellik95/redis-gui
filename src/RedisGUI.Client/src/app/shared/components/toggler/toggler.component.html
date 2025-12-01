@@ -1,0 +1,9 @@
+@if (config(); as items) {
+    <mat-button-toggle-group hideSingleSelectionIndicator="true" (change)="onToggle($event)" [value]="items.defaultValue">    
+        @for (item of items.items; track item.value) {
+            <mat-button-toggle [value]="item.value">
+                <mat-icon [fontIcon]="item.icon"></mat-icon>
+            </mat-button-toggle>
+        }
+    </mat-button-toggle-group>
+}

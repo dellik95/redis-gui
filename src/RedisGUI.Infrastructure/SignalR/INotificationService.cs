@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace RedisGUI.Infrastructure.SignalR
 {
 	/// <summary>

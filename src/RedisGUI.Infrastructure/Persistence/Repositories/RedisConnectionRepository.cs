@@ -1,11 +1,4 @@
-using Microsoft.EntityFrameworkCore;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Domain.Primitives;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 
 namespace RedisGUI.Infrastructure.Persistence.Repositories;
 
@@ -32,5 +25,16 @@ public class RedisConnectionRepository : RepositoryBase<RedisConnection>, IRedis
 	{
 		var connection = await DbSet.FirstOrDefaultAsync(c => c.Id == id, token);
 		return Result.Create(connection, DomainErrors.Connection.ConnectionNotFound);
+	}
+
+	/// <summary>
+	/// Retrieves all Redis connections
+	/// </summary>
+	/// <param name="token">Cancellation token</param>
+	/// <returns>A Result containing the list of connections</returns>
+	public async Task<Result<List<RedisConnection>>> GetAllConnectionsAsync(CancellationToken token = default)
+	{
+		var connections = await DbSet.ToListAsync(token);
+		return Result.Success(connections);
 	}
 }
