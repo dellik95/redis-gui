@@ -6,5 +6,5 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// <param name="DeletedCount">Number of keys deleted.</param>
 /// <param name="Pattern">Pattern used for deletion.</param>
 public sealed record DeleteKeysByPatternResponse(
-    int DeletedCount,
-    string Pattern);
+	int DeletedCount,
+	string Pattern);

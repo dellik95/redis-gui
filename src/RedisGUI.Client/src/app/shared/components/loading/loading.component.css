@@ -9,7 +9,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background: rgba(0, 0, 0, 0.32);
+    /* background: rgba(0, 0, 0, 0.32); */
     z-index: 20000;
 }
 

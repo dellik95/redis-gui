@@ -12,14 +12,14 @@ namespace RedisGUI.Application.Redis.Commands.ExecuteLuaScript;
 public sealed class ExecuteLuaScriptCommandHandler : ICommandHandler<ExecuteLuaScriptCommand, ExecuteLuaScriptResponse>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisScriptService scriptService;
 
 	public ExecuteLuaScriptCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IConnectionService connectionService)
+		IRedisScriptService scriptService)
 	{
 		this.connectionRepository = connectionRepository;
-		this.connectionService = connectionService;
+		this.scriptService = scriptService;
 	}
 
 	public async Task<Result<ExecuteLuaScriptResponse>> Handle(
@@ -33,11 +33,12 @@ public sealed class ExecuteLuaScriptCommandHandler : ICommandHandler<ExecuteLuaS
 			return Result.Failure<ExecuteLuaScriptResponse>(connectionResult.Error);
 		}
 
-		var result = await connectionService.ExecuteLuaScript(
+		var result = await scriptService.ExecuteLuaScriptAsync(
 			connectionResult.Value,
 			request.Script,
 			request.Keys,
-			request.Arguments);
+			request.Arguments,
+			cancellationToken);
 
 		if (result.IsFailure)
 		{

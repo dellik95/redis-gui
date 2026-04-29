@@ -1,7 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
-	<Import Project="..\..\build\Common.props" />
-
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
 	</PropertyGroup>
@@ -11,6 +8,7 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="FluentAssertions" />
 		<PackageReference Include="Microsoft.NET.Test.Sdk" />
 		<PackageReference Include="Moq" />
 		<PackageReference Include="NUnit" />
@@ -23,6 +21,7 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\RedisGUI.Shared\RedisGUI.Shared.csproj" />
+		<ProjectReference Include="..\..\src\RedisGUI.Domain\RedisGUI.Domain.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

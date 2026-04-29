@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using RedisGUI.Application.Core.Behavior;
 
@@ -15,7 +16,7 @@ public static class DependencyInjection
 	/// <returns>The service collection for chaining</returns>
 	public static IServiceCollection AddApplicationMediator(this IServiceCollection services)
 	{
-		// Invoke shared mediator registration with no additional behaviors.
+		// Invoke shared mediator registration with validation behavior
 		RedisGUI.Shared.Mediator.ServiceCollectionExtensions.AddCustomMediator(services, static config =>
 		{
 			config.RegisterHandlersFromAssembly(typeof(DependencyInjection).Assembly);
@@ -25,7 +26,13 @@ public static class DependencyInjection
 
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
+		// Register FluentValidation validators from assembly
+		// Note: AddValidatorsFromAssembly requires FluentValidation.DependencyInjectionExtensions package
+		// services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+
+		// Register mediator with behaviors
 		services.AddApplicationMediator();
+
 		return services;
 	}
 }

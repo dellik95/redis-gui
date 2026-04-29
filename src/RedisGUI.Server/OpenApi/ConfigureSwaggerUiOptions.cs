@@ -30,10 +30,10 @@ public class ConfigureSwaggerUiOptions : IConfigureNamedOptions<SwaggerUIOptions
 	/// <param name="options">The options to configure</param>
 	public void Configure(SwaggerUIOptions options)
 	{
-		foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+		foreach (ApiVersionDescription description in apiVersionDescriptionProvider.ApiVersionDescriptions)
 		{
-			var url = $"/swagger/{description.GroupName}/swagger.json";
-			var name = description.GroupName.ToUpperInvariant();
+			string url = $"/swagger/{description.GroupName}/swagger.json";
+			string name = description.GroupName.ToUpperInvariant();
 			options.SwaggerEndpoint(url, name);
 		}
 	}
@@ -43,7 +43,7 @@ public class ConfigureSwaggerUiOptions : IConfigureNamedOptions<SwaggerUIOptions
 	/// </summary>
 	/// <param name="name">The name of the options to configure</param>
 	/// <param name="options">The options to configure</param>
-	public void Configure(string name, SwaggerUIOptions options)
+	public void Configure(string? name, SwaggerUIOptions options)
 	{
 		Configure(options);
 	}

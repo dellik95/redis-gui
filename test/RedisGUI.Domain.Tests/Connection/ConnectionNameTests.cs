@@ -9,7 +9,7 @@ namespace RedisGUI.Domain.Tests.Connection;
 /// </summary>
 public class ConnectionNameTests
 {
-	[Fact]
+	[Test]
 	public void Create_WithValidName_ShouldSucceed()
 	{
 		// Arrange
@@ -22,7 +22,7 @@ public class ConnectionNameTests
 		connectionName.Value.Should().Be(name);
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithEmptyName_ShouldThrowException()
 	{
 		// Arrange
@@ -35,7 +35,7 @@ public class ConnectionNameTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithNullName_ShouldThrowException()
 	{
 		// Arrange
@@ -48,7 +48,7 @@ public class ConnectionNameTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithNameTooLong_ShouldThrowException()
 	{
 		// Arrange
@@ -61,11 +61,10 @@ public class ConnectionNameTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Theory]
-	[InlineData("Connection1")]
-	[InlineData("My Redis Connection")]
-	[InlineData("connection-123")]
-	[InlineData("Connection_With_Underscores")]
+	[TestCase("Connection1")]
+	[TestCase("My Redis Connection")]
+	[TestCase("connection-123")]
+	[TestCase("Connection_With_Underscores")]
 	public void Create_WithVariousValidNames_ShouldSucceed(string name)
 	{
 		// Act

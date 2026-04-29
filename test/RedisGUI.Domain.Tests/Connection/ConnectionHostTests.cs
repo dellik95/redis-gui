@@ -8,12 +8,11 @@ namespace RedisGUI.Domain.Tests.Connection;
 /// </summary>
 public class ConnectionHostTests
 {
-	[Theory]
-	[InlineData("localhost")]
-	[InlineData("127.0.0.1")]
-	[InlineData("redis.example.com")]
-	[InlineData("192.168.1.100")]
-	[InlineData("my-redis.example.com")]
+	[TestCase("localhost")]
+	[TestCase("127.0.0.1")]
+	[TestCase("redis.example.com")]
+	[TestCase("192.168.1.100")]
+	[TestCase("my-redis.example.com")]
 	public void Create_WithValidHost_ShouldSucceed(string host)
 	{
 		// Act
@@ -23,7 +22,7 @@ public class ConnectionHostTests
 		connectionHost.Value.Should().Be(host);
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithEmptyHost_ShouldThrowException()
 	{
 		// Arrange
@@ -36,7 +35,7 @@ public class ConnectionHostTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithNullHost_ShouldThrowException()
 	{
 		// Arrange
@@ -49,7 +48,7 @@ public class ConnectionHostTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithHostTooLong_ShouldThrowException()
 	{
 		// Arrange
@@ -62,9 +61,8 @@ public class ConnectionHostTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Theory]
-	[InlineData("invalid host with spaces")]
-	[InlineData("http://invalid")]
+	[TestCase("invalid host with spaces")]
+	[TestCase("http://invalid")]
 	public void Create_WithInvalidFormat_ShouldThrowException(string host)
 	{
 		// Act

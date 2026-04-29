@@ -3,5 +3,5 @@ import { ConnectionDialogMode } from "./connection-dialog-mode.enum";
 
 export type ConnectionDialogData = {
     mode: ConnectionDialogMode,
-    connection: ConnectionType
+    connection?: ConnectionType | null
 };

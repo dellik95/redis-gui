@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using System;
@@ -74,3 +74,6 @@ public class DeleteKeysByPatternCommandValidatorTests
         result.Errors.Should().ContainSingle(e => e.PropertyName == "Pattern");
     }
 }
+
+
+

@@ -245,12 +245,11 @@ NEVER suggest:
 
 Each answer MUST follow this structure:
 
-1. **Short summary**  
-2. **Best recommended solution**  
-3. **Trade-offs & alternatives**  
-4. **Clean code examples**  
-5. **Optional improvements**  
-6. **(If applicable) Adaptation note: how it fits the current project’s style**  
+1. **Best recommended solution**  
+2. **Trade-offs & alternatives**  
+3. **Clean code examples**  
+4. **Optional improvements**  
+5. **(If applicable) Adaptation note: how it fits the current project’s style**  
 
 ---
 

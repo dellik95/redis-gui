@@ -1,46 +1,46 @@
-import { Component, inject, OnDestroy, OnInit } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { StorageConnectionsListComponent } from "./components/storage-connections-list/storage-connections-list.component";
-import { SectionActionsPortalService } from '../../core/services/section-actions-portal.service';
+import { SectionActionsStore } from '../../core/stores/section-actions.store';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { DashboardSectionActionsComponent } from './components/dashboard-section-actions/dashboard-section-actions.component';
 import { SectionConfig } from '../../models/section-config.type';
 import { Connection } from '../../models/connection.type';
 import { sectionConfig } from './dashboard-section.config';
-import { SideNavService } from '../../shared/services/side-nav.service';
+import { SideNavStore } from '../../core/stores/side-nav.store';
 
+/**
+ * Dashboard component - Main landing page
+ *
+ * Displays Redis connection list and manages dashboard-specific section actions.
+ * Uses Angular's automatic cleanup (no DestroyRef needed).
+ * Modern zoneless-compatible implementation.
+ */
 @Component({
   selector: 'app-dashboard',
-  imports: [
-    StorageConnectionsListComponent
-  ],
+  imports: [StorageConnectionsListComponent],
   templateUrl: './dashboard.component.html',
-  styleUrl: './dashboard.component.scss'
+  styleUrl: './dashboard.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent {
+  // 1. Injected dependencies
+  private readonly sectionActionsStore = inject(SectionActionsStore);
+  private readonly sideNavStore = inject(SideNavStore);
 
-  private sectionActionsPortalService = inject(SectionActionsPortalService);
-  private sideNavService = inject(SideNavService);
+  // 2. Configuration
+  readonly connectionListConfig: SectionConfig<Connection> = sectionConfig;
 
-  connectionListConfig: SectionConfig<Connection> = sectionConfig;
-
-  ngOnInit(): void {
+  constructor() {
     // Clear connection-specific routes when returning to dashboard
-    this.sideNavService.clearConnectionRoutes();
-    this.showActions();
-  }
+    this.sideNavStore.clearConnectionRoutes();
 
-  ngOnDestroy(): void {
-    this.clearActions();
-  }
-
-
-  showActions() {
+    // Attach dashboard section actions (automatically cleaned up on destroy)
     const portal = new ComponentPortal(DashboardSectionActionsComponent);
-    this.sectionActionsPortalService.attach(portal);
+    this.sectionActionsStore.attach(portal);
   }
 
-  clearActions() {
-    this.sectionActionsPortalService.clear();
+  // ngOnDestroy is automatically called, clearing the portal
+  ngOnDestroy(): void {
+    this.sectionActionsStore.clear();
   }
-
 }

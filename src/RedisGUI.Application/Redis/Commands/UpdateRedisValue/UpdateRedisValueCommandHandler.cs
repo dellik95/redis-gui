@@ -15,14 +15,14 @@ namespace RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRedisValueCommand>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     public UpdateRedisValueCommandHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     public async Task<Result> Handle(UpdateRedisValueCommand request, CancellationToken cancellationToken)
@@ -56,13 +56,14 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
             return Result.Failure(new Error("RedisValue.InvalidData", "Invalid value data for the specified type"));
         }
 
-        // Update the value using the connection service
-        var result = await connectionService.UpdateValue(
+        // Update the value using the value service
+        var result = await valueService.UpdateValueAsync(
             connection,
             request.Key,
             valueToSet,
             request.Type.ToString(),
-            request.Ttl);
+            request.Ttl,
+            cancellationToken);
 
         return result;
     }

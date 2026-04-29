@@ -20,43 +20,55 @@ export class ErrorHandlingService {
    * Shows an error message to the user
    */
   showError(message: string, duration?: number): void {
-    this.snackBar.open(message, 'Close', {
+    const config: MatSnackBarConfig = {
       ...this.defaultConfig,
-      duration: duration || this.defaultConfig.duration,
       panelClass: ['error-snackbar']
-    });
+    };
+    if (duration !== undefined) {
+      config.duration = duration;
+    }
+    this.snackBar.open(message, 'Close', config);
   }
 
   /**
    * Shows a success message to the user
    */
   showSuccess(message: string, duration?: number): void {
-    this.snackBar.open(message, 'Close', {
+    const config: MatSnackBarConfig = {
       ...this.defaultConfig,
-      duration: duration || this.defaultConfig.duration,
       panelClass: ['success-snackbar']
-    });
+    };
+    if (duration !== undefined) {
+      config.duration = duration;
+    }
+    this.snackBar.open(message, 'Close', config);
   }
 
   /**
    * Shows a warning message to the user
    */
   showWarning(message: string, duration?: number): void {
-    this.snackBar.open(message, 'Close', {
+    const config: MatSnackBarConfig = {
       ...this.defaultConfig,
-      duration: duration || this.defaultConfig.duration,
       panelClass: ['warning-snackbar']
-    });
+    };
+    if (duration !== undefined) {
+      config.duration = duration;
+    }
+    this.snackBar.open(message, 'Close', config);
   }
 
   /**
    * Shows an info message to the user
    */
   showInfo(message: string, duration?: number): void {
-    this.snackBar.open(message, 'Close', {
+    const config: MatSnackBarConfig = {
       ...this.defaultConfig,
-      duration: duration || this.defaultConfig.duration,
       panelClass: ['info-snackbar']
-    });
+    };
+    if (duration !== undefined) {
+      config.duration = duration;
+    }
+    this.snackBar.open(message, 'Close', config);
   }
 }

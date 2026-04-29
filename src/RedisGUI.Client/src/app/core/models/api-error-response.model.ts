@@ -18,21 +18,25 @@ export interface ApiErrorResponse {
   path?: string;
   
   /** Additional error details (for development/debugging) */
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 /**
  * Type guard to check if an error response is an ApiErrorResponse
+ * 
+ * @param error - The error object to check
+ * @returns True if the error is an ApiErrorResponse
  */
-export function isApiErrorResponse(error: any): error is ApiErrorResponse {
+export function isApiErrorResponse(error: unknown): error is ApiErrorResponse {
   return (
-    error &&
+    error !== null &&
+    error !== undefined &&
     typeof error === 'object' &&
     'code' in error &&
     'message' in error &&
     'statusCode' in error &&
-    typeof error.code === 'string' &&
-    typeof error.message === 'string' &&
-    typeof error.statusCode === 'number'
+    typeof (error as Record<string, unknown>)['code'] === 'string' &&
+    typeof (error as Record<string, unknown>)['message'] === 'string' &&
+    typeof (error as Record<string, unknown>)['statusCode'] === 'number'
   );
 }

@@ -1,22 +1,36 @@
-import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { BreadcrumbService } from '../../services/breadcrumb.service';
-import { Observable } from 'rxjs';
-import { Breadcrumb as BreadcrumbType } from '../../../models/breadcrumb.type';
 
+import { BreadcrumbStore } from '../../../core/stores/breadcrumb.store';
+
+/**
+ * Component for displaying breadcrumb navigation
+ * 
+ * Features:
+ * - Automatically updates based on route changes
+ * - Uses BreadcrumbStore for centralized state management
+ * - Displays navigation path with clickable links
+ * 
+ * @example
+ * ```html
+ * <app-breadcrumb />
+ * ```
+ */
 @Component({
   selector: 'app-breadcrumb',
-  imports: [
-    CommonModule,
-    RouterLink
-  ],
+  standalone: true,
+  imports: [RouterLink],
   templateUrl: './breadcrumb.component.html',
-  styleUrl: './breadcrumb.component.scss'
+  styleUrl: './breadcrumb.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BreadcrumbComponent {
-  private breadcrumbService = inject(BreadcrumbService);
-  breadcrumbs$: Observable<Array<BreadcrumbType>> = this.breadcrumbService.breadcrumbs$;
-
-  constructor() {}
+  // 1. Injected dependencies
+  private readonly breadcrumbStore = inject(BreadcrumbStore);
+  
+  // 2. Store signals
+  /**
+   * Current breadcrumb trail as signal from store
+   */
+  readonly breadcrumbs = this.breadcrumbStore.breadcrumbs;
 }

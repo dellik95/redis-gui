@@ -31,7 +31,7 @@ public class ConfigureSwaggerOptions : IConfigureNamedOptions<SwaggerGenOptions>
 	/// <param name="options">The options to configure</param>
 	public void Configure(SwaggerGenOptions options)
 	{
-		foreach (var description in apiVersionDescriptionProvider.ApiVersionDescriptions)
+		foreach (ApiVersionDescription description in apiVersionDescriptionProvider.ApiVersionDescriptions)
 		{
 			options.SwaggerDoc(description.GroupName, CreateVersionInfo(description));
 		}
@@ -42,7 +42,7 @@ public class ConfigureSwaggerOptions : IConfigureNamedOptions<SwaggerGenOptions>
 	/// </summary>
 	/// <param name="name">The name of the options to configure</param>
 	/// <param name="options">The options to configure</param>
-	public void Configure(string name, SwaggerGenOptions options)
+	public void Configure(string? name, SwaggerGenOptions options)
 	{
 		Configure(options);
 	}
@@ -54,7 +54,7 @@ public class ConfigureSwaggerOptions : IConfigureNamedOptions<SwaggerGenOptions>
 	/// <returns>An OpenApiInfo object containing the API version information</returns>
 	private static OpenApiInfo CreateVersionInfo(ApiVersionDescription apiVersionDescription)
 	{
-		var openApiInfo = new OpenApiInfo
+		OpenApiInfo openApiInfo = new()
 		{
 			Title = $"Redis-Gui.Api v{apiVersionDescription.ApiVersion}",
 			Version = apiVersionDescription.ApiVersion.ToString()

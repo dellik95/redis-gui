@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.ExecuteTransaction;
 using RedisGUI.Domain.Redis;
@@ -68,3 +68,6 @@ public class ExecuteTransactionCommandValidatorTests
         result.Errors.Should().ContainSingle(e => e.PropertyName == "Operations");
     }
 }
+
+
+

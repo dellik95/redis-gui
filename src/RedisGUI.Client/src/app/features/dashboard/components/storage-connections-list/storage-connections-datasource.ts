@@ -1,48 +1,46 @@
 import { DataSource } from '@angular/cdk/collections';
-import { MatPaginator } from '@angular/material/paginator';
-import { MatSort, Sort } from '@angular/material/sort';
-import { Observable, BehaviorSubject, Subscription } from 'rxjs';
+import { from, Observable, of } from 'rxjs';
 import { Connection as ConnectionType } from '../../../../models/connection.type';
 import { inject } from '@angular/core';
-import { StorageConnectionsService } from '../../../../services/api/storage-connections.service';
+import { ConnectionsStore } from '../../../../core/stores/connections.store';
+import { toObservable } from '@angular/core/rxjs-interop';
 
 export interface RedisConnectionsItem {
   name: string;
   id: number;
 }
 
+/**
+ * DataSource for storage connections table
+ * Uses signals directly instead of BehaviorSubject for better performance
+ */
 export class StorageConnectionsDataSource extends DataSource<ConnectionType> {
-  private dataSubject = new BehaviorSubject<ConnectionType[]>([]);
-  subscription: Subscription | null = null;
+  private readonly connectionsStore = inject(ConnectionsStore);
+  private readonly $data = toObservable(this.connectionsStore.connections);
 
-  constructor(private connectionService: StorageConnectionsService) {
+  constructor() {
     super();
-    this.reloadData();
+    // Load connections if needed
+    if (this.connectionsStore.needsRefresh()) {
+      this.connectionsStore.loadConnections();
+    }
   }
 
   connect(): Observable<ConnectionType[]> {
-    return this.dataSubject.asObservable();
+    return this.$data;
   }
 
   disconnect(): void {
-    this.dataSubject.complete();
+    // No manual cleanup needed - toObservable handles it automatically
   }
 
-  reloadData() {
-    if (this.subscription != null) {
-      this.subscription.unsubscribe();
+  /**
+   * Reloads connections data
+   * Triggers a refresh if needed
+   */
+  reloadData(): void {
+    if (this.connectionsStore.needsRefresh()) {
+      this.connectionsStore.loadConnections();
     }
-    this.loadData();
-  }
-
-  private loadData(): void {
-    this.subscription = this.connectionService.getConnections().subscribe(
-      (data: ConnectionType[]) => {
-        this.dataSubject.next(data);
-      },
-      () => {
-        this.dataSubject.next([]);
-      }
-    );
   }
 }

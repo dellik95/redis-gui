@@ -1,35 +1,37 @@
 using Moq;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Domain.Tests.Connection;
 
 /// <summary>
 /// Unit tests for RedisConnection entity
 /// </summary>
+[TestFixture]
 public class RedisConnectionTests
 {
-	private readonly Mock<IPasswordEncryptor> _mockPasswordEncryptor;
+	private readonly Mock<IPasswordEncryptor> mockPasswordEncryptor;
 
 	public RedisConnectionTests()
 	{
-		_mockPasswordEncryptor = new Mock<IPasswordEncryptor>();
-		_mockPasswordEncryptor
+		mockPasswordEncryptor = new Mock<IPasswordEncryptor>();
+		mockPasswordEncryptor
 			.Setup(x => x.EncryptPassword(It.IsAny<string>()))
 			.Returns((string password) => $"encrypted_{password}");
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithValidParametersAndNoCredentials_ShouldReturnAnonymousConnection()
 	{
 		// Arrange
-		var name = new ConnectionName("TestConnection");
-		var host = new ConnectionHost("localhost");
-		var port = new ConnectionPort(6379);
-		var database = 0;
+		ConnectionName name = new("TestConnection");
+		ConnectionHost host = new("localhost");
+		ConnectionPort port = new(6379);
+		DatabaseNumber database = new(0);
 
 		// Act
-		var result = RedisConnection.Create(name, host, port, database);
+		Result<RedisConnection> result = RedisConnection.Create(name, host, port, database, ConnectionOwnerId.None());
 
 		// Assert
 		result.IsSuccess.Should().BeTrue();
@@ -40,18 +42,18 @@ public class RedisConnectionTests
 		result.Value.DatabaseNumber.Should().Be(database);
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithValidParametersAndCredentials_ShouldReturnConnectionWithCredentials()
 	{
 		// Arrange
-		var name = new ConnectionName("TestConnection");
-		var host = new ConnectionHost("localhost");
-		var port = new ConnectionPort(6379);
-		var database = 0;
-		var credentials = ConnectionCredentials.Create("user", "password", _mockPasswordEncryptor.Object).Value;
+		ConnectionName name = new("TestConnection");
+		ConnectionHost host = new("localhost");
+		ConnectionPort port = new(6379);
+		DatabaseNumber database = new(0);
+		ConnectionCredentials? credentials = ConnectionCredentials.Create("user", "password", mockPasswordEncryptor.Object).Value;
 
 		// Act
-		var result = RedisConnection.Create(name, host, port, database, credentials);
+		Result<RedisConnection> result = RedisConnection.Create(name, host, port, database, ConnectionOwnerId.None(), credentials);
 
 		// Assert
 		result.IsSuccess.Should().BeTrue();
@@ -63,23 +65,24 @@ public class RedisConnectionTests
 		((RedisConnectionWithCredentials)result.Value).ConnectionCredentials.Should().Be(credentials);
 	}
 
-	[Fact]
+	[Test]
 	public void UpdateConnectionDetails_WithValidParameters_ShouldUpdateProperties()
 	{
 		// Arrange
-		var connection = RedisConnection.Create(
+		RedisConnection connection = RedisConnection.Create(
 			new ConnectionName("Original"),
 			new ConnectionHost("localhost"),
 			new ConnectionPort(6379),
-			0).Value;
+			new DatabaseNumber(0),
+			ConnectionOwnerId.None()).Value;
 
-		var newName = new ConnectionName("Updated");
-		var newHost = new ConnectionHost("redis.example.com");
-		var newPort = new ConnectionPort(6380);
-		var newDatabase = 1;
+		ConnectionName newName = new("Updated");
+		ConnectionHost newHost = new("redis.example.com");
+		ConnectionPort newPort = new(6380);
+		DatabaseNumber newDatabase = new(1);
 
 		// Act
-		var result = connection.UpdateConnectionDetails(newName, newHost, newPort, newDatabase);
+		Result result = connection.UpdateConnectionDetails(newName, newHost, newPort, newDatabase);
 
 		// Assert
 		result.IsSuccess.Should().BeTrue();
@@ -89,15 +92,16 @@ public class RedisConnectionTests
 		connection.DatabaseNumber.Should().Be(newDatabase);
 	}
 
-	[Fact]
+	[Test]
 	public void UpdateAvailability_ShouldChangeIsAvailableProperty()
 	{
 		// Arrange
-		var connection = RedisConnection.Create(
+		RedisConnection connection = RedisConnection.Create(
 			new ConnectionName("Test"),
 			new ConnectionHost("localhost"),
 			new ConnectionPort(6379),
-			0).Value;
+			new DatabaseNumber(0),
+			ConnectionOwnerId.None()).Value;
 
 		// Act
 		connection.UpdateAvailability(true);
@@ -112,38 +116,40 @@ public class RedisConnectionTests
 		connection.IsAvailable.Should().BeFalse();
 	}
 
-	[Fact]
+	[Test]
 	public void BuildConnectionString_ForAnonymousConnection_ShouldReturnCorrectFormat()
 	{
 		// Arrange
-		var connection = RedisConnection.Create(
+		RedisConnection connection = RedisConnection.Create(
 			new ConnectionName("Test"),
 			new ConnectionHost("localhost"),
 			new ConnectionPort(6379),
-			0).Value;
+			new DatabaseNumber(0),
+			ConnectionOwnerId.None()).Value;
 
 		// Act
-		var connectionString = connection.BuildConnectionString();
+		string connectionString = connection.BuildConnectionString();
 
 		// Assert
 		connectionString.Should().Contain("localhost:6379");
 		connectionString.Should().Contain("allowAdmin=True");
 	}
 
-	[Fact]
+	[Test]
 	public void BuildConnectionString_ForConnectionWithCredentials_ShouldIncludeCredentials()
 	{
 		// Arrange
-		var credentials = ConnectionCredentials.Create("user", "password", _mockPasswordEncryptor.Object).Value;
-		var connection = RedisConnection.Create(
+		ConnectionCredentials? credentials = ConnectionCredentials.Create("user", "password", mockPasswordEncryptor.Object).Value;
+		RedisConnection connection = RedisConnection.Create(
 			new ConnectionName("Test"),
 			new ConnectionHost("localhost"),
 			new ConnectionPort(6379),
-			0,
+			new DatabaseNumber(0),
+			ConnectionOwnerId.None(),
 			credentials).Value;
 
 		// Act
-		var connectionString = connection.BuildConnectionString();
+		string connectionString = connection.BuildConnectionString();
 
 		// Assert
 		connectionString.Should().Contain("user");

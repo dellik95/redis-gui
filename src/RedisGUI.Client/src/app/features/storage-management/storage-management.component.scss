@@ -1,17 +1,36 @@
-.storage-container {
-    display: flex;
-    height: 100%;
-    gap: 16px;
-    
-    app-storage-values-list {
-        flex: 1;
-        min-width: 400px;
-        height: 100%;
-    }
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
 
-    app-inline-value-editor {
-        flex: 1;
-        min-width: 400px;
-        height: 100%;
-    }
+// ============================================================================
+// Storage Container Layout
+// ============================================================================
+
+:host {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.storage-container {
+  @include flex-row;
+  height: 100%;
+  width: 100%;
+  gap: 0;
+  overflow: hidden;
+  
+  .list-panel {
+    flex: 1;
+    min-width: 400px;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .edit-panel {
+    width: 600px;
+    min-width: 400px;
+    max-width: 800px;
+    height: 100%;
+    border-left: 1px solid var(--mat-sys-outline-variant);
+    overflow: hidden;
+  }
 }

@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
@@ -14,85 +14,89 @@ namespace RedisGUI.Application.Tests.Redis.Commands;
 [TestFixture]
 public class DeleteMultipleKeysCommandHandlerTests
 {
-    private Mock<IRedisConnectionRepository> _connectionRepositoryMock = null!;
-    private Mock<IConnectionService> _connectionServiceMock = null!;
-    private DeleteMultipleKeysCommandHandler _handler = null!;
+	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
+	private Mock<IRedisKeyService> connectionServiceMock = null!;
+	private DeleteMultipleKeysCommandHandler handler = null!;
 
-    [SetUp]
-    public void Setup()
-    {
-        _connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
-        _connectionServiceMock = new Mock<IConnectionService>();
-        _handler = new DeleteMultipleKeysCommandHandler(
-            _connectionRepositoryMock.Object,
-            _connectionServiceMock.Object);
-    }
+	[SetUp]
+	public void Setup()
+	{
+		connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
+		connectionServiceMock = new Mock<IRedisKeyService>();
+		handler = new DeleteMultipleKeysCommandHandler(
+			connectionRepositoryMock.Object,
+			connectionServiceMock.Object);
+	}
 
-    [Test]
-    public async Task Handle_ValidCommand_ReturnsSuccessWithCounts()
-    {
-        // Arrange
-        var connectionId = Guid.NewGuid();
-        var keys = new List<string> { "key1", "key2", "key3" }.AsReadOnly();
-        var command = new DeleteMultipleKeysCommand(connectionId, keys);
-        
-        var connection = RedisConnection.Create(
-              new ConnectionName("Test Connection"),
-              new ConnectionHost("localhost"),
-              new ConnectionPort(6379),
-            0,
-            null).Value;
+	[Test]
+	public async Task Handle_ValidCommand_ReturnsSuccessWithCounts()
+	{
+		// Arrange
+		var connectionId = Guid.NewGuid();
+		var keys = new List<string> { "key1", "key2", "key3" }.AsReadOnly();
+		var command = new DeleteMultipleKeysCommand(connectionId, keys);
 
-        _connectionRepositoryMock
-            .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(connection));
+		var connection = RedisConnection.Create(
+			  new ConnectionName("Test Connection"),
+			  new ConnectionHost("localhost"),
+			  new ConnectionPort(6379),
+			new DatabaseNumber(0),
+			null).Value;
 
-        var failedKeys = new List<string> { "key3" }.AsReadOnly();
-        _connectionServiceMock
-            .Setup(x => x.DeleteMultipleKeys(connection, keys))
-            .ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
+		connectionRepositoryMock
+			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(connection));
 
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+		var failedKeys = new List<string> { "key3" }.AsReadOnly();
+		connectionServiceMock
+			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.DeletedCount.Should().Be(2);
-        result.Value.TotalRequested.Should().Be(3);
-        result.Value.FailedKeys.Should().HaveCount(1);
-        result.Value.FailedKeys.Should().Contain("key3");
-    }
+		// Act
+		var result = await handler.Handle(command, CancellationToken.None);
 
-    [Test]
-    public async Task Handle_AllKeysDeleted_ReturnsNoFailures()
-    {
-        // Arrange
-        var connectionId = Guid.NewGuid();
-        var keys = new List<string> { "key1", "key2" }.AsReadOnly();
-        var command = new DeleteMultipleKeysCommand(connectionId, keys);
-        
-        var connection = RedisConnection.Create(
-              new ConnectionName("Test Connection"),
-              new ConnectionHost("localhost"),
-              new ConnectionPort(6379),
-            0,
-            null).Value;
+		// Assert
+		result.IsSuccess.Should().BeTrue();
+		result.Value.DeletedCount.Should().Be(2);
+		result.Value.TotalRequested.Should().Be(3);
+		result.Value.FailedKeys.Should().HaveCount(1);
+		result.Value.FailedKeys.Should().Contain("key3");
+	}
 
-        _connectionRepositoryMock
-            .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(connection));
+	[Test]
+	public async Task Handle_AllKeysDeleted_ReturnsNoFailures()
+	{
+		// Arrange
+		var connectionId = Guid.NewGuid();
+		var keys = new List<string> { "key1", "key2" }.AsReadOnly();
+		var command = new DeleteMultipleKeysCommand(connectionId, keys);
 
-        var failedKeys = new List<string>().AsReadOnly();
-        _connectionServiceMock
-            .Setup(x => x.DeleteMultipleKeys(connection, keys))
-            .ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
+		var connection = RedisConnection.Create(
+			  new ConnectionName("Test Connection"),
+			  new ConnectionHost("localhost"),
+			  new ConnectionPort(6379),
+			new DatabaseNumber(0),
+			null).Value;
 
-        // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+		connectionRepositoryMock
+			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(connection));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.DeletedCount.Should().Be(2);
-        result.Value.FailedKeys.Should().BeEmpty();
-    }
+		var failedKeys = new List<string>().AsReadOnly();
+		connectionServiceMock
+			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
+
+		// Act
+		var result = await handler.Handle(command, CancellationToken.None);
+
+		// Assert
+		result.IsSuccess.Should().BeTrue();
+		result.Value.DeletedCount.Should().Be(2);
+		result.Value.FailedKeys.Should().BeEmpty();
+	}
 }
+
+
+
+

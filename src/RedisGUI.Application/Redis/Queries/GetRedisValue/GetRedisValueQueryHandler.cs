@@ -12,19 +12,19 @@ namespace RedisGUI.Application.Redis.Queries.GetRedisValue;
 internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQuery, GetRedisValueResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     /// <summary>
     /// Initializes a new instance of the GetRedisValueQueryHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="valueService">Service for Redis value operations.</param>
     public GetRedisValueQueryHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     /// <summary>
@@ -42,7 +42,7 @@ internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQue
             return Result.Failure<GetRedisValueResponse>(connectionResult.Error);
         }
 
-        var result = await connectionService.GetValue(connectionResult.Value, request.Key);
+        var result = await valueService.GetValueAsync(connectionResult.Value, request.Key, cancellationToken);
         
         if (result.IsFailure)
         {

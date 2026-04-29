@@ -1,12 +1,13 @@
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.Redis;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
-using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 
@@ -14,94 +15,95 @@ namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 /// Handles the query to export Redis data.
 /// </summary>
 internal sealed class ExportRedisDataQueryHandler
-    : IQueryHandler<ExportRedisDataQuery, ExportRedisDataResponse>
+	: IQueryHandler<ExportRedisDataQuery, ExportRedisDataResponse>
 {
-    private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+	private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
 
-    /// <summary>
-    /// Initializes a new instance of the ExportRedisDataQueryHandler.
-    /// </summary>
-    /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
-    public ExportRedisDataQueryHandler(
-        IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
-    {
-        this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
-    }
+	private readonly IRedisConnectionRepository connectionRepository;
+	private readonly IRedisValueService valueService;
 
-    /// <summary>
-    /// Handles the query to export Redis data.
-    /// </summary>
-    /// <param name="request">The query request.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A Result containing the response or an error.</returns>
-    public async Task<Result<ExportRedisDataResponse>> Handle(
-        ExportRedisDataQuery request,
-        CancellationToken cancellationToken)
-    {
-        var connectionResult = await connectionRepository.GetConnectionByIdAsync(
-            request.ConnectionId,
-            cancellationToken);
+	/// <summary>
+	/// Initializes a new instance of the ExportRedisDataQueryHandler.
+	/// </summary>
+	/// <param name="connectionRepository">Repository for Redis connections.</param>
+	/// <param name="valueService">Service for Redis value operations.</param>
+	public ExportRedisDataQueryHandler(
+		IRedisConnectionRepository connectionRepository,
+		IRedisValueService valueService)
+	{
+		this.connectionRepository = connectionRepository;
+		this.valueService = valueService;
+	}
 
-        if (connectionResult.IsFailure)
-        {
-            return Result.Failure<ExportRedisDataResponse>(connectionResult.Error);
-        }
+	/// <summary>
+	/// Handles the query to export Redis data.
+	/// </summary>
+	/// <param name="request">The query request.</param>
+	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <returns>A Result containing the response or an error.</returns>
+	public async Task<Result<ExportRedisDataResponse>> Handle(
+		ExportRedisDataQuery request,
+		CancellationToken cancellationToken)
+	{
+		Result<RedisConnection> connectionResult = await connectionRepository.GetConnectionByIdAsync(
+			request.ConnectionId,
+			cancellationToken);
 
-        var valuesResult = await connectionService.GetAllValues(
-            connectionResult.Value,
-            request.Pattern);
+		if (connectionResult.IsFailure)
+		{
+			return Result.Failure<ExportRedisDataResponse>(connectionResult.Error);
+		}
 
-        if (valuesResult.IsFailure)
-        {
-            return Result.Failure<ExportRedisDataResponse>(valuesResult.Error);
-        }
+		Result<PagedRedisValues> valuesResult = await valueService.GetAllValuesAsync(
+			connectionResult.Value,
+			request.Pattern,
+			cancellationToken: cancellationToken);
 
-        var pagedValues = valuesResult.Value;
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        
-        string data;
-        string fileName;
-        string contentType;
+		if (valuesResult.IsFailure)
+		{
+			return Result.Failure<ExportRedisDataResponse>(valuesResult.Error);
+		}
 
-        if (request.Format == ExportFormat.Json)
-        {
-            var exportData = pagedValues.Values.Select(v => new
-            {
-                Key = v.Key,
-                Value = v.Value,
-                Type = v.Type,
-                TimeToLive = v.TimeToLive?.TotalSeconds
-            });
+		PagedRedisValues pagedValues = valuesResult.Value;
+		string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
 
-            data = JsonSerializer.Serialize(exportData, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            fileName = $"redis_export_{timestamp}.json";
-            contentType = "application/json";
-        }
-        else
-        {
-            var csv = new StringBuilder();
-            csv.AppendLine("Key,Value,Type,TTL");
+		string data;
+		string fileName;
+		string contentType;
 
-            foreach (var value in pagedValues.Values)
-            {
-                var ttl = value.TimeToLive?.TotalSeconds.ToString() ?? "";
-                var escapedValue = value.Value?.Replace("\"", "\"\"") ?? "";
-                csv.AppendLine($"\"{value.Key}\",\"{escapedValue}\",\"{value.Type}\",\"{ttl}\"");
-            }
+		if (request.Format == ExportFormat.Json)
+		{
+			var exportData = pagedValues.Values.Select(v => new
+			{
+				Key = v.Key,
+				Value = v.Value,
+				Type = v.Type,
+				TimeToLive = v.TimeToLive?.TotalSeconds
+			});
 
-            data = csv.ToString();
-            fileName = $"redis_export_{timestamp}.csv";
-            contentType = "text/csv";
-        }
+			// Cached JsonSerializerOptions to avoid creating new instances
+			data = JsonSerializer.Serialize(exportData, jsonOptions);
+			fileName = $"redis_export_{timestamp}.json";
+			contentType = "application/json";
+		}
+		else
+		{
+			StringBuilder csv = new();
+			csv.AppendLine("Key,Value,Type,TTL");
 
-        var response = new ExportRedisDataResponse(data, fileName, contentType);
-        return Result.Success(response);
-    }
+			foreach (RedisValue value in pagedValues.Values)
+			{
+				string ttl = value.TimeToLive?.TotalSeconds.ToString() ?? "";
+				string escapedValue = value.Value?.Replace("\"", "\"\"") ?? "";
+				csv.AppendLine($"\"{value.Key}\",\"{escapedValue}\",\"{value.Type}\",\"{ttl}\"");
+			}
+
+			data = csv.ToString();
+			fileName = $"redis_export_{timestamp}.csv";
+			contentType = "text/csv";
+		}
+
+		ExportRedisDataResponse response = new(data, fileName, contentType);
+		return Result.Success(response);
+	}
 }

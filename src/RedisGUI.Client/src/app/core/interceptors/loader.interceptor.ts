@@ -1,16 +1,23 @@
-import { HttpEvent, HttpHandler, HttpInterceptor, HttpRequest } from "@angular/common/http";
-import { inject, Injectable } from "@angular/core";
-import { Observable } from "rxjs";
-import { LoadingService } from "../../shared/components/loading/loading.service";
+import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
+import { LoadingStore } from '../stores/loading.store';
 
 /**
- * HTTP Interceptor that shows/hides loading indicator during HTTP requests
+ * Functional HTTP Loader Interceptor
+ * Shows/hides loading indicator during HTTP requests
+ * Uses LoadingStore for centralized state management
+ * 
+ * Excludes health check requests from triggering global loading indicator
  */
-@Injectable()
-export class LoaderInterceptor implements HttpInterceptor {
+export const loaderInterceptor: HttpInterceptorFn = (req, next) => {
+  const loadingStore = inject(LoadingStore);
+  
+  // Skip loading indicator for health check requests
+  // These are periodic background requests that shouldn't show global loading
+  if (req.url.includes('/health') || req.url.includes('/health/')) {
+    return next(req);
+  }
+  
+  return loadingStore.showLoaderUntilCompleted(next(req));
+};
 
-    intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-        const loadingService = inject(LoadingService);
-        return loadingService.showLoaderUntilCompleted(next.handle(req));
-    }
-}

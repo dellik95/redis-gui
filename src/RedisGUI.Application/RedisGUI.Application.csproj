@@ -1,14 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\build\Common.props" />
 	<ItemGroup>
 		<InternalsVisibleTo Include="RedisGUI.Application.Tests" />
 	</ItemGroup>
 	<ItemGroup>
-		<ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
-		<ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
-	</ItemGroup>
-	<ItemGroup>
 		<PackageReference Include="FluentValidation" />
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
+	</ItemGroup>
+	<ItemGroup>
+	  <ProjectReference Include="..\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+	  <ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
 	</ItemGroup>
 </Project>

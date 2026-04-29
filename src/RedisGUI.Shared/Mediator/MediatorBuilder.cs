@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 
 namespace RedisGUI.Shared.Mediator
@@ -132,7 +129,7 @@ namespace RedisGUI.Shared.Mediator
 		}
 		public MediatorBuilder RegisterHandlersFromAssembly(Assembly assembly)
 		{
-			var targetDefs = new[]
+			Type[] targetDefs = new[]
 			{
 				typeof(ICommandHandler<>),
 				typeof(ICommandHandler<,>),
@@ -159,9 +156,9 @@ namespace RedisGUI.Shared.Mediator
 			{
 				foreach (var pair in relevantPairs)
 				{
-					var type = pair.Type;
-					var iface = pair.Interface;
-					var definition = iface.GetGenericTypeDefinition();
+					Type type = pair.Type;
+					Type iface = pair.Interface;
+					Type definition = iface.GetGenericTypeDefinition();
 
 					if (definition == typeof(IPipelineBehavior<,>))
 					{
@@ -171,7 +168,7 @@ namespace RedisGUI.Shared.Mediator
 						}
 						else
 						{
-							var args = iface.GetGenericArguments();
+							Type[] args = iface.GetGenericArguments();
 							pipelines.AddBehavior(args[0], args[1], () => Resolve(resolver, type));
 						}
 						continue;
@@ -181,25 +178,25 @@ namespace RedisGUI.Shared.Mediator
 					{
 						case var d when d == typeof(ICommandHandler<,>):
 							{
-								var args = iface.GetGenericArguments();
+								Type[] args = iface.GetGenericArguments();
 								handlers.RegisterCommandHandler(args[0], args[1], () => Resolve(resolver, type));
 								break;
 							}
 						case var d when d == typeof(ICommandHandler<>):
 							{
-								var args = iface.GetGenericArguments();
+								Type[] args = iface.GetGenericArguments();
 								handlers.RegisterCommandHandler(args[0], () => Resolve(resolver, type));
 								break;
 							}
 						case var d when d == typeof(IQueryHandler<,>):
 							{
-								var args = iface.GetGenericArguments();
+								Type[] args = iface.GetGenericArguments();
 								handlers.RegisterQueryHandler(args[0], args[1], () => Resolve(resolver, type));
 								break;
 							}
 						case var d when d == typeof(INotificationHandler<>):
 							{
-								var args = iface.GetGenericArguments();
+								Type[] args = iface.GetGenericArguments();
 								notifications.AddHandler(args[0], () => Resolve(resolver, type));
 								break;
 							}
@@ -214,7 +211,7 @@ namespace RedisGUI.Shared.Mediator
 
 		public MediatorBuilder RegisterHandlersFromAssemblies(params Assembly[] assemblies)
 		{
-			foreach (var assembly in assemblies)
+			foreach (Assembly assembly in assemblies)
 			{
 				RegisterHandlersFromAssembly(assembly);
 			}
@@ -224,18 +221,18 @@ namespace RedisGUI.Shared.Mediator
 
 		public IMediator Build(Func<Type, object?>? typeResolver = null)
 		{
-			var handlerRegistry = new HandlerRegistry();
-			var pipelineRegistry = new PipelineRegistry();
-			var notificationRegistry = new NotificationRegistry();
+			HandlerRegistry handlerRegistry = new();
+			PipelineRegistry pipelineRegistry = new();
+			NotificationRegistry notificationRegistry = new();
 
-			var resolver = typeResolver ?? DefaultResolver;
+			Func<Type, object?> resolver = typeResolver ?? DefaultResolver;
 
-			foreach (var registration in registrations)
+			foreach (Action<Func<Type, object?>, HandlerRegistry, PipelineRegistry, NotificationRegistry> registration in registrations)
 			{
 				registration(resolver, handlerRegistry, pipelineRegistry, notificationRegistry);
 			}
 
-			var optionsCopy = new MediatorOptions
+			MediatorOptions optionsCopy = new()
 			{
 				NotificationExecution = options.NotificationExecution
 			};
@@ -245,7 +242,7 @@ namespace RedisGUI.Shared.Mediator
 
 		private static object DefaultResolver(Type type)
 		{
-			var instance = Activator.CreateInstance(type);
+			object? instance = Activator.CreateInstance(type);
 			if (instance == null)
 			{
 				throw new InvalidOperationException($"Unable to create an instance of type {type.FullName}.");
@@ -256,7 +253,7 @@ namespace RedisGUI.Shared.Mediator
 
 		private static object Resolve(Func<Type, object?> resolver, Type implementationType)
 		{
-			var instance = resolver(implementationType);
+			object? instance = resolver(implementationType);
 			if (instance == null)
 			{
 				throw new InvalidOperationException($"Resolver returned null for type {implementationType.FullName}.");

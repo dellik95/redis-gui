@@ -12,14 +12,14 @@ namespace RedisGUI.Application.Redis.Commands.PublishMessage;
 public sealed class PublishMessageCommandHandler : ICommandHandler<PublishMessageCommand>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisPubSubService pubSubService;
 
 	public PublishMessageCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IConnectionService connectionService)
+		IRedisPubSubService pubSubService)
 	{
 		this.connectionRepository = connectionRepository;
-		this.connectionService = connectionService;
+		this.pubSubService = pubSubService;
 	}
 
 	public async Task<Result> Handle(PublishMessageCommand request, CancellationToken cancellationToken)
@@ -31,6 +31,6 @@ public sealed class PublishMessageCommandHandler : ICommandHandler<PublishMessag
 			return Result.Failure(connectionResult.Error);
 		}
 
-		return await connectionService.PublishMessage(connectionResult.Value, request.Channel, request.Message);
+		return await pubSubService.PublishMessageAsync(connectionResult.Value, request.Channel, request.Message, cancellationToken);
 	}
 }

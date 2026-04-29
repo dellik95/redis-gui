@@ -1,11 +1,11 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RedisGUI.Server.Abstraction;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 
 namespace RedisGUI.Server.Extensions
 {
@@ -28,7 +28,7 @@ namespace RedisGUI.Server.Extensions
 			this IServiceCollection serviceCollection,
 			Assembly assembly)
 		{
-			var serviceDescriptors = assembly
+			ServiceDescriptor[] serviceDescriptors = assembly
 				.DefinedTypes
 				.Where(type => type is { IsAbstract: false, IsInterface: false } &&
 							   type.IsAssignableTo(typeof(IEndpoint)))
@@ -49,14 +49,14 @@ namespace RedisGUI.Server.Extensions
 		/// This method resolves all registered IEndpoint implementations and calls their MapEndpoint method
 		/// to configure their routes in the application.
 		/// </remarks>
-		public static WebApplication MapEndpoints(this WebApplication app, RouteGroupBuilder routeGroupBuilder = null)
+		public static WebApplication MapEndpoints(this WebApplication app, RouteGroupBuilder? routeGroupBuilder = null)
 		{
-			var endpoints = app.Services.GetRequiredService<IEnumerable<IEndpoint>>();
+			IEnumerable<IEndpoint> endpoints = app.Services.GetRequiredService<IEnumerable<IEndpoint>>();
 
 			IEndpointRouteBuilder builder =
 				routeGroupBuilder is null ? app : routeGroupBuilder;
 
-			foreach (var endpoint in endpoints)
+			foreach (IEndpoint endpoint in endpoints)
 			{
 				endpoint.MapEndpoint(builder);
 			}

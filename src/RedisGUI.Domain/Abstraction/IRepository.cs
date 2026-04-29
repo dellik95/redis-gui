@@ -1,10 +1,4 @@
-using RedisGUI.Domain.Primitives;
-using RedisGUI.Shared.Primitives;
-using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RedisGUI.Domain.Abstraction;
 
@@ -41,6 +35,20 @@ public interface IRepository<T> where T : Entity
 	/// <param name="trackChanges">Indicates whether to track entity changes or not</param>
 	/// <param name="pageNumber">Page number</param>
 	/// <param name="pageSize">Items per page</param>
-	/// <returns></returns>
-	Task<Result<List<T>>> GetAsync(Expression<Func<T, bool>> filter = null, bool trackChanges = false, int pageNumber = 1, int pageSize = 100);
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>Paginated result</returns>
+	Task<Result<PagedResult<T>>> GetAsync(
+		Expression<Func<T, bool>>? filter = null,
+		bool trackChanges = false,
+		int pageNumber = 1,
+		int pageSize = 100,
+		CancellationToken cancellationToken = default);
+
+	/// <summary>
+	/// Find entity by ID
+	/// </summary>
+	/// <param name="id">Entity ID</param>
+	/// <param name="cancellationToken">Cancellation token</param>
+	/// <returns>Result containing the entity if found</returns>
+	Task<Result<T?>> FindAsync(Guid id, CancellationToken cancellationToken = default);
 }

@@ -7,6 +7,6 @@ namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 /// <param name="FileName">Suggested filename for the export.</param>
 /// <param name="ContentType">MIME type of the exported data.</param>
 public sealed record ExportRedisDataResponse(
-    string Data,
-    string FileName,
-    string ContentType);
+	string Data,
+	string FileName,
+	string ContentType);

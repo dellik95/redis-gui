@@ -1,0 +1,30 @@
+<h2 mat-dialog-title>Export Redis Data</h2>
+<mat-dialog-content>
+  <mat-radio-group [formControl]="formatCtrl">
+    <mat-radio-button value="json">JSON</mat-radio-button>
+    <mat-radio-button value="csv">CSV</mat-radio-button>
+  </mat-radio-group>
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+      <span>Exporting...</span>
+    </div>
+  }
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button 
+    mat-button 
+    [disabled]="isLoading()" 
+    (click)="onExport()">
+    Export
+  </button>
+  <button 
+    mat-button 
+    (click)="dialogRef.close()">
+    Cancel
+  </button>
+</mat-dialog-actions>
+

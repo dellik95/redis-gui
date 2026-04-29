@@ -1,0 +1,31 @@
+<div class="edit-key-panel">
+  @if (selectedKey()) {
+    <div class="panel-header">
+      <h2>Edit Key</h2>
+      <button mat-icon-button (click)="onClose()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading key...</p>
+      </div>
+    } @else {
+      <app-storage-value-editor
+        [data]="editorData()"
+        [connectionId]="connectionId()"
+        [loading]="isSaving()"
+        (save)="onSave($event)"
+        (cancel)="onClose()">
+      </app-storage-value-editor>
+    }
+  } @else {
+    <div class="empty-state">
+      <mat-icon>info</mat-icon>
+      <p>Select a key to edit</p>
+    </div>
+  }
+</div>
+

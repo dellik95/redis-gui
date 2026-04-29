@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Primitives;
 
 namespace RedisGUI.Infrastructure.SignalR.Hubs;
 
@@ -23,10 +25,10 @@ public class RedisMetricsHub : Hub<IClientMethods>
 	/// </summary>
 	public override Task OnConnectedAsync()
 	{
-		var httpContext = Context.GetHttpContext();
-		var connectionId = httpContext?.Request.Query["connectionId"];
+		HttpContext? httpContext = Context.GetHttpContext();
+		StringValues? connectionId = httpContext?.Request.Query["connectionId"];
 
-		if (Guid.TryParse(connectionId, out var id))
+		if (Guid.TryParse(connectionId, out Guid id))
 		{
 			hubSubscribersManager.AddConnection(Context.ConnectionId, id);
 		}
@@ -38,7 +40,7 @@ public class RedisMetricsHub : Hub<IClientMethods>
 	/// Handles client disconnections by removing them from the subscriber manager
 	/// </summary>
 	/// <param name="exception">Exception that caused the disconnection, if any</param>
-	public override Task OnDisconnectedAsync(Exception exception)
+	public override Task OnDisconnectedAsync(Exception? exception)
 	{
 		hubSubscribersManager.RemoveConnection(Context.ConnectionId);
 

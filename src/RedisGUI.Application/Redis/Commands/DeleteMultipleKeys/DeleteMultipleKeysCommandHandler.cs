@@ -16,19 +16,19 @@ internal sealed class DeleteMultipleKeysCommandHandler
     : ICommandHandler<DeleteMultipleKeysCommand, DeleteMultipleKeysResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisKeyService keyService;
 
     /// <summary>
     /// Initializes a new instance of the DeleteMultipleKeysCommandHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="keyService">Service for Redis key operations.</param>
     public DeleteMultipleKeysCommandHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisKeyService keyService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.keyService = keyService;
     }
 
     /// <summary>
@@ -50,9 +50,10 @@ internal sealed class DeleteMultipleKeysCommandHandler
             return Result.Failure<DeleteMultipleKeysResponse>(connectionResult.Error);
         }
 
-        var deleteResult = await connectionService.DeleteMultipleKeys(
+        var deleteResult = await keyService.DeleteMultipleKeysAsync(
             connectionResult.Value,
-            request.Keys);
+            request.Keys,
+            cancellationToken);
 
         if (deleteResult.IsFailure)
         {

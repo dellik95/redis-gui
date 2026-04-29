@@ -2,11 +2,12 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.UpdateConnection;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Endpoints.Connections.UpdateConnection;
 
@@ -30,9 +31,9 @@ public class UpdateConnectionEndpoint : IEndpoint
 			Guid id,
 			UpdateConnectionRequest request,
 			IMediator sender,
-			CancellationToken token) =>
+			CancellationToken cancellationToken) =>
 		{
-			var updateConnectionCommand = new UpdateConnectionCommand(
+			UpdateConnectionCommand updateConnectionCommand = new(
 				id,
 				request.Name,
 				request.Host,
@@ -41,16 +42,18 @@ public class UpdateConnectionEndpoint : IEndpoint
 				request.UserName,
 				request.Password);
 
-			var result = await sender.Send(updateConnectionCommand, token);
-			
+			Result result = await sender.Send(updateConnectionCommand, cancellationToken);
+
 			return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
 		})
-		.AddOpenApiOperationTransformer((operation, context, ct) =>
-		{
-			operation.Summary = "Update an existing Redis connection";
-			operation.Description = "Updates the configuration of an existing Redis connection";
-
-			return Task.CompletedTask;
-		});
+		.WithName("UpdateConnection")
+		.WithSummary("Update a Redis connection")
+		.WithDescription("Updates the configuration of an existing Redis connection. Supports optimistic concurrency control.")
+		.WithTags("Connections")
+		.Produces(StatusCodes.Status204NoContent)
+		.Produces(StatusCodes.Status400BadRequest)
+		.Produces(StatusCodes.Status404NotFound)
+		.Produces(StatusCodes.Status409Conflict)
+		.RequireAuthorization(Policies.WriteAccess);
 	}
 }

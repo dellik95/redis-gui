@@ -1,13 +1,19 @@
 <div class="storage-container">
-    <app-storage-values-list 
-        [connectionId]="id()"
-        (keySelected)="onKeySelected($event)">
-    </app-storage-values-list>
+    <div class="list-panel">
+        <app-storage-values-list 
+            [connectionId]="id()"
+            (keySelected)="onKeySelected($event)">
+        </app-storage-values-list>
+    </div>
     
-    <app-inline-value-editor
-        [selectedKey]="selectedKey()"
-        [loading]="isSaving()"
-        (save)="onSave($event)"
-        (cancel)="onCancel()">
-    </app-inline-value-editor>
+    @if (selectedKey()) {
+        <div class="edit-panel">
+            <app-edit-key
+                [connectionId]="id()"
+                [selectedKey]="selectedKey()!"
+                (saved)="onEditSaved()"
+                (closed)="onEditClosed()">
+            </app-edit-key>
+        </div>
+    }
 </div>

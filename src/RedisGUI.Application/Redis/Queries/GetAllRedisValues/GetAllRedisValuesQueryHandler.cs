@@ -14,19 +14,19 @@ internal sealed class GetAllRedisValuesQueryHandler
     : IQueryHandler<GetAllRedisKeysQuery, GetAllRedisValuesResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     /// <summary>
     /// Initializes a new instance of the GetAllRedisValuesQueryHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="valueService">Service for Redis value operations.</param>
     public GetAllRedisValuesQueryHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     /// <summary>
@@ -48,11 +48,12 @@ internal sealed class GetAllRedisValuesQueryHandler
             return Result.Failure<GetAllRedisValuesResponse>(connectionResult.Error);
         }
 
-        var result = await connectionService.GetAllValues(
+        var result = await valueService.GetAllValuesAsync(
             connectionResult.Value, 
             request.Pattern,
             request.PageSize,
-            request.PageNumber);
+            request.PageNumber,
+            cancellationToken);
 
         if (result.IsFailure)
         {

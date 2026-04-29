@@ -1,13 +1,14 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
-using RedisGUI.Infrastructure.Configuration;
-using RedisGUI.Infrastructure.Persistence;
-using System.Linq;
 using Bogus;
 using RedisGUI.Domain.Connection;
-using Microsoft.EntityFrameworkCore;
+using RedisGUI.Infrastructure.Configuration;
+using RedisGUI.Infrastructure.Persistence;
 
 namespace RedisGUI.Server.Extensions;
 
@@ -64,8 +65,13 @@ public static class ApplicationBuilderExtensions
 			var connectionName = new ConnectionName(faker.Address.Country());
 			var connectionHost = new ConnectionHost(faker.Internet.Url());
 			var connectionPort = new ConnectionPort(faker.Internet.Port());
-			var dbNumber = faker.Random.Number(1, 10);
-			connections.Add(RedisConnection.Create(connectionName, connectionHost, connectionPort, dbNumber));
+			var dbNumber = new DatabaseNumber(faker.Random.Number(0, 15));
+			var ownerId = new ConnectionOwnerId(System.Guid.NewGuid());
+			var connectionResult = RedisConnection.Create(connectionName, connectionHost, connectionPort, dbNumber, ownerId, null);
+			if (connectionResult.IsSuccess)
+			{
+				connections.Add(connectionResult.Value);
+			}
 		}
 
 		context.Connections.AddRange(connections);

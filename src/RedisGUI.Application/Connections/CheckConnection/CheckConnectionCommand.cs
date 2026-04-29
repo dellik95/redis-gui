@@ -11,8 +11,8 @@ namespace RedisGUI.Application.Connections.CheckConnection;
 /// <param name="UserName">The username for authentication (optional)</param>
 /// <param name="Password">The password for authentication (optional)</param>
 public sealed record CheckConnectionCommand(
-    string Host, 
-    int Port, 
-    int Database = 0, 
-    string UserName = "", 
-    string Password = "") : ICommand;
+	string Host,
+	int Port,
+	int Database = 0,
+	string UserName = "",
+	string Password = "") : ICommand;

@@ -1,15 +1,15 @@
-using RedisGUI.Domain.Guards;
-using RedisGUI.Domain.Primitives;
-using System;
+using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Connection.Events;
-using RedisGUI.Shared.Primitives;
+using RedisGUI.Domain.Errors;
+using RedisGUI.Domain.Guards;
+using RedisGUI.Domain.Users;
 
 namespace RedisGUI.Domain.Connection;
 
 /// <summary>
-/// Represents a Redis connection configuration
+/// Represents a Redis connection configuration aggregate root
 /// </summary>
-public abstract class RedisConnection : Entity
+public abstract class RedisConnection : Entity, IAggregateRoot
 {
 	/// <summary>
 	/// Creates a new instance of <see cref="RedisConnection"/>
@@ -27,17 +27,20 @@ public abstract class RedisConnection : Entity
 		ConnectionName connectionName,
 		ConnectionHost serverHost,
 		ConnectionPort serverPort,
-		int databaseNumber) : base(id)
+		DatabaseNumber databaseNumber,
+		ConnectionOwnerId ownerId) : base(id)
 	{
 		Ensure.NotNull(connectionName, "Connection name is required", nameof(connectionName));
 		Ensure.NotNull(serverHost, "Server host is required", nameof(serverHost));
 		Ensure.NotNull(serverPort, "Server port is required", nameof(serverPort));
+		Ensure.NotNull(databaseNumber, "Database number is required", nameof(databaseNumber));
+		Ensure.NotNull(ownerId, "Owner ID is required", nameof(ownerId));
 
 		ConnectionName = connectionName;
 		ServerHost = serverHost;
 		ServerPort = serverPort;
 		DatabaseNumber = databaseNumber;
-		
+		OwnerId = ownerId;
 
 		RaiseDomainEvent(new ConnectionCreatedDomainEvent(id, connectionName.Value));
 	}
@@ -45,27 +48,32 @@ public abstract class RedisConnection : Entity
 	/// <summary>
 	/// The friendly name of the connection
 	/// </summary>
-	public ConnectionName ConnectionName { get; private set; }
+	public ConnectionName ConnectionName { get; private set; } = null!;
 
 	/// <summary>
 	/// The Redis server host address
 	/// </summary>
-	public ConnectionHost ServerHost { get; private set; }
+	public ConnectionHost ServerHost { get; private set; } = null!;
 
 	/// <summary>
 	/// The Redis server port number
 	/// </summary>
-	public ConnectionPort ServerPort { get; private set; }
+	public ConnectionPort ServerPort { get; private set; } = null!;
 
 	/// <summary>
 	/// The Redis database number to connect to
 	/// </summary>
-	public int DatabaseNumber { get; private set; }
+	public DatabaseNumber DatabaseNumber { get; private set; } = null!;
 
 	/// <summary>
 	/// Indicates whether connection is established.
 	/// </summary>
-	public bool IsAvailable { get; set; }
+	public bool IsAvailable { get; private set; }
+
+	/// <summary>
+	/// Gets the owner of this connection (None for legacy/public connections)
+	/// </summary>
+	public ConnectionOwnerId OwnerId { get; private set; } = null!;
 
 	/// <summary>
 	/// Creates a new Redis connection configuration
@@ -74,19 +82,21 @@ public abstract class RedisConnection : Entity
 	/// <param name="serverHost">The Redis server host address</param>
 	/// <param name="serverPort">The Redis server port number</param>
 	/// <param name="databaseNumber">The Redis database number</param>
+	/// <param name="ownerId">The owner of the connection (None for public connections)</param>
 	/// <param name="connectionCredentials">Optional authentication credentials</param>
 	/// <returns>A new <see cref="RedisConnection"/> instance</returns>
 	public static Result<RedisConnection> Create(
 		ConnectionName connectionName,
 		ConnectionHost serverHost,
 		ConnectionPort serverPort,
-		int databaseNumber,
-		ConnectionCredentials connectionCredentials = null)
+		DatabaseNumber databaseNumber,
+		ConnectionOwnerId ownerId,
+		ConnectionCredentials? connectionCredentials = null)
 	{
 		try
 		{
-			RedisConnection connection = null;
-			var id = Guid.NewGuid();
+			RedisConnection? connection = null;
+			Guid id = Guid.NewGuid();
 			if (connectionCredentials == null)
 			{
 				connection = new AnonymousRedisConnection(
@@ -94,7 +104,8 @@ public abstract class RedisConnection : Entity
 					connectionName,
 					serverHost,
 					serverPort,
-					databaseNumber);
+					databaseNumber,
+					ownerId);
 			}
 			else
 			{
@@ -104,16 +115,15 @@ public abstract class RedisConnection : Entity
 					serverHost,
 					serverPort,
 					databaseNumber,
+					ownerId,
 					connectionCredentials);
 			}
 
 			return Result.Success(connection);
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
-			return Result.Failure<RedisConnection>(new Error(
-				"ConnectionCreationFailed",
-				ex.Message));
+			return Result.Failure<RedisConnection>(DomainErrors.Connection.CreationFailed);
 		}
 	}
 
@@ -130,7 +140,7 @@ public abstract class RedisConnection : Entity
 		ConnectionName newName,
 		ConnectionHost newHost,
 		ConnectionPort newPort,
-		int newDatabaseNumber)
+		DatabaseNumber newDatabaseNumber)
 	{
 		try
 		{
@@ -141,11 +151,9 @@ public abstract class RedisConnection : Entity
 
 			return Result.Success();
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
-			return Result.Failure(new Error(
-				"ConnectionUpdateFailed",
-				ex.Message));
+			return Result.Failure(DomainErrors.Connection.UpdateFailed);
 		}
 
 	}
@@ -161,16 +169,53 @@ public abstract class RedisConnection : Entity
 	}
 
 	/// <summary>
+	/// Determines whether a user can access this connection based on ownership and role
+	/// </summary>
+	/// <param name="userId">The user's unique identifier</param>
+	/// <param name="userRole">The user's role</param>
+	/// <returns>True if the user can access the connection; otherwise, false</returns>
+	public bool CanBeAccessedBy(Guid userId, UserRole userRole)
+	{
+		// Admins can access all connections
+		if (userRole == UserRole.Admin)
+			return true;
+
+		// Connection without owner is public (legacy/shared)
+		if (!OwnerId.HasValue)
+			return true;
+
+		// User can only access their own connections
+		return OwnerId.Value == userId;
+	}
+
+	/// <summary>
+	/// Sets the owner of this connection
+	/// </summary>
+	/// <param name="ownerId">The owner's user ID</param>
+	public void SetOwner(ConnectionOwnerId ownerId)
+	{
+		OwnerId = ownerId;
+	}
+
+	/// <summary>
+	/// Removes ownership from this connection (makes it public)
+	/// </summary>
+	public void RemoveOwner()
+	{
+		OwnerId = ConnectionOwnerId.None();
+	}
+
+	/// <summary>
 	/// Builds the Redis connection string from the configuration
 	/// </summary>
 	/// <returns>A formatted Redis connection string</returns>
 	public string BuildConnectionString()
 	{
-		var baseConnectionString = $"{GetBaseConnectionString()},allowAdmin=True,connectTimeout=30,abortConnect=False";
+		string baseConnectionString = $"{GetBaseConnectionString()},allowAdmin=True,connectTimeout=30,abortConnect=False";
 
-		if (!baseConnectionString.Contains("database") && DatabaseNumber > 0)
+		if (!baseConnectionString.Contains("database") && DatabaseNumber.Value > 0)
 		{
-			baseConnectionString = $"{baseConnectionString}/database={DatabaseNumber}";
+			baseConnectionString = $"{baseConnectionString}/database={DatabaseNumber.Value}";
 		}
 
 		return baseConnectionString;

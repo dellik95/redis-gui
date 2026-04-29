@@ -17,6 +17,7 @@ public class RedisMetricsBackgroundJob : BackgroundService
 	private readonly INotificationService notificationService;
 	private readonly IHubSubscribersManager hubSubscribersManager;
 	private readonly IOptions<MetricsCollectorOptions> options;
+	private readonly ILogger<RedisMetricsBackgroundJob> logger;
 
 	/// <summary>
 	/// Initializes a new instance of the RedisMetricsBackgroundJob
@@ -25,16 +26,19 @@ public class RedisMetricsBackgroundJob : BackgroundService
 	/// <param name="notificationService">Service for sending notifications to clients</param>
 	/// <param name="hubSubscribersManager">Manager for hub subscriber connections</param>
 	/// <param name="options">Configuration options for metrics collection</param>
+	/// <param name="logger">Logger instance</param>
 	public RedisMetricsBackgroundJob(
 		IServiceProvider serviceProvider,
 		INotificationService notificationService,
 		IHubSubscribersManager hubSubscribersManager,
-		IOptions<MetricsCollectorOptions> options)
+		IOptions<MetricsCollectorOptions> options,
+		ILogger<RedisMetricsBackgroundJob> logger)
 	{
 		this.serviceProvider = serviceProvider;
 		this.notificationService = notificationService;
 		this.hubSubscribersManager = hubSubscribersManager;
 		this.options = options;
+		this.logger = logger;
 	}
 
 	/// <summary>
@@ -44,23 +48,32 @@ public class RedisMetricsBackgroundJob : BackgroundService
 	/// <returns>A task representing the background operation</returns>
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		using var scope = this.serviceProvider.CreateScope();
-		var sender = scope.ServiceProvider.GetRequiredService<IMediator>(); // Replace ISender with ICustomSender
 		while (!stoppingToken.IsCancellationRequested)
 		{
-			foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
+			try
 			{
-				var metrics = await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
-
-				if (!metrics.IsSuccess)
+				using var scope = this.serviceProvider.CreateScope();
+				var sender = scope.ServiceProvider.GetRequiredService<IMediator>();
+				
+				foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 				{
-					continue;
-				}
+					var metrics = await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
 
-				foreach (var pair in subscriber)
-				{
-					await this.notificationService.NotifyUser(pair.Key, metrics.Value);
+					if (!metrics.IsSuccess)
+					{
+						continue;
+					}
+
+					foreach (var pair in subscriber)
+					{
+						await this.notificationService.NotifyUser(pair.Key, metrics.Value);
+					}
 				}
+			}
+			catch (Exception ex) when (ex is not OperationCanceledException)
+			{
+				// Log the error but continue execution
+				logger.LogError(ex, "Error collecting Redis metrics for subscribers");
 			}
 
 			await Task.Delay(TimeSpan.FromSeconds(this.options.Value.PoolingIntervalInSec), stoppingToken);

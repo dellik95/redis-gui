@@ -13,6 +13,11 @@ public class ErrorException : Exception
 	private readonly List<Error> errors = [];
 
 	/// <summary>
+	/// Gets the collection of errors associated with this exception
+	/// </summary>
+	public IReadOnlyList<Error> Errors => errors.AsReadOnly();
+
+	/// <summary>
 	/// Creates a new instance of ErrorException with a single error
 	/// </summary>
 	/// <param name="error">The error that caused this exception</param>

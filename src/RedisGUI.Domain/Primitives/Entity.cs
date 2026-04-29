@@ -1,7 +1,4 @@
 using RedisGUI.Domain.Abstraction;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace RedisGUI.Domain.Primitives;
 
@@ -14,6 +11,11 @@ public abstract class Entity : IEquatable<Entity>
 	/// Gets the unique identifier for this entity
 	/// </summary>
 	public Guid Id { get; init; }
+
+	/// <summary>
+	/// Gets the row version for optimistic concurrency control
+	/// </summary>
+	public byte[] RowVersion { get; private set; } = [];
 
 	/// <summary>
 	/// Gets the collection of domain events for this entity
@@ -90,7 +92,7 @@ public abstract class Entity : IEquatable<Entity>
 	}
 
 	/// <inheritdoc />
-	public bool Equals(Entity other)
+	public bool Equals(Entity? other)
 	{
 		if (other is null)
 		{
@@ -101,7 +103,7 @@ public abstract class Entity : IEquatable<Entity>
 	}
 
 	/// <inheritdoc />
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		if (obj is null)
 		{

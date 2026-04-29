@@ -1,6 +1,6 @@
-import { Component, inject, signal, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, inject, signal, input, computed, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -8,22 +8,44 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RedisOperationsService } from '../../../services/api/redis-operations.service';
+
+import { RedisOperationsStore } from '../../../core/stores/redis-operations.store';
 import { ExecuteTransactionRequest, RedisOperation } from '../../../models/redis-advanced.types';
 
+/**
+ * Draft operation for transaction builder
+ */
 interface OperationDraft {
-  command: string; // SET | GET | DEL | INCR | DECR
+  /** Redis command: SET, GET, DEL, INCR, DECR */
+  command: string;
+  /** Redis key */
   key: string;
+  /** Value (for SET command) */
   value?: string;
 }
 
+/**
+ * Transaction Builder Component
+ * Builds and executes Redis transactions (MULTI/EXEC)
+ *
+ * Features:
+ * - Add/remove operations
+ * - Configure operation parameters
+ * - Execute transaction atomically
+ * - View execution results
+ *
+ * @example
+ * ```html
+ * <app-transaction-builder [connectionId]="connectionId" />
+ * ```
+ */
 @Component({
   selector: 'app-transaction-builder',
   standalone: true,
   templateUrl: './transaction-builder.component.html',
-  styleUrls: ['./transaction-builder.component.scss'],
+  styleUrl: './transaction-builder.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
     FormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -34,50 +56,97 @@ interface OperationDraft {
   ]
 })
 export class TransactionBuilderComponent {
-  private redisOperationsService = inject(RedisOperationsService);
-  private snackBar = inject(MatSnackBar);
+  // 1. Injected dependencies
+  private readonly redisOperationsStore = inject(RedisOperationsStore);
+  private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
-  connectionId = input.required<string>();
+  // 2. Inputs
+  readonly connectionId = input.required<string>();
 
-  operations = signal<OperationDraft[]>([
+  // 3. State signals
+  readonly operations = signal<OperationDraft[]>([
     { command: 'SET', key: '', value: '' }
   ]);
+  readonly executing = signal<boolean>(false);
+  readonly result = signal<{ success: boolean; results: string[]; operationsExecuted: number } | null>(null);
+  private readonly executionPending = signal<boolean>(false);
 
-  executing = signal<boolean>(false);
-  result = signal<{ success: boolean; results: string[]; operationsExecuted: number } | null>(null);
+  // 4. Computed signals
+  /** Whether the transaction can be executed (all operations have keys and not currently executing) */
+  readonly canExecute = computed(() => {
+    return this.operations().length > 0 &&
+           this.operations().every(op => op.key.trim().length > 0) &&
+           !this.executing();
+  });
 
-      updateCommand(operation: OperationDraft, command: string): void {
+  // 5. Public methods
+  /**
+   * Updates the command for an operation
+   *
+   * @param operation - Operation draft to update
+   * @param command - New command value
+   */
+  updateCommand(operation: OperationDraft, command: string): void {
         this.operations.update(list => {
           const idx = list.findIndex(op => op === operation);
           if (idx === -1) return list;
           const copy = [...list];
-          copy[idx] = { ...copy[idx], command };
+          const existing = copy[idx]!;
+          const updated: OperationDraft = { command, key: existing.key };
+          if (existing.value !== undefined) {
+            updated.value = existing.value;
+          }
+          copy[idx] = updated;
           return copy;
         });
       }
 
-      updateKey(operation: OperationDraft, key: string): void {
+  /**
+   * Updates the key for an operation
+   *
+   * @param operation - Operation draft to update
+   * @param key - New key value
+   */
+  updateKey(operation: OperationDraft, key: string): void {
         this.operations.update(list => {
           const idx = list.findIndex(op => op === operation);
           if (idx === -1) return list;
           const copy = [...list];
-          copy[idx] = { ...copy[idx], key };
+          const existing = copy[idx]!;
+          const updated: OperationDraft = { command: existing.command, key };
+          if (existing.value !== undefined) {
+            updated.value = existing.value;
+          }
+          copy[idx] = updated;
           return copy;
         });
       }
 
-      updateValue(operation: OperationDraft, value: string): void {
+  /**
+   * Updates the value for an operation
+   *
+   * @param operation - Operation draft to update
+   * @param value - New value
+   */
+  updateValue(operation: OperationDraft, value: string): void {
         this.operations.update(list => {
           const idx = list.findIndex(op => op === operation);
           if (idx === -1) return list;
           const copy = [...list];
-          copy[idx] = { ...copy[idx], value };
+          const existing = copy[idx]!;
+          copy[idx] = { command: existing.command, key: existing.key, value };
           return copy;
         });
       }
 
 
-    addOperation(afterOperation?: OperationDraft): void {
+  /**
+   * Adds a new operation to the transaction
+   *
+   * @param afterOperation - Optional operation to insert after (otherwise appends)
+   */
+  addOperation(afterOperation?: OperationDraft): void {
       const newOp: OperationDraft = { command: 'GET', key: '' };
       this.operations.update(list => {
         if (!afterOperation) {
@@ -91,43 +160,95 @@ export class TransactionBuilderComponent {
       });
     }
 
-    removeOperation(operation: OperationDraft): void {
+  /**
+   * Removes an operation from the transaction
+   *
+   * @param operation - Operation to remove
+   */
+  removeOperation(operation: OperationDraft): void {
       this.operations.update(list => list.filter(op => op !== operation));
     }
 
-    moveUp(operation: OperationDraft): void {
+  /**
+   * Moves an operation up in the list
+   *
+   * @param operation - Operation to move up
+   */
+  moveUp(operation: OperationDraft): void {
       this.operations.update(list => {
         const idx = list.findIndex(op => op === operation);
         if (idx <= 0) return list;
         const copy = [...list];
-        const temp = copy[idx - 1];
-        copy[idx - 1] = copy[idx];
+        const temp = copy[idx - 1]!;
+        copy[idx - 1] = copy[idx]!;
         copy[idx] = temp;
         return copy;
       });
     }
 
-    moveDown(operation: OperationDraft): void {
+  /**
+   * Moves an operation down in the list
+   *
+   * @param operation - Operation to move down
+   */
+  moveDown(operation: OperationDraft): void {
       this.operations.update(list => {
         const idx = list.findIndex(op => op === operation);
-        if (idx == null || idx >= list.length - 1) return list;
+        if (idx === -1 || idx >= list.length - 1) return list;
         const copy = [...list];
-        const temp = copy[idx + 1];
-        copy[idx + 1] = copy[idx];
+        const temp = copy[idx + 1]!;
+        copy[idx + 1] = copy[idx]!;
         copy[idx] = temp;
         return copy;
       });
     }
 
+  // 6. Constructor with effects
+  constructor() {
+    // Watch for transaction execution results
+    effect(() => {
+      if (!this.executionPending()) return;
+
+      const resp = this.redisOperationsStore.lastTransactionResult();
+      if (resp) {
+        this.result.set(resp);
+        this.snackBar.open(`Executed ${resp.operationsExecuted} operations`, 'Close', { duration: 4000 });
+        this.executing.set(false);
+        this.executionPending.set(false);
+      }
+
+      const err = this.redisOperationsStore.error();
+      if (err) {
+        this.snackBar.open(`Transaction failed: ${err}`, 'Close', { duration: 5000 });
+        this.executing.set(false);
+        this.executionPending.set(false);
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  /**
+   * Clears all operations and resets to default state
+   */
   clear(): void {
     this.operations.set([{ command: 'SET', key: '', value: '' }]);
     this.result.set(null);
   }
 
+  /**
+   * Checks if a value is required for the operation command
+   *
+   * @param op - Operation to check
+   * @returns True if value is required
+   */
   isValueRequired(op: OperationDraft): boolean {
     return op.command === 'SET';
   }
 
+  /**
+   * Validates all operations in the transaction
+   *
+   * @returns Array of validation error messages (empty if valid)
+   */
   validate(): string[] {
     const errors: string[] = [];
     const ops = this.operations();
@@ -143,32 +264,34 @@ export class TransactionBuilderComponent {
     return errors;
   }
 
+  /**
+   * Executes the transaction with all operations
+   * Validates operations before execution
+   */
   execute(): void {
     const errors = this.validate();
     if (errors.length) {
-      this.snackBar.open(errors[0], 'Close', { duration: 4000 });
+      const firstError = errors[0];
+      if (firstError) {
+        this.snackBar.open(firstError, 'Close', { duration: 4000 });
+      }
       return;
     }
     this.executing.set(true);
     this.result.set(null);
 
     const request: ExecuteTransactionRequest = {
-      operations: this.operations().map<RedisOperation>(o => ({
-        command: o.command,
-        key: o.key,
-        value: o.value?.trim() || undefined
-      }))
+      operations: this.operations().map<RedisOperation>(o => {
+        const trimmedValue = o.value?.trim();
+        return {
+          command: o.command,
+          key: o.key,
+          value: trimmedValue || ''
+        };
+      })
     };
 
-    this.redisOperationsService.executeTransaction(this.connectionId(), request).subscribe({
-      next: resp => {
-        this.result.set(resp);
-        this.snackBar.open(`Executed ${resp.operationsExecuted} operations`, 'Close', { duration: 4000 });
-      },
-      error: err => {
-        this.snackBar.open(`Transaction failed: ${err.message}`, 'Close', { duration: 5000 });
-      },
-      complete: () => this.executing.set(false)
-    });
+    this.executionPending.set(true);
+    this.redisOperationsStore.executeTransaction({ connectionId: this.connectionId(), request });
   }
 }

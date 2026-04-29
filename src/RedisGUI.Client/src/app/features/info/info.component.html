@@ -1,1 +1,229 @@
-<p>info works!</p>
+<div class="info-container">
+  <!-- Error Display -->
+  @if (store.error()) {
+    <mat-card class="error-card">
+      <mat-card-content>
+        <div class="error-content">
+          <mat-icon color="warn">error</mat-icon>
+          <span>{{ store.error() }}</span>
+          <button mat-icon-button (click)="store.clearError()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+      </mat-card-content>
+    </mat-card>
+  }
+
+  <!-- Loading State -->
+  @if (store.isLoadingInfo() && !store.serverInfo()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading server information...</p>
+    </div>
+  }
+
+  <!-- Content Tabs -->
+  @if (store.serverInfo()) {
+    <mat-tab-group>
+      <!-- Overview Tab -->
+      <mat-tab label="Overview">
+        <div class="tab-content">
+          <div class="cards-grid">
+            <!-- Server Info Card -->
+            <mat-card>
+              <mat-card-header>
+                <mat-icon mat-card-avatar>dns</mat-icon>
+                <mat-card-title>Server Information</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="info-row">
+                  <span class="label">Redis Version:</span>
+                  <span class="value">{{ store.serverInfo()!.redisVersion }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Mode:</span>
+                  <mat-chip>{{ store.serverInfo()!.redisMode }}</mat-chip>
+                </div>
+                <div class="info-row">
+                  <span class="label">OS:</span>
+                  <span class="value">{{ store.serverInfo()!.os }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Uptime:</span>
+                  <span class="value">{{ store.uptimeFormatted() }}</span>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Memory Card -->
+            <mat-card>
+              <mat-card-header>
+                <mat-icon mat-card-avatar>memory</mat-icon>
+                <mat-card-title>Memory Usage</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="memory-stats">
+                  <div class="memory-bar">
+                    <div class="memory-used" [style.width.%]="store.memoryUsagePercent()"></div>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Used:</span>
+                    <span class="value">{{ store.memoryUsedFormatted() }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Total:</span>
+                    <span class="value">{{ store.memoryTotalFormatted() }}</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Usage:</span>
+                    <span class="value">{{ store.memoryUsagePercent() | number:'1.2-2' }}%</span>
+                  </div>
+                  <div class="info-row">
+                    <span class="label">Fragmentation:</span>
+                    <span class="value">{{ store.serverInfo()!.memoryFragmentationRatio | number:'1.2-2' }}</span>
+                  </div>
+                </div>
+              </mat-card-content>
+            </mat-card>
+
+            <!-- Clients Card -->
+            <mat-card>
+              <mat-card-header>
+                <mat-icon mat-card-avatar>people</mat-icon>
+                <mat-card-title>Clients & Stats</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="info-row">
+                  <span class="label">Connected Clients:</span>
+                  <span class="value highlight">{{ store.serverInfo()!.connectedClients }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Total Commands:</span>
+                  <span class="value">{{ store.serverInfo()!.totalCommandsProcessed | number }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Cache Hit Rate:</span>
+                  <span class="value" [class.good]="store.serverInfo()!.hitRate > 80" [class.warning]="store.serverInfo()!.hitRate < 50">
+                    {{ store.serverInfo()!.hitRate | number:'1.2-2' }}%
+                  </span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Keyspace Hits:</span>
+                  <span class="value">{{ store.serverInfo()!.keyspaceHits | number }}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Keyspace Misses:</span>
+                  <span class="value">{{ store.serverInfo()!.keyspaceMisses | number }}</span>
+                </div>
+              </mat-card-content>
+            </mat-card>
+          </div>
+        </div>
+      </mat-tab>
+
+      <!-- Configuration Tab -->
+      <mat-tab label="Configuration">
+        <div class="tab-content">
+          <mat-card>
+            <mat-card-header>
+              <mat-icon mat-card-avatar>settings</mat-icon>
+              <mat-card-title>Redis Configuration</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <!-- Search -->
+              <div class="search-bar">
+                <mat-form-field appearance="outline">
+                  <mat-label>Search configuration</mat-label>
+                  <input matInput [ngModel]="configSearchQuery()" (ngModelChange)="configSearchQuery.set($event)" (keyup.enter)="searchConfig()" placeholder="e.g., maxmemory">
+                  <button mat-icon-button matSuffix (click)="searchConfig()">
+                    <mat-icon>search</mat-icon>
+                  </button>
+                </mat-form-field>
+                <button mat-raised-button color="primary" (click)="loadData()">
+                  <mat-icon>refresh</mat-icon>
+                  Refresh
+                </button>
+              </div>
+
+              <!-- Config Table -->
+              @if (store.isLoadingConfig()) {
+                <div class="loading-container">
+                  <mat-spinner diameter="40"></mat-spinner>
+                </div>
+              } @else {
+                <table mat-table [dataSource]="store.config()" class="config-table">
+                  <!-- Name Column -->
+                  <ng-container matColumnDef="name">
+                    <th mat-header-cell *matHeaderCellDef>Parameter</th>
+                    <td mat-cell *matCellDef="let param">
+                      <strong>{{ param.name }}</strong>
+                    </td>
+                  </ng-container>
+
+                  <!-- Value Column -->
+                  <ng-container matColumnDef="value">
+                    <th mat-header-cell *matHeaderCellDef>Value</th>
+                    <td mat-cell *matCellDef="let param">
+                      <code>{{ param.value }}</code>
+                    </td>
+                  </ng-container>
+
+                  <!-- Modifiable Column -->
+                  <ng-container matColumnDef="modifiable">
+                    <th mat-header-cell *matHeaderCellDef>Modifiable</th>
+                    <td mat-cell *matCellDef="let param">
+                      @if (param.isModifiable) {
+                        <mat-chip color="accent">Yes</mat-chip>
+                      } @else {
+                        <mat-chip>Read-only</mat-chip>
+                      }
+                    </td>
+                  </ng-container>
+
+                  <!-- Actions Column -->
+                  <ng-container matColumnDef="actions">
+                    <th mat-header-cell *matHeaderCellDef>Actions</th>
+                    <td mat-cell *matCellDef="let param">
+                      @if (param.isModifiable) {
+                        <button mat-icon-button color="primary" (click)="editConfig(param.name, param.value)" matTooltip="Edit">
+                          <mat-icon>edit</mat-icon>
+                        </button>
+                      }
+                    </td>
+                  </ng-container>
+
+                  <tr mat-header-row *matHeaderRowDef="configColumns"></tr>
+                  <tr mat-row *matRowDef="let row; columns: configColumns;"></tr>
+                </table>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+      </mat-tab>
+
+      <!-- All Sections Tab -->
+      <mat-tab label="All Info Sections">
+        <div class="tab-content">
+          @for (section of store.serverInfo()!.allSections; track section.name) {
+            <mat-card class="section-card">
+              <mat-card-header>
+                <mat-card-title>{{ section.name }}</mat-card-title>
+              </mat-card-header>
+              <mat-card-content>
+                <div class="section-properties">
+                  @for (prop of section.properties | keyvalue; track prop.key) {
+                    <div class="info-row">
+                      <span class="label">{{ prop.key }}:</span>
+                      <span class="value">{{ prop.value }}</span>
+                    </div>
+                  }
+                </div>
+              </mat-card-content>
+            </mat-card>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  }
+</div>
+

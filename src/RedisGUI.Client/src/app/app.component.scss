@@ -1,38 +1,42 @@
+@use '../styles/variables' as *;
+@use '../styles/mixins' as *;
+
+// ============================================================================
+// Layout Structure
+// ============================================================================
+
 .mat-sidenav {
-	width: 200px
+	width: $sidebar-width;
 }
 
 .layout-container {
-	display: flex;
-	flex-direction: column;
-	position: absolute;
-	top: 0;
-	bottom: 0;
-	left: 0;
-	right: 0;
+	@include flex-column;
+	height: 100vh;
+	width: 100vw;
+	overflow: hidden;
 }
 
-// Use Material system surface tokens so backgrounds change with prebuilt theme
-html, body {
-  background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  height: 100%;
-}
+// ============================================================================
+// Sidebar Navigation
+// ============================================================================
 
 .sidenav-menu {
 	border-right: 1px solid var(--mat-sys-outline);
 	border-radius: 0;
-	padding: 3px;
+	padding: $spacing-xs;
 	background: var(--mat-sys-surface);
 	color: var(--mat-sys-on-surface);
+	overflow-y: auto;
+	overflow-x: hidden;
+	@include custom-scrollbar;
 }
 
 .sidenav-menu__item:not(:nth-last-child(1)) {
-	margin-bottom: 10px;
+	margin-bottom: $spacing-md;
 }
 
 .sidenav-menu__content {
-	display: flex;
+	@include flex-row;
 	align-items: center;
 	width: 100%;
 
@@ -41,154 +45,353 @@ html, body {
 	}
 
 	> .sidenav-menu__text {
-		margin-left: 12px;
-		flex: 1;
-		min-width: 0;
+		margin-left: $spacing-lg;
+		@include flex-fill;
 
 		.sidenav-menu__title {
-			font-size: 14px;
-			font-weight: 500;
-			display: flex;
+			font-size: $font-size-sm;
+			font-weight: $font-weight-medium;
+			@include flex-row;
 			align-items: center;
-			gap: 8px;
+			gap: $spacing-sm;
 		}
 
 		.sidenav-menu__description {
-			font-size: 12px;
+			font-size: $font-size-xs;
 			opacity: 0.7;
 			margin-top: 2px;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
+			@include text-truncate;
 		}
 
 		.sidenav-menu__badge {
 			display: inline-block;
 			background: var(--mat-sys-primary);
 			color: var(--mat-sys-on-primary);
-			padding: 2px 8px;
-			border-radius: 12px;
+			padding: 2px $spacing-sm;
+			border-radius: $border-radius-lg;
 			font-size: 11px;
-			font-weight: 600;
+			font-weight: $font-weight-semibold;
 			line-height: 1.2;
 		}
 	}
 }
 
+// ============================================================================
+// Toolbar
+// ============================================================================
+
 .loyout-toolbar {
-	// Prefer Material 3 system tokens when available so toolbar contrasts with background.
 	background: var(--mat-sys-primary-container);
 	color: var(--mat-sys-on-primary-container);
+	flex-shrink: 0;
+	@include sticky(top, 0, $z-index-toolbar);
 
 	.spacer {
 		flex: 1 1 auto;
 	}
 
 	.github-logo {
-		margin-right: 8px;
+		margin-right: $spacing-sm;
 		width: 24px;
 		height: 24px;
 	}
 }
 
-.is-mobile .loyout-toolbar {
-	position: fixed;
-	z-index: 2;
-}
+// ============================================================================
+// Main Content Area
+// ============================================================================
 
 h1.header-company-name {
-	margin-left: 8px;
+	margin-left: $spacing-sm;
 }
 
 .sidenav-container {
-	flex: 1;
+	@include flex-fill;
+	overflow: hidden;
 }
 
-.is-mobile .sidenav-container {
-	flex: 1 0 auto;
+.mat-sidenav-content {
+	@include flex-column;
+	height: 100%;
+	overflow: hidden;
 }
 
 .main-content {
-		margin: 10px;
-		box-sizing: border-box;
-		height: calc(100% - 100px);
+	padding: $spacing-md;
+	@include flex-fill;
+	@include flex-column;
+	overflow: hidden;
 	background: var(--mat-sys-surface);
 	color: var(--mat-sys-on-surface);
+	
+	// Ensure router-outlet fills available space
+	router-outlet {
+		+ * {
+			display: block;
+			height: 100%;
+			width: 100%;
+		}
+	}
 }
+
+// ============================================================================
+// Section Actions Container
+// ============================================================================
+
+.section-actions-container {
+	@include flex-between;
+	flex-wrap: nowrap;
+	gap: $spacing-md;
+	border-bottom: 1px solid var(--mat-sys-outline);
+	padding-bottom: $spacing-sm;
+	margin-bottom: $spacing-md;
+	flex-shrink: 0;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	@include custom-scrollbar;
+	
+	> * {
+		flex-shrink: 0;
+	}
+}
+
+// Router outlet wrapper
+router-outlet {
+	display: none;
+}
+
+router-outlet + * {
+	@include flex-row;
+	@include flex-fill;
+	overflow: hidden;
+}
+
+// ============================================================================
+// Shared Components
+// ============================================================================
+
+.company-dedails {
+	@include flex-row;
+	align-content: center;
+	align-items: center;
+	
+	img {
+		width: $sidebar-width;
+		max-width: 100%;
+		height: auto;
+	}
+}
+
+.breadcrumb, app-breadcrumb {
+	border-radius: $border-radius-md;
+	padding: $spacing-xs $spacing-lg;
+	flex-shrink: 0;
+	@include text-truncate;
+	min-width: 0;
+	max-width: $breadcrumb-max-width;
+}
+
+// ============================================================================
+// Material Component Overrides
+// ============================================================================
 
 .mat-table, .mat-cell, .mat-header-cell {
 	background: transparent;
 }
 
-.cdk-virtual-scroll-viewport {
-	background: var(--mat-sys-surface, var(--mat-surface, transparent));
-}
-
-	.section-actions-container {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		border-bottom: 1px solid var(--mat-sys-outline);
-		margin-bottom: 10px;
-}
-
-.company-dedails {
-	display: flex;
-	align-content: center;
-	align-items: center;
-	
-	img {
-		width: 200px;
-	}
-}
-
-/* Toolbar should use primary container for prominence */
-.loyout-toolbar {
-	background: var(--mat-sys-primary-container);
-	color: var(--mat-sys-on-primary-container);
-}
-
-/* Nav list and items inherit surface / on-surface */
-.sidenav-menu .mat-nav-list, .sidenav-menu .mat-list-item {
-	background: transparent;
-	color: inherit;
-}
-
-/* Tables: use surface and variant for headers */
 .mat-table {
 	background: transparent;
 	color: inherit;
 }
+
 .mat-header-row, .mat-header-cell {
 	background: var(--mat-sys-surface-variant);
 	color: var(--mat-sys-on-surface);
 }
+
 .mat-row, .mat-cell {
 	background: transparent;
 }
 
-/* Virtual scroll viewport: match surface */
 .cdk-virtual-scroll-viewport {
 	background: transparent;
 }
 
-/* Density helpers */
+.sidenav-menu .mat-nav-list,
+.sidenav-menu .mat-list-item {
+	background: transparent;
+	color: inherit;
+}
+
+// ============================================================================
+// Density System
+// ============================================================================
+
 .density-default {
-	--app-density-scale: 0px;
+	--app-density-scale: #{$density-default};
 }
+
 .density-comfortable {
-	--app-density-scale: -4px;
+	--app-density-scale: #{$density-comfortable};
 }
+
 .density-compact {
-	--app-density-scale: -8px;
+	--app-density-scale: #{$density-compact};
 }
 
-/* Apply density to some components as example */
-.density-compact .mat-toolbar, .density-comfortable .mat-toolbar {
-	height: calc(64px + var(--app-density-scale));
+.density-compact .mat-toolbar,
+.density-comfortable .mat-toolbar {
+	height: calc(#{$toolbar-height} + var(--app-density-scale));
 }
 
-.breadcrumb, app-breadcrumb {
-  border-radius: 4px;
-  padding: 4px 12px;
+// ============================================================================
+// Responsive Design
+// ============================================================================
+
+// Mobile devices
+@include mobile {
+	.mat-sidenav {
+		width: $sidebar-width-mobile;
+	}
+	
+	.main-content {
+		padding: $spacing-sm;
+	}
+	
+	.section-actions-container {
+		gap: $spacing-sm;
+		padding-bottom: $spacing-sm;
+		margin-bottom: $spacing-sm;
+	}
+	
+	.sidenav-menu__content {
+		.sidenav-menu__text {
+			.sidenav-menu__description {
+				display: none;
+			}
+		}
+	}
+	
+	.user-profile-menu {
+		min-width: $user-menu-min-width-mobile;
+	}
+	
+	.breadcrumb, app-breadcrumb {
+		max-width: $breadcrumb-max-width-mobile;
+		padding: $spacing-xs $spacing-sm;
+		font-size: $font-size-sm;
+	}
+}
+
+// Tablet devices
+@include tablet {
+	.company-dedails {
+		display: none;
+	}
+	
+	.loyout-toolbar {
+		.company-dedails {
+			display: none;
+		}
+	}
+	
+	.company-dedails img {
+		width: 120px;
+	}
+}
+
+// Small mobile devices
+@include small-mobile {
+	.loyout-toolbar {
+		mat-toolbar-row {
+			padding: 0 $spacing-sm;
+		}
+		
+		a[mat-button] {
+			padding: 0 $spacing-sm;
+			font-size: $font-size-sm;
+			
+			.github-logo {
+				display: none;
+			}
+		}
+	}
+}
+
+// Mobile toolbar positioning
+.is-mobile {
+	.loyout-toolbar {
+		position: fixed;
+		z-index: $z-index-sidebar-mobile;
+		width: 100%;
+	}
+	
+	.sidenav-container {
+		flex: 1 0 auto;
+	}
+}
+
+// ============================================================================
+// Auth Layout
+// ============================================================================
+
+.auth-layout {
+	height: 100vh;
+	width: 100vw;
+	@include flex-center;
+	background: var(--mat-sys-surface);
+	color: var(--mat-sys-on-surface);
+	overflow: auto;
+}
+
+// ============================================================================
+// User Profile Menu
+// ============================================================================
+
+.user-menu-trigger {
+	margin-left: $spacing-sm;
+}
+
+.user-profile-menu {
+	min-width: $user-menu-min-width;
+	
+	.user-profile-header {
+		@include flex-row;
+		align-items: center;
+		gap: $spacing-lg;
+		padding: $spacing-xl !important;
+		cursor: default;
+		opacity: 1 !important;
+
+		.user-avatar {
+			@include avatar($avatar-size-md);
+		}
+
+		.user-info {
+			@include flex-column;
+			gap: 2px;
+			@include flex-fill;
+
+			.user-name {
+				font-weight: $font-weight-medium;
+				font-size: $font-size-sm;
+				color: var(--mat-sys-on-surface);
+				@include text-truncate;
+			}
+
+			.user-email {
+				font-size: $font-size-xs;
+				color: var(--mat-sys-on-surface-variant);
+				@include text-truncate;
+			}
+
+			.user-role {
+				font-size: 11px;
+				color: var(--mat-sys-primary);
+				font-weight: $font-weight-medium;
+				text-transform: uppercase;
+			}
+		}
+	}
 }

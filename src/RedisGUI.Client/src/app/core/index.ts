@@ -1,10 +1,19 @@
+/**
+ * Core Module Barrel Exports
+ * Centralized exports for core functionality
+ */
+
 // Core Interceptors
-export * from './interceptors/error.interceptor';
-export * from './interceptors/retry.interceptor';
-export * from './interceptors/loader.interceptor';
+export * from './interceptors';
+
+// Core Guards
+export * from './guards';
 
 // Core Services
-export * from './services/section-actions-portal.service';
+export * from './services';
+
+// Core Stores
+export * from './stores';
 
 // Core Models
 export * from './models/api-error-response.model';

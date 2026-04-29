@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\build\Common.props" />
 
 	<PropertyGroup>
 		<IsPackable>false</IsPackable>
@@ -7,12 +6,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<PackageReference Include="coverlet.collector"/>
-		<PackageReference Include="FluentAssertions"/>
-		<PackageReference Include="Microsoft.NET.Test.Sdk"/>
-		<PackageReference Include="Moq"/>
+		<PackageReference Include="coverlet.collector" />
+		<PackageReference Include="FluentAssertions" />
+		<PackageReference Include="Microsoft.NET.Test.Sdk" />
+		<PackageReference Include="Moq" />
 		<PackageReference Include="NUnit" />
-		<PackageReference Include="NUnit.Analyzers"  />
+		<PackageReference Include="NUnit.Analyzers" />
 		<PackageReference Include="NUnit3TestAdapter" />
 	</ItemGroup>
 
@@ -23,6 +22,7 @@
 	<ItemGroup>
 		<ProjectReference Include="..\..\src\RedisGUI.Application\RedisGUI.Application.csproj" />
 		<ProjectReference Include="..\..\src\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+		<ProjectReference Include="..\..\src\RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

@@ -12,14 +12,14 @@ namespace RedisGUI.Application.Redis.Commands.ExecuteTransaction;
 public sealed class ExecuteTransactionCommandHandler : ICommandHandler<ExecuteTransactionCommand, ExecuteTransactionResponse>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisTransactionService transactionService;
 
 	public ExecuteTransactionCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IConnectionService connectionService)
+		IRedisTransactionService transactionService)
 	{
 		this.connectionRepository = connectionRepository;
-		this.connectionService = connectionService;
+		this.transactionService = transactionService;
 	}
 
 	public async Task<Result<ExecuteTransactionResponse>> Handle(
@@ -33,7 +33,7 @@ public sealed class ExecuteTransactionCommandHandler : ICommandHandler<ExecuteTr
 			return Result.Failure<ExecuteTransactionResponse>(connectionResult.Error);
 		}
 
-		var result = await connectionService.ExecuteTransaction(connectionResult.Value, request.Operations);
+		var result = await transactionService.ExecuteTransactionAsync(connectionResult.Value, request.Operations, cancellationToken);
 
 		if (result.IsFailure)
 		{

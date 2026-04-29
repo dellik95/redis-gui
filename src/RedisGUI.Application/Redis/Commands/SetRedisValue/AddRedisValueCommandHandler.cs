@@ -12,19 +12,19 @@ namespace RedisGUI.Application.Redis.Commands.SetRedisValue;
 internal sealed class AddRedisValueCommandHandler : ICommandHandler<AddRedisValueCommand>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     /// <summary>
     /// Initializes a new instance of the AddRedisValueCommandHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="valueService">Service for Redis value operations.</param>
     public AddRedisValueCommandHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     /// <summary>
@@ -42,6 +42,6 @@ internal sealed class AddRedisValueCommandHandler : ICommandHandler<AddRedisValu
             return Result.Failure(connectionResult.Error);
         }
 
-        return await connectionService.SetValue(connectionResult.Value, request.Key, request.Value, request.Ttl);
+        return await valueService.SetValueAsync(connectionResult.Value, request.Key, request.Value, request.Ttl, cancellationToken);
     }
 } 

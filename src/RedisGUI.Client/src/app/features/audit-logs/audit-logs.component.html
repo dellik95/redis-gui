@@ -1,0 +1,290 @@
+<div class="audit-logs-container">
+	<!-- Access Denied for Non-Admins -->
+	@if (!isAdmin()) {
+		<mat-card class="access-denied-card">
+			<mat-card-content>
+				<mat-icon class="lock-icon">lock</mat-icon>
+				<h2>Access Restricted</h2>
+				<p>You need administrator privileges to view audit logs.</p>
+			</mat-card-content>
+		</mat-card>
+	} @else {
+		<!-- Header -->
+		<div class="page-header">
+			<div class="header-content">
+				<mat-icon class="header-icon">history</mat-icon>
+				<div>
+					<h1>Audit Logs</h1>
+					<p class="subtitle">Track all system activity and changes</p>
+				</div>
+			</div>
+			<div class="header-actions">
+				<button mat-raised-button color="primary" (click)="loadAuditLogs()">
+					<mat-icon>refresh</mat-icon>
+					Refresh
+				</button>
+			</div>
+		</div>
+
+		<!-- Error Display -->
+		@if (error()) {
+			<mat-card class="error-card">
+				<mat-card-content>
+					<mat-icon color="warn">error</mat-icon>
+					<span>{{ error() }}</span>
+					<button mat-icon-button (click)="auditStore.clearError()">
+						<mat-icon>close</mat-icon>
+					</button>
+				</mat-card-content>
+			</mat-card>
+		}
+
+		<!-- Filters Panel -->
+		<mat-card class="filters-card">
+			<mat-card-header>
+				<mat-icon mat-card-avatar>filter_list</mat-icon>
+				<mat-card-title>Filters</mat-card-title>
+			</mat-card-header>
+			<mat-card-content>
+				<div class="filters-grid">
+					<!-- Entity Type Filter -->
+					<mat-form-field appearance="outline">
+						<mat-label>Entity Type</mat-label>
+						<mat-select [value]="filters().entityType" (selectionChange)="updateFilter('entityType', $event.value)">
+							<mat-option [value]="undefined">All Types</mat-option>
+							@for (type of entityTypes; track type) {
+								<mat-option [value]="type">{{ type }}</mat-option>
+							}
+						</mat-select>
+					</mat-form-field>
+
+					<!-- Entity ID Filter -->
+					<mat-form-field appearance="outline">
+						<mat-label>Entity ID</mat-label>
+						<input matInput [value]="filters().entityId || ''" 
+							(input)="updateFilter('entityId', $any($event.target).value)" 
+							placeholder="Enter entity ID">
+						<mat-icon matSuffix>fingerprint</mat-icon>
+					</mat-form-field>
+
+					<!-- User ID Filter -->
+					<mat-form-field appearance="outline">
+						<mat-label>User ID</mat-label>
+						<input matInput [value]="filters().userId || ''" 
+							(input)="updateFilter('userId', $any($event.target).value)" 
+							placeholder="Enter user ID">
+						<mat-icon matSuffix>person</mat-icon>
+					</mat-form-field>
+
+					<!-- From Date -->
+					<mat-form-field appearance="outline">
+						<mat-label>From Date</mat-label>
+						<input matInput [matDatepicker]="fromPicker" 
+							[value]="filters().fromDate" 
+							(dateChange)="updateFilter('fromDate', $event.value?.toISOString())">
+						<mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
+						<mat-datepicker #fromPicker></mat-datepicker>
+					</mat-form-field>
+
+					<!-- To Date -->
+					<mat-form-field appearance="outline">
+						<mat-label>To Date</mat-label>
+						<input matInput [matDatepicker]="toPicker" 
+							[value]="filters().toDate" 
+							(dateChange)="updateFilter('toDate', $event.value?.toISOString())">
+						<mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
+						<mat-datepicker #toPicker></mat-datepicker>
+					</mat-form-field>
+				</div>
+
+				<div class="filter-actions">
+					<button mat-button (click)="resetFilters()">
+						<mat-icon>clear</mat-icon>
+						Clear Filters
+					</button>
+					<button mat-raised-button color="primary" (click)="applyFilters()">
+						<mat-icon>search</mat-icon>
+						Apply Filters
+					</button>
+				</div>
+			</mat-card-content>
+		</mat-card>
+
+		<!-- Stats Summary -->
+		<div class="stats-row">
+			<mat-card class="stat-card">
+				<mat-card-content>
+					<mat-icon>list_alt</mat-icon>
+					<div class="stat-value">{{ totalCount() | number }}</div>
+					<div class="stat-label">Total Records</div>
+				</mat-card-content>
+			</mat-card>
+			<mat-card class="stat-card">
+				<mat-card-content>
+					<mat-icon>pages</mat-icon>
+					<div class="stat-value">{{ currentPage() }}</div>
+					<div class="stat-label">Current Page</div>
+				</mat-card-content>
+			</mat-card>
+			<mat-card class="stat-card">
+				<mat-card-content>
+					<mat-icon>library_books</mat-icon>
+					<div class="stat-value">{{ totalPages() }}</div>
+					<div class="stat-label">Total Pages</div>
+				</mat-card-content>
+			</mat-card>
+		</div>
+
+		<!-- Loading State -->
+		@if (isLoading()) {
+			<div class="loading-overlay">
+				<mat-spinner diameter="48"></mat-spinner>
+				<p>Loading audit logs...</p>
+			</div>
+		}
+
+		<!-- Audit Logs Table -->
+		<mat-card class="table-card">
+			<mat-card-content>
+				@if (items().length === 0 && !isLoading()) {
+					<div class="empty-state">
+						<mat-icon>inbox</mat-icon>
+						<h3>No Audit Logs Found</h3>
+						<p>No records match your current filters.</p>
+					</div>
+				} @else {
+					<div class="table-container">
+						<table mat-table [dataSource]="items()" class="audit-table" multiTemplateDataRows>
+							<!-- Timestamp Column -->
+							<ng-container matColumnDef="timestamp">
+								<th mat-header-cell *matHeaderCellDef>Timestamp</th>
+								<td mat-cell *matCellDef="let row">
+									<div class="timestamp-cell">
+										<span class="date">{{ row.timestamp | date:'mediumDate' }}</span>
+										<span class="time">{{ row.timestamp | date:'mediumTime' }}</span>
+									</div>
+								</td>
+							</ng-container>
+
+							<!-- Action Column -->
+							<ng-container matColumnDef="action">
+								<th mat-header-cell *matHeaderCellDef>Action</th>
+								<td mat-cell *matCellDef="let row">
+									<mat-chip [color]="getActionColor(row.action)">
+										<mat-icon>{{ getActionIcon(row.action) }}</mat-icon>
+										{{ row.action }}
+									</mat-chip>
+								</td>
+							</ng-container>
+
+							<!-- Entity Type Column -->
+							<ng-container matColumnDef="entityType">
+								<th mat-header-cell *matHeaderCellDef>Entity Type</th>
+								<td mat-cell *matCellDef="let row">
+									<span class="entity-type">{{ row.entityType }}</span>
+								</td>
+							</ng-container>
+
+							<!-- Entity ID Column -->
+							<ng-container matColumnDef="entityId">
+								<th mat-header-cell *matHeaderCellDef>Entity ID</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.entityId) {
+										<code class="entity-id" [matTooltip]="row.entityId">{{ row.entityId | slice:0:8 }}...</code>
+									} @else {
+										<span class="na">N/A</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- User ID Column -->
+							<ng-container matColumnDef="userId">
+								<th mat-header-cell *matHeaderCellDef>User</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.userId) {
+										<code class="user-id" [matTooltip]="row.userId">{{ row.userId | slice:0:8 }}...</code>
+									} @else {
+										<span class="na">System</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- IP Address Column -->
+							<ng-container matColumnDef="ipAddress">
+								<th mat-header-cell *matHeaderCellDef>IP Address</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.ipAddress) {
+										<span class="ip-address">{{ row.ipAddress }}</span>
+									} @else {
+										<span class="na">–</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- Details Column -->
+							<ng-container matColumnDef="details">
+								<th mat-header-cell *matHeaderCellDef>Details</th>
+								<td mat-cell *matCellDef="let row">
+									<button mat-icon-button (click)="toggleExpanded(row)" 
+										[matTooltip]="expandedRowId() === row.id ? 'Collapse' : 'Expand'">
+										<mat-icon>{{ expandedRowId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+									</button>
+								</td>
+							</ng-container>
+
+							<!-- Expanded Detail Row -->
+							<ng-container matColumnDef="expandedDetail">
+								<td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
+									<div class="detail-container" [@detailExpand]="expandedRowId() === row.id ? 'expanded' : 'collapsed'">
+										@if (expandedRowId() === row.id) {
+											<div class="detail-content">
+												@if (row.userAgent) {
+													<div class="detail-section">
+														<strong>User Agent:</strong>
+														<span>{{ row.userAgent }}</span>
+													</div>
+												}
+												@if (row.oldValue) {
+													<div class="detail-section">
+														<strong>Previous Value:</strong>
+														<pre class="json-display old-value">{{ formatJson(row.oldValue) }}</pre>
+													</div>
+												}
+												@if (row.newValue) {
+													<div class="detail-section">
+														<strong>New Value:</strong>
+														<pre class="json-display new-value">{{ formatJson(row.newValue) }}</pre>
+													</div>
+												}
+												@if (!row.oldValue && !row.newValue && !row.userAgent) {
+													<div class="no-details">No additional details available</div>
+												}
+											</div>
+										}
+									</div>
+								</td>
+							</ng-container>
+
+							<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+							<tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+								class="audit-row"
+								[class.expanded]="expandedRowId() === row.id"></tr>
+							<tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
+						</table>
+					</div>
+				}
+
+				<!-- Paginator -->
+				<mat-paginator
+					[length]="totalCount()"
+					[pageSize]="pageSize()"
+					[pageSizeOptions]="[25, 50, 100, 200]"
+					[pageIndex]="currentPage() - 1"
+					(page)="onPageChange($event)"
+					showFirstLastButtons>
+				</mat-paginator>
+			</mat-card-content>
+		</mat-card>
+	}
+</div>
+

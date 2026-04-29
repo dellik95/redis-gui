@@ -24,7 +24,8 @@ public class NotificationService : INotificationService
 	/// </summary>
 	/// <param name="clientId">The SignalR client connection ID</param>
 	/// <param name="metrics">The Redis metrics to send</param>
-	public async Task NotifyUser(string clientId, Domain.RedisMetrics.RedisMetrics metrics)
+	/// <param name="cancellationToken">Cancellation token</param>
+	public async Task NotifyUser(string clientId, Domain.RedisMetrics.RedisMetrics metrics, CancellationToken cancellationToken = default)
 	{
 		await hubContext.Clients.Client(clientId).NotifyUserAsync(metrics);
 	}

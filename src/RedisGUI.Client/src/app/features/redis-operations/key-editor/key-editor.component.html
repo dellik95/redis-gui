@@ -5,6 +5,7 @@
       <mat-card-title>{{ details()!.key }}</mat-card-title>
       <mat-card-subtitle>{{ details()!.type | uppercase }} • TTL: {{ details()!.ttl }}s • Size: {{ details()!.size }} bytes</mat-card-subtitle>
       <span class="spacer"></span>
+      <button mat-icon-button (click)="close()" matTooltip="Close"><mat-icon>close</mat-icon></button>
       <button mat-icon-button color="warn" (click)="deleteKey()" matTooltip="Delete key"><mat-icon>delete</mat-icon></button>
     </mat-card-header>
 
@@ -20,14 +21,14 @@
       @if (details()!.type === 'string') {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Value</mat-label>
-          <textarea matInput rows="6" #strVal>{{ details()!.value }}</textarea>
+          <textarea matInput rows="6" #strVal>{{ getStringValue() }}</textarea>
         </mat-form-field>
         <button mat-raised-button color="primary" (click)="updateString(strVal.value)" [disabled]="saving()">Save</button>
       }
       <!-- HASH -->
       @if (details()!.type === 'hash') {
         <div class="hash-editor">
-          @for (field of (details()!.value | keyvalue); track field.key) {
+          @for (field of (getHashValue() | keyvalue); track field.key) {
             <div class="hash-row">
               <mat-form-field appearance="outline" class="field-name">
                 <mat-label>Field</mat-label>
@@ -35,9 +36,9 @@
               </mat-form-field>
               <mat-form-field appearance="outline" class="field-value">
                 <mat-label>Value</mat-label>
-                <input matInput [value]="field.value" (change)="updateHashField(field.key, $event.target.value + '')" />
+                <input matInput [value]="field.value" (change)="updateHashField(toString(field.key), $event.target.value + '')" />
               </mat-form-field>
-              <button mat-icon-button color="warn" (click)="deleteHashField(field.key + '')" matTooltip="Remove field"><mat-icon>close</mat-icon></button>
+              <button mat-icon-button color="warn" (click)="deleteHashField(toString(field.key))" matTooltip="Remove field"><mat-icon>close</mat-icon></button>
             </div>
           }
           <div class="add-hash-field">
@@ -57,9 +58,9 @@
       @if (details()!.type === 'list') {
         <div class="list-editor">
           <div class="list-items">
-            @for (item of details()!.value; track item) {
+            @for (item of getListItems(); track trackByIndex($index)) {
               <div class="list-item">
-                <span class="idx">{{ details()!.value.indexOf(item) }}</span>
+                <span class="idx">{{ $index }}</span>
                 <span>{{ item }}</span>
               </div>
             }
@@ -72,15 +73,15 @@
         <div class="actions">
           <button mat-button (click)="pushList('left')" [disabled]="!newListItem().trim()">LPUSH</button>
           <button mat-button (click)="pushList('right')" [disabled]="!newListItem().trim()">RPUSH</button>
-          <button mat-button (click)="popList('left')" [disabled]="details()!.value.length===0">LPOP</button>
-          <button mat-button (click)="popList('right')" [disabled]="details()!.value.length===0">RPOP</button>
+          <button mat-button (click)="popList('left')" [disabled]="getListItems().length===0">LPOP</button>
+          <button mat-button (click)="popList('right')" [disabled]="getListItems().length===0">RPOP</button>
         </div>
       }
       <!-- SET -->
       @if (details()!.type === 'set') {
         <div class="set-editor">
           <div class="set-members">
-            @for (member of details()!.value; track member) {
+            @for (member of getSetMembers(); track member) {
               <div class="set-member">{{ member }} <button mat-icon-button (click)="removeSetMember(member)" matTooltip="Remove"><mat-icon>close</mat-icon></button></div>
             }
           </div>
@@ -97,7 +98,7 @@
           <table class="zset-table">
             <thead><tr><th>Member</th><th>Score</th><th></th></tr></thead>
             <tbody>
-              @for (zitem of details()!.value; track zitem.member) {
+              @for (zitem of getZSetItems(); track zitem.member) {
                 <tr>
                   <td>{{ zitem.member }}</td>
                   <td><input type="number" [value]="zitem.score" (change)="updateZSetScore(zitem.member, +$event.target.value)" /></td>
@@ -123,7 +124,7 @@
       @if (details()!.type === 'stream') {
         <div class="stream-editor">
           <div class="stream-entries">
-            @for (entry of details()!.value; track entry.id) {
+            @for (entry of getStreamEntries(); track entry.id) {
               <div class="stream-entry">
                 <div class="entry-id">ID: {{ entry.id }}</div>
                 <div class="entry-fields">
@@ -135,7 +136,7 @@
             }
           </div>
           <div class="new-stream-entry">
-            @for (field of streamNewFields(); track field) {
+            @for (field of streamNewFields(); track trackByStreamField($index, field)) {
               <div class="fields">
                 <mat-form-field appearance="outline">
                   <mat-label>Field</mat-label>

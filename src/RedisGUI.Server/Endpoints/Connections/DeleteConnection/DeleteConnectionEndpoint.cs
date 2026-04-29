@@ -3,10 +3,12 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.DeleteConnection;
 using RedisGUI.Domain.Extensions;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
+using System.Threading;
 
 namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 {
@@ -26,11 +28,22 @@ namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapDelete("connections/{id:guid}", async (IMediator sender, Guid id) =>
+			routerBuilder.MapDelete("connections/{id:guid}", async (
+				IMediator sender,
+				Guid id,
+				CancellationToken cancellationToken) =>
 			{
-				var command = new DeleteConnectionCommand(id);
-				return await sender.Send(command).Match(() => Results.Ok(), Results.BadRequest);
-			}).WithOpenApi();
+				DeleteConnectionCommand command = new(id);
+				return await sender.Send(command, cancellationToken).Match(() => Results.Ok(), Results.BadRequest);
+			})
+			.WithName("DeleteConnection")
+			.WithSummary("Delete a Redis connection")
+			.WithDescription("Permanently deletes a Redis connection configuration. Admin only.")
+			.WithTags("Connections")
+			.Produces(StatusCodes.Status200OK)
+			.Produces(StatusCodes.Status400BadRequest)
+			.Produces(StatusCodes.Status404NotFound)
+			.RequireAuthorization(Policies.AdminOnly);
 		}
 	}
 }

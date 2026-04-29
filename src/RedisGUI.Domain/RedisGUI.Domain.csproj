@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-	<Import Project="..\..\build\Common.props" />
 	<ItemGroup>
 		<ProjectReference Include="..\RedisGUI.Shared\RedisGUI.Shared.csproj" />
 	</ItemGroup>

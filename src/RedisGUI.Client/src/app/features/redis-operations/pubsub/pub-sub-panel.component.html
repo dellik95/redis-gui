@@ -6,7 +6,7 @@
     <form (ngSubmit)="subscribe()" class="subscribe-form" aria-label="Subscribe to channel form">
       <mat-form-field appearance="outline" class="channel-field">
         <mat-label>Channel</mat-label>
-        <input matInput [ngModel]="subscribeChannel()" (ngModelChange)="updateSubscribeChannel($event)" name="subscribeChannel" placeholder="e.g. notifications" />
+        <input matInput [ngModel]="subscribeChannel()" (ngModelChange)="subscribeChannel.set($event)" name="subscribeChannel" placeholder="e.g. notifications" />
       </mat-form-field>
       <button mat-raised-button color="primary" type="submit" aria-label="Subscribe button">
         <mat-icon>add</mat-icon>
@@ -17,11 +17,11 @@
     <div class="publish-form" aria-label="Publish message form">
       <mat-form-field appearance="outline" class="channel-field">
         <mat-label>Publish Channel</mat-label>
-        <input matInput [ngModel]="publishChannel()" (ngModelChange)="updatePublishChannel($event)" name="publishChannel" placeholder="channel" />
+        <input matInput [ngModel]="publishChannel()" (ngModelChange)="publishChannel.set($event)" name="publishChannel" placeholder="channel" />
       </mat-form-field>
       <mat-form-field appearance="outline" class="message-field">
         <mat-label>Message</mat-label>
-        <input matInput [ngModel]="publishMessage()" (ngModelChange)="updatePublishMessage($event)" name="publishMessage" placeholder="Enter message" />
+        <input matInput [ngModel]="publishMessage()" (ngModelChange)="publishMessage.set($event)" name="publishMessage" placeholder="Enter message" />
       </mat-form-field>
       <button mat-raised-button color="accent" (click)="publish()" [disabled]="!isSubscribedToPublishChannel" matTooltip="Must subscribe to channel before publishing">
         <mat-icon>send</mat-icon>
@@ -30,7 +30,7 @@
       <button mat-icon-button (click)="clearMessages()" matTooltip="Clear messages" aria-label="Clear messages">
         <mat-icon>clear_all</mat-icon>
       </button>
-      <button mat-icon-button (click)="autoScroll.set(!autoScroll())" [color]="autoScroll() ? 'primary' : undefined" matTooltip="Toggle auto-scroll" aria-label="Toggle auto scroll">
+      <button mat-icon-button (click)="autoScroll.set(!autoScroll())" [color]="autoScroll() ? 'primary' : null" matTooltip="Toggle auto-scroll" aria-label="Toggle auto scroll">
         <mat-icon>{{ autoScroll() ? 'south' : 'pan_tool' }}</mat-icon>
       </button>
     </div>

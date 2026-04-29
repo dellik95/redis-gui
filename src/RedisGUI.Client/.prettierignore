@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Generated files
+*.d.ts
+*.js.map
+
+# IDE
+.vscode/
+.idea/
+
+# Package files
+package-lock.json
+yarn.lock
+

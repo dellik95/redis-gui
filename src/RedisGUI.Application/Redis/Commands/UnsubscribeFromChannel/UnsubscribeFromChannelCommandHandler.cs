@@ -12,14 +12,14 @@ namespace RedisGUI.Application.Redis.Commands.UnsubscribeFromChannel;
 public sealed class UnsubscribeFromChannelCommandHandler : ICommandHandler<UnsubscribeFromChannelCommand>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisPubSubService pubSubService;
 
 	public UnsubscribeFromChannelCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IConnectionService connectionService)
+		IRedisPubSubService pubSubService)
 	{
 		this.connectionRepository = connectionRepository;
-		this.connectionService = connectionService;
+		this.pubSubService = pubSubService;
 	}
 
 	public async Task<Result> Handle(UnsubscribeFromChannelCommand request, CancellationToken cancellationToken)
@@ -31,7 +31,7 @@ public sealed class UnsubscribeFromChannelCommandHandler : ICommandHandler<Unsub
 			return Result.Failure(connectionResult.Error);
 		}
 
-		return await connectionService.UnsubscribeFromChannel(
+		return await pubSubService.UnsubscribeFromChannelAsync(
 			connectionResult.Value,
 			request.SubscriptionId,
 			cancellationToken);

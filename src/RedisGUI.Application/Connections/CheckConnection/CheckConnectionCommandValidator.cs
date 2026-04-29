@@ -1,7 +1,8 @@
-﻿using FluentValidation;
+using FluentValidation;
 using RedisGUI.Application.Core.Extensions;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
+using RedisGUI.Domain.Redis;
 
 namespace RedisGUI.Application.Connections.CheckConnection;
 
@@ -22,17 +23,13 @@ internal sealed class CheckConnectionCommandValidator : AbstractValidator<CheckC
 			.WithError(DomainErrors.ConnectionHost.LongerThanAllowed);
 
 		RuleFor(x => x.Port)
-			.GreaterThan(0)
-			.WithMessage("Port must be greater than 0")
-			.LessThanOrEqualTo(65535)
-			.WithMessage("Port must be less than or equal to 65535")
+			.InclusiveBetween(RedisConstants.MinPort, RedisConstants.MaxPort)
+			.WithMessage($"Port must be between {RedisConstants.MinPort} and {RedisConstants.MaxPort}")
 			.WithError(DomainErrors.ConnectionPort.LessThanAllowed);
 
 		RuleFor(x => x.Database)
-			.GreaterThanOrEqualTo(0)
-			.WithMessage("Database number must be greater than or equal to 0")
-			.LessThanOrEqualTo(15)
-			.WithMessage("Database number must be less than or equal to 15");
+			.InclusiveBetween(0, RedisConstants.MaxDatabases - 1)
+			.WithMessage($"Database number must be between 0 and {RedisConstants.MaxDatabases - 1}");
 
 		// Validate that if UserName is provided, Password must also be provided
 		RuleFor(x => x.UserName)

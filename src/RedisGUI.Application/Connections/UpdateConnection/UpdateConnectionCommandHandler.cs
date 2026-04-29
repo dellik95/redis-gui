@@ -18,7 +18,7 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 	private readonly IRedisConnectionRepository connectionRepository;
 	private readonly IPasswordEncryptor passwordEncryptor;
 	private readonly IUnitOfWork unitOfWork;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisConnectionService connectionService;
 
 	/// <summary>
 	/// Initializes a new instance of the UpdateConnectionCommandHandler.
@@ -31,7 +31,7 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 		IRedisConnectionRepository connectionRepository,
 		IPasswordEncryptor passwordEncryptor,
 		IUnitOfWork unitOfWork,
-		IConnectionService connectionService)
+		IRedisConnectionService connectionService)
 	{
 		this.connectionRepository = connectionRepository;
 		this.passwordEncryptor = passwordEncryptor;
@@ -62,7 +62,7 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 			new ConnectionName(request.Name),
 			new ConnectionHost(request.Host),
 			new ConnectionPort(request.Port),
-			request.Database);
+			new DatabaseNumber(request.Database));
 
 		if (updateResult.IsFailure)
 		{
@@ -84,7 +84,7 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 		}
 
 		// Test connection and update availability
-		var testResult = await connectionService.CheckConnection(existingConnection);
+		var testResult = await connectionService.CheckConnectionAsync(existingConnection, cancellationToken);
 		existingConnection.UpdateAvailability(testResult.IsSuccess);
 
 		// Save changes

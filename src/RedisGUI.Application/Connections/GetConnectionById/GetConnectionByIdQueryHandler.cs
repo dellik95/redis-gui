@@ -1,6 +1,5 @@
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Extensions;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Application.Connections.Shared;

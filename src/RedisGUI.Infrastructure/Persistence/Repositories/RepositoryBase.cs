@@ -41,9 +41,9 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 	/// <returns>A Result indicating the success or failure of the operation</returns>
 	public async Task<Result> DeleteAsync(Guid id, CancellationToken token = default)
 	{
-		var connection = await DbSet.FindAsync(id, token);
+		T? connection = await DbSet.FindAsync(id, token);
 
-		if (connection == null)
+		if (connection is null)
 		{
 			return Result.Failure(DomainErrors.Storage.ItemNotFound);
 		}
@@ -63,14 +63,18 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 	}
 
 	/// <inheritdoc />
-	public async Task<Result<List<T>>> GetAsync(Expression<Func<T, bool>> filter = null, bool trackChanges = false, int pageNumber = 1, int pageSize = 100)
+	public async Task<Result<PagedResult<T>>> GetAsync(
+		Expression<Func<T, bool>>? filter = null,
+		bool trackChanges = false,
+		int pageNumber = 1,
+		int pageSize = 100,
+		CancellationToken cancellationToken = default)
 	{
-		//TODO : Add pagination
-		var query = DbSet.AsQueryable();
+		IQueryable<T> query = DbSet.AsQueryable();
 
 		if (filter != null)
 		{
-			query = DbSet.Where(filter);
+			query = query.Where(filter);
 		}
 
 		if (!trackChanges)
@@ -78,8 +82,30 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 			query = query.AsNoTracking();
 		}
 
-		var items = await query.ToListAsync();
+		// Validate pagination parameters
+		if (pageNumber < 1)
+			pageNumber = 1;
+		if (pageSize < 1)
+			pageSize = 100;
+		if (pageSize > 1000)
+			pageSize = 1000; // Cap at 1000 for safety
 
-		return items;
+		int totalCount = await query.CountAsync(cancellationToken);
+		List<T> items = await query
+			.Skip((pageNumber - 1) * pageSize)
+			.Take(pageSize)
+			.ToListAsync(cancellationToken);
+
+		PagedResult<T> pagedResult = new(items, totalCount, pageNumber, pageSize);
+		return Result.Success(pagedResult);
+	}
+
+	/// <inheritdoc />
+	public async Task<Result<T?>> FindAsync(Guid id, CancellationToken cancellationToken = default)
+	{
+		T? entity = await DbSet.FindAsync([id], cancellationToken);
+		return entity is null
+			? Result.Failure<T?>(DomainErrors.Storage.ItemNotFound)
+			: Result.Success(entity);
 	}
 }

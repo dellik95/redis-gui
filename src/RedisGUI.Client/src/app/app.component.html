@@ -1,6 +1,8 @@
 <loading></loading>
 
-<div class="layout-container" [class.is-mobile]="mobileQuery.matches">
+<!-- Authenticated Layout: Navbar + Sidebar -->
+@if (authStore.isAuthenticated()) {
+<div class="layout-container" [class.is-mobile]="isMobile()">
 
     <mat-toolbar class="loyout-toolbar" color="primary">
 
@@ -15,8 +17,6 @@
 
             <span class="spacer"></span>
 
-            
-
             <a mat-button target="_blank" href="https://github.com/dellik95/redis-gui" aria-label="GitHub Repository">
                 <span matButtonIcon [ngTemplateOutlet]="githubIcon"></span>
                 GitHub
@@ -26,35 +26,64 @@
                 <mat-icon>info</mat-icon>
             </button>
 
-        </mat-toolbar-row>
+            <!-- User Profile Menu -->
+            <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-menu-trigger">
+                <mat-icon>account_circle</mat-icon>
+            </button>
+            <mat-menu #userMenu="matMenu" class="user-profile-menu">
+                <div class="user-profile-header" mat-menu-item disabled>
+                    <div class="user-avatar">
+                        {{ authStore.userInitials() }}
+                    </div>
+                    <div class="user-info">
+                        <div class="user-name">{{ authStore.userFullName() }}</div>
+                        <div class="user-email">{{ authStore.user()?.email }}</div>
+                        <div class="user-role">{{ authStore.user()?.role }}</div>
+                    </div>
+                </div>
+                <mat-divider></mat-divider>
+                <button mat-menu-item (click)="logout()">
+                    <mat-icon>logout</mat-icon>
+                    <span>Logout</span>
+                </button>
+            </mat-menu>
 
+        </mat-toolbar-row>
 
     </mat-toolbar>
 
-    <mat-sidenav-container class="sidenav-container" [style.marginTop.px]="mobileQuery.matches ? 56 : 0">
-        <mat-sidenav class="sidenav-menu" #snav opened="true" [mode]="mobileQuery.matches ? 'over' : 'side'"
-            [fixedInViewport]="mobileQuery.matches" fixedTopGap="56">
+    <mat-sidenav-container class="sidenav-container" [style.marginTop.px]="isMobile() ? 56 : 0">
+        <mat-sidenav class="sidenav-menu" #snav opened="true" [mode]="isMobile() ? 'over' : 'side'"
+            [fixedInViewport]="isMobile()" fixedTopGap="56">
             <mat-nav-list class="sidenav-menu_items">
 
-                <mat-list-item class="sidenav-menu__item" *ngFor="let link of (sideNavService.sideNavLinks$ | async)"
+                @for (link of sideNavStore.sideNavLinks(); track link.href) {
+                <mat-list-item class="sidenav-menu__item"
                     [routerLink]="[link.href]" routerLinkActive="mdc-list-item--activated"
                     [routerLinkActiveOptions]="{exact: true}">
 
                     <div class="sidenav-menu__content">
-                        <mat-icon class="sidenav-menu_icon" *ngIf="link.icon" aria-hidden="false"
+                        @if (link.icon) {
+                        <mat-icon class="sidenav-menu_icon" aria-hidden="false"
                             [fontIcon]="link.icon"></mat-icon>
+                        }
                         <div class="sidenav-menu__text">
                             <div class="sidenav-menu__title">
                                 {{ link.title }}
-                                <span class="sidenav-menu__badge" *ngIf="link.badge">{{ link.badge }}</span>
+                                @if (link.badge) {
+                                <span class="sidenav-menu__badge">{{ link.badge }}</span>
+                                }
                             </div>
-                            <div class="sidenav-menu__description" *ngIf="link.description">
+                            @if (link.description) {
+                            <div class="sidenav-menu__description">
                                 {{ link.description }}
                             </div>
+                            }
                         </div>
                     </div>
 
                 </mat-list-item>
+                }
             </mat-nav-list>
         </mat-sidenav>
 
@@ -70,6 +99,14 @@
     </mat-sidenav-container>
 
 </div>
+}
+
+<!-- Unauthenticated Layout: Clean auth pages only -->
+@else {
+<div class="auth-layout">
+    <router-outlet></router-outlet>
+</div>
+}
 
 <ng-template #githubIcon>
     <svg viewBox="0 0 20 20" class="github-logo" aria-hidden="true">

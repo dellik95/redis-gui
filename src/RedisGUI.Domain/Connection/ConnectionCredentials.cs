@@ -1,6 +1,5 @@
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Shared.Primitives;
 
 
 namespace RedisGUI.Domain.Connection;
@@ -47,21 +46,21 @@ public class ConnectionCredentials
 	/// <param name="password">User password</param>
 	/// <param name="passwordEncryptor">Password encryptor</param>
 	/// <returns></returns>
-	public static Result<ConnectionCredentials> Create(string username, string password, IPasswordEncryptor passwordEncryptor)
+	public static Result<ConnectionCredentials?> Create(string username, string password, IPasswordEncryptor passwordEncryptor)
 	{
 		if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
 		{
-			return Result.Success<ConnectionCredentials>(null);
+			return Result.Success<ConnectionCredentials?>(null);
 		}
 
 		if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
 		{
-			return Result.Failure<ConnectionCredentials>(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
+			return Result.Failure<ConnectionCredentials?>(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
 		}
 
-		var passwordHash = passwordEncryptor.EncryptPassword(password);
+		string passwordHash = passwordEncryptor.EncryptPassword(password);
 
-		var credentials = new ConnectionCredentials(username, passwordHash);
+		ConnectionCredentials credentials = new(username, passwordHash);
 		return credentials!;
 	}
 }

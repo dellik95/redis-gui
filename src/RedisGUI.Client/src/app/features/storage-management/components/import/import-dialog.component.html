@@ -1,0 +1,32 @@
+<h2 mat-dialog-title>Import Redis Data</h2>
+<mat-dialog-content>
+  <input 
+    type="file" 
+    (change)="onFileChange($event)" 
+    [disabled]="isLoading()" 
+    accept=".json,.csv"
+    aria-label="Select file to import">
+  @if (isLoading()) {
+    <div class="loading-container">
+      <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+      <span>Importing...</span>
+    </div>
+  }
+  @if (error()) {
+    <div class="error">{{ error() }}</div>
+  }
+</mat-dialog-content>
+<mat-dialog-actions>
+  <button 
+    mat-button 
+    [disabled]="!canImport()" 
+    (click)="onImport()">
+    Import
+  </button>
+  <button 
+    mat-button 
+    (click)="dialogRef.close()">
+    Cancel
+  </button>
+</mat-dialog-actions>
+

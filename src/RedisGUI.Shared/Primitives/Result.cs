@@ -78,7 +78,7 @@ public class Result
 	/// <typeparam name="TValue">Value type</typeparam>
 	public static Result<TValue> Failure<TValue>(Error error)
 	{
-		return new Result<TValue>(default, false, error);
+		return new Result<TValue>(default!, false, error);
 	}
 
 	/// <summary>

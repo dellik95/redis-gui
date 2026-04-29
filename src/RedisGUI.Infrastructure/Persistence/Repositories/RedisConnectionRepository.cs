@@ -5,15 +5,9 @@ namespace RedisGUI.Infrastructure.Persistence.Repositories;
 /// <summary>
 /// Represents concrete repository for managing Redis connections
 /// </summary>
-public class RedisConnectionRepository : RepositoryBase<RedisConnection>, IRedisConnectionRepository
+public class RedisConnectionRepository(ApplicationDbContext applicationDbContext)
+	: RepositoryBase<RedisConnection>(applicationDbContext), IRedisConnectionRepository
 {
-	/// <summary>
-	/// Creates a new instance of RedisConnectionRepository
-	/// </summary>
-	/// <param name="applicationDbContext">The database context to be used</param>
-	public RedisConnectionRepository(ApplicationDbContext applicationDbContext) : base(applicationDbContext)
-	{
-	}
 
 	/// <summary>
 	/// Retrieves a Redis connection by its identifier
@@ -23,18 +17,23 @@ public class RedisConnectionRepository : RepositoryBase<RedisConnection>, IRedis
 	/// <returns>A Result containing the found connection or an error if not found</returns>
 	public async Task<Result<RedisConnection>> GetConnectionByIdAsync(Guid id, CancellationToken token = default)
 	{
-		var connection = await DbSet.FirstOrDefaultAsync(c => c.Id == id, token);
-		return Result.Create(connection, DomainErrors.Connection.ConnectionNotFound);
+		// Use FindAsync for better performance (uses primary key lookup)
+		RedisConnection? connection = await DbSet.FindAsync([id], token);
+		return connection is null
+			? Result.Failure<RedisConnection>(DomainErrors.Connection.ConnectionNotFound)
+			: Result.Success(connection);
 	}
 
 	/// <summary>
-	/// Retrieves all Redis connections
+	/// Retrieves all Redis connections (read-only, uses AsNoTracking)
 	/// </summary>
 	/// <param name="token">Cancellation token</param>
 	/// <returns>A Result containing the list of connections</returns>
 	public async Task<Result<List<RedisConnection>>> GetAllConnectionsAsync(CancellationToken token = default)
 	{
-		var connections = await DbSet.ToListAsync(token);
+		List<RedisConnection> connections = await DbSet
+			.AsNoTracking()
+			.ToListAsync(token);
 		return Result.Success(connections);
 	}
 }

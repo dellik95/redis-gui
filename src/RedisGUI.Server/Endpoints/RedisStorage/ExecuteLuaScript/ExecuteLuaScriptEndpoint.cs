@@ -1,11 +1,13 @@
-using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.ExecuteLuaScript;
 using RedisGUI.Domain.Extensions;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
+using System;
+using System.Threading;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.ExecuteLuaScript;
 
@@ -22,20 +24,27 @@ public class ExecuteLuaScriptEndpoint : IEndpoint
 		routerBuilder.MapPost("script/{connectionId:guid}/execute", async (
 			IMediator sender,
 			Guid connectionId,
-			ExecuteLuaScriptRequest request) =>
+			ExecuteLuaScriptRequest request,
+			CancellationToken cancellationToken) =>
 		{
-			var command = new ExecuteLuaScriptCommand(
+			ExecuteLuaScriptCommand command = new(
 				connectionId,
 				request.Script,
 				request.Keys ?? [],
 				request.Arguments ?? []);
 
-			return await sender.Send<ExecuteLuaScriptResponse>(command)
+			return await sender.Send<ExecuteLuaScriptResponse>(command, cancellationToken)
 				.Match(Results.Ok, Results.BadRequest);
 		})
 		.WithName("ExecuteLuaScript")
 		.WithSummary("Execute a Lua script in Redis")
-		.WithDescription("Executes a Lua script using EVAL with automatic SHA-based caching");
+		.WithDescription("Executes a Lua script using EVAL with automatic SHA-based caching for performance. Use with caution as scripts can be powerful!")
+		.WithTags("Redis Operations")
+		.Produces<ExecuteLuaScriptResponse>(StatusCodes.Status200OK)
+		.Produces(StatusCodes.Status400BadRequest)
+		.Produces(StatusCodes.Status404NotFound)
+		.RequireAuthorization(Policies.WriteAccess)
+		.RequireRateLimiting("sensitive");
 	}
 }
 

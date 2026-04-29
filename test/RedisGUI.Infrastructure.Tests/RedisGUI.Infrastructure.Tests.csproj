@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<IsPackable>false</IsPackable>
+		<IsTestProject>true</IsTestProject>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="coverlet.collector"/>
+		<PackageReference Include="FluentAssertions"/>
+		<PackageReference Include="Microsoft.NET.Test.Sdk"/>
+		<PackageReference Include="Moq"/>
+		<PackageReference Include="NUnit" />
+		<PackageReference Include="NUnit.Analyzers"  />
+		<PackageReference Include="NUnit3TestAdapter" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Using Include="NUnit.Framework" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\src\RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj" />
+		<ProjectReference Include="..\..\src\RedisGUI.Domain\RedisGUI.Domain.csproj" />
+		<ProjectReference Include="..\..\src\RedisGUI.Application\RedisGUI.Application.csproj" />
+	</ItemGroup>
+
+</Project>
+

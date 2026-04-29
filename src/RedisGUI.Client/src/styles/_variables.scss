@@ -1,0 +1,105 @@
+// Design System Variables
+// Spacing scale
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 10px;
+$spacing-lg: 12px;
+$spacing-xl: 16px;
+
+// Sizing
+$sidebar-width: 200px;
+$sidebar-width-mobile: 250px;
+$toolbar-height: 64px;
+$scrollbar-size: 4px;
+$scrollbar-size-thick: 8px;
+
+// Border radius
+$border-radius-sm: 2px;
+$border-radius-md: 4px;
+$border-radius-lg: 12px;
+$border-radius-circle: 50%;
+
+// Typography
+$font-size-xs: 0.75rem;   // 12px
+$font-size-sm: 0.875rem;  // 14px
+$font-size-base: 0.95rem; // 15.2px
+$font-size-md: 1rem;      // 16px
+$font-size-lg: 1.25rem;   // 20px
+$font-size-xl: 2rem;      // 32px
+$font-size-2xl: 2rem;     // 32px
+
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-semibold: 600;
+$font-weight-bold: 700;
+
+// Z-index layers
+$z-index-sticky: 10;
+$z-index-toolbar: 1000;
+$z-index-sidebar-mobile: 2;
+
+// Breakpoints
+$breakpoint-xs: 400px;
+$breakpoint-sm: 600px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 880px;
+$breakpoint-xl: 1024px;
+
+// Transitions
+$transition-fast: 150ms ease-in-out;
+$transition-normal: 250ms ease-in-out;
+$transition-slow: 350ms ease-in-out;
+
+// Effects
+$text-shadow-default: 0 2px 10px rgba(0, 0, 0, 0.2);
+$box-shadow-glassmorphic: 0 8px 32px rgba(0, 0, 0, 0.1);
+$box-shadow-elevated: 0 20px 60px rgba(0, 0, 0, 0.3);
+$backdrop-blur: blur(10px);
+
+// Density scale
+$density-default: 0px;
+$density-comfortable: -4px;
+$density-compact: -8px;
+
+// Component sizes
+$avatar-size-sm: 32px;
+$avatar-size-md: 48px;
+$avatar-size-lg: 64px;
+
+$button-size-sm: 40px;
+$button-size-md: 48px;
+$button-height-lg: 48px;
+
+// Auth component specific
+$auth-logo-size: 80px;
+$auth-logo-size-mobile: 60px;
+$auth-logo-icon-size: 48px;
+$auth-logo-icon-size-mobile: 36px;
+$auth-fractal-width: 30%;
+$auth-fractal-min-width: 300px;
+$auth-fractal-height-mobile: 200px;
+
+// Content constraints
+$breadcrumb-max-width: 200px;
+$breadcrumb-max-width-mobile: 120px;
+$table-min-width: 600px;
+$user-menu-min-width: 280px;
+$user-menu-min-width-mobile: 240px;
+$auth-card-width-md: 450px;
+$auth-card-width-lg: 500px;
+
+// Colors (Semantic)
+$color-primary: #667eea;
+$color-error: #f44336;
+$color-warning: #ff9800;
+$color-success: #4caf50;
+$color-info: #2196f3;
+
+// Background colors
+$bg-glassmorphic: rgba(255, 255, 255, 0.15);
+$bg-fractal: rgba(17, 24, 39, 0.9);
+
+// Opacity Levels
+$opacity-disabled: 0.38;
+$opacity-medium: 0.6;
+$opacity-high: 0.87;

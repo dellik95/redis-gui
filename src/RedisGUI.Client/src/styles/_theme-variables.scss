@@ -1,0 +1,71 @@
+/**
+ * Theme Variables
+ * 
+ * Centralized theme variable definitions for consistent styling across the application.
+ * These variables use Angular Material's design tokens and provide fallbacks.
+ */
+
+// Color Variables
+$color-healthy: var(--mat-sys-tertiary, #2e7d32);
+$color-degraded: var(--mat-sys-primary, #f9a825);
+$color-unhealthy: var(--mat-sys-error, #c62828);
+$color-unknown: var(--mat-sys-outline, #616161);
+
+// Background Colors
+$bg-scrim: var(--mat-sys-scrim, rgba(0, 0, 0, 0.32));
+$bg-error-container: var(--mat-sys-error-container, #ffebee);
+$bg-surface-container: var(--mat-sys-surface-container);
+$bg-surface-container-high: var(--mat-sys-surface-container-high);
+
+// Text Colors
+$text-on-surface: var(--mat-sys-on-surface);
+$text-on-surface-variant: var(--mat-sys-on-surface-variant);
+$text-on-error-container: var(--mat-sys-on-error-container);
+$text-error: var(--mat-sys-error);
+$text-primary: var(--mat-sys-primary);
+$text-tertiary: var(--mat-sys-tertiary);
+
+// Border Colors
+$border-divider: var(--mat-divider-color);
+$border-outline: var(--mat-sys-outline);
+$border-outline-variant: var(--mat-sys-outline-variant);
+
+// Spacing (using Material Design spacing scale)
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 24px;
+$spacing-xxl: 32px;
+$spacing-xxxl: 48px;
+
+// Border Radius
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
+
+// Shadows
+$shadow-level1: var(--mat-sys-level1);
+$shadow-level2: var(--mat-sys-level2);
+$shadow-level3: var(--mat-sys-level3);
+$shadow-level4: var(--mat-sys-level4);
+$shadow-level5: var(--mat-sys-level5);
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-normal: 0.2s ease;
+$transition-slow: 0.3s ease;
+
+// Z-Index Layers
+$z-index-base: 0;
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+$z-index-loading: 20000;
+

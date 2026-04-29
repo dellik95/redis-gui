@@ -1,1 +1,114 @@
-<!-- ...existing code... -->
+<mat-card class="signup-card">
+  <mat-card-header>
+    <mat-card-title>Create Account</mat-card-title>
+    <mat-card-subtitle>Register to start managing your Redis instances</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()">
+        <div class="name-row">
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>First Name</mat-label>
+            <input 
+              matInput 
+              type="text" 
+              formControlName="firstName" 
+              placeholder="John"
+              autocomplete="given-name">
+            <mat-icon matPrefix>person</mat-icon>
+            @if (firstNameError()) {
+              <mat-error>{{ firstNameError() }}</mat-error>
+            }
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="half-width">
+            <mat-label>Last Name</mat-label>
+            <input 
+              matInput 
+              type="text" 
+              formControlName="lastName" 
+              placeholder="Doe"
+              autocomplete="family-name">
+            <mat-icon matPrefix>person</mat-icon>
+            @if (lastNameError()) {
+              <mat-error>{{ lastNameError() }}</mat-error>
+            }
+          </mat-form-field>
+        </div>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Email</mat-label>
+          <input 
+            matInput 
+            type="email" 
+            formControlName="email" 
+            placeholder="your.email@example.com"
+            autocomplete="email">
+          <mat-icon matPrefix>email</mat-icon>
+          @if (emailError()) {
+            <mat-error>{{ emailError() }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input 
+            matInput 
+            [type]="hidePassword() ? 'password' : 'text'" 
+            formControlName="password"
+            autocomplete="new-password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            type="button"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="'Toggle password visibility'">
+            <mat-icon>{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          @if (passwordError()) {
+            <mat-error>{{ passwordError() }}</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Confirm Password</mat-label>
+          <input 
+            matInput 
+            [type]="hideConfirmPassword() ? 'password' : 'text'" 
+            formControlName="confirmPassword"
+            autocomplete="new-password">
+          <mat-icon matPrefix>lock</mat-icon>
+          <button 
+            mat-icon-button 
+            matSuffix 
+            type="button"
+            (click)="toggleConfirmPasswordVisibility()"
+            [attr.aria-label]="'Toggle confirm password visibility'">
+            <mat-icon>{{ hideConfirmPassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
+          </button>
+          @if (confirmPasswordError()) {
+            <mat-error>{{ confirmPasswordError() }}</mat-error>
+          }
+        </mat-form-field>
+
+        <button 
+          mat-raised-button 
+          color="primary" 
+          type="submit" 
+          class="full-width submit-button"
+          [disabled]="!canSubmit()">
+          @if (isLoading()) {
+            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+            <span>Creating account...</span>
+          } @else {
+            <span>Create Account</span>
+          }
+        </button>
+
+        <div class="login-link">
+          <p>Already have an account? <a routerLink="/login">Sign in here</a></p>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>

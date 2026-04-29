@@ -1,5 +1,3 @@
-using System;
-
 namespace RedisGUI.Domain.Connection;
 
 /// <summary>
@@ -20,8 +18,9 @@ public sealed class RedisConnectionWithCredentials : RedisConnection
 		ConnectionName connectionName,
 		ConnectionHost serverHost,
 		ConnectionPort serverPort,
-		int databaseNumber,
-		ConnectionCredentials connectionCredentials) : base(id, connectionName, serverHost, serverPort, databaseNumber)
+		DatabaseNumber databaseNumber,
+		ConnectionOwnerId ownerId,
+		ConnectionCredentials connectionCredentials) : base(id, connectionName, serverHost, serverPort, databaseNumber, ownerId)
 	{
 		this.ConnectionCredentials = connectionCredentials;
 	}
@@ -29,7 +28,7 @@ public sealed class RedisConnectionWithCredentials : RedisConnection
 	/// <summary>
 	/// The authentication credentials for the Redis server
 	/// </summary>
-	public ConnectionCredentials ConnectionCredentials { get; private set; }
+	public ConnectionCredentials ConnectionCredentials { get; private set; } = null!;
 
 	/// <summary>
 	/// Updates the connection credentials

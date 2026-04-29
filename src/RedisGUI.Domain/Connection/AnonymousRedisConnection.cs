@@ -1,5 +1,3 @@
-using System;
-
 namespace RedisGUI.Domain.Connection;
 
 /// <summary>
@@ -19,7 +17,8 @@ public sealed class AnonymousRedisConnection : RedisConnection
 		ConnectionName connectionName,
 		ConnectionHost serverHost,
 		ConnectionPort serverPort,
-		int databaseNumber) : base(id, connectionName, serverHost, serverPort, databaseNumber)
+		DatabaseNumber databaseNumber,
+		ConnectionOwnerId ownerId) : base(id, connectionName, serverHost, serverPort, databaseNumber, ownerId)
 	{
 	}
 

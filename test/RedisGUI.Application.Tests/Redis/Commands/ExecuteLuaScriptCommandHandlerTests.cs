@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.ExecuteLuaScript;
@@ -17,119 +17,123 @@ namespace RedisGUI.Application.Tests.Redis.Commands;
 public class ExecuteLuaScriptCommandHandlerTests
 {
 	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
-	private Mock<IConnectionService> connectionServiceMock = null!;
-    private ExecuteLuaScriptCommandHandler handler = null!;
+	private Mock<IRedisScriptService> connectionServiceMock = null!;
+	private ExecuteLuaScriptCommandHandler handler = null!;
 
-    [SetUp]
-    public void Setup()
-    {
-        connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
-        connectionServiceMock = new Mock<IConnectionService>();
-        handler = new ExecuteLuaScriptCommandHandler(
-            connectionRepositoryMock.Object,
-            connectionServiceMock.Object);
-    }
+	[SetUp]
+	public void Setup()
+	{
+		connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
+		connectionServiceMock = new Mock<IRedisScriptService>();
+		handler = new ExecuteLuaScriptCommandHandler(
+			connectionRepositoryMock.Object,
+			connectionServiceMock.Object);
+	}
 
-    [Test]
-    public async Task Handle_SimpleScript_ExecutesSuccessfully()
-    {
-        // Arrange
-        var connectionId = Guid.NewGuid();
-        var script = "return redis.call('GET', KEYS[1])";
-        var keys = new List<string> { "mykey" }.AsReadOnly();
-        var arguments = new List<string>().AsReadOnly();
-            var command = new ExecuteLuaScriptCommand(connectionId, script, keys.ToArray(), arguments.ToArray());
-        
-        var connection = RedisConnection.Create(
-                new ConnectionName("Test Connection"),
-                new ConnectionHost("localhost"),
-                new ConnectionPort(6379),
-            0,
-            null).Value;
+	[Test]
+	public async Task Handle_SimpleScript_ExecutesSuccessfully()
+	{
+		// Arrange
+		var connectionId = Guid.NewGuid();
+		var script = "return redis.call('GET', KEYS[1])";
+		var keys = new List<string> { "mykey" }.AsReadOnly();
+		var arguments = new List<string>().AsReadOnly();
+		var command = new ExecuteLuaScriptCommand(connectionId, script, keys.ToArray(), arguments.ToArray());
 
-        connectionRepositoryMock
-            .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(connection));
+		var connection = RedisConnection.Create(
+				new ConnectionName("Test Connection"),
+				new ConnectionHost("localhost"),
+				new ConnectionPort(6379),
+			new DatabaseNumber(0),
+			null).Value;
 
-        connectionServiceMock
-            .Setup(x => x.ExecuteLuaScript(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
-            .ReturnsAsync(Result.Success(("myvalue", "sha1hash")));
+		connectionRepositoryMock
+			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(connection));
 
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+		connectionServiceMock
+			.Setup(x => x.ExecuteLuaScriptAsync(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
+			.ReturnsAsync(Result.Success(("myvalue", "sha1hash")));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Result.Should().Be("myvalue");
-        result.Value.Success.Should().BeTrue();
-    }
+		// Act
+		var result = await handler.Handle(command, CancellationToken.None);
 
-    [Test]
-    public async Task Handle_ScriptWithArguments_ExecutesSuccessfully()
-    {
-        // Arrange
-        var connectionId = Guid.NewGuid();
-        var script = "return redis.call('SET', KEYS[1], ARGV[1])";
-        var keys = new List<string> { "mykey" }.AsReadOnly();
-        var arguments = new List<string> { "newvalue" }.AsReadOnly();
-        var command = new ExecuteLuaScriptCommand(connectionId, script, keys.ToArray(), arguments.ToArray());
-        
-        var connection = RedisConnection.Create(
-            new ConnectionName("Test Connection"),
-            new ConnectionHost("localhost"),
-            new ConnectionPort(6379),
-            0,
-            null).Value;
+		// Assert
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Result.Should().Be("myvalue");
+		result.Value.Success.Should().BeTrue();
+	}
 
-        connectionRepositoryMock
-            .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(connection));
+	[Test]
+	public async Task Handle_ScriptWithArguments_ExecutesSuccessfully()
+	{
+		// Arrange
+		var connectionId = Guid.NewGuid();
+		var script = "return redis.call('SET', KEYS[1], ARGV[1])";
+		var keys = new List<string> { "mykey" }.AsReadOnly();
+		var arguments = new List<string> { "newvalue" }.AsReadOnly();
+		var command = new ExecuteLuaScriptCommand(connectionId, script, keys.ToArray(), arguments.ToArray());
 
-        connectionServiceMock
-            .Setup(x => x.ExecuteLuaScript(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
-            .ReturnsAsync(Result.Success(("OK", "sha1hash")));
+		var connection = RedisConnection.Create(
+			new ConnectionName("Test Connection"),
+			new ConnectionHost("localhost"),
+			new ConnectionPort(6379),
+			new DatabaseNumber(0),
+			null).Value;
 
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+		connectionRepositoryMock
+			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(connection));
 
-        // Assert
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Result.Should().Be("OK");
-    }
+		connectionServiceMock
+			.Setup(x => x.ExecuteLuaScriptAsync(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
+			.ReturnsAsync(Result.Success(("OK", "sha1hash")));
 
-    [Test]
-    public async Task Handle_ScriptError_ReturnsFailure()
-    {
-        // Arrange
-        var connectionId = Guid.NewGuid();
-        var script = "invalid lua script";
-        var command = new ExecuteLuaScriptCommand(
-            connectionId, 
-            script, 
-            Array.Empty<string>(), 
-            Array.Empty<string>());
-        
-        var connection = RedisConnection.Create(
-            new ConnectionName("Test Connection"),
-            new ConnectionHost("localhost"),
-            new ConnectionPort(6379),
-            0,
-            null).Value;
+		// Act
+		var result = await handler.Handle(command, CancellationToken.None);
 
-        connectionRepositoryMock
-            .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success(connection));
+		// Assert
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Result.Should().Be("OK");
+	}
 
-        var error = new Error("Redis.ScriptError", "Syntax error in script");
-        connectionServiceMock
-            .Setup(x => x.ExecuteLuaScript(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
-            .ReturnsAsync(Result.Failure<(string, string)>(error));
+	[Test]
+	public async Task Handle_ScriptError_ReturnsFailure()
+	{
+		// Arrange
+		var connectionId = Guid.NewGuid();
+		var script = "invalid lua script";
+		var command = new ExecuteLuaScriptCommand(
+			connectionId,
+			script,
+			Array.Empty<string>(),
+			Array.Empty<string>());
 
-        // Act
-        var result = await handler.Handle(command, CancellationToken.None);
+		var connection = RedisConnection.Create(
+			new ConnectionName("Test Connection"),
+			new ConnectionHost("localhost"),
+			new ConnectionPort(6379),
+			new DatabaseNumber(0),
+			null).Value;
 
-        // Assert
-        result.IsFailure.Should().BeTrue();
-        result.Error.Should().Be(error);
-    }
+		connectionRepositoryMock
+			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(connection));
+
+		var error = new Error("Redis.ScriptError", "Syntax error in script");
+		connectionServiceMock
+			.Setup(x => x.ExecuteLuaScriptAsync(connection, script, It.IsAny<string[]>(), It.IsAny<string[]>()))
+			.ReturnsAsync(Result.Failure<(string, string)>(error));
+
+		// Act
+		var result = await handler.Handle(command, CancellationToken.None);
+
+		// Assert
+		result.IsFailure.Should().BeTrue();
+		result.Error.Should().Be(error);
+	}
 }
+
+
+
+

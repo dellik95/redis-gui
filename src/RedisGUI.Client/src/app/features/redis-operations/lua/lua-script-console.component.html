@@ -28,15 +28,17 @@
       <div class="list-group">
         <h4>KEYS</h4>
         <div class="items">
-          <div class="kv-row" *ngFor="let k of keys(); let i = index">
-            <mat-form-field appearance="outline" class="mini-field">
-              <mat-label>Key {{i+1}}</mat-label>
-                <input matInput [ngModel]="keys()[i]" (ngModelChange)="updateKey(i,$event)" />
-            </mat-form-field>
-            <button mat-icon-button color="warn" (click)="removeKey(i)" matTooltip="Remove key">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
+          @for (k of keys(); track trackByIndex($index)) {
+            <div class="kv-row">
+              <mat-form-field appearance="outline" class="mini-field">
+                <mat-label>Key {{$index+1}}</mat-label>
+                <input matInput [ngModel]="keys()[$index]" (ngModelChange)="updateKey($index,$event)" />
+              </mat-form-field>
+              <button mat-icon-button color="warn" (click)="removeKey($index)" matTooltip="Remove key">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
           <button mat-button (click)="addKey()" aria-label="Add key">
             <mat-icon>add</mat-icon>
             Add Key
@@ -46,15 +48,17 @@
       <div class="list-group">
         <h4>ARGV</h4>
         <div class="items">
-          <div class="kv-row" *ngFor="let a of args(); let i = index">
-            <mat-form-field appearance="outline" class="mini-field">
-              <mat-label>Arg {{i+1}}</mat-label>
-                <input matInput [ngModel]="args()[i]" (ngModelChange)="updateArg(i,$event)" />
-            </mat-form-field>
-            <button mat-icon-button color="warn" (click)="removeArg(i)" matTooltip="Remove arg">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </div>
+          @for (a of args(); track trackByIndex($index)) {
+            <div class="kv-row">
+              <mat-form-field appearance="outline" class="mini-field">
+                <mat-label>Arg {{$index+1}}</mat-label>
+                <input matInput [ngModel]="args()[$index]" (ngModelChange)="updateArg($index,$event)" />
+              </mat-form-field>
+              <button mat-icon-button color="warn" (click)="removeArg($index)" matTooltip="Remove arg">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          }
           <button mat-button (click)="addArg()" aria-label="Add argument">
             <mat-icon>add</mat-icon>
             Add Arg
@@ -64,22 +68,30 @@
     </div>
   </div>
 
-  <div class="saved" *ngIf="savedScripts().length > 0">
-    <h4>Saved Scripts</h4>
-    <mat-chip-listbox>
-      <mat-chip *ngFor="let s of savedScripts()" [class.selected]="selectedScriptId()===s.id" (click)="loadScript(s.id)" [removable]="true" (removed)="deleteScript(s.id)" matTooltip="Hash: {{s.hash || 'N/A'}}">
-        {{ s.name }}
-        <button matChipRemove aria-label="Delete script">
-          <mat-icon>close</mat-icon>
-        </button>
-      </mat-chip>
-    </mat-chip-listbox>
-  </div>
+  @if (savedScripts().length > 0) {
+    <div class="saved">
+      <h4>Saved Scripts</h4>
+      <mat-chip-listbox>
+        @for (s of savedScripts(); track trackByScriptId($index, s)) {
+          <mat-chip [class.selected]="selectedScriptId()===s.id" (click)="loadScript(s.id)" [removable]="true" (removed)="deleteScript(s.id)" matTooltip="Hash: {{s.hash || 'N/A'}}">
+            {{ s.name }}
+            <button matChipRemove aria-label="Delete script">
+              <mat-icon>close</mat-icon>
+            </button>
+          </mat-chip>
+        }
+      </mat-chip-listbox>
+    </div>
+  }
 
-  <div *ngIf="result() as r" class="result" aria-label="Script result">
-    <h4>Result</h4>
-    <p>Status: <strong [class.ok]="r.success" [class.fail]="!r.success">{{ r.success ? 'Success' : 'Failure' }}</strong></p>
-    <p *ngIf="r.scriptHash">SHA1: <code>{{ r.scriptHash }}</code></p>
-    <pre class="output">{{ r.result }}</pre>
-  </div>
+  @if (result(); as r) {
+    <div class="result" aria-label="Script result">
+      <h4>Result</h4>
+      <p>Status: <strong [class.ok]="r.success" [class.fail]="!r.success">{{ r.success ? 'Success' : 'Failure' }}</strong></p>
+      @if (r.scriptHash) {
+        <p>SHA1: <code>{{ r.scriptHash }}</code></p>
+      }
+      <pre class="output">{{ r.result }}</pre>
+    </div>
+  }
 </mat-card>

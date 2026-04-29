@@ -1,0 +1,36 @@
+input[type="file"] {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 1rem;
+  border: 1px solid var(--mat-divider-color);
+  border-radius: 4px;
+  background-color: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--mat-sys-primary);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.loading-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 1rem;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin-top: 1rem;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-error-container);
+  border-radius: 4px;
+  font-size: 0.875rem;
+}
+

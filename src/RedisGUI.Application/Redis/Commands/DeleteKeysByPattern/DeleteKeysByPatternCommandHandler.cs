@@ -14,19 +14,19 @@ internal sealed class DeleteKeysByPatternCommandHandler
     : ICommandHandler<DeleteKeysByPatternCommand, DeleteKeysByPatternResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisKeyService keyService;
 
     /// <summary>
     /// Initializes a new instance of the DeleteKeysByPatternCommandHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="keyService">Service for Redis key operations.</param>
     public DeleteKeysByPatternCommandHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisKeyService keyService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.keyService = keyService;
     }
 
     /// <summary>
@@ -48,9 +48,10 @@ internal sealed class DeleteKeysByPatternCommandHandler
             return Result.Failure<DeleteKeysByPatternResponse>(connectionResult.Error);
         }
 
-        var deleteResult = await connectionService.DeleteKeysByPattern(
+        var deleteResult = await keyService.DeleteKeysByPatternAsync(
             connectionResult.Value,
-            request.Pattern);
+            request.Pattern,
+            cancellationToken);
 
         if (deleteResult.IsFailure)
         {

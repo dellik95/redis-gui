@@ -72,101 +72,135 @@
 }
 
 @if (!isLoading() && viewMode() === 'table') {
-  <div class="table-container">
-    <cdk-virtual-scroll-viewport
-      itemSize="56"
-      class="virtual-table-viewport"
-      [minBufferPx]="280"
-      [maxBufferPx]="560"
-      (scrolledIndexChange)="onScroll($event)">
+  <div class="table-wrapper">
+    <div class="table-container">
+      <cdk-virtual-scroll-viewport
+        itemSize="56"
+        class="virtual-table-viewport"
+        [minBufferPx]="280"
+        [maxBufferPx]="560"
+        (scrolledIndexChange)="onScroll($event)">
 
-      <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
-        <!-- select column -->
-        <ng-container matColumnDef="select">
-          <th mat-header-cell *matHeaderCellDef>
-            <mat-checkbox (change)="$event ? masterToggle() : null"
-                          [checked]="selection.hasValue() && isAllSelected()"
-                          [indeterminate]="selection.hasValue() && !isAllSelected()">
-            </mat-checkbox>
-          </th>
-          <td mat-cell *matCellDef="let element">
-            <mat-checkbox (click)="$event.stopPropagation()"
-                          (change)="$event ? selection.toggle(element.key) : null"
-                          [checked]="selection.isSelected(element.key)">
-            </mat-checkbox>
-          </td>
-        </ng-container>
+        <table mat-table [dataSource]="dataSource" class="mat-elevation-z2">
+          <!-- select column -->
+          <ng-container matColumnDef="select">
+            <th mat-header-cell *matHeaderCellDef>
+              <mat-checkbox (change)="$event ? masterToggle() : null"
+                            [checked]="selection.hasValue() && isAllSelected()"
+                            [indeterminate]="selection.hasValue() && !isAllSelected()">
+              </mat-checkbox>
+            </th>
+            <td mat-cell *matCellDef="let element">
+              <mat-checkbox (click)="$event.stopPropagation()"
+                            (change)="$event ? selection.toggle(element.key) : null"
+                            [checked]="selection.isSelected(element.key)">
+              </mat-checkbox>
+            </td>
+          </ng-container>
 
-        <!-- type -->
-        <ng-container matColumnDef="type">
-          <th mat-header-cell *matHeaderCellDef> Type </th>
-          <td mat-cell *matCellDef="let element">
-            <mat-icon class="type-icon">{{ getTypeIcon(element.type) }}</mat-icon>
-            {{element.type}}
-          </td>
-        </ng-container>
+          <!-- type -->
+          <ng-container matColumnDef="type">
+            <th mat-header-cell *matHeaderCellDef> Type </th>
+            <td mat-cell *matCellDef="let element">
+              <mat-icon class="type-icon">{{ getTypeIcon(element.type) }}</mat-icon>
+              {{element.type}}
+            </td>
+          </ng-container>
 
-        <!-- key -->
-        <ng-container matColumnDef="key">
-          <th mat-header-cell *matHeaderCellDef> Key </th>
-          <td mat-cell *matCellDef="let element" class="key-cell">
-            <span class="key-text">{{element.key}}</span>
-          </td>
-        </ng-container>
+          <!-- key -->
+          <ng-container matColumnDef="key">
+            <th mat-header-cell *matHeaderCellDef> Key </th>
+            <td mat-cell *matCellDef="let element" class="key-cell">
+              <span class="key-text">{{element.key}}</span>
+            </td>
+          </ng-container>
 
-        <!-- ttl -->
-        <ng-container matColumnDef="ttl">
-          <th mat-header-cell *matHeaderCellDef> TTL </th>
-          <td mat-cell *matCellDef="let element">
-            <span *ngIf="element.ttl !== null && element.ttl > 0">{{element.ttl}}s</span>
-            <span *ngIf="element.ttl === null || element.ttl <= 0" class="no-ttl">No expiry</span>
-          </td>
-        </ng-container>
+          <!-- ttl -->
+          <ng-container matColumnDef="ttl">
+            <th mat-header-cell *matHeaderCellDef> TTL </th>
+            <td mat-cell *matCellDef="let element">
+              @if (element.ttl !== null && element.ttl > 0) {
+                <span>{{element.ttl}}s</span>
+              } @else {
+                <span class="no-ttl">No expiry</span>
+              }
+            </td>
+          </ng-container>
 
-        <!-- size -->
-        <ng-container matColumnDef="size">
-          <th mat-header-cell *matHeaderCellDef> Size </th>
-          <td mat-cell *matCellDef="let element"> {{element.size}} bytes </td>
-        </ng-container>
+          <!-- size -->
+          <ng-container matColumnDef="size">
+            <th mat-header-cell *matHeaderCellDef> Size </th>
+            <td mat-cell *matCellDef="let element"> {{element.size}} bytes </td>
+          </ng-container>
 
-        <!-- actions -->
-        <ng-container matColumnDef="actions">
-          <th mat-header-cell *matHeaderCellDef> Actions </th>
-          <td mat-cell *matCellDef="let element">
-            <button mat-icon-button (click)="editKey(element.key)" matTooltip="Edit">
-              <mat-icon>edit</mat-icon>
-            </button>
-            <button mat-icon-button (click)="deleteKey(element.key)" matTooltip="Delete" color="warn">
-              <mat-icon>delete</mat-icon>
-            </button>
-          </td>
-        </ng-container>
+          <!-- actions -->
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef> Actions </th>
+            <td mat-cell *matCellDef="let element">
+              <button mat-icon-button (click)="editKey(element.key)" matTooltip="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deleteKey(element.key)" matTooltip="Delete" color="warn">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </td>
+          </ng-container>
 
-        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-        <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="data-row"></tr>
-      </table>
+          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+          <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="data-row"></tr>
+        </table>
 
-      <!-- Chunk loading spinner -->
-      <div *ngIf="chunkLoading()" class="chunk-loading-spinner">
-        <mat-spinner diameter="32"></mat-spinner>
-        <span>Loading more keys...</span>
-      </div>
+        <!-- Chunk loading spinner -->
+        @if (chunkLoading()) {
+          <div class="chunk-loading-spinner">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span>Loading more keys...</span>
+          </div>
+        }
 
-    </cdk-virtual-scroll-viewport>
+      </cdk-virtual-scroll-viewport>
+    </div>
 
-    <!-- Paginator -->
-    <mat-paginator [length]="totalCount()"
-                   [pageSize]="pageSize()"
-                   [pageIndex]="pageNumber() - 1"
-                   [pageSizeOptions]="[10, 25, 50, 100]"
-                   (page)="onPageChange($event)"
-                   showFirstLastButtons>
-    </mat-paginator>
+    <!-- Paginator at the bottom -->
+    <div class="paginator-container">
+      <mat-paginator [length]="totalCount()"
+                     [pageSize]="pageSize()"
+                     [pageIndex]="pageNumber() - 1"
+                     [pageSizeOptions]="[10, 25, 50, 100]"
+                     (page)="onPageChange($event)"
+                     showFirstLastButtons>
+      </mat-paginator>
+    </div>
   </div>
 }
 
 @if (!isLoading() && viewMode() === 'tree') {
   <div class="tree-container">
-    <app-tree-view-list></app-tree-view-list>
+    @defer (on viewport; prefetch on idle) {
+      <app-tree-view-list 
+        [connectionId]="connectionId()"
+        [pattern]="searchPattern()"
+        [delimiter]="keyDelimiter()"
+      />
+    } @loading (minimum 500ms) {
+      <div class="tree-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p class="loading-text">Building tree structure...</p>
+      </div>
+    } @placeholder {
+      <div class="tree-placeholder">
+        <mat-icon class="placeholder-icon">account_tree</mat-icon>
+        <p class="placeholder-text">Tree view</p>
+        <p class="placeholder-subtitle">Loading tree structure for better key navigation</p>
+      </div>
+    } @error {
+      <div class="tree-error">
+        <mat-icon class="error-icon" color="warn">error</mat-icon>
+        <p class="error-text">Failed to load tree view</p>
+        <button mat-button color="primary" (click)="toggleViewMode('table')">
+          Switch to Table View
+        </button>
+      </div>
+    }
   </div>
 }

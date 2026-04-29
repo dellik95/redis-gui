@@ -1,4 +1,4 @@
-using FluentAssertions;
+﻿using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
@@ -14,18 +14,18 @@ namespace RedisGUI.Application.Tests.Redis.Commands;
 [TestFixture]
 public class DeleteKeysByPatternCommandHandlerTests
 {
-    private Mock<IRedisConnectionRepository> _connectionRepositoryMock = null!;
-    private Mock<IConnectionService> _connectionServiceMock = null!;
-    private DeleteKeysByPatternCommandHandler _handler = null!;
+	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
+	private Mock<IRedisKeyService> connectionServiceMock = null!;
+	private DeleteKeysByPatternCommandHandler handler = null!;
 
-    [SetUp]
+	[SetUp]
     public void Setup()
     {
-        _connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
-        _connectionServiceMock = new Mock<IConnectionService>();
-        _handler = new DeleteKeysByPatternCommandHandler(
-            _connectionRepositoryMock.Object,
-            _connectionServiceMock.Object);
+        connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
+        connectionServiceMock = new Mock<IRedisKeyService>();
+        handler = new DeleteKeysByPatternCommandHandler(
+            connectionRepositoryMock.Object,
+            connectionServiceMock.Object);
     }
 
     [Test]
@@ -40,19 +40,19 @@ public class DeleteKeysByPatternCommandHandlerTests
               new ConnectionName("Test Connection"),
               new ConnectionHost("localhost"),
               new ConnectionPort(6379),
-            0,
+              new DatabaseNumber(0),
             null).Value;
 
-        _connectionRepositoryMock
+        connectionRepositoryMock
             .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(connection));
 
-        _connectionServiceMock
-            .Setup(x => x.DeleteKeysByPattern(connection, pattern))
+        connectionServiceMock
+            .Setup(x => x.DeleteKeysByPatternAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(5));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsSuccess.Should().BeTrue();
@@ -68,12 +68,12 @@ public class DeleteKeysByPatternCommandHandlerTests
         var command = new DeleteKeysByPatternCommand(connectionId, "test:*");
         
         var error = new Error("Connection.NotFound", "Connection not found");
-        _connectionRepositoryMock
+        connectionRepositoryMock
             .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<RedisConnection>(error));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
@@ -91,23 +91,27 @@ public class DeleteKeysByPatternCommandHandlerTests
             new ConnectionName("Test Connection"),
             new ConnectionHost("localhost"),
             new ConnectionPort(6379),
-            0,
-            null).Value;
+			new DatabaseNumber(0),
+			null).Value;
 
-        _connectionRepositoryMock
+        connectionRepositoryMock
             .Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success(connection));
 
         var error = new Error("Redis.DeleteFailed", "Delete operation failed");
-        _connectionServiceMock
-            .Setup(x => x.DeleteKeysByPattern(connection, It.IsAny<string>()))
+        connectionServiceMock
+            .Setup(x => x.DeleteKeysByPatternAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<int>(error));
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(error);
     }
 }
+
+
+
+

@@ -1,0 +1,27 @@
+<h2 mat-dialog-title>{{ title() }}</h2>
+<mat-dialog-content>
+	<p>{{ message() }}</p>
+	<mat-form-field appearance="outline" class="full-width">
+		<mat-label>{{ placeholder() }}</mat-label>
+		<input 
+			matInput 
+			[formControl]="inputCtrl"
+			[placeholder]="placeholder()"
+			(keyup.enter)="onConfirm()"
+			(keyup.escape)="onCancel()">
+		@if (errorMessage()) {
+			<mat-error>{{ errorMessage() }}</mat-error>
+		}
+	</mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions>
+	<button mat-button (click)="onCancel()">{{ cancelText() }}</button>
+	<button 
+		mat-button 
+		color="primary" 
+		[disabled]="!canConfirm()" 
+		(click)="onConfirm()">
+		{{ confirmText() }}
+	</button>
+</mat-dialog-actions>
+

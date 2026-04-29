@@ -100,13 +100,32 @@ namespace RedisGUI.Shared.Mediator
 			var handlers = notificationRegistry.GetHandlers<TNotification>().ToList();
 			if (options.NotificationExecution == NotificationExecution.Parallel)
 			{
-				var tasks = handlers.Select(h => h.Handle(notification, cancellationToken));
+				var tasks = handlers.Select(async h =>
+				{
+					try
+					{
+						await h.Handle(notification, cancellationToken);
+					}
+					catch
+					{
+						// Swallow exceptions to prevent one handler from affecting others
+					}
+				});
 				await Task.WhenAll(tasks);
 			}
 			else
 			{
 				foreach (var handler in handlers)
-					await handler.Handle(notification, cancellationToken);
+				{
+					try
+					{
+						await handler.Handle(notification, cancellationToken);
+					}
+					catch
+					{
+						// Swallow exceptions to prevent one handler from affecting others
+					}
+				}
 			}
 		}
 	}

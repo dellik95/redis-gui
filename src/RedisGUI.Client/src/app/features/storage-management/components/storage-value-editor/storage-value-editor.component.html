@@ -1,1 +1,400 @@
-<p>storage-value-editor works!</p>
+<div class="storage-value-editor">
+  <form [formGroup]="form" class="editor-form">
+    <!-- Header: Key, Type, TTL -->
+    <div class="editor-header">
+      <mat-form-field appearance="outline" class="key-field">
+        <mat-label>Key</mat-label>
+        <input matInput formControlName="key" placeholder="Enter key name" [readonly]="!isNewKey()" />
+        @if (keyError()) {
+          <mat-error>{{ keyError() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="type-field">
+        <mat-label>Type</mat-label>
+        <mat-select formControlName="type" [disabled]="!isNewKey()">
+          @for (type of redisTypes; track type.value) {
+            <mat-option [value]="type.value">
+              <mat-icon>{{ type.icon }}</mat-icon>
+              <span>{{ type.label }}</span>
+            </mat-option>
+          }
+        </mat-select>
+        @if (typeError()) {
+          <mat-error>{{ typeError() }}</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="ttl-field">
+        <mat-label>TTL (seconds)</mat-label>
+        <input matInput type="number" formControlName="ttl" placeholder="No expiry" min="0" />
+        <mat-hint>Leave empty for no expiry</mat-hint>
+      </mat-form-field>
+    </div>
+
+    <!-- Editor Mode Toggle: Visual vs JSON -->
+    <div class="editor-mode-toggle">
+      <mat-slide-toggle [checked]="useJsonEditor()" (change)="toggleJsonEditor()">
+        <span class="toggle-label">
+          <mat-icon>{{ useJsonEditor() ? 'code' : 'edit' }}</mat-icon>
+          {{ useJsonEditor() ? 'JSON Editor' : 'Visual Editor' }}
+        </span>
+      </mat-slide-toggle>
+      @if (useJsonEditor()) {
+        <button mat-icon-button (click)="formatJson()" matTooltip="Format JSON">
+          <mat-icon>format_align_left</mat-icon>
+        </button>
+      }
+    </div>
+
+    <!-- Validation Errors -->
+    @if (validationErrors().length > 0) {
+      <div class="validation-errors">
+        @for (error of validationErrors(); track $index) {
+          <div class="error-item">
+            <mat-icon color="warn">error</mat-icon>
+            <span>{{ error }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- JSON Editor Mode -->
+    @if (useJsonEditor()) {
+      <div class="json-editor-wrapper">
+        <app-json-editor
+          #jsonEditor
+          [value]="jsonEditorValue()"
+          [readOnly]="false"
+          [height]="'400px'"
+          (valueChange)="onJsonChange($event)"
+          (valid)="jsonEditorValid.set($event)">
+        </app-json-editor>
+      </div>
+    }
+
+    <!-- Visual Editor Mode -->
+    @if (!useJsonEditor()) {
+      <div class="visual-editor">
+        <!-- STRING Type -->
+        @if (selectedType() === RedisDataType.String) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Value</mat-label>
+            <textarea
+              matInput
+              formControlName="stringValue"
+              rows="8"
+              placeholder="Enter string value">
+            </textarea>
+          </mat-form-field>
+        }
+
+        <!-- LIST Type -->
+        @if (selectedType() === RedisDataType.List) {
+          <div class="list-editor">
+            <div class="list-header">
+              <h3>List Items</h3>
+              <span class="count-badge">{{ listItems().length }} items</span>
+            </div>
+            <div class="list-items-container">
+              @for (item of listItems(); track $index) {
+                <div class="list-item-row">
+                  <span class="item-index">{{ $index }}</span>
+                  <span class="item-value">{{ item }}</span>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="removeListItem($index)"
+                    matTooltip="Remove item">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+              @if (listItems().length === 0) {
+                <div class="empty-state">No items in list</div>
+              }
+            </div>
+            <div class="add-item-section">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>New Item</mat-label>
+                <input
+                  matInput
+                  [value]="newListItem()"
+                  (input)="newListItem.set($any($event.target).value)"
+                  (keyup.enter)="addListItem()" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addListItem()"
+                [disabled]="!newListItem().trim()">
+                <mat-icon>add</mat-icon>
+                Add Item
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- SET Type -->
+        @if (selectedType() === RedisDataType.Set) {
+          <div class="set-editor">
+            <div class="set-header">
+              <h3>Set Members</h3>
+              <span class="count-badge">{{ listItems().length }} members</span>
+            </div>
+            <div class="set-members-container">
+              @for (member of listItems(); track member) {
+                <mat-chip>
+                  {{ member }}
+                  <button
+                    matChipRemove
+                    (click)="removeListItem(listItems().indexOf(member))"
+                    matTooltip="Remove member">
+                    <mat-icon>cancel</mat-icon>
+                  </button>
+                </mat-chip>
+              }
+              @if (listItems().length === 0) {
+                <div class="empty-state">No members in set</div>
+              }
+            </div>
+            <div class="add-item-section">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>New Member</mat-label>
+                <input
+                  matInput
+                  [value]="newListItem()"
+                  (input)="newListItem.set($any($event.target).value)"
+                  (keyup.enter)="addListItem()" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addListItem()"
+                [disabled]="!newListItem().trim() || listItems().includes(newListItem())">
+                <mat-icon>add</mat-icon>
+                Add Member
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- HASH Type -->
+        @if (selectedType() === RedisDataType.Hash) {
+          <div class="hash-editor">
+            <div class="hash-header">
+              <h3>Hash Fields</h3>
+              <span class="count-badge">{{ hashFields().length }} fields</span>
+            </div>
+            <div class="hash-fields-container">
+              @for (field of hashFields(); track $index) {
+                <div class="hash-field-row">
+                  <mat-form-field appearance="outline" class="field-key">
+                    <mat-label>Field</mat-label>
+                    <input
+                      matInput
+                      [value]="field.key"
+                      (input)="updateHashField($index, $any($event.target).value, field.value)" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="field-value">
+                    <mat-label>Value</mat-label>
+                    <input
+                      matInput
+                      [value]="field.value"
+                      (input)="updateHashField($index, field.key, $any($event.target).value)" />
+                  </mat-form-field>
+                  <button
+                    mat-icon-button
+                    color="warn"
+                    (click)="removeHashField($index)"
+                    matTooltip="Remove field">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              }
+              @if (hashFields().length === 0) {
+                <div class="empty-state">No fields in hash</div>
+              }
+            </div>
+            <div class="add-item-section">
+              <mat-form-field appearance="outline" class="field-key">
+                <mat-label>New Field</mat-label>
+                <input
+                  matInput
+                  [value]="newHashKey()"
+                  (input)="newHashKey.set($any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="field-value">
+                <mat-label>New Value</mat-label>
+                <input
+                  matInput
+                  [value]="newHashValue()"
+                  (input)="newHashValue.set($any($event.target).value)"
+                  (keyup.enter)="addHashField()" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addHashField()"
+                [disabled]="!newHashKey().trim()">
+                <mat-icon>add</mat-icon>
+                Add Field
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- SORTED SET Type -->
+        @if (selectedType() === RedisDataType.SortedSet) {
+          <div class="sorted-set-editor">
+            <div class="sorted-set-header">
+              <h3>Sorted Set Members</h3>
+              <span class="count-badge">{{ sortedSetMembers().length }} members</span>
+            </div>
+            <div class="sorted-set-table-container">
+              <table class="sorted-set-table">
+                <thead>
+                  <tr>
+                    <th>Member</th>
+                    <th>Score</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (member of sortedSetMembers(); track $index) {
+                    <tr>
+                      <td>{{ member.member }}</td>
+                      <td>
+                        <mat-form-field appearance="outline" class="score-field">
+                          <input
+                            matInput
+                            type="number"
+                            [value]="member.score"
+                            (input)="updateSortedSetScore($index, +$any($event.target).value)" />
+                        </mat-form-field>
+                      </td>
+                      <td>
+                        <button
+                          mat-icon-button
+                          color="warn"
+                          (click)="removeSortedSetMember($index)"
+                          matTooltip="Remove member">
+                          <mat-icon>delete</mat-icon>
+                        </button>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+              @if (sortedSetMembers().length === 0) {
+                <div class="empty-state">No members in sorted set</div>
+              }
+            </div>
+            <div class="add-item-section">
+              <mat-form-field appearance="outline" class="flex-grow">
+                <mat-label>Member</mat-label>
+                <input
+                  matInput
+                  [value]="newSortedMember()"
+                  (input)="newSortedMember.set($any($event.target).value)" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="score-field">
+                <mat-label>Score</mat-label>
+                <input
+                  matInput
+                  type="number"
+                  [value]="newSortedScore()"
+                  (input)="newSortedScore.set(+$any($event.target).value)"
+                  (keyup.enter)="addSortedSetMember()" />
+              </mat-form-field>
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addSortedSetMember()"
+                [disabled]="!newSortedMember().trim()">
+                <mat-icon>add</mat-icon>
+                Add Member
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- STREAM Type -->
+        @if (selectedType() === RedisDataType.Stream) {
+          <div class="stream-editor">
+            <div class="stream-header">
+              <h3>Stream Entries</h3>
+              <span class="count-badge">{{ streamEntries().length }} entries</span>
+            </div>
+            <div class="stream-entries-container">
+              @for (entry of streamEntries(); track $index) {
+                <mat-expansion-panel>
+                  <mat-expansion-panel-header>
+                    <mat-panel-title>
+                      <mat-icon>stream</mat-icon>
+                      <span>Entry ID: {{ entry.id }}</span>
+                    </mat-panel-title>
+                    <mat-panel-description>
+                      {{ entry.fields.length }} fields
+                    </mat-panel-description>
+                  </mat-expansion-panel-header>
+                  <div class="stream-entry-fields">
+                    @for (field of entry.fields; track $index) {
+                      <div class="stream-field-row">
+                        <span class="field-key">{{ field.key }}</span>
+                        <span class="field-value">{{ field.value }}</span>
+                      </div>
+                    }
+                  </div>
+                  <div class="stream-entry-actions">
+                    <button
+                      mat-icon-button
+                      color="warn"
+                      (click)="removeStreamEntry($index)"
+                      matTooltip="Remove entry">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+                </mat-expansion-panel>
+              }
+              @if (streamEntries().length === 0) {
+                <div class="empty-state">No entries in stream</div>
+              }
+            </div>
+            <div class="add-item-section">
+              <button
+                mat-raised-button
+                color="primary"
+                (click)="addStreamEntry()">
+                <mat-icon>add</mat-icon>
+                Add Stream Entry
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Action Buttons -->
+    <div class="editor-actions">
+      <button
+        mat-button
+        (click)="onCancel()"
+        [disabled]="loading()">
+        Cancel
+      </button>
+      <button
+        mat-raised-button
+        color="primary"
+        (click)="onSave()"
+        [disabled]="!isValid() || loading()">
+        @if (loading()) {
+          <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+        } @else {
+          <mat-icon>save</mat-icon>
+        }
+        {{ isNewKey() ? 'Create' : 'Save' }}
+      </button>
+    </div>
+  </form>
+</div>

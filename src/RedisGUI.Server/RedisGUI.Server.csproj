@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
-	<Import Project="..\..\build\Common.props" />
 	<PropertyGroup>
 		<SpaRoot>..\RedisGUI.Client\</SpaRoot>
 		<SpaProxyLaunchCommand>npm start</SpaProxyLaunchCommand>
@@ -15,6 +14,13 @@
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
+		<PackageReference Include="OpenTelemetry.Exporter.Console" />
+		<PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.EntityFrameworkCore" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Http" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
+		<PackageReference Include="OpenTelemetry.Instrumentation.Process" />
 		<PackageReference Include="Swashbuckle.AspNetCore" />
 	</ItemGroup>
 	<ItemGroup>

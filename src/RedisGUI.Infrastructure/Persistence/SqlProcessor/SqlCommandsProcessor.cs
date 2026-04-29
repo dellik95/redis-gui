@@ -26,9 +26,9 @@ public class SqlCommandsProcessor : ISqlCommandsProcessor
 	}
 
 	/// <inheritdoc />
-	public SortedSet<string> GetSqlCommandTableNames(string commandText, DbContext context, string[] columnsToInclude = null, string[] columnsToExclude = null)
+	public SortedSet<string> GetSqlCommandTableNames(string commandText, DbContext context, string[]? columnsToInclude = null, string[]? columnsToExclude = null)
 	{
-		var commandTextKey = $"{commandText.GetHashCode():X}";
+		string commandTextKey = $"{commandText.GetHashCode():X}";
 
 		return commandTableNames.GetOrAdd(commandTextKey,
 				_ => new Lazy<SortedSet<string>>(() => GetFilteredTableNames(commandText, context, columnsToInclude, columnsToExclude),
@@ -36,16 +36,16 @@ public class SqlCommandsProcessor : ISqlCommandsProcessor
 			.Value;
 	}
 
-	private SortedSet<string> GetFilteredTableNames(string commandText, DbContext context, string[] columnsToInclude, string[] columnsToExclude)
+	private static SortedSet<string> GetFilteredTableNames(string commandText, DbContext context, string[]? columnsToInclude, string[]? columnsToExclude)
 	{
-		var contextTableNames = GetTableNamesFromContext(context);
-		var rawSqlTableNames = GetRawSqlCommandTableNames(commandText);
-		var allTableNames = rawSqlTableNames.Intersect(contextTableNames);
+		List<string> contextTableNames = GetTableNamesFromContext(context);
+		SortedSet<string> rawSqlTableNames = GetRawSqlCommandTableNames(commandText);
+		IEnumerable<string> allTableNames = rawSqlTableNames.Intersect(contextTableNames);
 
-		var filteredNames = allTableNames
+		IEnumerable<string> filteredNames = allTableNames
 			.Intersect(columnsToInclude ?? [])
 			.Except(columnsToExclude ?? []);
-		return new SortedSet<string>(filteredNames);
+		return [.. filteredNames];
 	}
 
 	private static List<string> GetTableNamesFromContext(DbContext context)
@@ -58,18 +58,19 @@ public class SqlCommandsProcessor : ISqlCommandsProcessor
 		return context.Model.GetEntityTypes()
 			.Select(t => t.GetTableName())
 			.Where(t => !string.IsNullOrEmpty(t))
+			.Select(t => t!)
 			.Distinct()
 			.ToList();
 	}
 
 	private static SortedSet<string> GetRawSqlCommandTableNames(string commandText)
 	{
-		var tables = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-		var sqlItems = commandText.Split([" ", "\r\n", Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries);
+		SortedSet<string> tables = new(StringComparer.OrdinalIgnoreCase);
+		string[] sqlItems = commandText.Split([" ", "\r\n", Environment.NewLine, "\n"], StringSplitOptions.RemoveEmptyEntries);
 
-		for (var i = 0; i < sqlItems.Length; i++)
+		for (int i = 0; i < sqlItems.Length; i++)
 		{
-			foreach (var marker in tableMarkers)
+			foreach (string marker in tableMarkers)
 			{
 				if (!sqlItems[i].Equals(marker, StringComparison.OrdinalIgnoreCase))
 				{
@@ -81,7 +82,7 @@ public class SqlCommandsProcessor : ISqlCommandsProcessor
 					break;
 				}
 
-				var tableName = ExtractTableName(sqlItems[i]);
+				string tableName = ExtractTableName(sqlItems[i]);
 				if (!string.IsNullOrWhiteSpace(tableName))
 				{
 					tables.Add(tableName);
@@ -94,8 +95,8 @@ public class SqlCommandsProcessor : ISqlCommandsProcessor
 
 	private static string ExtractTableName(string sqlItem)
 	{
-		var tableNameParts = sqlItem.Split(separator, StringSplitOptions.RemoveEmptyEntries);
-		var tableName = tableNameParts.Length switch
+		string[] tableNameParts = sqlItem.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+		string tableName = tableNameParts.Length switch
 		{
 			1 => tableNameParts[0].Trim(),
 			>= 2 => tableNameParts[1].Trim(),

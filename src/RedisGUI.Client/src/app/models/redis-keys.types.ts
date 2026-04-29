@@ -40,6 +40,15 @@ export interface StreamValueData extends RedisValueData {
     entries: StreamEntry[];
 }
 
+// Union type for all Redis value data types
+export type RedisValue = 
+    | StringValueData 
+    | ListValueData 
+    | SetValueData 
+    | HashValueData 
+    | SortedSetValueData 
+    | StreamValueData;
+
 // Grouped keys response models
 export interface RedisKeyInfo {
     key: string;

@@ -1,89 +1,106 @@
 import {
   Component,
   ElementRef,
-  OnInit,
-  OnDestroy,
   input,
   output,
   viewChild,
   effect,
   ChangeDetectionStrategy,
-  signal
+  signal,
+  inject,
+  DestroyRef
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import loader from '@monaco-editor/loader';
 import type { editor } from 'monaco-editor';
 
+/**
+ * JSON Editor Component
+ * Monaco Editor-based JSON editor with syntax highlighting, validation, and formatting
+ * 
+ * Features:
+ * - Syntax highlighting for JSON
+ * - Real-time validation
+ * - Read-only mode support
+ * - Customizable theme and height
+ * - Emits value changes and validation status
+ * 
+ * @example
+ * ```html
+ * <app-json-editor
+ *   [value]="jsonString"
+ *   [readOnly]="false"
+ *   [theme]="'vs-dark'"
+ *   [height]="'500px'"
+ *   (valueChange)="onValueChange($event)"
+ *   (valid)="onValidationChange($event)"
+ * />
+ * ```
+ */
 @Component({
   selector: 'app-json-editor',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div class="json-editor-container">
-      <div #editorContainer class="editor-container"></div>
-      @if (errorMessage()) {
-        <div class="error-message">{{ errorMessage() }}</div>
-      }
-    </div>
-  `,
-  styles: [`
-    :host {
-      display: block;
-      width: 100%;
-      height: 100%;
-    }
-
-    .json-editor-container {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .editor-container {
-      flex: 1;
-      min-height: 300px;
-      border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.12));
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .error-message {
-      padding: 8px 12px;
-      margin-top: 8px;
-      background-color: var(--mat-error-container-background-color, #ffebee);
-      color: var(--mat-error-color, #c62828);
-      border-radius: 4px;
-      font-size: 12px;
-    }
-  `],
+  imports: [],
+  templateUrl: './json-editor.component.html',
+  styleUrl: './json-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class JsonEditorComponent implements OnInit, OnDestroy {
-  // Inputs
-  value = input<string>('');
-  readOnly = input<boolean>(false);
-  language = input<string>('json');
-  theme = input<'vs' | 'vs-dark' | 'hc-black'>('vs');
-  height = input<string>('400px');
+export class JsonEditorComponent {
+  // 1. Injected dependencies
+  private readonly destroyRef = inject(DestroyRef);
 
-  // Outputs
-  valueChange = output<string>();
-  valid = output<boolean>();
+  // 2. Inputs
+  /** JSON string value to display/edit */
+  readonly value = input<string>('');
+  
+  /** Whether the editor is in read-only mode */
+  readonly readOnly = input<boolean>(false);
+  
+  /** Editor language (default: 'json') */
+  readonly language = input<string>('json');
+  
+  /** Editor theme: 'vs' (light), 'vs-dark' (dark), or 'hc-black' (high contrast) */
+  readonly theme = input<'vs' | 'vs-dark' | 'hc-black'>('vs');
+  
+  /** Editor height (CSS value, default: '400px') */
+  readonly height = input<string>('400px');
 
-  // ViewChild
-  editorContainer = viewChild.required<ElementRef>('editorContainer');
+  // 3. Outputs
+  /** Emitted when the editor value changes */
+  readonly valueChange = output<string>();
+  
+  /** Emitted when validation status changes (true if valid JSON) */
+  readonly valid = output<boolean>();
 
-  // State
-  errorMessage = signal<string>('');
+  // 4. View queries
+  /** Reference to the editor container element */
+  readonly editorContainer = viewChild.required<ElementRef>('editorContainer');
+
+  // 5. State signals
+  /** Current error message (if JSON is invalid) */
+  readonly errorMessage = signal<string>('');
+  
+  /** Whether Monaco Editor has been initialized */
+  readonly isInitialized = signal(false);
+
+  // 6. Private state
   private editor: editor.IStandaloneCodeEditor | null = null;
   private monaco: typeof import('monaco-editor') | null = null;
 
+  // 7. Constructor with initialization
   constructor() {
     // Set Monaco paths
     loader.config({
       paths: {
         vs: 'assets/monaco-editor/min/vs'
+      }
+    });
+
+    // Initialize Monaco editor when container is available
+    effect(() => {
+      const container = this.editorContainer();
+      if (container && !this.isInitialized()) {
+        this.initializeMonaco();
       }
     });
 
@@ -103,20 +120,33 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
         this.monaco.editor.setTheme(newTheme);
       }
     });
+
+    // React to readOnly changes
+    effect(() => {
+      const readOnly = this.readOnly();
+      if (this.editor) {
+        this.editor.updateOptions({ readOnly });
+      }
+    });
+
+    // Cleanup on destroy
+    this.destroyRef.onDestroy(() => {
+      this.editor?.dispose();
+    });
   }
 
-  async ngOnInit(): Promise<void> {
+  /**
+   * Initialize Monaco editor
+   */
+  private async initializeMonaco(): Promise<void> {
     try {
       this.monaco = await loader.init();
       this.initializeEditor();
+      this.isInitialized.set(true);
     } catch (error) {
       console.error('Error initializing Monaco Editor:', error);
       this.errorMessage.set('Failed to initialize editor');
     }
-  }
-
-  ngOnDestroy(): void {
-    this.editor?.dispose();
   }
 
   private initializeEditor(): void {
@@ -160,6 +190,9 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
     this.validateJson(this.value());
   }
 
+  /**
+   * Validate JSON content
+   */
   private validateJson(value: string): void {
     if (!value.trim()) {
       this.errorMessage.set('');
@@ -171,13 +204,18 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
       JSON.parse(value);
       this.errorMessage.set('');
       this.valid.emit(true);
-    } catch (error: any) {
-      const message = error.message || 'Invalid JSON';
+    } catch (error: unknown) {
+      const message = error instanceof Error 
+        ? error.message 
+        : 'Invalid JSON';
       this.errorMessage.set(message);
       this.valid.emit(false);
     }
   }
 
+  /**
+   * Format the current JSON content
+   */
   /**
    * Format the current JSON content
    */
@@ -190,7 +228,7 @@ export class JsonEditorComponent implements OnInit, OnDestroy {
       const formatted = JSON.stringify(parsed, null, 2);
       this.editor.setValue(formatted);
       this.errorMessage.set('');
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.errorMessage.set('Cannot format invalid JSON');
     }
   }

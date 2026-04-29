@@ -1,17 +1,59 @@
 import { Injectable, signal, WritableSignal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { Observable } from 'rxjs';
+import { ISignalRHubConnection } from './signalr-hub.interface';
 
 /**
  * Base SignalR Hub Service
- * Provides common functionality for SignalR hub connections
+ *
+ * Provides common functionality for SignalR hub connections.
+ * Implements ISignalRHubConnection for abstraction and testability.
+ *
+ * Features:
+ * - Connection lifecycle management
+ * - Automatic reconnection with exponential backoff
+ * - Message streaming via Observables
+ * - Hub method invocation
+ * - Connection state signals
+ *
+ * @template TMessage - Type of messages received from the hub
+ *
+ * @example
+ * ```typescript
+ * @Injectable({ providedIn: 'root' })
+ * export class MyHubService extends SignalRHubService<MyMessage> {
+ *   protected override hubUrl = '/hub/myhub';
+ *   protected override eventName = 'ReceiveMessage';
+ * }
+ *
+ * // Usage
+ * private hub = inject(MyHubService);
+ *
+ * // Connect
+ * this.hub.connect().subscribe(() => {
+ *   // Connected
+ * });
+ *
+ * // Listen to messages
+ * this.hub.onMessage().subscribe(message => {
+ *   console.log('Received:', message);
+ * });
+ * ```
  */
 @Injectable()
-export abstract class SignalRHubService<TMessage = any> {
+export abstract class SignalRHubService<TMessage = unknown> implements ISignalRHubConnection {
+  // 1. Protected state
+  /** SignalR connection instance */
   protected connection?: signalR.HubConnection;
-  public connected: WritableSignal<boolean> = signal(false);
-  
+
+  /** Connection state signal */
+  public readonly connected: WritableSignal<boolean> = signal(false);
+
+  // 2. Abstract properties (must be implemented by derived classes)
+  /** Hub URL endpoint */
   protected abstract hubUrl: string;
+
+  /** Event name for receiving messages */
   protected abstract eventName: string;
 
   /**
@@ -19,7 +61,7 @@ export abstract class SignalRHubService<TMessage = any> {
    * Override this method to customize connection setup
    */
   protected createConnection(queryParams?: Record<string, string>): signalR.HubConnection {
-    const url = queryParams 
+    const url = queryParams
       ? `${this.hubUrl}?${new URLSearchParams(queryParams).toString()}`
       : this.hubUrl;
 
@@ -84,7 +126,7 @@ export abstract class SignalRHubService<TMessage = any> {
       this.connection!.stop()
         .then(() => {
           this.connected.set(false);
-          this.connection = undefined;
+          delete this.connection;
           this.onDisconnected();
           observer.next();
           observer.complete();
@@ -98,15 +140,15 @@ export abstract class SignalRHubService<TMessage = any> {
   /**
    * Listen to messages from the hub
    */
-  protected onMessage(): Observable<TMessage> {
-    return new Observable<TMessage>(observer => {
+  onMessage<T = TMessage>(): Observable<T> {
+    return new Observable<T>(observer => {
       if (!this.connection) {
         observer.error(new Error('Connection not established'));
         return;
       }
 
       this.connection.on(this.eventName, (message: TMessage) => {
-        observer.next(message);
+        observer.next(message as unknown as T);
       });
 
       // Cleanup on unsubscribe
@@ -150,8 +192,13 @@ export abstract class SignalRHubService<TMessage = any> {
 
   /**
    * Invoke a hub method
+   *
+   * @param methodName - Name of the hub method to invoke
+   * @param args - Arguments to pass to the hub method
+   * @returns Observable that emits the method result
+   * @template T - Return type of the hub method
    */
-  protected invoke<T = void>(methodName: string, ...args: any[]): Observable<T> {
+  public invoke<T = void>(methodName: string, ...args: unknown[]): Observable<T> {
     return new Observable<T>(observer => {
       if (!this.connection) {
         observer.error(new Error('Connection not established'));
@@ -169,30 +216,55 @@ export abstract class SignalRHubService<TMessage = any> {
     });
   }
 
+  // 3. Lifecycle hooks (override in derived classes if needed)
   /**
-   * Lifecycle hooks - override in derived classes
+   * Called when connection is established
+   * Override in derived classes for custom behavior
    */
   protected onConnected(): void {
-    console.log(`SignalR connected to ${this.hubUrl}`);
+    // Override in derived classes if needed
   }
 
+  /**
+   * Called when connection is disconnected
+   * Override in derived classes for custom behavior
+   */
   protected onDisconnected(): void {
-    console.log(`SignalR disconnected from ${this.hubUrl}`);
+    // Override in derived classes if needed
   }
 
+  /**
+   * Called when connection is reconnecting
+   * Override in derived classes for custom behavior
+   */
   protected onReconnecting(): void {
-    console.log(`SignalR reconnecting to ${this.hubUrl}...`);
+    // Override in derived classes if needed
   }
 
+  /**
+   * Called when connection is reconnected
+   * Override in derived classes for custom behavior
+   */
   protected onReconnected(): void {
-    console.log(`SignalR reconnected to ${this.hubUrl}`);
+    // Override in derived classes if needed
   }
 
+  /**
+   * Called when connection is closed
+   * Override in derived classes for custom behavior
+   */
   protected onConnectionClosed(): void {
-    console.log(`SignalR connection closed to ${this.hubUrl}`);
+    // Override in derived classes if needed
   }
 
-  protected onConnectionError(error: any): void {
-    console.error(`SignalR connection error to ${this.hubUrl}:`, error);
+  /**
+   * Handles connection errors
+   * Override in derived classes for custom error handling
+   *
+   * @param error - The connection error
+   */
+  protected onConnectionError(error: unknown): void {
+    // Silent error handling - override in derived classes if logging is needed
+    // Error is already propagated to Observable subscribers
   }
 }

@@ -64,12 +64,15 @@
 
         <div class="editor-actions">
 
-            <button mat-fab extended color="accent" (click)="checkConnections()">
+            <button mat-fab extended color="accent" [disabled]="!canTest()" (click)="checkConnections()">
                 <mat-icon>check_circle_outline</mat-icon>
+                @if (isTesting()) {
+                    <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
+                }
                 Check connection
             </button>
 
-            <button mat-fab extended [disabled]="form.invalid" (click)="saveConnection()">
+            <button mat-fab extended [disabled]="!canSave()" (click)="saveConnection()">
                 <mat-icon>favorite</mat-icon>
                 Save
             </button>

@@ -1,12 +1,11 @@
 <div class="breadcrumb-container">
-  <div class="breadcrumb-item" *ngFor="let breadcrumb of (breadcrumbs$ | async); let last = last">
-
-    @if(last) {
-      {{ breadcrumb.label }}
-    } 
-    @else {
-      <a class="breadcrumb-link" [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a> &gt;
-    }
-
-  </div>
+  @for (breadcrumb of breadcrumbs(); track breadcrumb.url) {
+    <div class="breadcrumb-item">
+      @if ($last) {
+        {{ breadcrumb.label }}
+      } @else {
+        <a class="breadcrumb-link" [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a> &gt;
+      }
+    </div>
+  }
 </div>

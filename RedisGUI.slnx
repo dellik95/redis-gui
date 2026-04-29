@@ -1,0 +1,45 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/build/">
+    <Project Path="build/RedisGUI.Docker/docker-compose.dcproj">
+      <Platform Project="AnyCPU" />
+      <Build />
+    </Project>
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="build/Code Analysis/Code Analysis Rules.ruleset" />
+    <File Path="build/Code Analysis/CustomDictionary.xml" />
+    <File Path="build/Code Analysis/StyleCop.json" />
+    <File Path="Directory.Packages.props" />
+	<File Path="Directory.Build.props" />
+    <File Path="README.md" />
+    <File Path="src/RedisGUI.Server/CHANGELOG.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/RedisGUI.Application/RedisGUI.Application.csproj" />
+    <Project Path="src/RedisGUI.Domain/RedisGUI.Domain.csproj" />
+    <Project Path="src/RedisGUI.Infrastructure/RedisGUI.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/src/shared/">
+    <Project Path="src/RedisGUI.Shared/RedisGUI.Shared.csproj" />
+  </Folder>
+  <Folder Name="/src/web/">
+    <Project Path="src/RedisGUI.Client/RedisGUI.Client.esproj">
+      <Build Solution="*|Any CPU" />
+      <Deploy Solution="*|Any CPU" />
+    </Project>
+    <Project Path="src/RedisGUI.Server/RedisGUI.Server.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/RedisGUI.Application.Tests/RedisGUI.Application.Tests.csproj" />
+    <Project Path="test/RedisGUI.Domain.Tests/RedisGUI.Domain.Tests.csproj" />
+    <Project Path="test/RedisGUI.Shared.Tests/RedisGUI.Shared.Tests.csproj" />
+  </Folder>
+</Solution>

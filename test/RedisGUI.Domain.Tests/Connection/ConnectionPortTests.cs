@@ -8,11 +8,10 @@ namespace RedisGUI.Domain.Tests.Connection;
 /// </summary>
 public class ConnectionPortTests
 {
-	[Theory]
-	[InlineData(1)]
-	[InlineData(6379)]
-	[InlineData(8080)]
-	[InlineData(65535)]
+	[TestCase(1)]
+	[TestCase(6379)]
+	[TestCase(8080)]
+	[TestCase(65535)]
 	public void Create_WithValidPort_ShouldSucceed(int port)
 	{
 		// Act
@@ -22,9 +21,8 @@ public class ConnectionPortTests
 		connectionPort.Value.Should().Be(port);
 	}
 
-	[Theory]
-	[InlineData(-1)]
-	[InlineData(-100)]
+	[TestCase(-1)]
+	[TestCase(-100)]
 	public void Create_WithInvalidPort_ShouldThrowException(int port)
 	{
 		// Act
@@ -34,7 +32,7 @@ public class ConnectionPortTests
 		act.Should().Throw<Exception>();
 	}
 
-	[Fact]
+	[Test]
 	public void Create_WithPort0_ShouldSucceed()
 	{
 		// Port 0 is technically valid (means "any available port")
@@ -45,7 +43,7 @@ public class ConnectionPortTests
 		connectionPort.Value.Should().Be(0);
 	}
 
-	[Fact]
+	[Test]
 	public void DefaultRedisPort_ShouldBe6379()
 	{
 		// Arrange

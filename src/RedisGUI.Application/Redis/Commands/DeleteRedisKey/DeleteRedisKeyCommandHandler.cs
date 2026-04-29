@@ -12,19 +12,19 @@ namespace RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 internal sealed class DeleteRedisKeyCommandHandler : ICommandHandler<DeleteRedisKeyCommand, bool>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisKeyService keyService;
 
     /// <summary>
     /// Initializes a new instance of the DeleteRedisKeyCommandHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="keyService">Service for Redis key operations.</param>
     public DeleteRedisKeyCommandHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisKeyService keyService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.keyService = keyService;
     }
 
     /// <summary>
@@ -44,6 +44,6 @@ internal sealed class DeleteRedisKeyCommandHandler : ICommandHandler<DeleteRedis
             return Result.Failure<bool>(connectionResult.Error);
         }
 
-        return await connectionService.DeleteKey(connectionResult.Value, request.Key);
+        return await keyService.DeleteKeyAsync(connectionResult.Value, request.Key, cancellationToken);
     }
 } 

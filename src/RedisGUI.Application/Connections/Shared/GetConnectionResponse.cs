@@ -1,6 +1,6 @@
-using System;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
+using System;
 
 namespace RedisGUI.Application.Connections.Shared;
 
@@ -17,22 +17,27 @@ public sealed class GetConnectionResponse
 	/// <summary>
 	/// The name of the connection.
 	/// </summary>
-	public string Name { get; private set; }
+	public required string Name { get; init; }
 
 	/// <summary>
 	/// The host address including port number.
 	/// </summary>
-	public string Host { get; private set; }
+	public required string Host { get; init; }
+
+	/// <summary>
+	/// The port number for the Redis connection.
+	/// </summary>
+	public int Port { get; private set; }
 
 	/// <summary>
 	/// The username used for authentication.
 	/// </summary>
-	public string Username { get; private set; }
+	public required string Username { get; init; }
 
 	/// <summary>
 	/// The decrypted password used for authentication.
 	/// </summary>
-	public string Password { get; private set; }
+	public required string Password { get; init; }
 
 	/// <summary>
 	/// The Redis database number.
@@ -49,8 +54,8 @@ public sealed class GetConnectionResponse
 		RedisConnection connection,
 		IPasswordDecrypt passwordDecrypt)
 	{
-		var password = string.Empty;
-		var userName = string.Empty;
+		string password = string.Empty;
+		string userName = string.Empty;
 
 		if (connection is RedisConnectionWithCredentials securedConnection)
 		{
@@ -63,10 +68,11 @@ public sealed class GetConnectionResponse
 		{
 			Id = connection.Id,
 			Name = connection.ConnectionName?.Value ?? string.Empty,
-			Host = $"{connection.ServerHost}:{connection.ServerPort}",
+			Host = connection.ServerHost.Value,
+			Port = connection.ServerPort.Value,
 			Username = userName,
 			Password = password,
-			Database = connection.DatabaseNumber,
+			Database = connection.DatabaseNumber.Value,
 		};
 	}
 }

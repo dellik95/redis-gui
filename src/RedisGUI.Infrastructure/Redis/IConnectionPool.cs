@@ -7,13 +7,13 @@ namespace RedisGUI.Infrastructure.Redis;
 /// </summary>
 public interface IConnectionPool : IDisposable, IAsyncDisposable
 {
-    /// <summary>
-    /// Retrieves a connection from the pool or creates a new one if necessary
-    /// </summary>
-    /// <param name="configuration">Redis configuration options</param>
-    /// <param name="cancellationToken">Cancellation token for the operation</param>
-    /// <returns>A Result containing either a successful ConnectionMultiplexer or an error</returns>
-    Task<Result<ConnectionMultiplexer>> GetConnection(
-        string configuration,
-        CancellationToken cancellationToken = default);
+	/// <summary>
+	/// Retrieves a connection from the pool or creates a new one if necessary
+	/// </summary>
+	/// <param name="configuration">Redis configuration options</param>
+	/// <param name="cancellationToken">Cancellation token for the operation</param>
+	/// <returns>A Result containing either a successful ConnectionMultiplexer or an error</returns>
+	Task<Result<ConnectionMultiplexer>> GetConnection(
+		string configuration,
+		CancellationToken cancellationToken = default);
 }

@@ -91,14 +91,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override bool GetBoolean(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return default;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.LongType)
 		{
@@ -121,14 +121,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override byte GetByte(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return default;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.BoolType)
 		{
@@ -149,26 +149,26 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	}
 
 	/// <inheritdoc />
-	public override long GetBytes(int ordinal, long dataOffset, byte[] buffer, int bufferOffset, int length) => 0L;
+	public override long GetBytes(int ordinal, long dataOffset, byte[]? buffer, int bufferOffset, int length) => 0L;
 
 	/// <inheritdoc />
 	public override char GetChar(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return '\0';
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType != TypeExtensions.StringType)
 		{
 			return Convert.ToChar(value, CultureInfo.InvariantCulture);
 		}
 
-		var val = value.ToString();
+		string? val = value.ToString();
 
 		if (string.IsNullOrWhiteSpace(val))
 		{
@@ -179,26 +179,26 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	}
 
 	/// <inheritdoc />
-	public override long GetChars(int ordinal, long dataOffset, char[] buffer, int bufferOffset, int length) => checked((char)GetInt64(ordinal));
+	public override long GetChars(int ordinal, long dataOffset, char[]? buffer, int bufferOffset, int length) => checked((char)GetInt64(ordinal));
 
 	/// <inheritdoc />
 	public override DateTime GetDateTime(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return default;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.DateTimeType)
 		{
 			return (DateTime)value;
 		}
 
-		var s = value.ToString();
+		string? s = value.ToString();
 
 		return string.IsNullOrWhiteSpace(s) ? default : DateTime.Parse(s, CultureInfo.InvariantCulture);
 	}
@@ -206,18 +206,18 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override decimal GetDecimal(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return 0;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.StringType)
 		{
-			var s = value.ToString();
+			string? s = value.ToString();
 
 			return string.IsNullOrWhiteSpace(s) ? 0 : decimal.Parse(s, NumberStyles.Number | NumberStyles.AllowExponent, CultureInfo.InvariantCulture);
 		}
@@ -233,14 +233,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override double GetDouble(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return 0;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType != TypeExtensions.DoubleType)
 		{
@@ -253,14 +253,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override float GetFloat(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return 0;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.DoubleType)
 		{
@@ -279,18 +279,18 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override Guid GetGuid(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return Guid.NewGuid();
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.StringType)
 		{
-			var g = value.ToString();
+			string? g = value.ToString();
 
 			return string.IsNullOrWhiteSpace(g) ? Guid.NewGuid() : new Guid(g);
 		}
@@ -307,14 +307,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override short GetInt16(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return 0;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.BoolType)
 		{
@@ -337,14 +337,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override int GetInt32(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return default;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.BoolType)
 		{
@@ -368,14 +368,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override long GetInt64(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		if (value.IsNull())
 		{
 			return default;
 		}
 
-		var valueType = GetOrdinalValueType(ordinal, value);
+		Type valueType = GetOrdinalValueType(ordinal, value);
 
 		if (valueType == TypeExtensions.BoolType)
 		{
@@ -394,7 +394,7 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override string GetString(int ordinal)
 	{
-		var value = GetValue(ordinal);
+		object value = GetValue(ordinal);
 
 		return value.IsNull() ? string.Empty : value.ToString() ?? string.Empty;
 	}
@@ -416,14 +416,14 @@ public class InMemoryTableRowsDataReader : DbDataReader
 	/// <inheritdoc />
 	public override bool IsDBNull(int ordinal)
 	{
-		var value = rowValues[ordinal];
+		object value = rowValues[ordinal];
 
 		return value.IsNull();
 	}
 
 	private Type GetOrdinalValueType(int ordinal, object value)
 	{
-		if (valueTypes.TryGetValue(ordinal, out var valueType))
+		if (valueTypes.TryGetValue(ordinal, out Type? valueType))
 		{
 			return valueType;
 		}

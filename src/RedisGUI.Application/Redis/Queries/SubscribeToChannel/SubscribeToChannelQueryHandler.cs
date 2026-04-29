@@ -12,14 +12,14 @@ namespace RedisGUI.Application.Redis.Queries.SubscribeToChannel;
 public sealed class SubscribeToChannelQueryHandler : IQueryHandler<SubscribeToChannelQuery, SubscribeToChannelResponse>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IConnectionService connectionService;
+	private readonly IRedisPubSubService pubSubService;
 
 	public SubscribeToChannelQueryHandler(
 		IRedisConnectionRepository connectionRepository,
-		IConnectionService connectionService)
+		IRedisPubSubService pubSubService)
 	{
 		this.connectionRepository = connectionRepository;
-		this.connectionService = connectionService;
+		this.pubSubService = pubSubService;
 	}
 
 	public async Task<Result<SubscribeToChannelResponse>> Handle(SubscribeToChannelQuery request, CancellationToken cancellationToken)
@@ -31,7 +31,7 @@ public sealed class SubscribeToChannelQueryHandler : IQueryHandler<SubscribeToCh
 			return Result.Failure<SubscribeToChannelResponse>(connectionResult.Error);
 		}
 
-		var result = await connectionService.SubscribeToChannel(
+		var result = await pubSubService.SubscribeToChannelAsync(
 			connectionResult.Value,
 			request.Channel,
 			cancellationToken);

@@ -1,0 +1,174 @@
+<div class="health-monitoring-container">
+	<!-- Header -->
+	<div class="page-header">
+		<div class="header-content">
+			<mat-icon class="header-icon" [ngClass]="overallStatusClass()">{{ overallStatusIcon() }}</mat-icon>
+			<div>
+				<h1>Health Monitoring</h1>
+				<p class="subtitle">Monitor the health status of all Redis connections</p>
+			</div>
+		</div>
+		<div class="header-actions">
+			<mat-slide-toggle [checked]="autoRefreshEnabled()" (change)="toggleAutoRefresh()">
+				Auto-refresh
+			</mat-slide-toggle>
+			
+			@if (autoRefreshEnabled()) {
+				<mat-form-field appearance="outline" class="interval-select">
+					<mat-label>Interval</mat-label>
+					<mat-select [value]="refreshIntervalMs()" (selectionChange)="refreshIntervalMs.set($event.value)">
+						@for (interval of refreshIntervals; track interval.value) {
+							<mat-option [value]="interval.value">{{ interval.label }}</mat-option>
+						}
+					</mat-select>
+				</mat-form-field>
+			}
+			
+			<button mat-raised-button color="primary" (click)="refreshAll()">
+				<mat-icon>refresh</mat-icon>
+				Refresh All
+			</button>
+		</div>
+	</div>
+
+	<!-- Error Display -->
+	@if (error()) {
+		<mat-card class="error-card">
+			<mat-card-content>
+				<mat-icon color="warn">error</mat-icon>
+				<span>{{ error() }}</span>
+				<button mat-icon-button (click)="connectionsStore.clearError()">
+					<mat-icon>close</mat-icon>
+				</button>
+			</mat-card-content>
+		</mat-card>
+	}
+
+	<!-- Summary Cards -->
+	<div class="summary-grid">
+		<mat-card class="summary-card total">
+			<mat-card-content>
+				<mat-icon>storage</mat-icon>
+				<div class="summary-value">{{ connections().length }}</div>
+				<div class="summary-label">Total Connections</div>
+			</mat-card-content>
+		</mat-card>
+		
+		<mat-card class="summary-card healthy">
+			<mat-card-content>
+				<mat-icon>check_circle</mat-icon>
+				<div class="summary-value">{{ healthySummary() }}</div>
+				<div class="summary-label">Healthy</div>
+			</mat-card-content>
+		</mat-card>
+		
+		<mat-card class="summary-card degraded">
+			<mat-card-content>
+				<mat-icon>warning</mat-icon>
+				<div class="summary-value">{{ degradedSummary() }}</div>
+				<div class="summary-label">Degraded</div>
+			</mat-card-content>
+		</mat-card>
+		
+		<mat-card class="summary-card unhealthy">
+			<mat-card-content>
+				<mat-icon>error</mat-icon>
+				<div class="summary-value">{{ unhealthySummary() }}</div>
+				<div class="summary-label">Unhealthy</div>
+			</mat-card-content>
+		</mat-card>
+	</div>
+
+	<!-- Loading State -->
+	@if (isLoading() && connections().length === 0) {
+		<div class="loading-container">
+			<mat-spinner diameter="48"></mat-spinner>
+			<p>Loading connections...</p>
+		</div>
+	}
+
+	<!-- Empty State -->
+	@if (!isLoading() && connections().length === 0) {
+		<mat-card class="empty-state-card">
+			<mat-card-content>
+				<mat-icon>cloud_off</mat-icon>
+				<h3>No Connections Found</h3>
+				<p>Add a Redis connection from the Dashboard to start monitoring health.</p>
+				<a mat-raised-button color="primary" routerLink="/home">
+					<mat-icon>arrow_back</mat-icon>
+					Go to Dashboard
+				</a>
+			</mat-card-content>
+		</mat-card>
+	}
+
+	<!-- Connection Health Cards Grid -->
+	@if (connections().length > 0) {
+		<div class="health-cards-grid">
+			@for (connection of connections(); track connection.id) {
+				<mat-card class="connection-card">
+					<mat-card-header>
+						<mat-icon mat-card-avatar>dns</mat-icon>
+						<mat-card-title>{{ connection.name }}</mat-card-title>
+						<mat-card-subtitle>{{ connection.host }}:{{ connection.port }}</mat-card-subtitle>
+					</mat-card-header>
+					<mat-card-content>
+						<app-connection-health-card 
+							[connectionId]="connection.id">
+						</app-connection-health-card>
+					</mat-card-content>
+					<mat-card-actions>
+						<a mat-button [routerLink]="['/storage', connection.id]" color="primary">
+							<mat-icon>storage</mat-icon>
+							Open Storage
+						</a>
+						<a mat-button [routerLink]="['/info']" [queryParams]="{connectionId: connection.id}" color="accent">
+							<mat-icon>info</mat-icon>
+							Server Info
+						</a>
+					</mat-card-actions>
+				</mat-card>
+			}
+		</div>
+	}
+
+	<!-- Legend -->
+	<mat-card class="legend-card">
+		<mat-card-header>
+			<mat-card-title>Health Status Legend</mat-card-title>
+		</mat-card-header>
+		<mat-card-content>
+			<div class="legend-grid">
+				<div class="legend-item">
+					<mat-chip class="healthy">
+						<mat-icon>check_circle</mat-icon>
+						Healthy
+					</mat-chip>
+					<span>Connection is responding normally with acceptable latency</span>
+				</div>
+				<div class="legend-item">
+					<mat-chip class="degraded">
+						<mat-icon>warning</mat-icon>
+						Degraded
+					</mat-chip>
+					<span>Connection is responding but with high latency or errors</span>
+				</div>
+				<div class="legend-item">
+					<mat-chip class="unhealthy">
+						<mat-icon>error</mat-icon>
+						Unhealthy
+					</mat-chip>
+					<span>Connection is not responding or has failed</span>
+				</div>
+				<div class="legend-item">
+					<mat-chip class="unknown">
+						<mat-icon>help</mat-icon>
+						Unknown
+					</mat-chip>
+					<span>Health status has not been determined yet</span>
+				</div>
+			</div>
+		</mat-card-content>
+	</mat-card>
+</div>
+
