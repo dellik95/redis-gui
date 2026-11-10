@@ -11,6 +11,8 @@ import { StorageValueEditorComponent, ValueEditorInput, ValueEditorOutput } from
 export interface AddKeyDialogData {
   /** Redis connection ID */
   connectionId: string;
+  /** Optional namespace / subfolder prefix */
+  folderPrefix?: string;
 }
 
 /**
@@ -37,10 +39,12 @@ export class AddKeyComponent {
   // 2. Configuration
   /** Redis connection ID from dialog data */
   readonly connectionId = this.dialogData.connectionId;
+  /** Subfolder namespace prefix */
+  readonly folderPrefix = this.dialogData.folderPrefix || '';
 
   /** Initial editor data for new key */
   readonly editorData: ValueEditorInput = {
-    key: '',
+    key: this.dialogData.folderPrefix || '',
     type: RedisDataType.String,
     value: { value: '' },
     isNew: true

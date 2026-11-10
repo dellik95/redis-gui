@@ -16,6 +16,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTree, MatTreeModule } from '@angular/material/tree';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { RedisKeysStore } from '../../../core/stores/redis-keys.store';
 import { RedisKeyInfo, RedisDataType, RedisKeyGroup, RedisValue } from '../../../models/redis-keys.types';
@@ -64,6 +65,7 @@ interface TreeNode {
 export class TreeViewListComponent {
   // 1. Injected dependencies
   private readonly redisKeysStore = inject(RedisKeysStore);
+  private readonly snackBar = inject(MatSnackBar);
 
   // 2. Inputs
   /** Required connection ID for loading keys */
@@ -87,12 +89,45 @@ export class TreeViewListComponent {
     ttl: number;
   }>();
 
+  /** Emitted when adding a new key directly into a subfolder */
+  readonly addKeyInFolder = output<string>();
+
+  /** Emitted when deleting a specific key in the tree */
+  readonly deleteKey = output<string>();
+
+  /** Emitted when renaming a key in the tree */
+  readonly renameKey = output<string>();
+
+  /** Emitted when duplicating a key in the tree */
+  readonly duplicateKey = output<string>();
+
+  /** Emitted when deleting an entire folder/namespace in the tree */
+  readonly deleteFolder = output<{ path: string; name: string; keyCount: number; keys: string[] }>();
+
   // 4. View children
   readonly tree = viewChild(MatTree);
 
   // 5. State signals
   /** Tree data source for Material Tree */
   readonly dataSource = signal<TreeNode[]>([]);
+
+  /** Total number of leaf keys */
+  readonly totalKeysCount = computed<number>(() => this.redisKeysStore.keys().length);
+
+  /** Total number of folder groups */
+  readonly totalFoldersCount = computed<number>(() => {
+    let count = 0;
+    const countGroups = (nodes: TreeNode[]) => {
+      for (const n of nodes) {
+        if (n.isGroup) {
+          count++;
+          if (n.children) countGroups(n.children);
+        }
+      }
+    };
+    countGroups(this.dataSource());
+    return count;
+  });
 
   /** Loading state indicator computed from store */
   readonly isLoading = computed<boolean>(() => this.redisKeysStore.isLoading());
@@ -194,6 +229,132 @@ export class TreeViewListComponent {
   /**
    * Toggles a group node open or closed and persists its path in the set
    */
+  /**
+   * Adds a new key directly into the specified subfolder / group
+   */
+  onAddKeyInGroup(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const delim = this.delimiter() || ':';
+    const folderPrefix = node.path.endsWith(delim) ? node.path : `${node.path}${delim}`;
+    this.addKeyInFolder.emit(folderPrefix);
+  }
+
+  /**
+   * Copies the folder prefix to the clipboard
+   */
+  onCopyFolderPath(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const delim = this.delimiter() || ':';
+    const folderPrefix = node.path.endsWith(delim) ? node.path : `${node.path}${delim}`;
+    navigator.clipboard.writeText(folderPrefix).then(() => {
+      this.snackBar.open(`Copied folder "${folderPrefix}" to clipboard`, 'Close', { duration: 2500 });
+    });
+  }
+
+  /**
+   * Triggers deletion of the entire folder and all nested keys
+   */
+  onDeleteFolder(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const allKeys = this.collectAllKeysUnderNode(node);
+    this.deleteFolder.emit({
+      path: node.path,
+      name: node.name,
+      keyCount: node.keyCount,
+      keys: allKeys
+    });
+  }
+
+  /**
+   * Copies a key name to clipboard
+   */
+  onCopyKey(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const key = node.keyInfo?.key || node.path;
+    navigator.clipboard.writeText(key).then(() => {
+      this.snackBar.open(`Copied "${key}" to clipboard`, 'Close', { duration: 2500 });
+    });
+  }
+
+  /**
+   * Triggers deletion of an individual key
+   */
+  onDeleteKey(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const key = node.keyInfo?.key || node.path;
+    this.deleteKey.emit(key);
+  }
+
+  /**
+   * Triggers renaming of an individual key
+   */
+  onRenameKey(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const key = node.keyInfo?.key || node.path;
+    this.renameKey.emit(key);
+  }
+
+  /**
+   * Triggers duplication of an individual key
+   */
+  onDuplicateKey(node: TreeNode, event: MouseEvent): void {
+    event.stopPropagation();
+    const key = node.keyInfo?.key || node.path;
+    this.duplicateKey.emit(key);
+  }
+
+  /**
+   * Collects all leaf key names recursively under a given tree node
+   */
+  collectAllKeysUnderNode(node: TreeNode): string[] {
+    if (!node.isGroup) {
+      return node.keyInfo ? [node.keyInfo.key] : [node.path];
+    }
+    const keys: string[] = [];
+    if (node.children) {
+      for (const child of node.children) {
+        keys.push(...this.collectAllKeysUnderNode(child));
+      }
+    }
+    return keys;
+  }
+
+  /**
+   * Expands all group folders across the entire tree
+   */
+  expandAll(): void {
+    const allPaths = new Set<string>();
+    const collectGroupPaths = (nodes: TreeNode[]) => {
+      for (const n of nodes) {
+        if (n.isGroup) {
+          allPaths.add(n.path);
+          if (n.children) collectGroupPaths(n.children);
+        }
+      }
+    };
+    collectGroupPaths(this.dataSource());
+    this.expandedNodePaths.set(allPaths);
+    const matTree = this.tree();
+    if (matTree) {
+      for (const n of this.dataSource()) {
+        matTree.expandDescendants(n);
+      }
+    }
+  }
+
+  /**
+   * Collapses all folders across the tree
+   */
+  collapseAll(): void {
+    this.expandedNodePaths.set(new Set<string>());
+    const matTree = this.tree();
+    if (matTree) {
+      for (const n of this.dataSource()) {
+        matTree.collapseDescendants(n);
+      }
+    }
+  }
+
   toggleGroup(node: TreeNode, event?: MouseEvent): void {
     if (event) {
       event.stopPropagation();

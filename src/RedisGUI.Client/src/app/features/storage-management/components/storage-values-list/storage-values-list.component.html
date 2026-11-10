@@ -357,6 +357,11 @@
       [(pattern)]="searchPattern"
       [(delimiter)]="keyDelimiter"
       (keySelected)="onTreeKeySelected($event)"
+      (addKeyInFolder)="addNewKey($event)"
+      (deleteKey)="deleteKey($event)"
+      (renameKey)="renameKey($event)"
+      (duplicateKey)="duplicateKey($event)"
+      (deleteFolder)="deleteFolder($event)"
     />
   </div>
 }

@@ -10,6 +10,26 @@
       <p class="empty-text">No keys found matching pattern</p>
     </div>
   } @else {
+    <!-- Tree Header Toolbar -->
+    <div class="tree-toolbar">
+      <div class="tree-stats">
+        <mat-icon class="stats-icon">account_tree</mat-icon>
+        <span class="stats-text">
+          <strong>{{ totalKeysCount() }}</strong> keys in <strong>{{ totalFoldersCount() }}</strong> namespaces
+        </span>
+      </div>
+      <div class="tree-toolbar-actions">
+        <button mat-button type="button" class="tree-tool-btn" (click)="expandAll()" matTooltip="Expand all namespaces">
+          <mat-icon>unfold_more</mat-icon>
+          <span>Expand All</span>
+        </button>
+        <button mat-button type="button" class="tree-tool-btn" (click)="collapseAll()" matTooltip="Collapse all namespaces">
+          <mat-icon>unfold_less</mat-icon>
+          <span>Collapse All</span>
+        </button>
+      </div>
+    </div>
+
     <mat-tree #tree 
               [dataSource]="dataSource()" 
               [childrenAccessor]="childrenAccessor"
@@ -35,6 +55,24 @@
             {{ node.keyInfo.type }}
           </span>
         }
+
+        <div class="node-actions-bar" (click)="$event.stopPropagation()">
+          <button mat-icon-button type="button" class="node-action-btn edit-btn" (click)="onKeyClick(node)" matTooltip="View / Edit Key">
+            <mat-icon>edit_note</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="node-action-btn copy-btn" (click)="onCopyKey(node, $event)" matTooltip="Copy key name">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="node-action-btn rename-btn" (click)="onRenameKey(node, $event)" matTooltip="Rename Key">
+            <mat-icon>drive_file_rename_outline</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="node-action-btn duplicate-btn" (click)="onDuplicateKey(node, $event)" matTooltip="Duplicate Key">
+            <mat-icon>file_copy</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="node-action-btn delete-btn" (click)="onDeleteKey(node, $event)" matTooltip="Delete Key">
+            <mat-icon>delete_outline</mat-icon>
+          </button>
+        </div>
       </mat-tree-node>
 
       <!-- Expandable node template (folder / group) -->
@@ -53,6 +91,18 @@
         <mat-icon class="group-folder-icon">{{ isExpanded(node) ? 'folder_open' : 'folder' }}</mat-icon>
         <span class="group-name">{{ node.name }}</span>
         <span class="group-count">{{ node.keyCount }} {{ node.keyCount === 1 ? 'key' : 'keys' }}</span>
+
+        <div class="group-actions-bar" (click)="$event.stopPropagation()">
+          <button mat-icon-button type="button" class="group-action-btn add-btn" (click)="onAddKeyInGroup(node, $event)" matTooltip="Add key in this subfolder">
+            <mat-icon>add</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="group-action-btn copy-btn" (click)="onCopyFolderPath(node, $event)" matTooltip="Copy folder namespace prefix">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+          <button mat-icon-button type="button" class="group-action-btn delete-folder-btn" (click)="onDeleteFolder(node, $event)" matTooltip="Delete folder and all nested keys">
+            <mat-icon>delete_sweep</mat-icon>
+          </button>
+        </div>
       </mat-tree-node>
     </mat-tree>
   }

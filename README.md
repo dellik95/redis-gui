@@ -34,8 +34,8 @@ Full visual inspection and editing across all native Redis types using the **Str
 - Live status pills in the Storage Manager header with pulsing indicators.
 
 ### 📂 Dual Exploration Modes
-- **Table View**: Fast, sortable data grid with instant search and type filtering.
-- **Namespace Tree View**: Hierarchical folder tree grouping keys by delimiter (e.g. `user:profile:1001`).
+- **Table View**: Fast virtual-scrolled data grid with instant pattern search, type filter chips, live TTL countdowns, and aligned column sorting (Key, Type, TTL, Size).
+- **Namespace Tree View**: Hierarchical folder tree grouping keys by delimiter (`:`, `/`, `.`, etc.) with **direct subfolder key creation** via the folder `+` action.
 
 ### 🛠️ Interactive Redis CLI Drawer
 - Built-in slide-out terminal drawer.

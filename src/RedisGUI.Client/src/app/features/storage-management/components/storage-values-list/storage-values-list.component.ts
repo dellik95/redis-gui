@@ -329,6 +329,7 @@ export class StorageValuesListComponent {
 	loadKeys(): void {
 		this.fetchTimestamp.set(Date.now());
 		this.storageStore.loadKeys(this.searchPattern(), this.keyDelimiter(), this.selectedDb());
+		this.redisKeysStore.loadKeys({ connectionId: this.connectionId(), pattern: this.searchPattern() || '*' });
 		this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
 	}
 
@@ -374,14 +375,15 @@ export class StorageValuesListComponent {
 		}
 	}
 
-	addNewKey(): void {
+	addNewKey(folderPrefix?: string): void {
 		const dialogRef = this.dialog.open(AddKeyComponent, {
 			width: "900px",
 			maxWidth: "92vw",
 			maxHeight: "90vh",
 			panelClass: 'custom-key-dialog',
 			data: {
-				connectionId: this.connectionId()
+				connectionId: this.connectionId(),
+				folderPrefix: folderPrefix || ''
 			},
 		});
 
@@ -395,12 +397,16 @@ export class StorageValuesListComponent {
 						key: result.key,
 						type: result.type,
 						value: result.value,
-						...(result.ttl !== undefined ? { ttl: result.ttl } : {})
+						database: this.selectedDb(),
+						...(result.ttl !== undefined ? { ttl: result.ttl } : {}),
+						onSuccess: () => {
+							this.redisKeysStore.clearCache();
+							this.loadKeys();
+							this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+							this.snackBar.open(`Key "${result.key}" created successfully`, "Close", { duration: 3000 });
+							this.isLoading.set(false);
+						}
 					});
-					this.redisKeysStore.clearCache();
-					this.snackBar.open(`Key "${result.key}" created successfully`, "Close", { duration: 3000 });
-					this.loadKeys();
-					this.isLoading.set(false);
 				}
 			});
 	}
@@ -431,6 +437,54 @@ export class StorageValuesListComponent {
 						this.isLoading.set(false);
 					}
 				});
+			});
+	}
+
+	deleteFolder(event: { path: string; name: string; keyCount: number; keys: string[] }): void {
+		const delim = this.keyDelimiter() || ':';
+		const pattern = event.path.endsWith(delim) ? `${event.path}*` : `${event.path}${delim}*`;
+
+		this.dialog.open(ConfirmDialogComponent, {
+			data: {
+				title: `Delete Folder "${event.name}"`,
+				message: `Are you sure you want to delete folder "${event.path}" and all ${event.keyCount} key(s) under it? This will delete all keys matching "${pattern}". This action cannot be undone.`,
+				confirmText: `Delete ${event.keyCount} Key(s)`,
+				cancelText: 'Cancel',
+				confirmColor: 'warn'
+			}
+		}).afterClosed()
+			.pipe(filter((confirmed): confirmed is boolean => confirmed === true))
+			.subscribe(() => {
+				this.isLoading.set(true);
+				if (event.keys.length > 0) {
+					this.redisOperationsStore.deleteMultipleKeys({
+						connectionId: this.connectionId(),
+						keys: event.keys,
+						database: this.selectedDb(),
+						onSuccess: () => {
+							this.selection.clear();
+							this.redisKeysStore.clearCache();
+							this.loadKeys();
+							this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+							this.snackBar.open(`Folder "${event.name}" and ${event.keys.length} key(s) deleted`, "Close", { duration: 3500 });
+							this.isLoading.set(false);
+						}
+					});
+				} else {
+					this.redisOperationsStore.deleteKeysByPattern({
+						connectionId: this.connectionId(),
+						pattern,
+						database: this.selectedDb(),
+						onSuccess: () => {
+							this.selection.clear();
+							this.redisKeysStore.clearCache();
+							this.loadKeys();
+							this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+							this.snackBar.open(`Folder "${event.name}" keys deleted`, "Close", { duration: 3500 });
+							this.isLoading.set(false);
+						}
+					});
+				}
 			});
 	}
 

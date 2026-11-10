@@ -1,10 +1,12 @@
-# RedisGUI — Повний довідник конфігурацій та налаштувань
+# RedisGUI — Configuration & Settings Reference Guide
 
-У цьому документі наведено детальний опис усіх можливих параметрів конфігурації платформи **RedisGUI** через файли `appsettings.json`, `appsettings.Development.json`, змінні середовища (Environment Variables) та параметри Docker.
+This document provides a comprehensive specification of all configuration options available in **RedisGUI**, including `appsettings.json`, environment variables, Docker parameters, database providers, and security settings.
 
 ---
 
-## 1. Структура `appsettings.json` (Головний файл конфігурації)
+## 1. Master Configuration File (`appsettings.json`)
+
+The server reads configuration hierarchically from `appsettings.json`, environment-specific overrides (e.g. `appsettings.Development.json` or `appsettings.Production.json`), and operating system environment variables.
 
 ```json
 {
@@ -49,132 +51,89 @@
   "Observability": {
     "ServiceName": "RedisGUI.Server",
     "ServiceVersion": "1.0.0",
-    "EnableMetrics": true,
-    "EnableTracing": true
-  },
-  "RateLimiting": {
-    "PermitLimit": 100,
-    "WindowInSeconds": 10,
-    "QueueLimit": 20
-  },
-  "Cors": {
-    "AllowedOrigins": [
-      "http://localhost:4200",
-      "http://localhost:5000",
-      "http://127.0.0.1:4200",
-      "http://127.0.0.1:5000"
-    ]
+    "OtlpEndpoint": "http://localhost:4317",
+    "ExportTelemetry": false
   }
 }
 ```
 
 ---
 
-## 2. Детальний опис кожної секції конфігурації
+## 2. Configuration Settings Breakdown
 
-### 2.1. Секція `DatabaseProvider` та `ConnectionStrings`
-Визначає сховище метаданих системи (збережені підключення Redis, користувачі, журнали аудиту).
+### 2.1 Database & Persistence (`DatabaseProvider`)
+Defines the persistence store for user accounts, connection profiles, and audit log history:
 
-| Параметр | Можливі значення | За замовчуванням | Опис |
+| Key | Options | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `DatabaseProvider` | `InMemory`, `MySql`, `MariaDb` | `InMemory` | Двигун бази даних. `InMemory` ідеально підходить для швидкого старту та тестування; `MySql` забезпечує постійне зберігання на диску. |
-| `ConnectionStrings:DefaultConnection` | Рядок підключення ADO.NET | — | Рядок підключення до реляційної СУБД (використовується при `DatabaseProvider != InMemory`). |
+| `DatabaseProvider` | `InMemory`, `MySQL` | `InMemory` | Storage provider for `ApplicationDbContext`. `InMemory` is ideal for zero-setup local development and container testing. `MySQL` is recommended for multi-instance production. |
+| `ConnectionStrings:DefaultConnection` | Valid ADO.NET Connection String | Local MySQL string | Active connection string when `DatabaseProvider` is set to `MySQL`. |
+
+### 2.2 Redis Client Defaults (`Redis`)
+Default settings applied when connecting to Redis nodes:
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `DefaultHost` | `string` | `127.0.0.1` | Default fallback Redis host address. |
+| `DefaultPort` | `int` | `6379` | Default Redis TCP port. |
+| `ConnectTimeout` | `int` (ms) | `5000` | Socket connection timeout in milliseconds. |
+| `SyncTimeout` | `int` (ms) | `5000` | Synchronous command timeout before throwing a `TimeoutException`. |
+| `KeepAlive` | `int` (sec) | `60` | Heartbeat keep-alive ping interval in seconds. |
+| `AllowAdmin` | `bool` | `true` | Allows execution of administrative commands such as `INFO`, `CONFIG GET`, `SLOWLOG`, and `FLUSHDB`. |
+| `AbortOnConnectFail` | `bool` | `false` | When `false`, StackExchange.Redis reconnects in the background instead of failing immediately upon startup. |
+| `DefaultConnectionId` | `string` (GUID) | `ae3201ab-...` | ID of the pre-seeded default connection profile. |
+
+### 2.3 JWT Authentication (`Jwt`)
+Controls cryptographic security tokens issued to authenticated clients:
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Secret` | `string` | *Dev string (>= 32 chars)* | HMAC-SHA256 secret key for signing tokens. **Must be overridden in production.** |
+| `Issuer` | `string` | `RedisGUI` | Valid token issuer identifier. |
+| `Audience` | `string` | `RedisGUIClient` | Valid token audience claim. |
+| `AccessTokenExpirationInMinutes` | `int` | `60` | Lifespan of access tokens before requiring refresh. |
+| `RefreshTokenExpirationInDays` | `int` | `7` | Lifespan of refresh tokens stored on the client. |
+
+### 2.4 Live Telemetry & Observability (`MetricsCollector`, `Observability`)
+Controls live metric streaming and OpenTelemetry exports:
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `MetricsCollector:PoolingIntervalInSec` | `int` | `5` | Frequency of `server.InfoAsync()` polling for SignalR telemetry streaming. |
+| `MetricsCollector:Enabled` | `bool` | `true` | Globally toggles real-time metrics collection background workers. |
+| `MetricsCollector:MaxHistoryDataPoints` | `int` | `100` | Maximum number of in-memory data points retained for sparkline charts. |
+| `HealthCheck:IntervalInSeconds` | `int` | `15` | Periodic connection health verification interval. |
+| `Observability:ExportTelemetry` | `bool` | `false` | Enables OpenTelemetry trace and metric export over OTLP. |
+| `Observability:OtlpEndpoint` | `string` | `http://localhost:4317` | Target gRPC/HTTP OTLP collector address. |
 
 ---
 
-### 2.2. Секція `Redis` (Налаштування двигуна Redis за замовчуванням)
-Параметри автоматично посіяного локального з'єднання та базові тайм-аути StackExchange.Redis.
+## 3. Environment Variables (Docker & Cloud Overrides)
 
-| Параметр | Тип | За замовчуванням | Опис |
-| :--- | :--- | :--- | :--- |
-| `DefaultHost` | `string` | `127.0.0.1` | Хост для первинного автопосіву з'єднання. У середовищі Docker автоматично змінюється на ім'я контейнера `redis`. |
-| `DefaultPort` | `int` | `6379` | Порт Redis сервера. |
-| `ConnectTimeout` | `int` (мс) | `5000` | Максимальний час очікування встановлення TCP сокета з Redis перед генерацією помилки. |
-| `SyncTimeout` | `int` (мс) | `5000` | Максимальний час очікування відповіді на синхронні команди Redis. |
-| `KeepAlive` | `int` (сек) | `60` | Інтервал відправки PING-пакетів для підтримки TCP з'єднання активним. |
-| `AllowAdmin` | `bool` | `true` | Дозволяє виконання адміністративних команд (`INFO`, `CONFIG GET`, `SLOWLOG GET`, `CLIENT LIST`). Обов'язково для повноцінної діагностики. |
-| `AbortOnConnectFail`| `bool` | `false` | Якщо `false`, StackExchange.Redis продовжує спроби підключення у фоні при тимчасовій недоступності сервера, не перериваючи роботу застосунку. |
-| `DefaultConnectionId`| `Guid` | `ae3201ab-c3f1-4594-8f80-bbffd8d5eb65` | Стабільний GUID первинного з'єднання, що дозволяє зберігати закладки та прямі посилання у браузері. |
+Any setting in `appsettings.json` can be overridden using environment variables by replacing nested colons `:` with double underscores `__`:
 
----
-
-### 2.3. Секція `Jwt` (Автентифікація та Безпека)
-Керує створенням та перевіркою криптографічних JSON Web Tokens.
-
-| Параметр | Тип | За замовчуванням | Опис |
-| :--- | :--- | :--- | :--- |
-| `Secret` | `string` | — | Секретний ключ для підпису JWT токенів алгоритмом HMAC-SHA256 (має містити щонайменше 256 біт / 32 символи). |
-| `Issuer` | `string` | `RedisGUI` | Видавець токена. |
-| `Audience` | `string` | `RedisGUIClient` | Цільова аудиторія токена. |
-| `AccessTokenExpirationInMinutes` | `int` | `60` | Тривалість дії Access Token у хвилинах. |
-| `RefreshTokenExpirationInDays` | `int` | `7` | Тривалість дії Refresh Token у днях для автоматичного поновлення сесії. |
-
----
-
-### 2.4. Секція `MetricsCollector` (Збір живої телеметрії)
-Керує фоновим сервісом `RedisMetricsBackgroundJob`.
-
-| Параметр | Тип | За замовчуванням | Опис |
-| :--- | :--- | :--- | :--- |
-| `PoolingIntervalInSec` | `int` | `5` | Інтервал опитування Redis команди `INFO ALL` у секундах для оновлення телеметрії через SignalR. |
-| `Enabled` | `bool` | `true` | Прапорець активації фонового збору метрик. |
-| `MaxHistoryDataPoints` | `int` | `100` | Максимальна кількість збережених точок у пам'яті для побудови графіків. |
-
----
-
-### 2.5. Секція `HealthCheck` (Моніторинг доступності)
-Керує фоновим сервісом `ConnectionHealthMonitor`.
-
-| Параметр | Тип | За замовчуванням | Опис |
-| :--- | :--- | :--- | :--- |
-| `IntervalInSeconds` | `int` | `15` | Частота перевірки доступності всіх зареєстрованих Redis серверів. |
-| `TimeoutInSeconds` | `int` | `3` | Час очікування пінгу перед позначенням з'єднання як `Degraded` або `Unhealthy`. |
-
----
-
-### 2.6. Секція `RateLimiting` (Захист API від перевантаження)
-Вбудований rate limiter ASP.NET Core для захисту ендпоінтів.
-
-| Параметр | Тип | За замовчуванням | Опис |
-| :--- | :--- | :--- | :--- |
-| `PermitLimit` | `int` | `100` | Кількість дозволених запитів на клієнта у межах часового вікна. |
-| `WindowInSeconds` | `int` | `10` | Тривалість ковзного вікна у секундах. |
-| `QueueLimit` | `int` | `20` | Розмір черги запитів, що очікують обробки при перевищенні ліміту. |
-
----
-
-## 3. Змінні середовища (Environment Variables)
-
-Будь-який параметр з `appsettings.json` можна перекрити за допомогою змінних середовища. У середовищі Docker або Kubernetes розділювач `:` замінюється на подвійне підкреслення `__`:
-
-| Змінна середовища | Відповідне поле в JSON | Приклад значення |
+| Environment Variable | Equivalent JSON Key | Example Production Value |
 | :--- | :--- | :--- |
-| `ASPNETCORE_ENVIRONMENT` | — | `Production` або `Development` |
-| `ASPNETCORE_URLS` | — | `http://+:5000` |
-| `DatabaseProvider` | `DatabaseProvider` | `MySql` |
-| `ConnectionStrings__DefaultConnection` | `ConnectionStrings:DefaultConnection` | `Server=db;Port=3306;Database=redisgui;Uid=root;Pwd=secret;` |
-| `Redis__DefaultHost` | `Redis:DefaultHost` | `redis` або `10.0.0.5` |
+| `ASPNETCORE_ENVIRONMENT` | Environment name | `Production` |
+| `ASPNETCORE_URLS` | Server bindings | `http://+:5000` |
+| `DatabaseProvider` | `DatabaseProvider` | `MySQL` |
+| `ConnectionStrings__DefaultConnection` | `ConnectionStrings:DefaultConnection` | `Server=db;Port=3306;Database=redisgui;Uid=app;Pwd=Secret!` |
+| `Jwt__Secret` | `Jwt:Secret` | `ProductionSecretKeyMustBeVeryLongAndSecureWithRandomEntropy123!` |
+| `Redis__DefaultHost` | `Redis:DefaultHost` | `redis` or `redis.cluster.local` |
 | `Redis__DefaultPort` | `Redis:DefaultPort` | `6379` |
-| `Jwt__Secret` | `Jwt:Secret` | `MyProductionHighEntropySecretKey123456789!` |
-| `MetricsCollector__PoolingIntervalInSec` | `MetricsCollector:PoolingIntervalInSec` | `3` |
+| `MetricsCollector__PoolingIntervalInSec`| `MetricsCollector:PoolingIntervalInSec`| `3` |
 
 ---
 
-## 4. Конфігурація клієнтської частини (Angular 19)
+## 4. Default Seeded Credentials
 
-Файл конфігурації клієнта знаходиться у:
-`src/RedisGUI.Client/src/environments/environment.ts` (dev)
-`src/RedisGUI.Client/src/environments/environment.prod.ts` (prod)
+When starting with an `InMemory` database, the application automatically seeds an initial administrator account and demo connection:
 
-```typescript
-export const environment = {
-  production: true,
-  apiUrl: '', // Порожній рядок вказує на використання відносного кореня (Same-Origin)
-  signalrHubs: {
-    metrics: '/hub/metrics',
-    keys: '/hub/keys'
-  },
-  defaultTheme: 'magenta-violet',
-  storageKeyPrefix: 'redisgui_'
-};
-```
+* **Administrator Email**: `admin@redisgui.local`
+* **Administrator Password**: `AdminPassword123!`
+* **Pre-configured Connection**:
+  * **Name**: `Local Redis`
+  * **Host**: `127.0.0.1` (or `redis` inside Docker)
+  * **Port**: `6379`
+  * **Database Count**: `16` (DB 0 through DB 15)
+  * **Safe Mode**: Disabled (`IsReadOnly = false`)

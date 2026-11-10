@@ -1,17 +1,17 @@
-# RedisGUI — Детальний опис проєктів рішення (Solution Structure)
+# RedisGUI — Solution Projects & Architecture Breakdown
 
-Рішення **RedisGUI** (`RedisGUI.slnx`) побудовано за принципами **Clean Architecture** (Чистої Архітектури) Роберта Мартіна з чітким розділенням відповідальностей за шарами. Рішення містить 10 проєктів: 5 основних модулів .NET, клієнтський проєкт на Angular 19 та 4 тестові проєкти xUnit/Moq.
+The **RedisGUI** solution (`RedisGUI.slnx`) is engineered according to Robert C. Martin's **Clean Architecture** principles with strict separation of concerns across concentric layers. The solution contains 10 projects: 5 core .NET modules, an Angular 19 SPA client, and 4 xUnit/Moq test suites.
 
 ```
 RedisGUI.slnx
 │
 ├── 📂 src/
-│   ├── 📦 RedisGUI.Domain/           # Підприємницькі моделі, сутності, enums, доменні контракти
-│   ├── 📦 RedisGUI.Shared/           # Загальні примітиви Result<T>, Error, кастомний MediatR пайплайн
-│   ├── 📦 RedisGUI.Application/      # CQRS Команди, Запити, Валідатори (FluentValidation), Behaviors
-│   ├── 📦 RedisGUI.Infrastructure/   # Реалізація StackExchange.Redis, EF Core, SignalR, Services
-│   ├── 📦 RedisGUI.Server/           # ASP.NET Core 10 Host, Minimal APIs, SignalR Hubs, OpenAPI
-│   └── 📦 RedisGUI.Client/           # Angular 19 Standalone, Signals, Tailwind CSS, Monaco Editor
+│   ├── 📦 RedisGUI.Domain/           # Enterprise entities, value objects, domain contracts, and enums
+│   ├── 📦 RedisGUI.Shared/           # Functional primitives: Result<T>, Error, and in-process CQRS pipeline
+│   ├── 📦 RedisGUI.Application/      # CQRS Commands, Queries, FluentValidation rules, and MediatR behaviors
+│   ├── 📦 RedisGUI.Infrastructure/   # StackExchange.Redis adapters, Strategy type handlers, EF Core, and SignalR
+│   ├── 📦 RedisGUI.Server/           # ASP.NET Core 10 host, Minimal APIs, SignalR hubs, and OpenAPI/Scalar
+│   └── 📦 RedisGUI.Client/           # Angular 19 Standalone, Signals, Tailwind CSS, and Monaco Editor
 │
 └── 📂 test/
     ├── 🧪 RedisGUI.Domain.Tests/
@@ -22,142 +22,143 @@ RedisGUI.slnx
 
 ---
 
-## 1. `RedisGUI.Domain` (Доменний шар)
-Найглибший шар системи, що не має жодних зовнішніх залежностей від баз даних чи фреймворків.
+## 1. `RedisGUI.Domain` (Domain Layer)
 
-### Основні сутності та моделі:
-* **`Connection/RedisConnection`**: Сутність збереженого підключення до Redis. Містить:
+The innermost layer of the system. It contains enterprise business logic and contracts with **zero external dependencies** on databases, Web frameworks, or serialization libraries.
+
+### Core Entities & Domain Models:
+* **`Connection/RedisConnection`**: Entity representing a stored connection profile to a Redis instance:
   * `ServerHost` (Value Object), `ServerPort`, `DatabaseCount`, `Name`, `Password`, `Ssl`, `ConnectTimeout`.
-  * `IsReadOnly`: Прапорець Safe Mode (режим захисту від запису).
-  * `OwnerId`: Зовнішній ключ власника з'єднання.
-  * Метод `BuildConnectionString()`: Генерація безпечного рядка підключення StackExchange.Redis.
-* **`Users/User`**: Сутність облікового запису користувача з полями `Email`, `PasswordHash`, `Role` (`UserRole`), `IsActive`, `LastLoginAt`.
-* **`Audit/AuditLog`**: Сутність журналу аудиту операцій із міткою часу `Timestamp`, `UserId`, `UserEmail`, `IpAddress`, `ActionType`, `Resource`, `Details`, `IsSuccess`.
-* **`RedisMetrics/RedisMetrics`**: Агрегат метрик продуктивності Redis, заповнюваний через спеціальні атрибути `[RedisMetric]` (Ops/sec, Used Memory, Peak Memory, CPU System/User, Connected Clients, Key Count, Network In/Out).
-* **`Redis/RedisLoadTest`**: Моделі налаштування та результатів навантажувального тестування (`LoadTestResult`, `LoadTestOptions`, процентилі латентності `p50`, `p95`, `p99`, RPS, `ErrorCount`).
-* **`Redis/RedisSlowlogItem`**: Модель повільних запитів Redis (`Id`, `Timestamp`, `DurationMicroseconds`, `Arguments`, `ClientIp`).
-* **`Redis/SeedDataOptions`**: Параметри генерації демо-даних (`TotalKeys`, `KeyComplexity`, `PayloadComplexity`, `DataTypes`, `TtlStrategy`).
+  * `IsReadOnly`: Safe Mode flag preventing write, update, and delete mutations.
+  * `OwnerId`: Foreign key to the user owning this connection.
+  * `BuildConnectionString()`: Domain method generating a safe, formatted `StackExchange.Redis` connection string.
+* **`Users/User`**: User identity entity with `Email`, `PasswordHash`, `Role` (`UserRole` enum), `IsActive`, and `LastLoginAt`.
+* **`Audit/AuditLog`**: Audit trail record capturing `Timestamp`, `UserId`, `UserEmail`, `IpAddress`, `ActionType`, `Resource`, `Details`, and `IsSuccess`.
+* **`RedisMetrics/RedisMetrics`**: Performance telemetry aggregate populated using `[RedisMetric]` attributes: Ops/sec, Used Memory, Peak Memory, System/User CPU, Connected Clients, Total Keys, and Network I/O.
+* **`Redis/RedisLoadTest`**: Models configuring and reporting stress tests: `LoadTestResult`, `LoadTestOptions`, latency percentiles (`p50`, `p95`, `p99`), RPS, and `ErrorCount`.
+* **`Redis/RedisSlowlogItem`**: High-latency command inspection model: `Id`, `Timestamp`, `DurationMicroseconds`, `Arguments`, and `ClientIp`.
+* **`Redis/SeedDataOptions`**: Configuration for demo data generation: `TotalKeys`, `KeyComplexity`, `PayloadComplexity`, `DataTypes`, and `TtlStrategy`.
 
-### Доменні інтерфейси та контракти:
-* `IRedisConnectionRepository`: Контракт доступу до збережених підключень.
-* `IUserRepository`: Контракт доступу до облікових записів.
-* `IAuditLogRepository`: Контракт запису та фільтрації журналу аудиту.
-* `IRedisValueService`: Контракт високорівневих операцій над значеннями ключів Redis.
-* `IRedisCliService`: Контракт виконання команд через інтерактивний термінал CLI.
-* `IRedisDiagnosticsService`: Контракт отримання діагностики сервера (Slowlog, Server Config).
-* `IRedisLoadTestService`: Контракт синтетичного навантажувального тестування.
-* `IRedisSeedDataService`: Контракт генерації демо-даних за типами та стратегіями.
-
----
-
-## 2. `RedisGUI.Shared` (Спільне ядро та примітиви)
-Містить базові будівельні блоки для забезпечення надійності та CQRS-пайплайну.
-* **`Result<T>` та `Error`**: Паттерн залізничного програмування (Railway-Oriented Programming). Забезпечує відсутність неперехоплених `null` та замінює винятки контрольованими результатами з кодом та описом помилки.
-* **Кастомний MediatR / In-Process Pipeline**:
-  * Інтерфейси: `ICommand`, `ICommand<TResponse>`, `IQuery<TResponse>`, `ICommandHandler<TCommand, TResponse>`, `IQueryHandler<TQuery, TResponse>`, `IMediator`, `IPipelineBehavior`.
-  * Дозволяє створювати пайплайни декораторів без сторонніх громіздких бібліотек.
+### Domain Contracts & Interfaces:
+* `IRedisConnectionRepository`: Abstraction for persisting and retrieving connection profiles.
+* `IUserRepository`: Abstraction for user account queries and credential verification.
+* `IAuditLogRepository`: Abstraction for appending and filtering audit events.
+* `IRedisValueService`: Abstraction for high-level read and write operations across Redis types.
+* `IRedisCliService`: Abstraction for executing raw CLI commands with database context.
+* `IRedisDiagnosticsService`: Abstraction for server diagnostics (`SLOWLOG`, server configurations).
+* `IRedisLoadTestService`: Abstraction for concurrent benchmark execution.
+* `IRedisSeedDataService`: Abstraction for synthetic dataset generation.
 
 ---
 
-## 3. `RedisGUI.Application` (Шар бізнес-логіки / CQRS)
-Імплементує бізнес-сценарії (Use Cases) як окремі Команди (Commands) та Запити (Queries).
+## 2. `RedisGUI.Shared` (Shared Kernel & Functional Primitives)
 
-### Основні групи сценаріїв:
+Provides foundational primitives for robust, exception-safe code across the entire codebase.
+
+* **`Result<T>` & `Error`**: Railway-Oriented Programming (ROP) pattern. Eliminates unhandled `null` references and replaces exceptions for business rule violations with structured, strongly-typed error responses.
+* **In-Process CQRS & Mediator Pipeline**:
+  * Interfaces: `ICommand`, `ICommand<TResponse>`, `IQuery<TResponse>`, `ICommandHandler<TCommand, TResponse>`, `IQueryHandler<TQuery, TResponse>`, `IMediator`, and `IPipelineBehavior`.
+  * Enables lightweight, high-performance in-process messaging without third-party dependencies.
+
+---
+
+## 3. `RedisGUI.Application` (Business Logic & CQRS Layer)
+
+Implements application business use cases using the CQRS pattern.
+
+### Key Use-Case Handlers:
 1. **`Connections/`**:
-   * `CreateConnectionCommand`, `UpdateConnectionCommand`, `DeleteConnectionCommand`, `CheckConnectionCommand`, `GetAllConnectionsQuery`, `GetConnectionByIdQuery`, `GetConnectionHealthQuery`, `ToggleReadOnlyCommand`, `GetServerInfoQuery`, `GetServerConfigQuery`, `UpdateServerConfigCommand`.
-2. **`Redis/` (Управління ключами та структурами)**:
-   * `GetAllRedisKeysQuery`: Посторінковий пошук ключів за патерном через `SCAN`.
-   * `GetRedisValueQuery`: Отримання значення довільного типу через фабрику хендлерів.
-   * `AddRedisValueCommand`: Створення нового ключа з контролем типу, значення та TTL.
-   * `UpdateRedisValueCommand`: Модифікація існуючого ключа.
+   * `CreateConnectionCommand`, `UpdateConnectionCommand`, `DeleteConnectionCommand`, `CheckConnectionCommand`.
+   * `GetAllConnectionsQuery`, `GetConnectionByIdQuery`, `GetConnectionHealthQuery`, `ToggleReadOnlyCommand`.
+   * `GetServerInfoQuery`, `GetServerConfigQuery`, `UpdateServerConfigCommand`.
+2. **`Redis/` (Key & Data Structure Management)**:
+   * `GetAllRedisKeysQuery`: Cursor-based `SCAN` iteration with pattern and database filters.
+   * `GetRedisValueQuery`: Resolves and returns key data via the Strategy Pattern handler factory.
+   * `SaveRedisValueCommand`: Persists String, Hash, List, Set, Sorted Set, or Stream data.
    * `DeleteRedisKeyCommand`, `DeleteMultipleKeysCommand`, `DeleteKeysByPatternCommand`.
-   * `RenameKeyCommand`: Безпечне перейменування ключа (`RENAME`).
-   * `DuplicateKeyCommand`: Клонування ключа з типом та TTL (`DUMP` + `RESTORE`).
-   * `BulkUpdateTtlCommand`: Масове оновлення або скидання часу життя ключів.
-   * `ExecuteCliCommand`: Виконання команд терміналу з валідацією Safe Mode.
-   * `RunLoadTestCommand`: Запуск навантажувального тестування з паралельними воркерами.
-   * `SeedSampleDataCommand`: Генерація наборів даних.
-   * `ExportRedisDataQuery` / `ImportRedisDataCommand`: Експорт/імпорт у JSON/CSV.
-   * `GetKeyMemoryUsageQuery`: Оцінка споживання пам'яті через `MEMORY USAGE`.
-   * `GetSlowlogQuery`: Отримання записів `SLOWLOG GET`.
-3. **`Users/`**:
-   * `LoginUserCommand`, `RegisterUserCommand`, `RefreshTokenCommand`, `ChangePasswordCommand`.
-4. **`Audit/`**:
-   * `GetAuditLogsQuery`: Посторінковий запит журналу аудиту з гнучкою фільтрацією.
-5. **Pipeline Behaviors**:
-   * `ValidationBehavior`: Автоматична валідація запитів за допомогою правил `FluentValidation`.
-   * `AuditingBehavior`: Автоматична реєстрація записів аудиту для операцій з атрибутом `[Auditable]`.
-   * `LoggingBehavior`: Структуроване логування запитів MediatR із часом виконання.
+   * `DuplicateRedisKeyCommand`: Deep clones a key and its contents under a new name.
+   * `BulkUpdateTtlCommand`: Updates expiration for multiple keys simultaneously.
+3. **`Diagnostics/` & `Benchmarking/`**:
+   * `GetRedisSlowlogQuery`: Fetches recent slow operations with execution microsecond durations.
+   * `RunRedisLoadTestCommand`: Executes concurrent stress tests and computes RPS / percentiles.
+   * `SeedRedisSampleDataCommand`: Populates databases with synthetic data structures.
+4. **`Users/` & `Audit/`**:
+   * `SignInCommand`, `SignUpCommand`, `GetCurrentUserQuery`.
+   * `GetAuditLogsQuery`: Paginated and filtered retrieval of audit records.
+
+### Cross-Cutting Behaviors (`Behaviors/`):
+* `ValidationBehavior<TRequest, TResponse>`: Automatically executes FluentValidation validators before handler execution.
+* `LoggingBehavior<TRequest, TResponse>`: Structured execution duration and parameter logging.
+* `AuditingBehavior<TRequest, TResponse>`: Automatically creates audit entries for mutating commands.
 
 ---
 
-## 4. `RedisGUI.Infrastructure` (Шар інфраструктури)
-Реалізує взаємодію з зовнішніми системами: Redis (StackExchange.Redis), базою даних EF Core, SignalR та операційною системою.
+## 4. `RedisGUI.Infrastructure` (Adapters & External Services)
 
-### Ключові сервіси та паттерни:
-* **Пул з'єднань `IConnectionPool` (`ConnectionPool.cs`)**:
-  * Забезпечує потокобезпечне кешування `ConnectionMultiplexer`.
-  * Підтримує автоматичне відновлення після збоїв та плавний fallback з внутрішнього імені Docker (`redis:6379`) на локальний `127.0.0.1:6379` у dev-середовищі.
-* **Паттерн Стратегія для типів Redis (`TypeHandlers/`)**:
-  * `IRedisTypeHandler`, `IRedisTypeHandlerFactory`.
-  * `StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, `StreamTypeHandler`.
-  * Зареєстровані в DI-контейнері як `Singleton`.
-* **Паттерни генерації даних (`Seeding/`)**:
-  * `IKeyNamingStrategy`: Стратегії формування імен ключів (`SimpleKeyNamingStrategy`, `HierarchicalKeyNamingStrategy`, `UuidKeyNamingStrategy`).
-  * `ISeedDataStrategy`: Стратегії наповнення корисним навантаженням для кожного типу Redis.
-* **Навантажувальний тестер (`LoadTesting/`)**:
-  * `RedisLoadTestService`: Запускає пул паралельних асинхронних задач з контрольованим розподілом Read/Write, фіксує таймінги за допомогою `Stopwatch` та розраховує перцентилі `p50`, `p95`, `p99`.
-* **Телеметрія та фонові задачі (`BackgroundJobs/`)**:
-  * `RedisMetricsBackgroundJob`: Фоновий сервіс (`BackgroundService`), що кожні 5 секунд збирає `INFO ALL` через `RedisMetricsCollector` (з `CultureInfo.InvariantCulture`) та транслює в SignalR Hub.
-  * `ConnectionHealthMonitor`: Моніторинг доступності з'єднань.
-* **SignalR Хаби (`SignalR/Hubs/`)**:
-  * `RedisMetricsHub`: Хаб трансляції телеметрії (`/hub/metrics`) за методом `NotifyUserAsync`.
-  * `KeyChangeHub`: Хаб сповіщень про модифікації простору ключів (`/hub/keys`).
-* **Entity Framework Core (`Persistence/`)**:
-  * `ApplicationDbContext`: Моделі для користувачів, з'єднань та аудит-логів з підтримкою In-Memory сховища, MySQL та MariaDB.
+Implements domain abstractions and manages external network connections.
+
+### Key Subsystems:
+* **`Redis/Handlers/` (Strategy Pattern for Redis Types)**:
+  * Handlers for each native Redis data type: `StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, and `StreamTypeHandler`.
+  * Managed by `RedisTypeHandlerFactory`, with all handlers registered directly into the ASP.NET Core DI container.
+* **`Redis/ConnectionPool/`**:
+  * Thread-safe cache of `IConnectionMultiplexer` instances keyed by connection ID, preventing socket exhaustion.
+* **`Redis/Telemetry/`**:
+  * `RedisMetricsCollector`: Periodically collects telemetry via `server.InfoAsync()`, parsing numerical metrics using `CultureInfo.InvariantCulture` to prevent decimal formatting crashes.
+* **`Persistence/`**:
+  * Entity Framework Core `ApplicationDbContext` supporting both `InMemory` and `MySQL` / `MariaDB` providers.
+  * Automatic schema migrations and seeding of default administrator accounts and demo connection profiles.
+* **`Authentication/`**:
+  * Cryptographic password hashing and JWT token issuance via `IJwtTokenGenerator`.
 
 ---
 
-## 5. `RedisGUI.Server` (Шар хостингу / Web API)
-ASP.NET Core 10 Minimal API хост.
-* **Ендпоінти (`Endpoints/`)**:
-  * `Connections/`: Керування з'єднаннями, статус здоров'я, інфо про сервер, конфігурація.
-  * `RedisStorage/`: CRUD над ключами, CLI, імпорт/експорт, load-test, seed, slowlog.
-  * `Auth/`: Вхід, реєстрація, токени.
-  * `Audit/`: Журнали дій.
-* **Middleware**:
-  * `RequestLoggingMiddleware`: Логування кожного HTTP-запиту з Correlation ID.
-  * `GlobalExceptionHandler`: Перехоплення винятків та повернення стандартизованого RFC 7807 Problem Details.
-  * `JwtMiddleware`: Авторизація токенів.
-* **OpenApi & Swagger**: Автоматична генерація схем OpenAPI з підтримкою версіонування.
+## 5. `RedisGUI.Server` (API Host & Presentation Layer)
+
+The ASP.NET Core 10 Web host serving RESTful APIs, SignalR WebSockets, and static client assets.
+
+### Features & Configuration:
+* **Minimal APIs & Carter**: Modular endpoint definitions organized under `Endpoints/`.
+* **SignalR Real-Time Hubs**:
+  * `/hub/metrics`: Streams ops/sec, memory RSS, and CPU utilization every 5 seconds.
+  * `/hub/keys`: Broadcasts key modifications and invalidation events.
+* **Static File Hosting**: Serves the compiled Angular 19 SPA from `wwwroot/browser` with HTML5 fallback routing.
+* **Security & Middleware**:
+  * JWT Bearer token authentication and role authorization policies.
+  * Global exception handling and RFC 7807 ProblemDetails middleware.
+  * CORS headers for cross-origin local development.
+* **OpenAPI / Scalar**: Interactive API documentation explorer available at `/scalar/v1`.
 
 ---
 
-## 6. `RedisGUI.Client` (Frontend / Angular 19)
-Сучасний односторінковий застосунок (SPA) на **Angular 19** без `NgModule` (чисті Standalone Components).
-* **Signals & State Management**:
-  * `AuthStore`: Реактивний сигнал стану користувача та ролей.
-  * `RedisKeysStore`: Керування списком ключів, пагінацією, фільтрами за типами та просторами імен.
-  * `ThemeService`: Керування 6 кольоровими палітрами та режимами Dark/Light.
-* **Value Handlers (Client Strategy)**:
-  * Клієнтське дзеркало серверних стратегій: `StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, `StreamTypeHandler`.
-  * Забезпечують валідацію, конвертацію візуального інтерфейсу в строгий JSON та назад.
-* **UI-компоненти**:
-  * `DashboardComponent`: Віджети здоров'я та списки підключень.
-  * `StorageManagementComponent`: Табличний та деревоподібний режими, панель ресурсів, живі метрики.
-  * `StorageValueEditorComponent`: Візуальні та JSON-редактори для кожного типу даних.
-  * `RedisCliDrawerComponent`: Висувний інтерактивний термінал консолі Redis з історією.
-  * `LoadTestDialogComponent`: Інтерфейс запуску тестів продуктивності.
-  * `SeedDataDialogComponent`: Майстер генерації демо-даних.
-  * `SlowlogDialogComponent`: Аналізатор повільних запитів.
-  * `CommandPaletteComponent`: Швидка палітра команд за комбінацією `Ctrl+K`.
+## 6. `RedisGUI.Client` (Angular 19 SPA Frontend)
+
+Modern, high-performance single-page application built on Angular 19 with zoneless Signals.
+
+### Architecture Highlights:
+* **Signals & Signal Stores**: Reactive state management with zero RxJS memory leak risks (`AuthStore`, `RedisKeysStore`, `ThemeService`).
+* **Dual Key Exploration**:
+  * **Table View**: Virtual-scrolled table with live TTL countdowns, size formatting, and custom sort headers.
+  * **Namespace Tree View**: Delimiter-based hierarchical folder browser (`:`, `/`, etc.) with direct subfolder key creation.
+* **Data Structure Visual Editors**:
+  * String: Plain text and Monaco JSON editor.
+  * Hash: Interactive key-value attribute grid.
+  * List, Set, Sorted Set: Element inspectors with push, pop, and score modifiers.
+  * Stream: Append-only log inspector with Entry IDs and dual Visual/JSON modes.
+* **Diagnostics & Utilities**:
+  * Slide-out interactive Redis CLI terminal drawer with command history (`↑` / `↓`).
+  * Command Palette (`Ctrl+K` / `Cmd+K`) for keyboard-driven navigation.
+  * Slowlog inspector, synthetic load test runner, and sample data generator.
+* **Design System**:
+  * 6 custom color schemes, Dark/Light mode toggle, and Tailwind CSS utility classes.
 
 ---
 
-## 7. `test/` (Тестові проєкти)
-Покриття юніт- та інтеграційними тестами:
-* **`RedisGUI.Domain.Tests`**: 132 тести. Тестування сутностей `RedisConnection`, `User`, `AuditLog`, моделей метрик, Value Objects, перевірок ролей.
-* **`RedisGUI.Shared.Tests`**: 98 тестів. Тестування `Result<T>`, обробки помилок, власного пайплайну MediatR.
-* **`RedisGUI.Application.Tests`**: 98 тестів. Тестування CQRS-хендлерів (AddKey, DuplicateKey, RenameKey, ExecuteCli, LoadTest, SeedData, GetKeyspaceInfo, GetKeyMemoryUsage) з використанням `Moq`.
-* **`RedisGUI.Infrastructure.Tests`**: 32 тести. Тестування пулу з'єднань, шифрування паролів, парсерів телеметрії, безпечного fallback'у хостів.
-* **Загальний підсумок**: 350+ успішних тестів (`0 failed`).
+## 7. Test Projects (Automated Test Suites)
+
+Comprehensive automated testing with over 350 test cases across 4 test projects:
+
+1. **`RedisGUI.Domain.Tests`**: Unit tests verifying entities, value objects, domain rules, and connection string builders.
+2. **`RedisGUI.Shared.Tests`**: Unit tests verifying functional `Result<T>` and custom MediatR pipeline behaviors.
+3. **`RedisGUI.Application.Tests`**: CQRS handler tests verifying commands, queries, and FluentValidation rules.
+4. **`RedisGUI.Infrastructure.Tests`**: Unit and integration tests verifying Strategy type handlers, metric parsers, and connection pooling.

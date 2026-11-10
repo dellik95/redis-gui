@@ -340,10 +340,11 @@ export const RedisKeysStore = signalStore(
 				value: any;
 				ttl?: number;
 				database?: number;
+				onSuccess?: () => void;
 			}>(
 				pipe(
 					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, key, type = RedisDataType.String, value, ttl, database }) => {
+					switchMap(({ connectionId, key, type = RedisDataType.String, value, ttl, database, onSuccess }) => {
 						const targetDb = database ?? store.activeDatabase();
 
 						const valObj = typeof value === 'object' && value !== null
@@ -370,6 +371,7 @@ export const RedisKeysStore = signalStore(
 										isLoading: false,
 										lastFetched: null // Invalidate cache
 									});
+									onSuccess?.();
 								}),
 								catchError((error) => {
 									patchState(store, {
