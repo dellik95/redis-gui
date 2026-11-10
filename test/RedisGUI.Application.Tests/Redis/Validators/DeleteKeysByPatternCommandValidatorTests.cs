@@ -1,5 +1,4 @@
-﻿using FluentAssertions;
-using NUnit.Framework;
+using FluentAssertions;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using System;
 

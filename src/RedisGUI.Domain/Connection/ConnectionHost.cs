@@ -2,7 +2,6 @@
 
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Guards;
-using RedisGUI.Domain.Primitives;
 using System.Text.RegularExpressions;
 
 

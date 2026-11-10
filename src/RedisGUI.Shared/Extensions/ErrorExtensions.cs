@@ -1,6 +1,4 @@
 using RedisGUI.Domain.Primitives;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace RedisGUI.Domain.Extensions;
 

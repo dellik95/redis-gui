@@ -1,6 +1,4 @@
-using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
-using RedisGUI.Application.Core.Behavior;
 
 namespace RedisGUI.Application;
 

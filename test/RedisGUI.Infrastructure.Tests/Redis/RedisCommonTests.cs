@@ -1,5 +1,4 @@
 using FluentAssertions;
-using NUnit.Framework;
 using RedisGUI.Infrastructure.Redis.Common;
 using RedisGUI.Infrastructure.Redis.LoadTesting;
 using RedisGUI.Infrastructure.Redis.Parsers;

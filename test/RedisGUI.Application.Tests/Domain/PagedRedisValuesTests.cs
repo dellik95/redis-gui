@@ -1,5 +1,4 @@
 using FluentAssertions;
-using NUnit.Framework;
 using RedisGUI.Domain.Redis;
 using System.Collections.Generic;
 

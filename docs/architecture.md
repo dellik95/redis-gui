@@ -2,7 +2,7 @@
 
 ## 1. Overview & Architectural Principles
 
-**RedisGUI** is an enterprise-grade, high-performance Redis management studio and diagnostics platform built on modern **.NET 10** and **Angular 19**.
+**RedisGUI** is an enterprise-grade, high-performance Redis management studio and diagnostics platform built on modern **.NET 10** and **Angular 22**.
 
 The solution strictly adheres to the following engineering paradigms:
 - **Clean Architecture & Onion Architecture**: Absolute separation of concerns where business rules (Domain) have zero dependencies on external frameworks or databases.
@@ -17,7 +17,7 @@ The solution strictly adheres to the following engineering paradigms:
 
 ```mermaid
 flowchart TD
-    subgraph Browser ["Client Application (Angular 19 Standalone)"]
+    subgraph Browser ["Client Application (Angular 22 Standalone)"]
         UI["UI Layer\n(Components, Directives, Pipes)"]
         SignalStore["Signal Stores\n(AuthStore, RedisKeysStore, ThemeService)"]
         Handlers["Type Handlers (Strategy)\n(String, Hash, List, Set, ZSet, Stream)"]
@@ -79,7 +79,7 @@ The project is structured into clean layers according to Robert C. Martin's Clea
 | **`RedisGUI.Application`** | CQRS command & query handlers, FluentValidation rules, pipeline behaviors (`AuditingBehavior`, `ValidationBehavior`, `LoggingBehavior`). | `RedisGUI.Domain`, `RedisGUI.Shared` |
 | **`RedisGUI.Infrastructure`** | StackExchange.Redis integration, `IConnectionPool`, type handler strategies, diagnostics, background telemetry jobs, EF Core persistence. | `RedisGUI.Application`, StackExchange.Redis, EF Core |
 | **`RedisGUI.Server`** | ASP.NET Core 10 Host, RESTful Minimal APIs, SignalR Hubs (`RedisMetricsHub`), JWT middleware, rate limiting, OpenAPI/Swagger. | `RedisGUI.Infrastructure` |
-| **`RedisGUI.Client`** | Modern Angular 19 application with signals, Angular Material 19, Tailwind CSS, Monaco editor, SignalR client. | Pure TypeScript / Web platform |
+| **`RedisGUI.Client`** | Modern Angular 22 application with signals, Angular Material 22, Tailwind CSS, Monaco editor, SignalR client. | Pure TypeScript / Web platform |
 
 ---
 

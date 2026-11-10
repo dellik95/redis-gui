@@ -1,5 +1,4 @@
 using RedisGUI.Domain.Primitives;
-using System;
 
 
 namespace RedisGUI.Shared.Primitives;

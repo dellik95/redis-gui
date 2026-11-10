@@ -10,7 +10,7 @@ This document provides a comprehensive collection of Mermaid diagrams detailing 
 flowchart TD
     subgraph UI ["Presentation Layer (Client)"]
         Browser["User Web Browser"]
-        AngularApp["Angular 19 SPA (Standalone & Signals)"]
+        AngularApp["Angular 22 SPA (Standalone & Signals)"]
         SignalStore["Signal Stores (Auth, RedisKeys, Theme)"]
         Browser <-->|DOM Events / Render| AngularApp
         AngularApp --> SignalStore

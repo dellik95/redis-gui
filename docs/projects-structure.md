@@ -1,6 +1,6 @@
 # RedisGUI — Solution Projects & Architecture Breakdown
 
-The **RedisGUI** solution (`RedisGUI.slnx`) is engineered according to Robert C. Martin's **Clean Architecture** principles with strict separation of concerns across concentric layers. The solution contains 10 projects: 5 core .NET modules, an Angular 19 SPA client, and 4 xUnit/Moq test suites.
+The **RedisGUI** solution (`RedisGUI.slnx`) is engineered according to Robert C. Martin's **Clean Architecture** principles with strict separation of concerns across concentric layers. The solution contains 10 projects: 5 core .NET modules, an Angular 22 SPA client, and 4 xUnit/Moq test suites.
 
 ```
 RedisGUI.slnx
@@ -11,7 +11,7 @@ RedisGUI.slnx
 │   ├── 📦 RedisGUI.Application/      # CQRS Commands, Queries, FluentValidation rules, and MediatR behaviors
 │   ├── 📦 RedisGUI.Infrastructure/   # StackExchange.Redis adapters, Strategy type handlers, EF Core, and SignalR
 │   ├── 📦 RedisGUI.Server/           # ASP.NET Core 10 host, Minimal APIs, SignalR hubs, and OpenAPI/Scalar
-│   └── 📦 RedisGUI.Client/           # Angular 19 Standalone, Signals, Tailwind CSS, and Monaco Editor
+│   └── 📦 RedisGUI.Client/           # Angular 22 Standalone, Signals, Tailwind CSS, and Monaco Editor
 │
 └── 📂 test/
     ├── 🧪 RedisGUI.Domain.Tests/
@@ -122,7 +122,7 @@ The ASP.NET Core 10 Web host serving RESTful APIs, SignalR WebSockets, and stati
 * **SignalR Real-Time Hubs**:
   * `/hub/metrics`: Streams ops/sec, memory RSS, and CPU utilization every 5 seconds.
   * `/hub/keys`: Broadcasts key modifications and invalidation events.
-* **Static File Hosting**: Serves the compiled Angular 19 SPA from `wwwroot/browser` with HTML5 fallback routing.
+* **Static File Hosting**: Serves the compiled Angular 22 SPA from `wwwroot/browser` with HTML5 fallback routing.
 * **Security & Middleware**:
   * JWT Bearer token authentication and role authorization policies.
   * Global exception handling and RFC 7807 ProblemDetails middleware.
@@ -131,9 +131,9 @@ The ASP.NET Core 10 Web host serving RESTful APIs, SignalR WebSockets, and stati
 
 ---
 
-## 6. `RedisGUI.Client` (Angular 19 SPA Frontend)
+## 6. `RedisGUI.Client` (Angular 22 SPA Frontend)
 
-Modern, high-performance single-page application built on Angular 19 with zoneless Signals.
+Modern, high-performance single-page application built on Angular 22 with zoneless Signals.
 
 ### Architecture Highlights:
 * **Signals & Signal Stores**: Reactive state management with zero RxJS memory leak risks (`AuthStore`, `RedisKeysStore`, `ThemeService`).

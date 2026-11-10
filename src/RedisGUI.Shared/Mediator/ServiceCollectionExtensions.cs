@@ -1,6 +1,4 @@
-using System;
 using Microsoft.Extensions.DependencyInjection;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Shared.Mediator
 {

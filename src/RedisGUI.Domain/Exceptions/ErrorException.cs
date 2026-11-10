@@ -1,7 +1,4 @@
 using RedisGUI.Domain.Extensions;
-using RedisGUI.Domain.Primitives;
-using System;
-using System.Collections.Generic;
 
 namespace RedisGUI.Domain.Exceptions;
 

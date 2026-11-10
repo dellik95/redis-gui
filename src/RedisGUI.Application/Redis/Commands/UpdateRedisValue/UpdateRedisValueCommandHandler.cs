@@ -1,7 +1,6 @@
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Primitives;
-using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System.Collections.Generic;

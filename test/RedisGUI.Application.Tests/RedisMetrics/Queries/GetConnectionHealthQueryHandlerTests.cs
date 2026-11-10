@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Moq;
-using NUnit.Framework;
 using RedisGUI.Application.Connections.GetConnectionHealth;
 using RedisGUI.Domain.Connection;
 using System;

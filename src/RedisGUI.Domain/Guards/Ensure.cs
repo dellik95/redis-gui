@@ -1,6 +1,4 @@
 using RedisGUI.Domain.Exceptions;
-using RedisGUI.Domain.Primitives;
-using System;
 
 namespace RedisGUI.Domain.Guards;
 
