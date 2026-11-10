@@ -2,9 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, Add-new-features ]
   pull_request:
     branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
   # ==========================================
@@ -22,6 +23,7 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
+          dotnet-quality: 'preview'
 
       - name: Restore dependencies
         run: dotnet restore RedisGUI.slnx
