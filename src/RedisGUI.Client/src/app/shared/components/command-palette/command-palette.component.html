@@ -1,0 +1,58 @@
+<div class="command-palette-container" (keydown)="onKeyDown($event)">
+	<div class="search-header">
+		<mat-icon class="search-icon">search</mat-icon>
+		<input
+			#searchInput
+			type="text"
+			class="palette-input"
+			[ngModel]="searchQuery()"
+			(ngModelChange)="searchQuery.set($event); selectedIndex.set(0)"
+			[ngModelOptions]="{standalone: true}"
+			placeholder="Type a command, search keys, switch DB... (e.g. 'DB 1', 'export', 'user')"
+			autocomplete="off"
+			spellcheck="false"
+		/>
+		<span class="esc-badge" (click)="close()">ESC</span>
+	</div>
+
+	<div class="results-list">
+		@if (filteredCommands().length === 0) {
+			<div class="no-results">
+				<mat-icon>search_off</mat-icon>
+				<span>No commands or keys found for "{{ searchQuery() }}"</span>
+			</div>
+		}
+
+		@for (item of filteredCommands(); track item.id; let i = $index) {
+			<div
+				class="result-item"
+				[class.selected]="i === selectedIndex()"
+				(click)="executeItem(item)"
+				(mouseenter)="selectedIndex.set(i)"
+			>
+				<div class="item-icon-wrapper" [class]="'cat-' + item.category">
+					<mat-icon>{{ item.icon }}</mat-icon>
+				</div>
+
+				<div class="item-content">
+					<div class="item-title">{{ item.title }}</div>
+					@if (item.subtitle) {
+						<div class="item-subtitle">{{ item.subtitle }}</div>
+					}
+				</div>
+
+				@if (item.badge) {
+					<span class="item-badge" [class]="'cat-' + item.category">{{ item.badge }}</span>
+				}
+			</div>
+		}
+	</div>
+
+	<div class="palette-footer">
+		<div class="footer-hints">
+			<span class="footer-hint"><kbd>&uarr;&darr;</kbd> Navigate</span>
+			<span class="footer-hint"><kbd>&crarr;</kbd> Select</span>
+			<span class="footer-hint"><kbd>ESC</kbd> Close</span>
+		</div>
+	</div>
+</div>

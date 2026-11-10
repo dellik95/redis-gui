@@ -1,7 +1,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Domain.RedisMetrics.Abstractions;
 

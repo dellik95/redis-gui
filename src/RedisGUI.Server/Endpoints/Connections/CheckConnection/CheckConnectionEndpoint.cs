@@ -1,10 +1,10 @@
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.CheckConnection;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.CheckConnection
 {
@@ -24,7 +24,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CheckConnection
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapPost("connections/check", async (ISender sender, CheckConnectionRequest request) =>
+			routerBuilder.MapPost("connections/check", async (IMediator sender, CheckConnectionRequest request) =>
 				{
 					var createConnectionCommand = new CheckConnectionCommand(
 						request.Host,

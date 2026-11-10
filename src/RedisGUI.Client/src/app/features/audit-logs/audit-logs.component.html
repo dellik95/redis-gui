@@ -1,0 +1,327 @@
+<div class="audit-logs-container">
+	<!-- Access Denied for Non-Admins -->
+	@if (!isAdmin()) {
+		<mat-card class="access-denied-card">
+			<mat-card-content>
+				<mat-icon class="lock-icon">lock</mat-icon>
+				<h2>Access Restricted</h2>
+				<p>You need administrator privileges to view audit logs.</p>
+			</mat-card-content>
+		</mat-card>
+	} @else {
+		<!-- Unified Primary Header -->
+		<app-page-header
+			icon="history"
+			title="Audit Logs"
+			subtitle="Track all system activity and changes"
+			badge="Admin"
+			badgeColor="warn"
+		>
+			<div actions>
+				<button class="btn-primary" (click)="loadAuditLogs()">
+					<mat-icon>refresh</mat-icon>
+					<span>Refresh</span>
+				</button>
+			</div>
+		</app-page-header>
+
+		<!-- Error Display -->
+		@if (error()) {
+			<mat-card class="error-card">
+				<mat-card-content>
+					<mat-icon color="warn">error</mat-icon>
+					<span>{{ error() }}</span>
+					<button mat-icon-button (click)="auditStore.clearError()">
+						<mat-icon>close</mat-icon>
+					</button>
+				</mat-card-content>
+			</mat-card>
+		}
+
+		<!-- Filters Panel -->
+		<mat-card class="filters-card">
+			<mat-card-header>
+				<mat-icon mat-card-avatar>filter_list</mat-icon>
+				<mat-card-title>Filters</mat-card-title>
+			</mat-card-header>
+			<mat-card-content>
+				<div class="filters-grid">
+					<!-- Entity Type Filter -->
+					<ui-select
+						[value]="filters().entityType"
+						(valueChange)="updateFilter('entityType', $event)"
+						[options]="entityTypeOptions"
+						label="Entity Type"
+						icon="category"
+					/>
+
+					<!-- Entity ID Filter -->
+					<ui-input
+						[value]="filters().entityId || ''"
+						(valueChange)="updateFilter('entityId', $any($event))"
+						label="Entity ID"
+						placeholder="Enter entity ID..."
+						icon="fingerprint"
+					/>
+
+					<!-- User ID Filter -->
+					<ui-input
+						[value]="filters().userId || ''"
+						(valueChange)="updateFilter('userId', $any($event))"
+						label="User ID"
+						placeholder="Enter user ID..."
+						icon="person"
+					/>
+
+					<!-- From Date -->
+					<ui-input
+						type="date"
+						[value]="formatDateForInput(filters().fromDate)"
+						(valueChange)="updateFilter('fromDate', $event ? $event + 'T00:00:00Z' : undefined)"
+						label="From Date"
+						icon="calendar_today"
+					/>
+
+					<!-- To Date -->
+					<ui-input
+						type="date"
+						[value]="formatDateForInput(filters().toDate)"
+						(valueChange)="updateFilter('toDate', $event ? $event + 'T23:59:59Z' : undefined)"
+						label="To Date"
+						icon="event"
+					/>
+				</div>
+
+				<div class="filter-actions">
+					<button class="btn-ghost" (click)="resetFilters()">
+						<mat-icon>clear</mat-icon>
+						<span>Clear Filters</span>
+					</button>
+					<button class="btn-primary" (click)="applyFilters()">
+						<mat-icon>search</mat-icon>
+						<span>Apply Filters</span>
+					</button>
+				</div>
+			</mat-card-content>
+		</mat-card>
+
+		<!-- Stats Summary -->
+		<div class="stats-row">
+			<div class="stat-card">
+				<mat-icon>list_alt</mat-icon>
+				<div class="stat-value">{{ totalCount() | number }}</div>
+				<div class="stat-label">Total Records</div>
+			</div>
+			<div class="stat-card">
+				<mat-icon>pages</mat-icon>
+				<div class="stat-value">{{ currentPage() }}</div>
+				<div class="stat-label">Current Page</div>
+			</div>
+			<div class="stat-card">
+				<mat-icon>library_books</mat-icon>
+				<div class="stat-value">{{ totalPages() }}</div>
+				<div class="stat-label">Total Pages</div>
+			</div>
+		</div>
+
+		<!-- Audit Logs Table -->
+		<mat-card class="table-card">
+			@if (isLoading()) {
+				<mat-progress-bar mode="indeterminate" class="audit-table-progress-bar"></mat-progress-bar>
+			}
+			<mat-card-content>
+				@if (items().length === 0) {
+					@if (isLoading()) {
+						<div class="table-loading-inline">
+							<mat-spinner diameter="40"></mat-spinner>
+							<span>Loading audit logs...</span>
+						</div>
+					} @else {
+						<div class="empty-state">
+							<mat-icon>inbox</mat-icon>
+							<h3>No Audit Logs Found</h3>
+							<p>No records match your current filters.</p>
+						</div>
+					}
+				} @else {
+					<div class="table-container">
+						<table mat-table [dataSource]="items()" class="audit-table" multiTemplateDataRows>
+							<!-- Timestamp Column -->
+							<ng-container matColumnDef="timestamp">
+								<th mat-header-cell *matHeaderCellDef>Timestamp</th>
+								<td mat-cell *matCellDef="let row">
+									<div class="timestamp-cell">
+										<span class="date">{{ row.timestamp | date:'mediumDate' }}</span>
+										<span class="time">{{ row.timestamp | date:'mediumTime' }}</span>
+									</div>
+								</td>
+							</ng-container>
+
+							<!-- Action Column -->
+							<ng-container matColumnDef="action">
+								<th mat-header-cell *matHeaderCellDef>Action</th>
+								<td mat-cell *matCellDef="let row">
+									<mat-chip [color]="getActionColor(row.action)">
+										<mat-icon>{{ getActionIcon(row.action) }}</mat-icon>
+										{{ row.action }}
+									</mat-chip>
+								</td>
+							</ng-container>
+
+							<!-- Entity Type Column -->
+							<ng-container matColumnDef="entityType">
+								<th mat-header-cell *matHeaderCellDef>Entity Type</th>
+								<td mat-cell *matCellDef="let row">
+									<span class="entity-type">{{ row.entityType }}</span>
+								</td>
+							</ng-container>
+
+							<!-- Entity ID Column -->
+							<ng-container matColumnDef="entityId">
+								<th mat-header-cell *matHeaderCellDef>Entity ID</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.entityId) {
+										<code class="entity-id" [matTooltip]="row.entityId">{{ row.entityId | slice:0:8 }}...</code>
+									} @else {
+										<span class="na">N/A</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- User ID Column -->
+							<ng-container matColumnDef="userId">
+								<th mat-header-cell *matHeaderCellDef>User</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.userId) {
+										<code class="user-id" [matTooltip]="row.userId">{{ row.userId | slice:0:8 }}...</code>
+									} @else {
+										<span class="na">System</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- IP Address Column -->
+							<ng-container matColumnDef="ipAddress">
+								<th mat-header-cell *matHeaderCellDef>IP Address</th>
+								<td mat-cell *matCellDef="let row">
+									@if (row.ipAddress) {
+										<span class="ip-address">{{ row.ipAddress }}</span>
+									} @else {
+										<span class="na">–</span>
+									}
+								</td>
+							</ng-container>
+
+							<!-- Details Column -->
+							<ng-container matColumnDef="details">
+								<th mat-header-cell *matHeaderCellDef>Details</th>
+								<td mat-cell *matCellDef="let row">
+									<button mat-icon-button (click)="toggleExpanded(row)" 
+										[matTooltip]="expandedRowId() === row.id ? 'Collapse' : 'Expand'">
+										<mat-icon>{{ expandedRowId() === row.id ? 'expand_less' : 'expand_more' }}</mat-icon>
+									</button>
+								</td>
+							</ng-container>
+
+							<!-- Expanded Detail Row -->
+							<ng-container matColumnDef="expandedDetail">
+								<td mat-cell *matCellDef="let row" [attr.colspan]="displayedColumns.length">
+									<div class="detail-container" [@detailExpand]="expandedRowId() === row.id ? 'expanded' : 'collapsed'">
+										@if (expandedRowId() === row.id) {
+											<div class="detail-content">
+												@if (row.userAgent) {
+													<div class="detail-section">
+														<strong>User Agent:</strong>
+														<span>{{ row.userAgent }}</span>
+													</div>
+												}
+												@if (row.oldValue) {
+													<div class="detail-section">
+														<strong>Previous Value:</strong>
+														<pre class="json-display old-value">{{ formatJson(row.oldValue) }}</pre>
+													</div>
+												}
+												@if (row.newValue) {
+													<div class="detail-section">
+														<strong>New Value:</strong>
+														<pre class="json-display new-value">{{ formatJson(row.newValue) }}</pre>
+													</div>
+												}
+												@if (!row.oldValue && !row.newValue && !row.userAgent) {
+													<div class="no-details">No additional details available</div>
+												}
+											</div>
+										}
+									</div>
+								</td>
+							</ng-container>
+
+							<tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+							<tr mat-row *matRowDef="let row; columns: displayedColumns;" 
+								class="audit-row"
+								[class.expanded]="expandedRowId() === row.id"></tr>
+							<tr mat-row *matRowDef="let row; columns: ['expandedDetail']" class="detail-row"></tr>
+						</table>
+					</div>
+				}
+
+				<!-- Custom Modern Pagination Bar with ui-select and navigation controls -->
+				<div class="custom-paginator-bar">
+					<div class="paginator-size-selector">
+						<span class="size-label">Items per page:</span>
+						<ui-select
+							[value]="pageSize()"
+							(valueChange)="onPageSizeChange($event)"
+							[options]="pageSizeOptions"
+							size="sm"
+							[fullWidth]="false"
+						/>
+					</div>
+
+					<div class="paginator-info">
+						Showing <strong>{{ pageStart() }}–{{ pageEnd() }}</strong> of <strong>{{ totalCount() | number }}</strong> records
+					</div>
+
+					<div class="paginator-nav">
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="currentPage() <= 1" 
+							(click)="goToPage(1)"
+							matTooltip="First page">
+							<mat-icon>first_page</mat-icon>
+						</button>
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="!hasPreviousPage()" 
+							(click)="goToPage(currentPage() - 1)"
+							matTooltip="Previous page">
+							<mat-icon>chevron_left</mat-icon>
+						</button>
+						
+						<span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() || 1 }}</span>
+
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="!hasNextPage()" 
+							(click)="goToPage(currentPage() + 1)"
+							matTooltip="Next page">
+							<mat-icon>chevron_right</mat-icon>
+						</button>
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="currentPage() >= totalPages()" 
+							(click)="goToPage(totalPages())"
+							matTooltip="Last page">
+							<mat-icon>last_page</mat-icon>
+						</button>
+					</div>
+				</div>
+			</mat-card-content>
+		</mat-card>
+	}
+</div>
+

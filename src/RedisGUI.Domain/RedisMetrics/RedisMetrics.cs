@@ -16,6 +16,15 @@ public class RedisMetrics
 	[RedisMetric("Memory", "used_memory")]
 	public double MemoryUsage { get; set; }
 
+	[RedisMetric("Memory", "used_memory_peak")]
+	public double PeakMemoryUsage { get; set; }
+
+	[RedisMetric("Stats", "instantaneous_ops_per_sec")]
+	public long OpsPerSecond { get; set; }
+
+	[RedisMetric("Clients", "connected_clients")]
+	public long ConnectedClients { get; set; }
+
 	[RedisMetric("CPU", "used_cpu_sys")]
 	public double CpuUsageSystem { get; set; }
 

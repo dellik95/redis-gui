@@ -1,4 +1,4 @@
-﻿using MediatR;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Domain.Abstraction;
 

@@ -1,0 +1,153 @@
+@use '../../../styles/variables' as *;
+@use '../../../styles/mixins' as *;
+
+// ============================================================================
+// Full Screen Auth Container
+// ============================================================================
+
+:host {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  font-family: 'Roboto', sans-serif; // Consistent font with app
+}
+
+.auth-container {
+  @include flex-row;
+  width: 100%;
+  height: 100%;
+  background: var(--mat-sys-surface-container);
+  overflow: hidden;
+}
+
+.auth-content {
+  flex: 1;
+  @include flex-column;
+  @include flex-center;
+  padding: $spacing-xl;
+  overflow-y: auto;
+  @include custom-scrollbar;
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+// ============================================================================
+// Logo Section
+// ============================================================================
+
+.logo-section {
+  text-align: center;
+  margin-bottom: $spacing-xl * 2;
+  animation: fadeInDown $transition-slow ease-out;
+
+  .logo {
+    @include flex-center;
+    width: $auth-logo-size;
+    height: $auth-logo-size;
+    margin: 0 auto $spacing-lg;
+    background: var(--mat-sys-primary-container);
+    backdrop-filter: $backdrop-blur;
+    border-radius: $border-radius-lg;
+    box-shadow: $box-shadow-glassmorphic;
+
+    mat-icon {
+      font-size: $auth-logo-icon-size;
+      width: $auth-logo-icon-size;
+      height: $auth-logo-icon-size;
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+
+  .app-name {
+    font-size: $font-size-xl * 1.5;
+    font-weight: $font-weight-bold;
+    color: var(--mat-sys-on-surface);
+    margin: 0 0 $spacing-sm;
+  }
+
+  .app-tagline {
+    font-size: $font-size-base;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+    font-weight: $font-weight-normal;
+  }
+}
+
+// ============================================================================
+// Auth Form Wrapper
+// ============================================================================
+
+.auth-form-wrapper {
+  width: 100%;
+  max-width: $auth-card-width-lg;
+  animation: fadeInUp $transition-slow ease-out 0.2s both;
+}
+
+// ============================================================================
+// Fractal Animation Component
+// Handled by app-fractal-animation component
+// ============================================================================
+
+// ============================================================================
+// Animations
+// ============================================================================
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ============================================================================
+// Responsive Design
+// ============================================================================
+
+@include tablet {
+  .auth-container {
+    flex-direction: column;
+  }
+
+  .auth-content {
+    padding: $spacing-md;
+  }
+
+  // Fractal animation responsive styles handled by component
+
+  .logo-section {
+    margin-bottom: $spacing-xl;
+
+    .logo {
+      width: $auth-logo-size-mobile;
+      height: $auth-logo-size-mobile;
+
+      mat-icon {
+        font-size: $auth-logo-icon-size-mobile;
+        width: $auth-logo-icon-size-mobile;
+        height: $auth-logo-icon-size-mobile;
+      }
+    }
+
+    .app-name {
+      font-size: $font-size-xl;
+    }
+  }
+}
+
+// Dark theme is handled by Material Design 3 CSS variables

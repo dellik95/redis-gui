@@ -1,0 +1,11 @@
+<div class="breadcrumb-container">
+  @for (breadcrumb of breadcrumbs(); track breadcrumb.url) {
+    <div class="breadcrumb-item">
+      @if ($last) {
+        {{ breadcrumb.label }}
+      } @else {
+        <a class="breadcrumb-link" [routerLink]="breadcrumb.url">{{ breadcrumb.label }}</a> &gt;
+      }
+    </div>
+  }
+</div>

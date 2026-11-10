@@ -1,0 +1,123 @@
+:host {
+  display: block;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--mat-sys-on-surface);
+  padding: 20px 24px 12px 24px !important;
+  margin: 0 !important;
+
+  .title-icon {
+    color: var(--mat-sys-primary, #1976d2);
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.dialog-content {
+  padding: 12px 24px 20px 24px !important;
+  max-height: 75vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.connection-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.host-port-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.database-details {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0;
+
+  .database-checkbox {
+    user-select: none;
+  }
+
+  .db-field {
+    width: 140px;
+    margin: 0;
+  }
+}
+
+.credentials-accordion {
+  margin-top: 4px;
+
+  mat-expansion-panel {
+    border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.1));
+    border-radius: 8px !important;
+    box-shadow: none !important;
+
+    mat-expansion-panel-header {
+      padding: 0 16px;
+
+      mat-panel-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13.5px;
+        color: var(--mat-sys-on-surface-variant);
+
+        .panel-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          opacity: 0.8;
+        }
+      }
+    }
+  }
+
+  .credentials-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 12px;
+  }
+}
+
+.dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 20px 24px !important;
+  margin: 0 !important;
+  border-top: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.06));
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-spinner {
+    display: inline-block;
+  }
+}

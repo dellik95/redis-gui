@@ -1,12 +1,6 @@
-using Microsoft.Extensions.Logging;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Domain.Primitives;
 using StackExchange.Redis;
-using System;
 using System.Collections.Concurrent;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Options;
 
 namespace RedisGUI.Infrastructure.Redis;
 
@@ -45,7 +39,7 @@ internal sealed class ConnectionPool : IConnectionPool
 	{
 		try
 		{
-			var connection = await connections.GetOrAdd(
+			ConnectionMultiplexer connection = await connections.GetOrAdd(
 				configuration,
 				_ => CreateConnectionAsync(configuration, cancellationToken));
 
@@ -71,8 +65,7 @@ internal sealed class ConnectionPool : IConnectionPool
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Unexpected error while getting Redis connection");
-			return Result.Failure<ConnectionMultiplexer>(
-				new Error("ConnectionPool.UnexpectedError", "An unexpected error occurred"));
+			return Result.Failure<ConnectionMultiplexer>(DomainErrors.ConnectionPool.UnexpectedError);
 		}
 	}
 
@@ -83,26 +76,26 @@ internal sealed class ConnectionPool : IConnectionPool
 		string configuration,
 		CancellationToken cancellationToken)
 	{
-		var connection = await ConnectionMultiplexer.ConnectAsync(configuration)
-			.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		ConnectionMultiplexer connection;
+
+		try
+		{
+			connection = await ConnectionMultiplexer.ConnectAsync(configuration)
+				.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		}
+		catch (Exception ex) when (configuration.StartsWith("redis:", StringComparison.OrdinalIgnoreCase) || configuration.StartsWith("redis,", StringComparison.OrdinalIgnoreCase))
+		{
+			// Fallback: If host "redis" cannot be resolved outside Docker, attempt 127.0.0.1
+			string fallbackConfig = "127.0.0.1" + configuration[5..];
+			logger.LogWarning(ex, "Failed to connect to '{Config}', attempting fallback to '{FallbackConfig}'", configuration, fallbackConfig);
+
+			connection = await ConnectionMultiplexer.ConnectAsync(fallbackConfig)
+				.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		}
 
 		connection.ConnectionFailed += OnConnectionFailed;
 		connection.ConnectionRestored += OnConnectionRestored;
 		connection.ErrorMessage += OnErrorMessage;
-
-		// Monitor connection state and remove if idle
-		//_ = Task.Run(async () =>
-		//{
-		//	while (!disposed && connection.IsConnected)
-		//	{
-		//		await Task.Delay(options.IdleTimeout, cancellationToken);
-		//		if (connection.GetCounters().TotalOutstanding == 0)
-		//		{
-		//			await RemoveConnectionAsync(configuration.ToString());
-		//			break;
-		//		}
-		//	}
-		//}, cancellationToken);
 
 		return connection;
 	}
@@ -112,7 +105,7 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// </summary>
 	private async Task RemoveConnectionAsync(string key)
 	{
-		if (connections.TryRemove(key, out var connection))
+		if (connections.TryRemove(key, out Task<ConnectionMultiplexer>? connection))
 		{
 			ConnectionMultiplexer multiplexer;
 			if (!connection.IsCompleted)
@@ -136,19 +129,19 @@ internal sealed class ConnectionPool : IConnectionPool
 	/// <summary>
 	/// Handles connection failure events
 	/// </summary>
-	private void OnConnectionFailed(object sender, ConnectionFailedEventArgs e) =>
+	private void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e) =>
 		logger.LogWarning(
 			e.Exception,
 			"Redis connection failed. Endpoint: {Endpoint}, FailureType: {FailureType}",
 			e.EndPoint,
 			e.FailureType);
 
-	private void OnConnectionRestored(object sender, ConnectionFailedEventArgs e) =>
+	private void OnConnectionRestored(object? sender, ConnectionFailedEventArgs e) =>
 		logger.LogInformation(
 			"Redis connection restored. Endpoint: {Endpoint}",
 			e.EndPoint);
 
-	private void OnErrorMessage(object sender, RedisErrorEventArgs e) =>
+	private void OnErrorMessage(object? sender, RedisErrorEventArgs e) =>
 		logger.LogError(
 			"Redis error: {Message}. Endpoint: {Endpoint}",
 			e.Message,
@@ -163,7 +156,7 @@ internal sealed class ConnectionPool : IConnectionPool
 
 		disposed = true;
 
-		foreach (var connection in connections.Values)
+		foreach (Task<ConnectionMultiplexer> connection in connections.Values)
 		{
 			ConnectionMultiplexer multiplexer;
 			if (!connection.IsCompleted)
@@ -194,9 +187,9 @@ internal sealed class ConnectionPool : IConnectionPool
 
 		disposed = true;
 
-		foreach (var connection in connections.Values)
+		foreach (Task<ConnectionMultiplexer> connection in connections.Values)
 		{
-			var multiplexer = !connection.IsCompleted ? connection.GetAwaiter().GetResult() : connection.Result;
+			ConnectionMultiplexer multiplexer = !connection.IsCompleted ? connection.GetAwaiter().GetResult() : connection.Result;
 
 			multiplexer.ConnectionFailed -= OnConnectionFailed;
 			multiplexer.ConnectionRestored -= OnConnectionRestored;

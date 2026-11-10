@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Concurrent;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Extensions;
 using RedisGUI.Infrastructure.Redis;
+using System.Collections.Concurrent;
+using System.Linq;
 
 namespace RedisGUI.Infrastructure.RedisMetrics;
 

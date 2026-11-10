@@ -1,0 +1,59 @@
+/**
+ * Theme Variables
+ * 
+ * Centralized theme variable definitions for consistent styling across the application.
+ * Mapped to semantic CSS variables driven by the active theme.
+ */
+
+// Status Colors
+$color-healthy: #10b981;
+$color-degraded: #f59e0b;
+$color-unhealthy: #ef4444;
+$color-unknown: #94a3b8;
+
+// Background Colors
+$bg-scrim: rgba(0, 0, 0, 0.6);
+$bg-error-container: rgba(239, 68, 68, 0.15);
+$bg-surface-container: var(--color-card, #0f172a);
+$bg-surface-container-high: var(--color-card-hover, #1e293b);
+
+// Text Colors
+$text-on-surface: var(--color-text, #f8fafc);
+$text-on-surface-variant: var(--color-text-muted, #94a3b8);
+$text-on-error-container: #fca5a5;
+$text-error: #ef4444;
+$text-primary: var(--color-accent, #6366f1);
+$text-tertiary: #10b981;
+
+// Border Colors
+$border-divider: var(--color-border, #1e293b);
+$border-outline: var(--color-border, #1e293b);
+$border-outline-variant: var(--color-border-light, #334155);
+
+// Spacing
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 24px;
+$spacing-xxl: 32px;
+$spacing-xxxl: 48px;
+
+// Border Radius
+$radius-sm: 6px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
+
+// Shadows
+$shadow-level1: 0 1px 3px rgba(0, 0, 0, 0.2);
+$shadow-level2: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+$shadow-level3: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
+$shadow-level4: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+$shadow-level5: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+
+// Transitions
+$transition-fast: 0.15s ease;
+$transition-normal: 0.2s ease;
+$transition-slow: 0.3s ease;

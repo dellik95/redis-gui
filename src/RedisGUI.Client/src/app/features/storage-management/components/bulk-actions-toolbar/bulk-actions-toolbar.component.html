@@ -1,0 +1,51 @@
+<div class="bulk-toolbar" [class.has-selection]="hasSelection()">
+  @if (hasSelection()) {
+    <div class="selection-actions-bar">
+      <span class="count">{{ selectedCount() }} selected</span>
+      <button class="btn-danger-compact" (click)="deleteSelected.emit()" matTooltip="Delete all selected keys" [disabled]="loading()">
+        <mat-icon>delete_sweep</mat-icon>
+        <span>Delete ({{ selectedCount() }})</span>
+      </button>
+      <button class="btn-secondary-compact" (click)="setBulkTtl.emit()" matTooltip="Set TTL or persist selected keys" [disabled]="loading()">
+        <mat-icon>timer</mat-icon>
+        <span>TTL</span>
+      </button>
+      <button class="btn-ghost-compact" (click)="clearSelection.emit()" matTooltip="Clear selection" [disabled]="loading()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  }
+
+  <div class="menu-actions-group">
+    <button class="btn-secondary compact-btn" [matMenuTriggerFor]="exportMenu" matTooltip="Export or Import Redis data" [disabled]="loading()">
+      <mat-icon>import_export</mat-icon>
+      <span>Export / Import</span>
+    </button>
+    <mat-menu #exportMenu="matMenu">
+      <button mat-menu-item (click)="exportJson.emit()">
+        <mat-icon>download</mat-icon>
+        <span>Export JSON (pattern {{ pattern() }})</span>
+      </button>
+      <button mat-menu-item (click)="exportCsv.emit()">
+        <mat-icon>download</mat-icon>
+        <span>Export CSV (pattern {{ pattern() }})</span>
+      </button>
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="importData.emit()">
+        <mat-icon>upload</mat-icon>
+        <span>Import Data</span>
+      </button>
+    </mat-menu>
+
+    <button class="btn-secondary compact-btn" [matMenuTriggerFor]="patternMenu" matTooltip="Bulk delete by pattern" [disabled]="loading()">
+      <mat-icon>filter_list</mat-icon>
+      <span>Delete by Pattern</span>
+    </button>
+    <mat-menu #patternMenu="matMenu">
+      <button mat-menu-item (click)="deleteByPattern.emit()">
+        <mat-icon>delete</mat-icon>
+        <span>Delete keys matching '{{ pattern() }}'</span>
+      </button>
+    </mat-menu>
+  </div>
+</div>

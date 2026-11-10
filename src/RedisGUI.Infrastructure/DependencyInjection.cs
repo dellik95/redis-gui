@@ -1,23 +1,39 @@
 using Asp.Versioning;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using RedisGUI.Domain.Abstraction;
+using Microsoft.IdentityModel.Tokens;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction.Cryptography;
+using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
+using RedisGUI.Domain.Users;
+using RedisGUI.Infrastructure.Authentication;
 using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Cryptography;
+using RedisGUI.Infrastructure.HealthChecks;
 using RedisGUI.Infrastructure.Persistence;
 using RedisGUI.Infrastructure.Persistence.Cache;
 using RedisGUI.Infrastructure.Persistence.Interceptors;
 using RedisGUI.Infrastructure.Persistence.Repositories;
+using RedisGUI.Infrastructure.Redis.Services;
+using RedisGUI.Infrastructure.Redis.TypeHandlers;
 using RedisGUI.Infrastructure.Persistence.SqlProcessor;
 using RedisGUI.Infrastructure.Redis;
 using RedisGUI.Infrastructure.RedisMetrics;
+using RedisGUI.Infrastructure.Services;
 using RedisGUI.Infrastructure.SignalR;
+using System.Linq;
+using System.Text;
+using Microsoft.EntityFrameworkCore;
+using MySql.EntityFrameworkCore.Extensions;
 
 namespace RedisGUI.Infrastructure;
 
@@ -34,15 +50,36 @@ public static class DependencyInjection
 	/// <returns>The service collection for chaining</returns>
 	public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
 	{
+		// Register PasswordEncryptor for both interfaces
 		services.AddSingleton<PasswordEncryptor>();
-		services.AddSingleton<IPasswordDecrypt>(svc => svc.GetRequiredService<PasswordEncryptor>());
-		services.AddSingleton<IPasswordEncryptor>(svc => svc.GetRequiredService<PasswordEncryptor>());
+		services.AddSingleton<IPasswordDecrypt, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
+		services.AddSingleton<IPasswordEncryptor, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 
 		services.AddOptions<ConnectionPoolOptions>()
 			.Bind(configuration.GetSection(ConnectionPoolOptions.Key));
 
 		services.AddSingleton<IConnectionPool, ConnectionPool>();
+
+		// Register specialized Redis services
+		services.AddSingleton<IRedisTypeHandler, StringTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, ListTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, SetTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, SortedSetTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, HashTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, StreamTypeHandler>();
+		services.AddSingleton<IRedisTypeHandlerFactory, RedisTypeHandlerFactory>();
+		services.AddScoped<IRedisConnectionService, RedisConnectionService>();
+		services.AddScoped<IRedisKeyService, RedisKeyService>();
+		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
+		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
+		services.AddScoped<IRedisCliService, RedisCliService>();
+		services.AddScoped<IRedisDiagnosticsService, RedisDiagnosticsService>();
+		services.AddScoped<IRedisValueService, RedisValueService>();
+
+		// Keep legacy IConnectionService for backward compatibility
 		services.AddScoped<IConnectionService, ConnectionService>();
+
+		AddAuthentication(services, configuration);
 
 		AddPersistence(services, configuration);
 
@@ -79,6 +116,69 @@ public static class DependencyInjection
 	}
 
 	/// <summary>
+	/// Adds authentication and authorization services
+	/// </summary>
+	/// <param name="services">The service collection to add services to</param>
+	/// <param name="configuration">Application configuration</param>
+	private static void AddAuthentication(IServiceCollection services, IConfiguration configuration)
+	{
+		// Configure JWT settings with validation
+		services.AddOptions<JwtSettings>()
+			.Bind(configuration.GetSection(JwtSettings.SectionName))
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+
+		// Register authentication services
+		services.AddScoped<IPasswordHasher, PasswordHasher>();
+		services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+		services.AddScoped<ICurrentUserService, CurrentUserService>();
+		services.AddHttpContextAccessor();
+
+		JwtSettings? jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>();
+		if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.SecretKey))
+		{
+			throw new InvalidOperationException("JWT settings are not configured properly");
+		}
+
+		services.AddAuthentication(options =>
+		{
+			options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+			options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+		})
+		.AddJwtBearer(options =>
+		{
+			options.TokenValidationParameters = new TokenValidationParameters
+			{
+				ValidateIssuer = true,
+				ValidateAudience = true,
+				ValidateLifetime = true,
+				ValidateIssuerSigningKey = true,
+				ValidIssuer = jwtSettings.Issuer,
+				ValidAudience = jwtSettings.Audience,
+				IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.SecretKey))
+			};
+		});
+
+		services.AddAuthorization(options =>
+		{
+			// Admin-only policy
+			options.AddPolicy(Authorization.Policies.AdminOnly, policy =>
+				policy.RequireRole("Admin"));
+
+			// Write access policy (Admin or User, excludes ReadOnly)
+			options.AddPolicy(Authorization.Policies.WriteAccess, policy =>
+				policy.RequireRole("Admin", "User"));
+
+			// Authenticated policy
+			options.AddPolicy(Authorization.Policies.Authenticated, policy =>
+				policy.RequireAuthenticatedUser());
+		});
+
+		// Register authorization handlers
+		services.AddScoped<IAuthorizationHandler, Authorization.ConnectionOwnershipHandler>();
+	}
+
+	/// <summary>
 	/// Adds persistence services to the service collection
 	/// </summary>
 	/// <param name="services">The service collection to add services to</param>
@@ -90,11 +190,12 @@ public static class DependencyInjection
 		services.AddSingleton<ISqlCommandsProcessor, SqlCommandsProcessor>();
 		services.AddSingleton<ICacheKeyProvider, CacheKeyProvider>();
 		services.AddScoped<CachingInterceptor>();
+		services.AddScoped<DomainEventsDispatcherInterceptor>();
 
 		services.AddDbContext<ApplicationDbContext>((sp, cgf) =>
 			{
-				var options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
-				var config = options.Value;
+				IOptions<DatabaseConfiguration> options = sp.GetRequiredService<IOptions<DatabaseConfiguration>>();
+				DatabaseConfiguration config = options.Value;
 
 				if (config.IsInMemory)
 				{
@@ -102,13 +203,17 @@ public static class DependencyInjection
 					return;
 				}
 
-				cgf.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder =>
+				cgf.UseMySQL(config.ConnectionString, builder =>
 				{
 					builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
-				}).AddInterceptors(sp.GetRequiredService<CachingInterceptor>());
+				}).AddInterceptors(
+					sp.GetRequiredService<CachingInterceptor>(),
+					sp.GetRequiredService<DomainEventsDispatcherInterceptor>());
 			});
 
 		services.AddTransient<IRedisConnectionRepository, RedisConnectionRepository>();
+		services.AddTransient<IUserRepository, UserRepository>();
+		services.AddTransient<IAuditLogRepository, AuditLogRepository>();
 		services.AddTransient(typeof(IRepository<>), typeof(RepositoryBase<>));
 		services.AddScoped<IUnitOfWork>(p => p.GetRequiredService<ApplicationDbContext>());
 	}
@@ -120,8 +225,42 @@ public static class DependencyInjection
 	/// <param name="configuration">Application configuration</param>
 	private static void AddHealthChecks(IServiceCollection services, IConfiguration configuration)
 	{
-		//TODO: add health Checks
-		// 1. Database
+		DatabaseConfiguration? dbConfig = configuration.GetSection(DatabaseConfiguration.Key).Get<DatabaseConfiguration>();
+		RedisHealthCheckOptions? redisHealthOptions = configuration.GetSection(RedisHealthCheckOptions.Key).Get<RedisHealthCheckOptions>();
+
+		services.Configure<RedisHealthCheckOptions>(configuration.GetSection(RedisHealthCheckOptions.Key));
+
+		IHealthChecksBuilder healthChecks = services.AddHealthChecks();
+
+		// Database health (works for in-memory and relational)
+		healthChecks.AddCheck<DatabaseHealthCheck>(
+			"database",
+			tags: ["db", "sql", "ready"]);
+
+		// Redis health (optional - only if connection string configured)
+		if (redisHealthOptions is { ConnectionString: { Length: > 0 } })
+		{
+			healthChecks.AddCheck<RedisHealthCheck>(
+				"redis",
+				tags: ["cache", "redis", "ready"]);
+		}
+
+		// Memory health check
+		healthChecks.AddCheck("memory", () =>
+		{
+			long allocated = GC.GetTotalMemory(forceFullCollection: false);
+			long threshold = 1024L * 1024L * 1024L; // 1GB
+			long allocatedMB = allocated / 1024 / 1024;
+
+			return allocated < threshold
+				? HealthCheckResult.Healthy($"Memory usage: {allocatedMB}MB")
+				: HealthCheckResult.Degraded($"Memory usage high: {allocatedMB}MB");
+		}, tags: ["memory"]);
+
+		// Background services health check
+		healthChecks.AddCheck<BackgroundServicesHealthCheck>(
+			"background-services",
+			tags: ["services", "background", "ready"]);
 	}
 
 	/// <summary>
@@ -148,16 +287,26 @@ public static class DependencyInjection
 			});
 	}
 
-
 	private static void AddBackgroundJobs(IServiceCollection services)
 	{
 		services.AddHostedService<RedisMetricsBackgroundJob>();
+		services.AddHostedService<ConnectionHealthMonitor>();
+		services.AddSingleton<IConnectionHealthMonitor>(sp =>
+			sp.GetServices<IHostedService>()
+				.OfType<ConnectionHealthMonitor>()
+				.First());
 	}
 
 	private static void AddSignalR(IServiceCollection services)
 	{
+		// Metrics hub services
 		services.AddSingleton<INotificationService, NotificationService>();
 		services.AddSingleton<IHubSubscribersManager, HubSubscribersManager>();
+
+		// Key change hub services
+		services.AddSingleton<IKeyChangeSubscriptionManager, KeyChangeSubscriptionManager>();
+		services.AddSingleton<IKeyChangeNotificationService, KeyChangeNotificationService>();
+
 		services.AddSignalR();
 	}
 
@@ -166,7 +315,6 @@ public static class DependencyInjection
 		services.Configure<MetricsCollectorOptions>(configuration.GetSection(MetricsCollectorOptions.Key));
 		services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
 	}
-
 
 	private static void AddCaching(IServiceCollection services, IConfiguration configuration)
 	{

@@ -1,44 +1,60 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using RedisGUI.Application.Redis.Commands.SetRedisValue;
+using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Server.Endpoints.RedisStorage.UpdateRedisValue;
+using RedisGUI.Shared.Mediator;
+using System;
+using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 {
 	/// <summary>
-	/// Endpoint for adding or updating values in Redis storage.
-	/// Handles setting key-value pairs with optional TTL.
+	/// Endpoint for adding new keys or updating values in Redis storage.
+	/// Supports all Redis data types (String, List, Hash, Set, SortedSet, Stream).
 	/// </summary>
 	public class AddRedisValueEndpoint : IEndpoint
 	{
 		/// <summary>
-		/// Maps the POST endpoint for adding Redis values.
+		/// Maps the POST endpoints for adding Redis values.
 		/// </summary>
-		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
-		/// <remarks>
-		/// POST /storage/{connectionId}
-		/// Adds or updates a Redis key-value pair and returns OK if successful, BadRequest if operation fails.
-		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapPost("storage/{connectionId:guid}", async (
-				ISender sender,
+			async Task<IResult> HandleAddKey(
+				IMediator sender,
 				Guid connectionId,
-				AddRedisValueRequest request) =>
+				UpdateRedisValueRequest request,
+				int? database = null)
 			{
-				var command = new AddRedisValueCommand(
+				TimeSpan? ttl = request.Ttl.HasValue && request.Ttl.Value > 0
+					? TimeSpan.FromSeconds(request.Ttl.Value)
+					: null;
+
+				var command = new UpdateRedisValueCommand(
 					connectionId,
 					request.Key,
+					request.Type,
 					request.Value,
-					request.Ttl);
+					ttl,
+					database ?? request.Database);
 
-				return await sender.Send(command).Match(() => Results.Ok(), Results.BadRequest);
+				return await sender.Send(command).Match(
+					() => Results.Ok(),
+					error => Results.BadRequest(new { error = error.Code, message = error.Message }));
+			}
 
-			}).WithOpenApi();
+			routerBuilder.MapPost("storage/{connectionId:guid}", HandleAddKey)
+				.WithName("AddRedisValue")
+				.WithSummary("Add a new Redis key-value pair")
+				.WithDescription("Creates a new Redis key with specified type and value")
+				.WithOpenApi();
+
+			routerBuilder.MapPost("storage/{connectionId:guid}/keys", HandleAddKey)
+				.WithName("AddRedisValueKeys")
+				.WithSummary("Add a new Redis key-value pair (keys subpath)")
+				.WithOpenApi();
 		}
 	}
 }

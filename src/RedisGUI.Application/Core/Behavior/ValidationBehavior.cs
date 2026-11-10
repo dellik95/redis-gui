@@ -1,7 +1,7 @@
 using FluentValidation;
-using MediatR;
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Application.Exceptions;
+using RedisGUI.Shared.Mediator;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -16,7 +16,7 @@ namespace RedisGUI.Application.Core.Behavior;
 /// <typeparam name="TRequest">The type of request being validated</typeparam>
 /// <typeparam name="TResponse">The type of response from the handler</typeparam>
 public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
-	where TRequest : IBaseCommand
+	where TRequest : IRequest<TResponse>
 {
 	/// <summary>
 	/// Collection of validators that can validate the request type
@@ -40,7 +40,7 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <returns>The response from the handler</returns>
 	/// <exception cref="ValidationException">Thrown when validation fails</exception>
-	public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
+	public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, Func<Task<TResponse>> next)
 	{
 		if (!validators.Any())
 		{

@@ -1,5 +1,3 @@
-using System;
-
 namespace RedisGUI.Infrastructure.Extensions;
 
 /// <summary>

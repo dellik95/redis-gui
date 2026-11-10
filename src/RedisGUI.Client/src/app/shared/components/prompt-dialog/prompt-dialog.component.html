@@ -1,0 +1,15 @@
+<h2 mat-dialog-title>{{ title() }}</h2>
+<mat-dialog-content>
+	<p class="prompt-message">{{ message() }}</p>
+	<form (submit)="onConfirm($event)" class="prompt-form">
+		<ui-input
+			[formField]="promptForm.value"
+			[placeholder]="placeholder()"
+			[fullWidth]="true"
+		/>
+	</form>
+</mat-dialog-content>
+<mat-dialog-actions align="end" class="dialog-actions">
+	<ui-button variant="ghost" (click)="onCancel()">{{ cancelText() }}</ui-button>
+	<ui-button variant="primary" [disabled]="!canConfirm()" (click)="onConfirm()">{{ confirmText() }}</ui-button>
+</mat-dialog-actions>

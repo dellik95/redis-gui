@@ -1,11 +1,12 @@
-using System;
-using MediatR;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Shared.Mediator;
+using System;
+using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 {
@@ -18,24 +19,22 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 		/// <summary>
 		/// Maps the DELETE endpoint for removing Redis values.
 		/// </summary>
-		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
-		/// <remarks>
-		/// DELETE /storage/{connectionId}/{key}
-		/// Deletes the specified key-value pair and returns OK if successful, NotFound if key doesn't exist, or BadRequest if operation fails.
-		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapDelete("storage/{connectionId:guid}/{key}", async (
-				ISender sender,
+			async Task<IResult> HandleDelete(
+				IMediator sender,
 				Guid connectionId,
-				string key) =>
+				string key,
+				int? database)
 			{
-				var command = new DeleteRedisKeyCommand(connectionId, key);
+				var command = new DeleteRedisKeyCommand(connectionId, key, database);
 				return await sender.Send(command).Match(
 					deleted => deleted ? Results.Ok() : Results.NotFound(),
 					Results.BadRequest);
-			}).WithOpenApi();
+			}
+
+			routerBuilder.MapDelete("storage/{connectionId:guid}/{*key}", HandleDelete).WithOpenApi();
+			routerBuilder.MapDelete("storage/{connectionId:guid}/keys/{*key}", HandleDelete).WithOpenApi();
 		}
 	}
-
 }

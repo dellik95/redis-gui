@@ -332,3 +332,12 @@ ASALocalRun/
 
 .angular/
 
+# Configuration files with secrets
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
+!**/appsettings.example.json
+
+# Explicitly include docs directory
+!docs/
+!docs/**

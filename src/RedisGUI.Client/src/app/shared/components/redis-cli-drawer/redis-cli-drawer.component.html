@@ -1,0 +1,109 @@
+<!-- Collapsed Floating Trigger Bar -->
+@if (!isOpen()) {
+	<div class="cli-floating-trigger" (click)="toggleOpen()">
+		<div class="trigger-left">
+			<mat-icon class="terminal-icon">terminal</mat-icon>
+			<span class="trigger-title">Redis CLI</span>
+			<span class="db-pill">DB {{ activeDatabase() }}</span>
+		</div>
+		<div class="trigger-right">
+			<span class="shortcut-hint">Click to open</span>
+			<mat-icon>keyboard_arrow_up</mat-icon>
+		</div>
+	</div>
+}
+
+<!-- Expanded CLI Drawer Container -->
+@if (isOpen()) {
+	<div class="cli-drawer-overlay" [class.maximized]="isMaximized()">
+		<div class="cli-header">
+			<div class="header-left">
+				<mat-icon class="header-icon">terminal</mat-icon>
+				<span class="header-title">Interactive Redis CLI</span>
+				<span class="db-badge">DB {{ activeDatabase() }}</span>
+			</div>
+
+			<!-- Preset Quick Commands -->
+			<div class="presets-container">
+				@for (preset of presets; track preset.cmd) {
+					<button 
+						mat-button 
+						class="preset-chip" 
+						(click)="executePreset(preset.cmd)"
+						[disabled]="isExecuting()"
+						[matTooltip]="'Run ' + preset.cmd">
+						{{ preset.label }}
+					</button>
+				}
+			</div>
+
+			<div class="header-actions">
+				<button mat-icon-button (click)="copyAll()" matTooltip="Copy Terminal History" [disabled]="logs().length === 0">
+					<mat-icon>content_copy</mat-icon>
+				</button>
+				<button mat-icon-button (click)="clearTerminal()" matTooltip="Clear Terminal (Ctrl+L)" [disabled]="logs().length === 0">
+					<mat-icon>delete_sweep</mat-icon>
+				</button>
+				<button mat-icon-button (click)="toggleMaximize()" [matTooltip]="isMaximized() ? 'Restore' : 'Maximize'">
+					<mat-icon>{{ isMaximized() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+				</button>
+				<button mat-icon-button (click)="toggleOpen()" matTooltip="Close CLI">
+					<mat-icon>close</mat-icon>
+				</button>
+			</div>
+		</div>
+
+		<!-- Terminal Body -->
+		<div class="terminal-window" #terminalOutput>
+			<div class="terminal-welcome">
+				<span class="welcome-line">Connected to Redis. Type standard Redis commands (e.g. <code>INFO</code>, <code>DBSIZE</code>, <code>KEYS *</code>, <code>GET key</code>).</span>
+				<span class="welcome-hint">Use <kbd>&uarr;</kbd> <kbd>&darr;</kbd> to navigate command history.</span>
+			</div>
+
+			@for (entry of logs(); track $index) {
+				<div class="log-entry" [class.has-error]="entry.isError">
+					<div class="log-prompt-line">
+						<span class="prompt-time">{{ entry.timestamp }}</span>
+						<span class="prompt-host">redis[db{{ entry.database }}]&gt;</span>
+						<span class="prompt-cmd">{{ entry.command }}</span>
+					</div>
+					<pre class="log-output" [class.error-output]="entry.isError">{{ entry.output }}</pre>
+				</div>
+			}
+
+			@if (isExecuting()) {
+				<div class="executing-indicator">
+					<mat-spinner diameter="16"></mat-spinner>
+					<span>Executing...</span>
+				</div>
+			}
+		</div>
+
+		<!-- Command Prompt Input Line -->
+		<div class="terminal-input-bar">
+			<span class="prompt-prefix">redis[db{{ activeDatabase() }}]&gt;</span>
+			<input
+				#cmdInput
+				type="text"
+				class="terminal-input"
+				[ngModel]="commandInput()"
+				(ngModelChange)="commandInput.set($event)"
+				(keydown.enter)="runCommand()"
+				(keydown.arrowup)="navigateHistory($event, 'up')"
+				(keydown.arrowdown)="navigateHistory($event, 'down')"
+				placeholder="Enter Redis command (e.g. INFO, DBSIZE, GET user:100)..."
+				[disabled]="isExecuting()"
+				autocomplete="off"
+				spellcheck="false"
+			/>
+			<button 
+				mat-flat-button 
+				color="primary" 
+				class="send-btn" 
+				(click)="runCommand()" 
+				[disabled]="!commandInput().trim() || isExecuting()">
+				<mat-icon>send</mat-icon>
+			</button>
+		</div>
+	</div>
+}

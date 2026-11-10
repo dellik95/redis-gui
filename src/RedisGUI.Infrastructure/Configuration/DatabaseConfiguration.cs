@@ -1,4 +1,4 @@
-﻿namespace RedisGUI.Infrastructure.Configuration;
+namespace RedisGUI.Infrastructure.Configuration;
 
 /// <summary>
 /// Configuration settings for database connections
@@ -18,5 +18,5 @@ public class DatabaseConfiguration
 	/// <summary>
 	/// Gets or sets the database connection string
 	/// </summary>
-	public string ConnectionString { get; set; }
+	public required string ConnectionString { get; set; }
 }

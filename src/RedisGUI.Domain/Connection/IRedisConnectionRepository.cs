@@ -1,6 +1,7 @@
-﻿using RedisGUI.Domain.Abstraction;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Domain.Abstraction;
+using RedisGUI.Shared.Primitives;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,4 +19,11 @@ public interface IRedisConnectionRepository : IRepository<RedisConnection>
 	/// <param name="token">Cancellation token</param>
 	/// <returns></returns>
 	Task<Result<RedisConnection>> GetConnectionByIdAsync(Guid id, CancellationToken token = default);
+
+	/// <summary>
+	/// Get all connections
+	/// </summary>
+	/// <param name="token">Cancellation token</param>
+	/// <returns></returns>
+	Task<Result<List<RedisConnection>>> GetAllConnectionsAsync(CancellationToken token = default);
 }

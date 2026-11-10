@@ -1,0 +1,106 @@
+<h2 mat-dialog-title class="dialog-title">
+    <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_link' }}</mat-icon>
+    <span>{{ dialogTitle() }}</span>
+</h2>
+
+<mat-dialog-content class="dialog-content">
+    <form class="connection-form" id="connectionForm" (submit)="saveConnection($event)">
+
+        <ui-input
+            [formField]="connectionForm.name"
+            label="Connection Name"
+            placeholder="e.g. Local Redis, Production Cache"
+            icon="label"
+        />
+
+        <div class="host-port-row">
+            <div class="host-field">
+                <ui-input
+                    [formField]="connectionForm.host"
+                    label="Host"
+                    placeholder="localhost, redis, or 127.0.0.1"
+                    icon="dns"
+                />
+            </div>
+
+            <div class="port-field">
+                <ui-input
+                    [formField]="connectionForm.port"
+                    type="number"
+                    label="Port"
+                    placeholder="6379"
+                    icon="tag"
+                />
+            </div>
+        </div>
+
+        <div class="database-details">
+            <ui-checkbox
+                [(checked)]="allDatabasesSelected"
+                label="All databases"
+                description="Scan across all Redis databases (0-15)"
+            />
+
+            @if (!allDatabasesSelected()) {
+                <div class="db-field">
+                    <ui-input
+                        type="number"
+                        [formField]="connectionForm.database"
+                        label="Database (0-15)"
+                        placeholder="0"
+                    />
+                </div>
+            }
+        </div>
+
+        <mat-accordion class="credentials-accordion">
+            <mat-expansion-panel hideToggle>
+                <mat-expansion-panel-header>
+                    <mat-panel-title>
+                        <mat-icon class="panel-icon">key</mat-icon>
+                        <span>Connection credentials (optional)</span>
+                    </mat-panel-title>
+                </mat-expansion-panel-header>
+
+                <div class="credentials-fields">
+                    <ui-input
+                        [formField]="connectionForm.userName"
+                        label="Username (optional)"
+                        placeholder="default"
+                        icon="person"
+                    />
+
+                    <ui-input
+                        [type]="hidePasswordMode() ? 'password' : 'text'"
+                        [formField]="connectionForm.password"
+                        label="Password (optional)"
+                        placeholder="••••••••"
+                        icon="lock"
+                        [suffixIcon]="hidePasswordMode() ? 'visibility_off' : 'visibility'"
+                        (suffixClicked)="togglePasswordMode()"
+                    />
+                </div>
+            </mat-expansion-panel>
+        </mat-accordion>
+    </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+    <button class="btn-secondary" type="button" (click)="cancel()">
+        Cancel
+    </button>
+
+    <button class="btn-secondary" type="button" [disabled]="!canTest()" (click)="checkConnections()">
+        @if (isTesting()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        } @else {
+            <mat-icon>network_check</mat-icon>
+        }
+        <span>Test Connection</span>
+    </button>
+
+    <button class="btn-primary" type="button" [disabled]="!canSave()" (click)="saveConnection()">
+        <mat-icon>{{ isEditMode() ? 'check' : 'add' }}</mat-icon>
+        <span>{{ isEditMode() ? 'Update' : 'Create' }}</span>
+    </button>
+</mat-dialog-actions>

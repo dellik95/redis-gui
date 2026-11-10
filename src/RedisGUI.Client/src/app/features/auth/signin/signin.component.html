@@ -1,0 +1,56 @@
+<mat-card class="signin-card">
+  <mat-card-header>
+    <mat-card-title>Sign In</mat-card-title>
+    <mat-card-subtitle>Enter your credentials to access Redis GUI</mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <div class="demo-banner">
+      <div class="demo-info">
+        <mat-icon class="demo-icon">verified_user</mat-icon>
+        <div class="demo-text">
+          <strong>Demo Admin Account</strong>
+          <span>admin&#64;redisgui.local &bull; AdminPassword123!</span>
+        </div>
+      </div>
+      <button mat-button type="button" (click)="fillDemoCredentials()" class="demo-fill-btn">
+        <mat-icon>auto_fix_high</mat-icon>
+        Pre-fill
+      </button>
+    </div>
+
+    <form (submit)="onSubmit($event)" class="signin-form-fields">
+      <ui-input
+        type="email"
+        [formField]="loginForm.email"
+        label="Email"
+        placeholder="admin@redisgui.local"
+        icon="email"
+      />
+
+      <ui-input
+        [type]="hidePassword() ? 'password' : 'text'"
+        [formField]="loginForm.password"
+        label="Password"
+        placeholder="••••••••"
+        icon="lock"
+        [suffixIcon]="hidePassword() ? 'visibility' : 'visibility_off'"
+        (suffixClicked)="togglePasswordVisibility()"
+      />
+
+      <ui-button
+        type="submit"
+        variant="primary"
+        size="lg"
+        [fullWidth]="true"
+        [disabled]="!canSubmit()"
+        [loading]="isLoading()">
+        Sign In
+      </ui-button>
+
+      <div class="register-link">
+        <p>Don't have an account? <a routerLink="/register">Register here</a></p>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

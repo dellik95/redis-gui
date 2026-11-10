@@ -1,14 +1,9 @@
-using System;
-using System.Data.Common;
-using System.Globalization;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using Microsoft.Extensions.Options;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Persistence.InMemoryDbDataReader;
 using RedisGUI.Infrastructure.Persistence.SqlProcessor;
+using System.Data.Common;
+using System.Globalization;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace RedisGUI.Infrastructure.Persistence.Cache;
@@ -43,7 +38,7 @@ public class DbCommandInterceptorProcessor : IDbCommandInterceptorProcessor
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<T> ProcessExecutedCommands<T>(DbCommand command, DbContext context, T result, CancellationToken cancellationToken = default)
+	public async ValueTask<T> ProcessExecutedCommands<T>(DbCommand command, DbContext? context, T result, CancellationToken cancellationToken = default)
 	{
 		if (context is null || command is null || sqlCommandsProcessor.IsCrudCommand(command.CommandText))
 		{
@@ -84,7 +79,7 @@ public class DbCommandInterceptorProcessor : IDbCommandInterceptorProcessor
 	}
 
 	/// <inheritdoc />
-	public async ValueTask<T> ProcessExecutingCommands<T>(DbCommand command, DbContext context, T result, CancellationToken cancellationToken = default)
+	public async ValueTask<T> ProcessExecutingCommands<T>(DbCommand command, DbContext? context, T result, CancellationToken cancellationToken = default)
 	{
 		if (context is null || command is null)
 		{
@@ -127,7 +122,8 @@ public class DbCommandInterceptorProcessor : IDbCommandInterceptorProcessor
 
 	private static async Task<T> HandleDbDataReaderResult<T>(CacheEntry cacheResult)
 	{
-		await using var dataRows = new InMemoryTableRowsDataReader(cacheResult.TableRows);
+		DbTableRows tableRows = cacheResult.TableRows ?? new DbTableRows();
+		await using var dataRows = new InMemoryTableRowsDataReader(tableRows);
 		return (T)Convert.ChangeType(InterceptionResult<DbDataReader>.SuppressWithResult(dataRows), typeof(T), CultureInfo.InvariantCulture);
 	}
 

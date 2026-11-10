@@ -2,12 +2,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Application.Connections.Shared;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Extensions;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Connections.GetAllConnections
 {
@@ -27,7 +26,7 @@ namespace RedisGUI.Application.Connections.GetAllConnections
 		{
 			var connectionsResult = await this.redisConnectionRepository.GetAsync(null, false, request.PageNumber, request.PageSize);
 
-			return connectionsResult.Map(connections => connections.Select(c => GetConnectionResponse.FromRedisConnection(c, passwordDecrypt)));
+			return connectionsResult.Map(pagedConnections => pagedConnections.Items.Select(c => GetConnectionResponse.FromRedisConnection(c, passwordDecrypt)));
 		}
 	}
 }

@@ -1,5 +1,5 @@
 using System;
-using RedisGUI.Application.Abstraction.Messaging;
+using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Application.RedisMetrics.Queries
 {

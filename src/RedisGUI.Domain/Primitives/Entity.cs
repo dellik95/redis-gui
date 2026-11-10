@@ -1,7 +1,4 @@
 using RedisGUI.Domain.Abstraction;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace RedisGUI.Domain.Primitives;
 
@@ -16,9 +13,14 @@ public abstract class Entity : IEquatable<Entity>
 	public Guid Id { get; init; }
 
 	/// <summary>
+	/// Gets the row version for optimistic concurrency control
+	/// </summary>
+	public byte[] RowVersion { get; private set; } = [];
+
+	/// <summary>
 	/// Gets the collection of domain events for this entity
 	/// </summary>
-	private readonly List<IDomainEvent> domainEvents = new();
+	private readonly List<IDomainEvent> domainEvents = [];
 
 	/// <summary>
 	/// Initializes a new instance of the Entity class
@@ -63,7 +65,7 @@ public abstract class Entity : IEquatable<Entity>
 	/// <param name="a">First entity</param>
 	/// <param name="b">Second entity</param>
 	/// <returns>True if entities are equal, false otherwise</returns>
-	public static bool operator ==(Entity a, Entity b)
+	public static bool operator ==(Entity? a, Entity? b)
 	{
 		if (a is null && b is null)
 		{
@@ -84,13 +86,13 @@ public abstract class Entity : IEquatable<Entity>
 	/// <param name="a">First entity</param>
 	/// <param name="b">Second entity</param>
 	/// <returns>True if entities are not equal, false otherwise</returns>
-	public static bool operator !=(Entity a, Entity b)
+	public static bool operator !=(Entity? a, Entity? b)
 	{
 		return !(a == b);
 	}
 
 	/// <inheritdoc />
-	public bool Equals(Entity other)
+	public bool Equals(Entity? other)
 	{
 		if (other is null)
 		{
@@ -101,7 +103,7 @@ public abstract class Entity : IEquatable<Entity>
 	}
 
 	/// <inheritdoc />
-	public override bool Equals(object obj)
+	public override bool Equals(object? obj)
 	{
 		if (obj is null)
 		{
@@ -134,9 +136,9 @@ public abstract class Entity : IEquatable<Entity>
 	/// <summary>
 	/// Returns a hash code for this entity
 	/// </summary>
-	/// <returns>A hash code value generated from the entity's Id and domain events</returns>
+	/// <returns>A hash code value generated from the entity's type and Id</returns>
 	public override int GetHashCode()
 	{
-		return HashCode.Combine(Id, domainEvents);
+		return HashCode.Combine(GetType(), Id);
 	}
 }

@@ -1,0 +1,57 @@
+<div class="edit-key-panel">
+  @if (selectedKey()) {
+    <div class="panel-header">
+      <div class="panel-title-area">
+        <mat-icon class="header-icon">tune</mat-icon>
+        <div class="header-titles">
+          <h2>Edit Key</h2>
+          <div class="key-badge-container">
+            <span class="key-badge" [matTooltip]="selectedKey()?.key || ''">{{ selectedKey()?.key }}</span>
+            <button mat-icon-button class="copy-btn" (click)="copyKeyName()" matTooltip="Copy key name">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="panel-actions">
+        <button mat-icon-button type="button" (click)="refreshKey()" [disabled]="isLoading() || isSaving()" matTooltip="Refresh value from Redis">
+          <mat-icon [class.spinning]="isLoading()">refresh</mat-icon>
+        </button>
+        <button mat-icon-button type="button" (click)="onClose()" matTooltip="Close editor">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    
+    @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading key data from Redis...</p>
+      </div>
+    } @else if (loadError()) {
+      <div class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p class="error-message">Failed to load key value.</p>
+        <button mat-stroked-button color="primary" (click)="refreshKey()">Retry</button>
+      </div>
+    } @else {
+      <div class="editor-content">
+        <app-storage-value-editor
+          [data]="editorData()"
+          [connectionId]="connectionId()"
+          [loading]="isSaving()"
+          (save)="onSave($event)"
+          (cancel)="onClose()">
+        </app-storage-value-editor>
+      </div>
+    }
+  } @else {
+    <div class="empty-state">
+      <div class="empty-icon-circle">
+        <mat-icon>dataset</mat-icon>
+      </div>
+      <h3>No key selected</h3>
+      <p>Select any key from the table or tree to view and edit its content</p>
+    </div>
+  }
+</div>

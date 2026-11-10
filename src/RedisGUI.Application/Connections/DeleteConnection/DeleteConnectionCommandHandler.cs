@@ -1,9 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Connections.DeleteConnection;
 

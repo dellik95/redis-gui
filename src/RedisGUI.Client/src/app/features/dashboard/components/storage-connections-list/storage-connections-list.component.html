@@ -1,0 +1,88 @@
+<div class="connections-wrapper">
+  @if (connectionsStore.isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <span class="loading-label">Loading connections...</span>
+    </div>
+  } @else if (connectionsStore.connections().length === 0) {
+    <div class="welcome-card">
+      <div class="welcome-icon-wrap">
+        <mat-icon class="welcome-icon">storage</mat-icon>
+      </div>
+      <h2 class="welcome-title">Welcome to Redis Studio</h2>
+      <p class="welcome-text">
+        Connect to your local or remote Redis instances to browse keys, inspect memory, monitor metrics, and manage your data with ease.
+      </p>
+      <button class="btn-primary" (click)="addConnection()">
+        <mat-icon>add</mat-icon>
+        <span>Add Your First Connection</span>
+      </button>
+    </div>
+  } @else {
+    <div class="connections-header">
+      <div class="header-info">
+        <h2 class="section-title">Redis Connections</h2>
+        <span class="count-badge">{{ connectionsStore.connections().length }} active</span>
+      </div>
+      <button class="btn-primary" (click)="addConnection()">
+        <mat-icon>add</mat-icon>
+        <span>New Connection</span>
+      </button>
+    </div>
+
+    <div class="connections-grid">
+      @for (conn of connectionsStore.connections(); track conn.id) {
+        <div class="connection-card" (click)="rowClick(conn)">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="conn-icon-box">
+                <mat-icon>dns</mat-icon>
+              </div>
+              <div class="conn-name-block">
+                <h3 class="conn-name" [matTooltip]="conn.name">{{ conn.name }}</h3>
+                <span class="conn-endpoint">{{ conn.host }}:{{ conn.port }}</span>
+              </div>
+            </div>
+            
+            <div class="card-actions-menu" (click)="$event.stopPropagation()">
+              <button mat-icon-button (click)="editRecord(conn, $event)" matTooltip="Edit Connection" class="action-btn">
+                <mat-icon>edit_note</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deleteRecord(conn.id, $event)" matTooltip="Delete Connection" color="warn" class="action-btn">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="meta-tags">
+              <span class="meta-tag tag-db">
+                <mat-icon>dataset</mat-icon>
+                <span>DB {{ conn.database }}</span>
+              </span>
+              @if (conn.password) {
+                <span class="meta-tag tag-auth" matTooltip="Authentication protected">
+                  <mat-icon>lock</mat-icon>
+                  <span>Protected</span>
+                </span>
+              } @else {
+                <span class="meta-tag tag-no-auth" matTooltip="No password set">
+                  <mat-icon>lock_open</mat-icon>
+                  <span>Public</span>
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <span class="click-hint">Click card to open database</span>
+            <button mat-button class="connect-action-btn" color="primary">
+              <span>Connect</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>

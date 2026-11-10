@@ -1,7 +1,5 @@
-using System.Data.Common;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using System.Data.Common;
 
 namespace RedisGUI.Infrastructure.Persistence.Cache;
 
@@ -19,7 +17,7 @@ public interface IDbCommandInterceptorProcessor
 	/// <param name="result">The result of the command execution</param>
 	/// <param name="cancellationToken">The cancellation token</param>
 	/// <returns>The processed result</returns>
-	ValueTask<T> ProcessExecutedCommands<T>(DbCommand command, DbContext context, T result, CancellationToken cancellationToken = default);
+	ValueTask<T> ProcessExecutedCommands<T>(DbCommand command, DbContext? context, T result, CancellationToken cancellationToken = default);
 
 	/// <summary>
 	/// Processes commands before they are executed
@@ -30,5 +28,5 @@ public interface IDbCommandInterceptorProcessor
 	/// <param name="result">The current result</param>
 	/// <param name="cancellationToken">The cancellation token</param>
 	/// <returns>The processed result</returns>
-	ValueTask<T> ProcessExecutingCommands<T>(DbCommand command, DbContext context, T result, CancellationToken cancellationToken = default);
+	ValueTask<T> ProcessExecutingCommands<T>(DbCommand command, DbContext? context, T result, CancellationToken cancellationToken = default);
 }

@@ -1,0 +1,135 @@
+<div class="storage-value-editor">
+  <form class="editor-form" (submit)="onSave($event)">
+    <!-- Header: Key, Type, TTL -->
+    <div class="editor-header">
+      <div class="header-inputs-grid">
+        <ui-input
+          [formField]="editorForm.key"
+          label="Key"
+          placeholder="Enter key name (e.g. user:1001)"
+          icon="vpn_key"
+        />
+
+        <ui-select
+          [formField]="editorForm.type"
+          label="Data Type"
+          [options]="redisTypes"
+        />
+      </div>
+
+      <!-- TTL Selector Component -->
+      <app-ttl-selector [(ttl)]="ttl" />
+    </div>
+
+    <!-- Mode Toggle: Visual Mode vs JSON Mode -->
+    <div class="editor-mode-toggle">
+      <div class="mode-info">
+        <app-type-badge [type]="selectedType()" size="md" />
+        <span class="mode-text">{{ useJsonEditor() ? 'Raw JSON Mode' : 'Visual Form Mode' }}</span>
+        @if (memoryUsageBytes() !== null) {
+          <span class="memory-usage-chip" matTooltip="Memory footprint (MEMORY USAGE)">
+            <mat-icon class="mem-icon">memory</mat-icon>
+            <span>{{ formatBytes(memoryUsageBytes()!) }}</span>
+          </span>
+        } @else if (isCheckingMemory()) {
+          <span class="memory-usage-chip loading">
+            <mat-spinner diameter="12"></mat-spinner>
+            <span>Checking memory...</span>
+          </span>
+        }
+      </div>
+
+      <div class="toggle-actions">
+        <mat-slide-toggle [checked]="useJsonEditor()" (change)="toggleJsonEditor()">
+          <span class="toggle-label">
+            <mat-icon class="toggle-icon">{{ useJsonEditor() ? 'code' : 'edit' }}</mat-icon>
+            {{ useJsonEditor() ? 'JSON' : 'Visual' }}
+          </span>
+        </mat-slide-toggle>
+
+        @if (useJsonEditor()) {
+          <button
+            mat-stroked-button
+            type="button"
+            class="format-btn"
+            (click)="formatJson()"
+            matTooltip="Format JSON">
+            <mat-icon>auto_fix_high</mat-icon>
+            Format
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Validation Errors Display -->
+    @if (validationErrors().length > 0) {
+      <div class="validation-errors-box">
+        @for (err of validationErrors(); track err) {
+          <div class="error-item">
+            <mat-icon class="error-icon">error_outline</mat-icon>
+            <span>{{ err }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Raw JSON Editor Mode -->
+    @if (useJsonEditor()) {
+      <div class="json-editor-wrapper">
+        <app-json-editor
+          #jsonEditor
+          [value]="jsonEditorValue()"
+          [readOnly]="false"
+          (valueChange)="onJsonChange($event)">
+        </app-json-editor>
+      </div>
+    }
+
+    <!-- Visual Form Editor Mode -->
+    @if (!useJsonEditor()) {
+      <div class="visual-editor-container">
+        @switch (selectedType()) {
+          @case (RedisDataType.String) {
+            <app-string-editor [(value)]="stringValue" />
+          }
+          @case (RedisDataType.List) {
+            <app-list-editor [(items)]="listItems" />
+          }
+          @case (RedisDataType.Set) {
+            <app-set-editor [(members)]="setMembers" />
+          }
+          @case (RedisDataType.Hash) {
+            <app-hash-editor [(fields)]="hashFields" />
+          }
+          @case (RedisDataType.SortedSet) {
+            <app-zset-editor [(members)]="sortedSetMembers" />
+          }
+          @case (RedisDataType.Stream) {
+            <app-stream-editor [(entries)]="streamEntries" />
+          }
+        }
+      </div>
+    }
+
+    <!-- Action Buttons -->
+    <div class="editor-actions">
+      <ui-button
+        variant="ghost"
+        type="button"
+        (clicked)="onCancel()"
+        [disabled]="loading()">
+        Cancel
+      </ui-button>
+
+      <ui-button
+        variant="primary"
+        type="button"
+        icon="save"
+        (clicked)="onSave($event)"
+        [disabled]="!isValid() || loading()"
+        [loading]="loading()">
+        {{ isNewKey() ? 'Create Key' : 'Save Changes' }}
+      </ui-button>
+    </div>
+  </form>
+</div>

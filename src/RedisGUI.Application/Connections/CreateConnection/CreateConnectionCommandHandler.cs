@@ -1,78 +1,74 @@
-using RedisGUI.Application.Abstraction.Messaging;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Domain.Extensions;
 
 namespace RedisGUI.Application.Connections.CreateConnection;
 
 /// <summary>
 /// Handles the creation of new Redis connections, including validation and persistence.
 /// </summary>
-internal sealed class CreateConnectionCommandHandler : ICommandHandler<CreateConnectionCommand, Guid>
+internal sealed class CreateConnectionCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IPasswordEncryptor passwordEncryptor,
+	IUnitOfWork unitOfWork,
+	IRedisConnectionService connectionService,
+	ICurrentUserService currentUserService)
+	: ICommandHandler<CreateConnectionCommand, Guid>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IPasswordEncryptor passwordEncryptor;
-	private readonly IUnitOfWork unitOfWork;
-	private readonly IConnectionService connectionService;
-
-	/// <summary>
-	/// Initializes a new instance of the CreateConnectionCommandHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="passwordEncryptor">Service for password encryption</param>
-	/// <param name="unitOfWork">Unit of work for transaction management</param>
-	/// <param name="connectionService">Service for testing Redis connections</param>
-	public CreateConnectionCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IPasswordEncryptor passwordEncryptor,
-		IUnitOfWork unitOfWork,
-		IConnectionService connectionService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.passwordEncryptor = passwordEncryptor;
-		this.unitOfWork = unitOfWork;
-		this.connectionService = connectionService;
-	}
-
 	/// <summary>
 	/// Handles the creation of a new Redis connection, validates it, and persists it to the repository.
 	/// </summary>
-	/// <param name="request">The connection creation command</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>Result containing the new connection's ID if successful</returns>
 	public async Task<Result<Guid>> Handle(CreateConnectionCommand request, CancellationToken cancellationToken)
 	{
-		// Create and validate credentials
-		var credentialsResult = ConnectionCredentials.Create(
+		Result<ConnectionCredentials?> credentialsResult = ConnectionCredentials.Create(
 			request.UserName,
 			request.Password,
 			passwordEncryptor);
 
-		// Create connection with value objects
-		var connectionResult = await RedisConnection.Create(
+		if (credentialsResult.IsFailure)
+			return Result.Failure<Guid>(credentialsResult.Error);
+
+		Guid? userId = currentUserService.UserId;
+		if (!userId.HasValue)
+		{
+			return Result.Failure<Guid>(Domain.Errors.DomainErrors.User.Unauthorized);
+		}
+
+		DatabaseNumber databaseNumber = new(request.Database);
+		ConnectionOwnerId ownerId = ConnectionOwnerId.Some(userId.Value);
+
+		Result<RedisConnection> createResult = RedisConnection.Create(
 			new ConnectionName(request.Name),
 			new ConnectionHost(request.Host),
 			new ConnectionPort(request.Port),
-			request.Database,
-			credentialsResult.Value)
-			.Bind(async connection =>
+			databaseNumber,
+			ownerId,
+			credentialsResult.Value);
+
+		if (createResult.IsFailure)
+			return Result.Failure<Guid>(createResult.Error);
+
+		createResult.Value.SetReadOnly(request.IsReadOnly);
+
+		Result testResult = await connectionService.CheckConnectionAsync(createResult.Value, cancellationToken);
+		if (testResult.IsFailure)
+			return Result.Failure<Guid>(testResult.Error);
+		createResult.Value.UpdateAvailability(testResult.IsSuccess);
+
+		connectionRepository.Add(createResult.Value);
+		Result<int> saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
+
+		if (saveResult.IsFailure)
 		{
-			var testResult = await connectionService.CheckConnection(connection);
+			return Result.Failure<Guid>(saveResult.Error);
+		}
 
-			connection.UpdateAvailability(testResult.IsSuccess);
-
-			return Result.Create(connection);
-		});
-
-		// Save to repository
-		connectionRepository.Add(connectionResult);
-		await unitOfWork.SaveChangesAsync(cancellationToken);
-
-		return connectionResult.Value.Id;
+		return Result.Success(createResult.Value.Id);
 	}
 }

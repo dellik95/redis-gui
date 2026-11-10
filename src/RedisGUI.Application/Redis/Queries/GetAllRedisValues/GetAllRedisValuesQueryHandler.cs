@@ -1,6 +1,6 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,19 +14,19 @@ internal sealed class GetAllRedisValuesQueryHandler
     : IQueryHandler<GetAllRedisKeysQuery, GetAllRedisValuesResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     /// <summary>
     /// Initializes a new instance of the GetAllRedisValuesQueryHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="valueService">Service for Redis value operations.</param>
     public GetAllRedisValuesQueryHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     /// <summary>
@@ -48,27 +48,33 @@ internal sealed class GetAllRedisValuesQueryHandler
             return Result.Failure<GetAllRedisValuesResponse>(connectionResult.Error);
         }
 
-        var result = await connectionService.GetAllValues(
+        var result = await valueService.GetAllValuesAsync(
             connectionResult.Value, 
             request.Pattern,
             request.PageSize,
-            request.PageNumber);
+            request.PageNumber,
+            cancellationToken,
+            request.Database);
 
         if (result.IsFailure)
         {
             return Result.Failure<GetAllRedisValuesResponse>(result.Error);
         }
 
+        var pagedValues = result.Value;
         var response = new GetAllRedisValuesResponse(
-            result.Value.Select(v => new RedisKeyValuePair(
+            pagedValues.Values.Select(v => new RedisKeyValuePair(
                 v.Key,
                 v.Value,
                 v.Type,
                 v.TimeToLive)),
-            0,
-            0,
-            0);
+            pagedValues.TotalCount,
+            pagedValues.PageNumber,
+            pagedValues.PageSize,
+            pagedValues.TotalPages,
+            pagedValues.HasPreviousPage,
+            pagedValues.HasNextPage);
 
         return Result.Success(response);
     }
-} 
+}

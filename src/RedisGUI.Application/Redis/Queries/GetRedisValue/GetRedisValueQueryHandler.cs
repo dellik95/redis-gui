@@ -1,6 +1,8 @@
-using RedisGUI.Application.Abstraction.Messaging;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
+using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -12,19 +14,19 @@ namespace RedisGUI.Application.Redis.Queries.GetRedisValue;
 internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQuery, GetRedisValueResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IConnectionService connectionService;
+    private readonly IRedisValueService valueService;
 
     /// <summary>
     /// Initializes a new instance of the GetRedisValueQueryHandler.
     /// </summary>
     /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="connectionService">Service for Redis connection operations.</param>
+    /// <param name="valueService">Service for Redis value operations.</param>
     public GetRedisValueQueryHandler(
         IRedisConnectionRepository connectionRepository,
-        IConnectionService connectionService)
+        IRedisValueService valueService)
     {
         this.connectionRepository = connectionRepository;
-        this.connectionService = connectionService;
+        this.valueService = valueService;
     }
 
     /// <summary>
@@ -42,16 +44,41 @@ internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQue
             return Result.Failure<GetRedisValueResponse>(connectionResult.Error);
         }
 
-        var result = await connectionService.GetValue(connectionResult.Value, request.Key);
+        var result = await valueService.GetValueAsync(connectionResult.Value, request.Key, cancellationToken, request.Database);
         
         if (result.IsFailure)
         {
             return Result.Failure<GetRedisValueResponse>(result.Error);
         }
 
+        object parsedValue;
+        string rawValue = result.Value.Value;
+
+        if (string.Equals(result.Value.Type, "string", StringComparison.OrdinalIgnoreCase))
+        {
+            parsedValue = rawValue;
+        }
+        else
+        {
+            try
+            {
+                parsedValue = JsonSerializer.Deserialize<JsonElement>(rawValue);
+            }
+            catch
+            {
+                parsedValue = rawValue;
+            }
+        }
+
+        long? ttlSeconds = result.Value.TimeToLive.HasValue
+            ? (long)result.Value.TimeToLive.Value.TotalSeconds
+            : null;
+
         return Result.Success(new GetRedisValueResponse(
             request.Key,
-            result.Value.Value,
-            result.Value.TimeToLive));
+            parsedValue,
+            result.Value.Type,
+            result.Value.TimeToLive,
+            ttlSeconds));
     }
-} 
+}

@@ -1,5 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
-using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace RedisGUI.Infrastructure.Persistence.Migrations
 {
