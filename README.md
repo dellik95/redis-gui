@@ -76,13 +76,29 @@ Full visual inspection and editing across all native Redis types using the **Str
 | :---: | :---: |
 | ![Tree View](docs/screenshots/04_storage_tree.png) | ![Hash Editor](docs/screenshots/07_hash_editor.png) |
 
+| Stream Visual Editor | Stream JSON Document View |
+| :---: | :---: |
+| ![Stream Visual](docs/screenshots/05_stream_visual_editor.png) | ![Stream JSON](docs/screenshots/06_stream_json_editor.png) |
+
+| String / JSON Value Editor | Add New Key Modal |
+| :---: | :---: |
+| ![String Editor](docs/screenshots/07b_string_editor.png) | ![Add Key](docs/screenshots/15_add_key_dialog.png) |
+
 | Synthetic Load Testing | Interactive CLI Terminal |
 | :---: | :---: |
 | ![Load Test Dialog](docs/screenshots/08_load_test_dialog.png) | ![CLI Drawer](docs/screenshots/10_redis_cli_drawer.png) |
 
-| Sample Data Seeder | Light Theme Preview |
+| Sample Data Seeder | Slowlog Diagnostics |
 | :---: | :---: |
-| ![Seed Data Dialog](docs/screenshots/09_seed_data_dialog.png) | ![Light Theme](docs/screenshots/13_light_theme_preview.png) |
+| ![Seed Data Dialog](docs/screenshots/09_seed_data_dialog.png) | ![Slowlog](docs/screenshots/11_slowlog_dialog.png) |
+
+| Command Palette (Ctrl+K) | Add Connection Dialog |
+| :---: | :---: |
+| ![Command Palette](docs/screenshots/16_command_palette.png) | ![Add Connection](docs/screenshots/14_add_connection_dialog.png) |
+
+| Audit Logs & Compliance | Light Theme Preview |
+| :---: | :---: |
+| ![Audit Logs](docs/screenshots/12_audit_logs.png) | ![Light Theme](docs/screenshots/13_light_theme_preview.png) |
 
 ---
 
@@ -164,12 +180,15 @@ dotnet test RedisGUI.slnx
 
 ---
 
-## 📚 Documentation Links
+## 📚 Documentation & Technical References
 
-- 🏛️ [System Architecture & Design Details](docs/architecture.md)
-- 📖 [User Guide & Operations Manual](docs/user-guide.md)
-- 📋 [Comprehensive Feature Catalog](docs/features.md)
-- 🐳 [Docker Deployment & Configuration](docs/docker.md)
+- 🏛️ [System Architecture & Design Details](docs/architecture.md) — Clean Architecture layers, CQRS, Strategy/Factory patterns, Connection Pooling.
+- 📦 [Projects & Solution Structure](docs/projects-structure.md) — Comprehensive breakdown of every project in `RedisGUI.slnx`, classes, and tests.
+- ⚙️ [Configuration & Settings Guide](docs/configuration.md) — Full reference for `appsettings.json`, JWT, Redis timeouts, Docker env vars.
+- 📊 [Architectural Diagrams & Flowcharts](docs/diagrams.md) — Complete Mermaid diagrams (Architecture, ER, CQRS pipeline, SignalR, CLI, Load testing).
+- 📋 [Comprehensive Feature Catalog](docs/features.md) — Specifications for all 10+ core feature modules and API contracts.
+- 📖 [User Guide & Operations Manual](docs/user-guide.md) — Step-by-step user manual with screenshots for every feature.
+- 🐳 [Docker Deployment & Configuration](docs/docker.md) — Production multi-stage Docker builds and docker-compose orchestration.
 
 ---
 

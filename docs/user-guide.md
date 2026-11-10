@@ -1,169 +1,231 @@
-# RedisGUI — User Guide & Operations Manual
+# RedisGUI — Повний посібник користувача та інструкція по роботі
 
-Welcome to **RedisGUI**, an intuitive, modern Redis administration dashboard designed for developers, DevOps engineers, and system architects.
-
----
-
-## Table of Contents
-1. [Getting Started & Authentication](#1-getting-started--authentication)
-2. [Dashboard & Real-Time Monitoring](#2-dashboard--real-time-monitoring)
-3. [Storage Manager & Key Management](#3-storage-manager--key-management)
-   - [Table View](#table-view)
-   - [Tree / Namespace View](#tree--namespace-view)
-   - [Key Filtering & Pagination](#key-filtering--pagination)
-4. [Editing Redis Values](#4-editing-redis-values)
-   - [String & JSON Values](#string--json-values)
-   - [Hash Key Visual Editor](#hash-key-visual-editor)
-   - [Stream Visual & JSON Editors](#stream-visual--json-editors)
-   - [Lists, Sets, and Sorted Sets](#lists-sets-and-sorted-sets)
-5. [Interactive Redis CLI Terminal](#5-interactive-redis-cli-terminal)
-6. [Benchmarking & Load Testing](#6-benchmarking--load-testing)
-7. [Sample Data Generator & Seeder](#7-sample-data-generator--seeder)
-8. [Slowlog & Diagnostics](#8-slowlog--diagnostics)
-9. [Audit Logs & Compliance](#9-audit-logs--compliance)
-10. [Appearance, Themes & Safe Mode](#10-appearance-themes--safe-mode)
+Цей посібник містить вичерпні покрокові інструкції щодо використання всіх функціональностей платформи **RedisGUI** із наочними скриншотами кожного екрана та діалогу.
 
 ---
 
-## 1. Getting Started & Authentication
+## Зміст
 
-When launching RedisGUI, you are greeted with the secure authentication gateway.
-
-![RedisGUI Login Gateway](screenshots/01_login.png)
-
-### Default Credentials
-For local development and initial Docker runs, the system seeds a default administrative account:
-- **Email**: `admin@redisgui.local`
-- **Password**: `AdminPassword123!`
-
-> [!NOTE]
-> You can create additional users with granular roles (`Admin`, `Standard`, `ReadOnly`) from the application settings.
-
----
-
-## 2. Dashboard & Real-Time Monitoring
-
-Upon signing in, the **Dashboard** presents immediate health telemetry and connection overviews for all configured Redis clusters and standalones.
-
-![RedisGUI Dashboard](screenshots/02_dashboard.png)
-
-### Key Metrics Displayed:
-- **Ops / Sec**: Instantaneous operations throughput processed by Redis.
-- **Memory Usage**: Real-time RSS memory allocated vs. peak memory.
-- **CPU System / User**: Redis engine CPU consumption.
-- **Active Connections**: Active client connections and health status.
+1. [Автентифікація та вхід у систему](#1-автентифікація-та-вхід-у-систему)
+2. [Головний дашборд та керування підключеннями](#2-головний-дашборд-та-керування-підключеннями)
+   - [Огляд стану серверів та телеметрія](#огляд-стану-серверів-та-телеметрія)
+   - [Діалог створення та редагування підключення](#діалог-створення-та-редагування-підключення)
+3. [Менеджер сховища (Storage Manager)](#3-менеджер-сховища-storage-manager)
+   - [Табличний режим (Table View) та Живі Метрики](#табличний-режим-table-view-та-живі-метрики)
+   - [Дерево просторів імен (Namespace Tree View)](#дерево-просторів-імен-namespace-tree-view)
+   - [Швидка палітра команд (Command Palette Ctrl+K)](#швидка-палітра-команд-command-palette-ctrlk)
+   - [Створення нового ключа (Add Key Modal)](#створення-нового-ключа-add-key-modal)
+4. [Візуальні редактори значень Redis](#4-візуальні-редактори-значень-redis)
+   - [Редактор рядків та JSON (String / JSON Editor)](#редактор-рядків-та-json-string--json-editor)
+   - [Редактор хешів (Hash Visual Editor)](#редактор-хешів-hash-visual-editor)
+   - [Візуальний редактор стрімів (Stream Visual Editor)](#візуальний-редактор-стрімів-stream-visual-editor)
+   - [JSON режим стрімів (Stream JSON Editor)](#json-режим-стрімів-stream-json-editor)
+   - [Редактори списків, множин та сортованих множин](#редактори-списків-множин-та-сортованих-множин)
+5. [Інтерактивна консоль Redis CLI](#5-інтерактивна-консоль-redis-cli)
+6. [Навантажувальне тестування та бенчмарк (Load Testing)](#6-навантажувальне-тестування-та-бенчмарк-load-testing)
+7. [Генератор реалістичних демо-даних (Sample Data Seeder)](#7-генератор-реалістичних-демо-даних-sample-data-seeder)
+8. [Діагностика та аналізатор Slowlog](#8-діагностика-та-аналізатор-slowlog)
+9. [Журнал аудиту та безпека (Audit Logs)](#9-журнал-аудиту-та-безпека-audit-logs)
+10. [Теми оформлення та світлий режим (Themes & Light Mode)](#10-теми-оформлення-та-світлий-режим-themes--light-mode)
 
 ---
 
-## 3. Storage Manager & Key Management
+## 1. Автентифікація та вхід у систему
 
-The **Storage Manager** is your primary workspace for exploring and manipulating Redis keys across all available logical databases (`DB 0` through `DB 15`).
+Для забезпечення безпеки доступу до ваших баз даних система використовує захищений шлюз автентифікації на основі криптографічних токенів JWT.
 
-### Table View
-The Table View presents keys in a structured, sortable, and filterable data grid, featuring live metrics pills in the header:
+![Екран входу в RedisGUI](screenshots/01_login.png)
 
-![Storage Manager Table View](screenshots/03_storage_table.png)
-
-- **Live Metrics Bar**: High-visibility pills showing CPU usage, live memory footprint, network bandwidth in/out, and total keys count streamed via SignalR.
-- **Action Bar**: Instant access to **Add Key**, **Seed Demo Data**, **Load Test**, **Slowlog**, and database switcher.
-
-### Tree / Namespace View
-Switch to **Tree View** by clicking the view toggler. This hierarchical tree automatically groups keys by their separator (e.g. `:` or `/`):
-
-![Storage Manager Tree View](screenshots/04_storage_tree.png)
-
-- Click any folder to expand or collapse namespaces (e.g., `user:*`, `demo:*`, `orders:*`).
-- Select any leaf node to open the key editor instantly.
+### Покрокова інструкція:
+1. Перейдіть за адресою `http://localhost:5000` (або `http://localhost:4200` при локальній розробці).
+2. За замовчуванням система автоматично ініціалізує обліковий запис адміністратора:
+   * **Email**: `admin@redisgui.local`
+   * **Пароль**: `AdminPassword123!`
+3. Натисніть кнопку **Sign In**. Після успішної автентифікації токен автоматично збережеться, і вас буде перенаправлено на головний дашборд.
 
 ---
 
-## 4. Editing Redis Values
+## 2. Головний дашборд та керування підключеннями
 
-RedisGUI includes dedicated visual and code editors for each Redis data type.
+### Огляд стану серверів та телеметрія
+Головний дашборд надає панорамний огляд стану всіх зареєстрованих екземплярів Redis, кластерів та автономних вузлів.
 
-### Hash Key Visual Editor
-Easily inspect and edit field-value pairs in Redis Hashes without manual serialized syntax:
+![Головний дашборд RedisGUI](screenshots/02_dashboard.png)
 
-![Hash Key Visual Editor](screenshots/07_hash_editor.png)
+* **Карточки з'єднань**: Відображають ім'я з'єднання, хост, порт, кількість доступних баз даних та індикатор статусу підключення (Online / Offline).
+* **Швидкі дії**: Кнопки швидкого переходу до менеджера сховища, редагування параметрів з'єднання, перевірки доступності та активації **Safe Mode** (захисту від запису).
 
-- Add new fields with one click.
-- Inline edit field names and values.
-- Delete individual fields or update TTL.
+### Діалог створення та редагування підключення
+Для додавання нового екземпляра Redis натисніть кнопку **Add Connection** у верхньому правому куті дашборду.
 
-### Stream Visual & JSON Editors
-Redis Streams are first-class citizens in RedisGUI:
-- **Visual Event Stream**: Renders each stream entry with its auto-generated timestamp ID (`<timestamp>-<sequence>`) and all associated telemetry fields.
-- **JSON View**: Switch the toggle at the top right to inspect the raw JSON document representation.
+![Діалог створення нового з'єднання](screenshots/14_add_connection_dialog.png)
 
----
-
-## 5. Interactive Redis CLI Terminal
-
-Need direct console access? Click the **CLI Terminal** button in the bottom drawer to open the integrated interactive Redis CLI:
-
-![Redis CLI Terminal Drawer](screenshots/10_redis_cli_drawer.png)
-
-- Supports standard Redis commands: `INFO`, `PING`, `KEYS`, `GET`, `SET`, `HGETALL`, `XREAD`, etc.
-- **Multi-Database Awareness**: Commands execute against the currently active database context.
-- **Keyboard Navigation**: Press `Up` / `Down` arrow keys to cycle through past command history.
-- Auto-scrolls to latest output and formats RESP multi-bulk responses clearly.
+### Налаштування форми:
+* **Connection Name**: Зручна назва (наприклад, `Production Cache`, `Staging Cluster`).
+* **Host & Port**: IP-адреса або DNS-ім'я (наприклад, `127.0.0.1` або `redis.internal.net`) та порт (за замовчуванням `6379`).
+* **Password**: Пароль доступу (AUTH) — шифрується перед збереженням у базі даних.
+* **SSL / TLS**: Прапорець для активації захищеного з'єднання.
+* **Safe Mode (Read-Only)**: Забороняє будь-які деструктивні операції, модифікації або видалення ключів на цьому з'єднанні.
+* **Test Connection**: Кнопка попередньої перевірки зв'язку перед збереженням.
 
 ---
 
-## 6. Benchmarking & Load Testing
+## 3. Менеджер сховища (Storage Manager)
 
-Benchmark your Redis instance directly from the UI without external tools like `redis-benchmark`:
+Менеджер сховища — центральний робочий простір для керування даними у базах Redis.
 
-![Load Test Dialog](screenshots/08_load_test_dialog.png)
+### Табличний режим (Table View) та Живі Метрики
 
-### Configurable Test Parameters:
-- **Total Operations**: Number of commands to execute (e.g. 500 – 10,000).
-- **Concurrency**: Number of parallel workers (1 to 50 concurrent threads).
-- **Operation Distribution**: Choose between **Read Heavy (80% Get / 20% Set)**, **Write Heavy**, or **Balanced (50/50)**.
-- **Live Performance Report**: Displays total duration, operations per second, latency percentiles (`p50`, `p95`, `p99`), and error counts.
+![Табличний режим менеджера сховища](screenshots/03_storage_table.png)
 
----
+* **Панель живих метрик (Header Live Metrics)**:
+  * **CPU**: Відсоток утилізації процесора сервером Redis.
+  * **Memory**: Поточний обсяг пам'яті (RSS), що використовується процесом Redis, з автоматичним форматуванням байтів.
+  * **Network**: Швидкість вхідного та вихідного мережевого трафіку (Kb/s).
+  * **Keys**: Загальна кількість ключів в активній базі даних.
+* **Вибір бази даних (Database Selector)**: Швидке перемикання між логічними базами від `DB 0` до `DB 15` із відображенням кількості ключів у кожній.
+* **Фільтри за типами даних**: Інтерактивні чіпи у верхній частині таблиці (`All`, `String`, `Hash`, `List`, `Set`, `ZSet`, `Stream`) із лічильниками для миттєвої фільтрації.
+* **Пошуковий рядок (Pattern Search)**: Пошук за регулярними виразами або масками (наприклад, `user:*`, `order:2026:*`).
 
-## 7. Sample Data Generator & Seeder
+### Дерево просторів імен (Namespace Tree View)
+Перемикач режимів перегляду дозволяє трансформувати плаский список ключів у структуроване ієрархічне дерево:
 
-Quickly populate realistic datasets for staging, performance testing, and demo environments:
+![Деревоподібний перегляд ключів](screenshots/04_storage_tree.png)
 
-![Sample Data Generator Dialog](screenshots/09_seed_data_dialog.png)
+* Автоматично групує ключі за розділювачами (двокрапка `:`, слеш `/`, крапка `.`).
+* Клік по папці розгортає або згортає групу.
+* Клік по кінцевому вузлу відкриває відповідний ключ для перегляду та редагування.
 
-- **Key Count**: Generate up to 10,000 keys in seconds.
-- **Key Complexity**: Choose between Simple (`prefix:id`), Hierarchical (`org:dept:entity:id`), or UUID-based keys.
-- **Data Types**: Choose which types to include (String, Hash, List, Set, Sorted Set, Stream).
-- **TTL Strategies**: Choose between Persistent keys, Expiring keys (60s – 3600s), or Mixed.
+### Швидка палітра команд (Command Palette Ctrl+K)
+Натискання клавіш `Ctrl + K` або клік по кнопці з клавіатурним бейджем відкриває універсальну командну палітру для миттєвої навігації:
 
----
+![Швидка палітра команд](screenshots/16_command_palette.png)
 
-## 8. Slowlog & Diagnostics
+* Швидкий пошук та перехід до будь-якої дії (створення ключа, запуск тесту, зміна бази, відкриття терміналу).
 
-Diagnose performance bottlenecks and queries exceeding your latency threshold:
+### Створення нового ключа (Add Key Modal)
+Для додавання ключа натисніть кнопку **Add Key**:
 
-![Slowlog Diagnostics Dialog](screenshots/11_slowlog_dialog.png)
+![Діалог створення нового ключа](screenshots/15_add_key_dialog.png)
 
-- Displays execution timestamp, duration (in microseconds), client IP, and full command arguments.
-- Identifies slow O(N) operations (e.g. unindexed `KEYS *` or large `SMEMBERS`).
-
----
-
-## 9. Audit Logs & Compliance
-
-All administrative actions, key mutations, and CLI commands are recorded in the immutable audit log:
-
-![Audit Logs Viewer](screenshots/12_audit_logs.png)
-
-- Search and filter by user email, action category, connection ID, or date range.
-- View request payloads, client IP addresses, and HTTP status codes.
+* **Key**: Унікальне ім'я ключа в активній базі.
+* **Type**: Вибір строго типізованого типу даних (`String`, `Hash`, `List`, `Set`, `SortedSet`, `Stream`).
+* **TTL (Time-to-Live)**: Час життя в секундах. Значення `-1` означає безстроковий (постійний) ключ.
+* **Initial Value**: Початкове значення у зручному для типу форматі.
 
 ---
 
-## 10. Appearance, Themes & Safe Mode
+## 4. Візуальні редактори значень Redis
 
-RedisGUI provides a tailored visual experience with 6 built-in themes and a toggleable Light/Dark mode:
+Для кожного з 6 підтримуваних типів даних у системі реалізовано окремі спеціалізовані панелі редагування з валідацією.
 
-![Light Theme Storage View](screenshots/13_light_theme_preview.png)
+### Редактор рядків та JSON (String / JSON Editor)
 
-- **Available Themes**: Deep Violet, Emerald Green, Indigo Night, Crimson Gold, Cyan Amber, Charcoal Dark.
-- **Safe Mode**: Toggle any connection into **Read-Only** mode to protect production environments from unintended modifications or deletions.
+![Редактор рядкових значень](screenshots/07b_string_editor.png)
+
+* Підтримує як простий текст, так і складні структуровані JSON-об'єкти.
+* Автоматично підсвічує синтаксис, перевіряє валідність JSON та форматує документ із відступами.
+* Дозволяє змінювати час життя (TTL) або видаляти ключ в один клік.
+
+### Редактор хешів (Hash Visual Editor)
+
+![Редактор полів хешів](screenshots/07_hash_editor.png)
+
+* Табличне представлення пар `Field` (поле) та `Value` (значення).
+* Додавання нових полів безпосередньо у візуальній таблиці.
+* Інлайн-редагування та миттєве видалення окремих полів хеша.
+
+### Візуальний редактор стрімів (Stream Visual Editor)
+
+![Візуальний перегляд стрімів](screenshots/05_stream_visual_editor.png)
+
+* Представляє записи стріма у вигляді часової шкали подій із точними мілісекундними ідентифікаторами (`timestamp-seq`).
+* Кожен запис містить розгорнуті пари ключ-значення корисного навантаження телеметрії або логів.
+
+### JSON режим стрімів (Stream JSON Editor)
+
+![JSON представлення стріма](screenshots/06_stream_json_editor.png)
+
+* Перемикач **Visual / JSON** дозволяє миттєво переглянути та скопіювати весь стрім у стандартизованому форматі JSON.
+
+---
+
+## 5. Інтерактивна консоль Redis CLI
+
+Інтегрована консоль дозволяє виконувати низькорівневі команди Redis без необхідності встановлення `redis-cli` на хостову машину:
+
+![Інтерактивна консоль Redis CLI](screenshots/10_redis_cli_drawer.png)
+
+### Можливості консолі:
+* **Висувний термінал (Drawer)**: Зручно відкривається поверх будь-якої сторінки кліком по нижній панелі.
+* **Історія команд**: Навігація клавішами `↑` (вгору) та `↓` (вниз) по попередньо виконаних командах.
+* **Контекст баз даних**: Команди виконуються саме в тій базі даних (`SELECT db`), яка активна на сторінці.
+* **Форматований вивід**: Масиви RESP3 та відповіді команд (наприклад, `INFO`, `CLIENT LIST`, `MEMORY STATS`) рендеряться з чистою моноширинною типографікою.
+* **Захист Safe Mode**: У разі активації безпечного режиму деструктивні команди блокуються ще до передачі на сервер.
+
+---
+
+## 6. Навантажувальне тестування та бенчмарк (Load Testing)
+
+Вбудований модуль синтетичного тестування дозволяє виміряти реальну продуктивність і затримку сервера Redis:
+
+![Діалог навантажувального тестування](screenshots/08_load_test_dialog.png)
+
+### Налаштування тесту:
+* **Total Operations**: Кількість запитів (від 50 до 50,000).
+* **Concurrency Workers**: Кількість паралельних асинхронних потоків (від 1 до 50 воркерів).
+* **Workload Distribution**:
+  * *Read Heavy*: 80% GET / 20% SET.
+  * *Write Heavy*: 80% SET / 20% GET.
+  * *Balanced*: 50% GET / 50% SET.
+* **Звіт результатів**: Відображає сумарний час, кількість операцій за секунду (RPS), перцентилі затримки `p50`, `p95`, `p99` у мілісекундах та статус автоматичного прибирання тестових ключів.
+
+---
+
+## 7. Генератор реалістичних демо-даних (Sample Data Seeder)
+
+Потужний інструмент для швидкого наповнення бази реалістичними наборами даних для розробки, навчання або стрес-тестів:
+
+![Генератор демо-даних](screenshots/09_seed_data_dialog.png)
+
+### Параметри генерації:
+* **Key Count**: Кількість ключів для створення (до 10,000).
+* **Key Complexity**:
+  * *Simple*: `demo:string:1`
+  * *Hierarchical*: `prod:europe:auth:session:1`
+  * *UUID*: `orders:hash:3f4a-9b1c-...`
+* **Data Types**: Вибір типів даних (можна згенерувати одночасно суміш рядків, хешів, списків, множин та стрімів).
+* **TTL Strategy**: Постійні ключі, з випадковим часом життя або змішані.
+
+---
+
+## 8. Діагностика та аналізатор Slowlog
+
+Діалогове вікно Slowlog дозволяє розробникам та адміністраторам виявляти повільні команди, що блокують головний потік Redis:
+
+![Діагностика Slowlog](screenshots/11_slowlog_dialog.png)
+
+* Фіксує час запуску, IP-адресу клієнта, аргументи команди та точну тривалість виконання в мікросекундах (`µs`).
+* Допомагає оптимізувати повільні неіндексовані операції `KEYS *`, сортування або важкі об'єднання множин.
+
+---
+
+## 9. Журнал аудиту та безпека (Audit Logs)
+
+Кожна адміністративна дія, мутація ключа, запуск тесту або виконання команди в консолі незмінно записується в журнал безпеки:
+
+![Журнал аудиту дій користувачів](screenshots/12_audit_logs.png)
+
+* **Фільтрація**: Пошук за email користувача, типом дії (`CreateKey`, `DeleteKey`, `ExecuteCli`, `LoadTest`), цільовим з'єднанням або датою.
+* **Інспектор корисного навантаження**: Детальний перегляд параметрів запиту та результату у форматі JSON.
+
+---
+
+## 10. Теми оформлення та світлий режим (Themes & Light Mode)
+
+RedisGUI містить гнучкий двіжок тем із підтримкою як глибокої темної теми, так і чистого світлого режиму:
+
+![Світла тема оформлення](screenshots/13_light_theme_preview.png)
+
+* **Доступні палітри**: Deep Violet (Magenta), Emerald Green, Indigo Night, Crimson Gold, Cyan Amber, Charcoal Dark.
+* Швидке перемикання між світлим та темним режимами в один клік у шапці застосунку.
