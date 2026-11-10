@@ -1,7 +1,4 @@
-using Microsoft.Extensions.Logging;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Shared.Primitives;
 using StackExchange.Redis;
 using System.Linq;
 

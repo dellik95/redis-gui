@@ -72,7 +72,7 @@ networks:
 
 The `Dockerfile` employs multi-stage builds to optimize image size and build caching:
 
-1. **Stage 1 (Node.js Build)**: Builds the Angular 19 client into optimized production static bundles.
+1. **Stage 1 (Node.js Build)**: Builds the Angular 22 client into optimized production static bundles.
 2. **Stage 2 (.NET SDK Build & Publish)**: Restores packages, compiles C# projects using the .NET 10 SDK, and publishes the server assembly.
 3. **Stage 3 (Runtime Image)**: Copies the published .NET binaries and the client static files into a minimal `aspnet:10.0` Alpine or Debian base image.
 

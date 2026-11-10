@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace RedisGUI.Domain.Redis;
 
 /// <summary>

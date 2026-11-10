@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Moq;
-using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;

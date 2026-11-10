@@ -1,6 +1,4 @@
 using StackExchange.Redis;
-using System;
-using System.Threading.Tasks;
 
 namespace RedisGUI.Infrastructure.Redis.Seeding;
 

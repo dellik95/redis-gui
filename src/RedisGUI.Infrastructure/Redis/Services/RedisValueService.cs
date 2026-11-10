@@ -1,16 +1,9 @@
-using Microsoft.Extensions.Logging;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Redis.Common;
 using RedisGUI.Infrastructure.Redis.TypeHandlers;
-using RedisGUI.Shared.Primitives;
 using StackExchange.Redis;
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using RedisValue = RedisGUI.Domain.Redis.RedisValue;
 
 namespace RedisGUI.Infrastructure.Redis.Services;

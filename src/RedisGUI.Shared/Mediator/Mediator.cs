@@ -1,8 +1,6 @@
 #nullable enable
 using RedisGUI.Shared.Primitives;
 using RedisGUI.Domain.Primitives;
-using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 

@@ -1,5 +1,3 @@
-using RedisGUI.Shared.Primitives;
-
 namespace RedisGUI.Domain.Connection;
 
 /// <summary>

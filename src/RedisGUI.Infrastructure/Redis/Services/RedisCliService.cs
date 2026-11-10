@@ -1,12 +1,6 @@
-using Microsoft.Extensions.Logging;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Infrastructure.Redis.Common;
-using RedisGUI.Shared.Primitives;
 using StackExchange.Redis;
-using System;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace RedisGUI.Infrastructure.Redis.Services;
 

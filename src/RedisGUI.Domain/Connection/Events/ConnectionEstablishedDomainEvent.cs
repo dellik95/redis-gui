@@ -1,5 +1,4 @@
 using RedisGUI.Domain.Abstraction;
-using System;
 
 namespace RedisGUI.Domain.Connection.Events;
 

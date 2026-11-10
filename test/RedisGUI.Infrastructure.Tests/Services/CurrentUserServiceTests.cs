@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
-using NUnit.Framework;
 using RedisGUI.Infrastructure.Services;
 using System.Security.Claims;
 

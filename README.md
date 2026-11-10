@@ -5,12 +5,12 @@
 </p>
 
 <p align="center">
-  <strong>An enterprise-grade, high-performance Redis management studio and diagnostics platform built on .NET 10, ASP.NET Core Minimal APIs, and Angular 19 Signals.</strong>
+  <strong>An enterprise-grade, high-performance Redis management studio and diagnostics platform built on .NET 10, ASP.NET Core Minimal APIs, and Angular 22 Signals.</strong>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
-  <img src="https://img.shields.io/badge/Angular-19.0-DD0031?logo=angular" alt="Angular 19">
+  <img src="https://img.shields.io/badge/Angular-22.2.5-DD0031?logo=angular" alt="Angular 22">
   <img src="https://img.shields.io/badge/Redis-7.x%20%7C%208.x-DC382D?logo=redis" alt="Redis">
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker" alt="Docker">
   <img src="https://img.shields.io/badge/Architecture-Clean%20%2F%20CQRS-brightgreen" alt="Clean Architecture">
@@ -108,7 +108,7 @@ RedisGUI follows **Clean Architecture** and **CQRS**:
 
 ```mermaid
 flowchart LR
-    Client["Angular 19 (Signals)"] <-->|REST & SignalR| Server["ASP.NET Core 10 Minimal APIs"]
+    Client["Angular 22 (Signals)"] <-->|REST & SignalR| Server["ASP.NET Core 10 Minimal APIs"]
     Server --> MediatR["MediatR CQRS Pipeline"]
     MediatR --> App["Application Core"]
     App --> Domain["Domain (Pure Models & Contracts)"]
@@ -117,7 +117,7 @@ flowchart LR
 ```
 
 - **Backend**: .NET 10, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
-- **Frontend**: Angular 19 (Standalone Components, Signals, Signal Forms), Angular Material 19, Tailwind CSS, Monaco Editor.
+- **Frontend**: Angular 22 (Standalone Components, Signals, Signal Forms), Angular Material 22, Tailwind CSS, Monaco Editor.
 - **Architecture Highlights**:
   - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`) synced between client and server.
   - **Strategy & Factory Patterns**: Handlers registered in DI container and resolved dynamically without manual `new` instantiation.

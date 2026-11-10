@@ -3,10 +3,8 @@ using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Shared.Primitives;
 using RedisGUI.Shared.Mediator;
-using RedisGUI.Domain.Errors;
 
 namespace RedisGUI.Application.Connections.UpdateConnection;
 

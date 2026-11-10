@@ -1,7 +1,4 @@
 using RedisGUI.Domain.Errors;
-using RedisGUI.Domain.Primitives;
-using RedisGUI.Shared.Primitives;
-using System;
 
 namespace RedisGUI.Domain.Redis;
 

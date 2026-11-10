@@ -1,5 +1,4 @@
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Primitives;
 using System;
 
 namespace RedisGUI.Domain.Tests.Connection;

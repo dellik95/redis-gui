@@ -1,5 +1,4 @@
 using System;
-using RedisGUI.Domain.Connection;
 
 namespace RedisGUI.Application.Connections.GetConnectionHealth;
 

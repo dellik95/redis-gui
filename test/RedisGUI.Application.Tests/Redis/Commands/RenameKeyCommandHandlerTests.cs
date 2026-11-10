@@ -3,7 +3,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
-using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.RenameKey;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;

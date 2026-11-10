@@ -1,6 +1,5 @@
 using FluentAssertions;
 using Microsoft.Extensions.Options;
-using NUnit.Framework;
 using RedisGUI.Infrastructure.Cryptography;
 using System;
 

@@ -1,6 +1,4 @@
 using RedisGUI.Domain.Redis;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace RedisGUI.Infrastructure.Redis.LoadTesting;

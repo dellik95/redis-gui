@@ -1,4 +1,3 @@
-using System;
 using System.Text.RegularExpressions;
 
 namespace RedisGUI.Infrastructure.Redis.Common;

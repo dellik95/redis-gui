@@ -2,7 +2,6 @@ using RedisGUI.Domain.Errors;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 

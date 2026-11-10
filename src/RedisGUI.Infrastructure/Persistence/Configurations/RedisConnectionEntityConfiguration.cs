@@ -1,7 +1,4 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using RedisGUI.Domain.Users;
-using RedisGUI.Domain.Connection;
 
 namespace RedisGUI.Infrastructure.Persistence.Configurations
 {

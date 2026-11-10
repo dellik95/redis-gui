@@ -5,13 +5,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Audit;
-using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Domain.Users;
 using RedisGUI.Infrastructure.Authentication;
@@ -32,8 +29,6 @@ using RedisGUI.Infrastructure.Services;
 using RedisGUI.Infrastructure.SignalR;
 using System.Linq;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using MySql.EntityFrameworkCore.Extensions;
 
 namespace RedisGUI.Infrastructure;
 

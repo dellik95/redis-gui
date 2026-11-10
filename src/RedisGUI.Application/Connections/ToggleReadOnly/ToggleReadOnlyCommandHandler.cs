@@ -1,6 +1,5 @@
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System.Threading;

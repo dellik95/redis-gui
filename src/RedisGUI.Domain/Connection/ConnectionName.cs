@@ -1,6 +1,5 @@
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Guards;
-using RedisGUI.Domain.Primitives;
 
 namespace RedisGUI.Domain.Connection;
 

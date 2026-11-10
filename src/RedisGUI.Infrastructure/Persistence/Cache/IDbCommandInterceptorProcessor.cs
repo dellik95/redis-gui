@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using System.Data.Common;
 
 namespace RedisGUI.Infrastructure.Persistence.Cache;
