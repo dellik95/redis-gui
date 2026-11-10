@@ -195,8 +195,8 @@ export class TreeViewListComponent {
   /** Accessor function for Material Tree to get children */
   readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
 
-  /** Determines if a node has children (for expand/collapse) */
-  readonly hasChild = (_: number, node: TreeNode) => node.isGroup && !!node.children && node.children.length > 0;
+  /** Determines if a node is a group / folder */
+  readonly hasChild = (_: number, node: TreeNode) => node.isGroup;
 
   /** TrackBy function for Material Tree recycling */
   readonly trackByPath = (_: number, node: TreeNode) => node.path;
