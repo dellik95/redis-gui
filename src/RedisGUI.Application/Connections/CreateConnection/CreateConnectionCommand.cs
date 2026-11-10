@@ -12,10 +12,12 @@ namespace RedisGUI.Application.Connections.CreateConnection;
 /// <param name="Database">The Redis database number to connect to</param>
 /// <param name="UserName">The username for authentication (optional)</param>
 /// <param name="Password">The password for authentication (optional)</param>
+/// <param name="IsReadOnly">Whether the connection is in Safe Read-Only mode</param>
 public sealed record CreateConnectionCommand(
     string Name, 
     string Host, 
     int Port, 
     int Database, 
-    string UserName, 
-    string Password) : ICommand<Guid>;
+    string? UserName = null, 
+    string? Password = null,
+    bool IsReadOnly = false) : ICommand<Guid>;

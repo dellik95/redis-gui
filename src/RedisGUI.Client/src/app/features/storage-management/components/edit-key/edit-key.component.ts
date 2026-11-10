@@ -1,35 +1,20 @@
-import { Component, inject, input, output, signal, effect, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, inject, input, output, signal, computed, resource, ChangeDetectionStrategy } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { StorageValueEditorComponent, ValueEditorInput, ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { StorageValueEditorComponent, ValueEditorInput, ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
 import { RedisDataType, RedisValue } from '../../../../models/redis-keys.types';
 import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
 
 /**
- * Edit Key Component
- * Sidebar panel for editing existing Redis keys
- *
- * Features:
- * - Loads key value from Redis
- * - Displays value in editor
- * - Updates key value and TTL
- * - Emits save/close events
- *
- * @example
- * ```html
- * <app-edit-key
- *   [connectionId]="connectionId"
- *   [selectedKey]="selectedKey"
- *   (saved)="onKeySaved()"
- *   (closed)="onEditorClosed()"
- * />
- * ```
+ * Edit Key Component (Angular 22 Resource API)
+ * Modern sidebar panel for editing existing Redis keys using native Angular 22 Resource API
  */
 @Component({
   selector: 'app-edit-key',
@@ -49,8 +34,8 @@ import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
 export class EditKeyComponent {
   // 1. Injected dependencies
   private readonly snackBar = inject(MatSnackBar);
+  private readonly http = inject(HttpClient);
   private readonly redisKeysStore = inject(RedisKeysStore);
-  private readonly destroyRef = inject(DestroyRef);
 
   // 2. Inputs
   /** Redis connection ID */
@@ -67,69 +52,65 @@ export class EditKeyComponent {
   readonly saved = output<void>();
 
   // 4. State signals
-  /** Loading state while fetching key value */
-  readonly isLoading = signal<boolean>(false);
-
   /** Saving state during update operation */
   readonly isSaving = signal<boolean>(false);
 
-  /** Editor input data */
-  readonly editorData = signal<ValueEditorInput | null>(null);
-
-  constructor() {
-    // Watch for selected key changes and load the value
-    effect(() => {
+  // 5. Angular 22 Resource API for declarative key loading
+  readonly keyResource = resource<ValueEditorInput | null, { key: string; connectionId: string; requestedType: RedisDataType; database: number } | null>({
+    params: () => {
       const key = this.selectedKey();
-      if (key) {
-        this.loadKeyValue(key);
-      } else {
-        this.editorData.set(null);
-      }
-    });
+      const connId = this.connectionId();
+      const db = this.redisKeysStore.activeDatabase();
+      return key && connId ? { key: key.key, connectionId: connId, requestedType: key.type, database: db } : null;
+    },
+    loader: async ({ params }) => {
+      if (!params) return null;
 
-    // Watch for loaded value from store
-    effect(() => {
-      const loadedKey = this.redisKeysStore.selectedKey();
-      const currentKey = this.selectedKey();
-      const storeLoading = this.redisKeysStore.isLoading();
-      const storeError = this.redisKeysStore.error();
+      try {
+        const httpParams = { database: params.database.toString() };
+        const response = await firstValueFrom(
+          this.http.get<{ key: string; value: any; type: string; ttl?: number; timeToLive?: string }>(
+            `/api/v1/storage/${params.connectionId}/${encodeURIComponent(params.key)}`,
+            { params: httpParams }
+          )
+        );
 
-      if (loadedKey && currentKey && loadedKey.key === currentKey.key) {
-        // loadedKey.type is already RedisDataType from the store
-        this.editorData.set({
-          key: currentKey.key,
-          type: this.mapTypeToRedisDataType(loadedKey.type),
-          value: loadedKey.value,
-          ttl: loadedKey.ttl ?? -1,
+        let ttlVal = response.ttl ?? -1;
+        if (response.timeToLive && ttlVal === -1) {
+          const parts = response.timeToLive.split(':');
+          if (parts.length === 3) {
+            ttlVal = Math.round(
+              parseFloat(parts[0] ?? '0') * 3600 +
+              parseFloat(parts[1] ?? '0') * 60 +
+              parseFloat(parts[2] ?? '0')
+            );
+          }
+        }
+
+        return {
+          key: response.key,
+          type: this.mapTypeToRedisDataType(response.type || params.requestedType),
+          value: response.value,
+          ttl: ttlVal,
           isNew: false
-        });
-        this.isLoading.set(false);
-      } else if (currentKey && !storeLoading && storeError) {
-        // Loading failed - show error and stop loading
-        this.isLoading.set(false);
-        this.snackBar.open(`Failed to load key: ${storeError}`, "Close", { duration: 5000 });
-      } else if (currentKey && !storeLoading && !loadedKey) {
-        // Loading completed but no key found (shouldn't happen, but handle gracefully)
-        this.isLoading.set(false);
+        };
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : 'Failed to fetch key value');
       }
-    });
-  }
+    }
+  });
 
-  // 5. Private methods
-  /**
-   * Maps Redis data type to RedisDataType enum
-   * Handles both string and enum types from the store
-   *
-   * @param type - Redis data type (string or RedisDataType)
-   * @returns RedisDataType enum value
-   */
+  // 6. Computed signals from Resource
+  readonly isLoading = computed(() => this.keyResource.isLoading());
+  readonly editorData = computed(() => this.keyResource.value() ?? null);
+  readonly loadError = computed(() => this.keyResource.error());
+
+  // 7. Methods
   private mapTypeToRedisDataType(type: string | RedisDataType): RedisDataType {
-    // If already a RedisDataType enum, return as-is
     if (Object.values(RedisDataType).includes(type as RedisDataType)) {
       return type as RedisDataType;
     }
 
-    // Otherwise, convert from string
     switch (String(type).toLowerCase()) {
       case 'string': return RedisDataType.String;
       case 'list': return RedisDataType.List;
@@ -142,48 +123,37 @@ export class EditKeyComponent {
     }
   }
 
-  /**
-   * Loads key value from Redis
-   *
-   * @param key - Key information to load
-   */
-  private loadKeyValue(key: { key: string; type: RedisDataType; value: RedisValue; ttl: number }): void {
-    this.isLoading.set(true);
-    // Call store directly - effect will handle updates when store changes
-    this.redisKeysStore.loadValue({
-      connectionId: this.connectionId(),
-      key: key.key
-    });
+  refreshKey(): void {
+    this.keyResource.reload();
+    this.snackBar.open("Key value refreshed from Redis", "Close", { duration: 2000 });
   }
 
-  /**
-   * Handles save action from value editor
-   *
-   * @param data - Editor output with updated key data
-   */
+  copyKeyName(): void {
+    const key = this.selectedKey()?.key;
+    if (key) {
+      navigator.clipboard.writeText(key);
+      this.snackBar.open(`Copied "${key}" to clipboard`, "Close", { duration: 2000 });
+    }
+  }
+
   onSave(data: ValueEditorOutput): void {
     this.isSaving.set(true);
-    // Call store directly
     this.redisKeysStore.updateValue({
       connectionId: this.connectionId(),
       key: data.key,
       type: data.type,
       value: data.value,
-      ...(data.ttl !== undefined ? { ttl: data.ttl } : {})
+      ...(data.ttl !== undefined ? { ttl: data.ttl } : {}),
+      database: this.redisKeysStore.activeDatabase()
     });
-    // Clear cache to force refresh on next load, but don't reload immediately
-    // The data source will automatically update when store changes
     this.redisKeysStore.clearCache();
     this.snackBar.open("Key updated successfully", "Close", { duration: 3000 });
     this.isSaving.set(false);
+    this.keyResource.reload();
     this.saved.emit();
   }
 
-  /**
-   * Handles close action
-   */
   onClose(): void {
     this.closed.emit();
   }
 }
-

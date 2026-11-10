@@ -11,7 +11,7 @@ public class CacheEntry
 	/// <summary>
 	/// Gets or sets the table rows returned from a database query
 	/// </summary>
-	public DbTableRows TableRows { get; set; }
+	public DbTableRows? TableRows { get; set; }
 
 	/// <summary>
 	/// Gets or sets the number of rows affected by a non-query operation
@@ -21,7 +21,7 @@ public class CacheEntry
 	/// <summary>
 	/// Gets or sets the scalar result from a database query
 	/// </summary>
-	public object Scalar { get; set; }
+	public object? Scalar { get; set; }
 
 	/// <summary>
 	/// Gets or sets a value indicating whether the result is null

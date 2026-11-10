@@ -18,10 +18,15 @@ public class ErrorException : Exception
 	public IReadOnlyList<Error> Errors => errors.AsReadOnly();
 
 	/// <summary>
+	/// Gets the primary error associated with this exception
+	/// </summary>
+	public Error Error => errors.Count > 0 ? errors[0] : Error.None;
+
+	/// <summary>
 	/// Creates a new instance of ErrorException with a single error
 	/// </summary>
 	/// <param name="error">The error that caused this exception</param>
-	public ErrorException(Error error) : base($"An error occurred: {error.Code}")
+	public ErrorException(Error error) : base(error.Message)
 	{
 		errors.Add(error);
 	}
@@ -30,7 +35,7 @@ public class ErrorException : Exception
 	/// Creates a new instance of ErrorException with multiple errors
 	/// </summary>
 	/// <param name="errors">The collection of errors that caused this exception</param>
-	public ErrorException(params Error[] errors) : base($"An error occurred: {errors.ToCodeString()}")
+	public ErrorException(params Error[] errors) : base(errors.Length > 0 ? errors[0].Message : "An error occurred")
 	{
 		this.errors = [.. errors];
 	}
@@ -44,3 +49,4 @@ public class ErrorException : Exception
 		return errors.ToFormattedMessage();
 	}
 }
+

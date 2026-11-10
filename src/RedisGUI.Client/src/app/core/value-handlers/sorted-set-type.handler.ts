@@ -1,5 +1,6 @@
+import { Injectable } from '@angular/core';
 import { RedisDataType } from '../../models/redis-keys.types';
-import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from './redis-type-handler.interface';
+import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type-handler.interface';
 
 /**
  * Member-score pair for Sorted Set visual representation
@@ -18,25 +19,34 @@ export interface SortedSetMember {
  * Visual format: Array<{ member: string, score: number }>
  * JSON format: { "membersWithScores": { "member1": 1.0, "member2": 2.0 } }
  */
+@Injectable({
+  providedIn: 'root'
+})
 export class SortedSetTypeHandler implements RedisTypeHandler {
   readonly type = RedisDataType.SortedSet;
 
   /**
    * Convert raw Redis value to visual editor format (SortedSetMember array)
    * 
-   * @param data Raw value from Redis (array or object format)
+   * @param data Raw value from Redis (array or object format or { membersWithScores: {} })
    * @returns Array of SortedSetMember objects
    */
   toVisual(data: unknown): SortedSetMember[] {
-    if (Array.isArray(data)) {
-      // Already in array format
-      return data.map(item => ({
+    if (!data) {
+      return [];
+    }
+
+    const source = typeof data === 'object' && 'membersWithScores' in (data as Record<string, unknown>)
+      ? (data as Record<string, unknown>)['membersWithScores']
+      : data;
+
+    if (Array.isArray(source)) {
+      return source.map((item: any) => ({
         member: String(item.member || item.value || item),
         score: Number(item.score || 0)
       }));
-    } else if (data && typeof data === 'object') {
-      // Object format: { member: score }
-      return Object.entries(data).map(([member, score]) => ({
+    } else if (source && typeof source === 'object') {
+      return Object.entries(source as Record<string, unknown>).map(([member, score]) => ({
         member,
         score: Number(score)
       }));
@@ -51,21 +61,26 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
    * @returns JSON string representation
    */
   toJson(data: unknown): string {
-    let membersWithScores: { [member: string]: number } = {};
+    const membersWithScores: { [key: string]: number } = {};
 
     if (Array.isArray(data)) {
-      // From visual editor format
-      data.forEach(item => {
+      data.forEach((item: SortedSetMember) => {
         membersWithScores[item.member] = item.score;
       });
     } else if (data && typeof data === 'object') {
-      // Already in object format
-      membersWithScores = data as { [member: string]: number };
+      Object.assign(membersWithScores, data);
     }
 
     return JSON.stringify({ membersWithScores }, null, 2);
   }
 
+  /**
+   * Parse JSON back to visual editor format
+   * 
+   * @param json JSON string or parsed object
+   * @returns Array of SortedSetMember objects
+   * @throws Error if JSON is invalid
+   */
   fromJson(json: string | RedisValueJson): SortedSetMember[] {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
@@ -83,41 +98,32 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
   /**
    * Validate value structure for Sorted Set type
    * 
-   * @param value Value to validate (should be SortedSetMember array)
+   * @param value Value to validate (must be SortedSetMember array)
    * @returns Validation result with errors if invalid
    */
   validate(value: unknown): ValidationResult {
     const errors: string[] = [];
 
     if (!Array.isArray(value)) {
-      errors.push('Sorted Set value must be an array of member-score pairs');
-      return { valid: false, errors };
+      return { valid: false, errors: ['Value must be an array of members with scores'] };
     }
 
-    value.forEach((item, index) => {
-      if (!item.member || typeof item.member !== 'string') {
-        errors.push(`Item at index ${index}: member is required and must be a string`);
+    const members = value as SortedSetMember[];
+    const seenMembers = new Set<string>();
+
+    members.forEach((item, index) => {
+      if (!item.member || !item.member.trim()) {
+        errors.push(`Item ${index + 1}: Member is required`);
+      } else if (seenMembers.has(item.member)) {
+        errors.push(`Duplicate member: "${item.member}"`);
+      } else {
+        seenMembers.add(item.member);
       }
-      if (item.member && item.member.trim() === '') {
-        errors.push(`Item at index ${index}: member cannot be empty`);
-      }
-      if (item.score === null || item.score === undefined) {
-        errors.push(`Item at index ${index}: score is required`);
-      }
+
       if (typeof item.score !== 'number' || isNaN(item.score)) {
-        errors.push(`Item at index ${index}: score must be a valid number`);
+        errors.push(`Item ${index + 1}: Score must be a valid number`);
       }
     });
-
-    // Check for duplicate members
-    const members = value.map(item => item.member);
-    const duplicates = members.filter((member, index) => 
-      members.indexOf(member) !== index
-    );
-    
-    if (duplicates.length > 0) {
-      errors.push(`Duplicate members found: ${duplicates.join(', ')}`);
-    }
 
     return {
       valid: errors.length === 0,
@@ -125,33 +131,17 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
     };
   }
 
+  /**
+   * Get default empty value for Sorted Set type
+   * 
+   * @returns Default empty SortedSetMember array
+   */
   getDefaultValue(): SortedSetMember[] {
     return [];
   }
 
-  /**
-   * Format value for display in UI
-   * Shows first 3 members (sorted by score) and total count
-   * 
-   * @param value Value to format
-   * @returns Human-readable string representation
-   */
   formatForDisplay(value: unknown): string {
-    const members = Array.isArray(value) ? value : this.toVisual(value);
-    const count = members.length;
-    
-    if (count === 0) {
-      return 'Empty sorted set';
-    }
-    
-    // Sort by score for display
-    const sorted = [...members].sort((a, b) => a.score - b.score);
-    const preview = sorted.slice(0, 3)
-      .map(m => `${m.member} (${m.score})`)
-      .join(', ');
-    
-    return count > 3 
-      ? `${preview}... (${count} members)`
-      : preview;
+    const visual = this.toVisual(value);
+    return `${visual.length} members`;
   }
 }

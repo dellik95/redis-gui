@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.ImportRedisData;
@@ -47,7 +47,7 @@ public class ImportRedisDataCommandHandlerTests
 			  new ConnectionHost("localhost"),
 			  new ConnectionPort(6379),
 			new DatabaseNumber(0),
-			null).Value;
+			ConnectionOwnerId.None()).Value!;
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -80,7 +80,7 @@ public class ImportRedisDataCommandHandlerTests
 			  new ConnectionHost("localhost"),
 			  new ConnectionPort(6379),
 			new DatabaseNumber(0),
-			null).Value;
+			ConnectionOwnerId.None()).Value!;
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -115,7 +115,7 @@ public class ImportRedisDataCommandHandlerTests
 			  new ConnectionHost("localhost"),
 			  new ConnectionPort(6379),
 			new DatabaseNumber(0),
-			null).Value;
+			ConnectionOwnerId.None()).Value!;
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -134,6 +134,7 @@ public class ImportRedisDataCommandHandlerTests
 		result.Value.SkippedCount.Should().Be(1);
 	}
 }
+
 
 
 

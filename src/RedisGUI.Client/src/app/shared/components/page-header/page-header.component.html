@@ -1,0 +1,24 @@
+<div class="page-header-card">
+  <div class="header-left">
+    @if (icon()) {
+      <div class="icon-wrapper">
+        <mat-icon class="header-icon">{{ icon() }}</mat-icon>
+      </div>
+    }
+    <div class="text-content">
+      <div class="title-row">
+        <h1 class="header-title">{{ title() }}</h1>
+        @if (badge()) {
+          <span class="header-badge" [class]="'badge-' + (badgeColor() || 'primary')">{{ badge() }}</span>
+        }
+      </div>
+      @if (subtitle()) {
+        <p class="header-subtitle">{{ subtitle() }}</p>
+      }
+    </div>
+  </div>
+
+  <div class="header-actions">
+    <ng-content select="[actions]" />
+  </div>
+</div>

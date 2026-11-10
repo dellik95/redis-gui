@@ -1,5 +1,5 @@
 import { Component, inject, input, signal, effect, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
-import { DatePipe, NgClass } from '@angular/common';
+import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { RedisOperationsStore } from '../../core/stores/redis-operations.store';
 import { GetConnectionHealthResponse } from '../../models/redis-advanced.types';
+import { UiSelectComponent, UiSelectOption } from '../../shared/ui';
 
 @Component({
   selector: 'app-connection-health-card',
@@ -19,13 +20,15 @@ import { GetConnectionHealthResponse } from '../../models/redis-advanced.types';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     DatePipe,
+    DecimalPipe,
     NgClass,
     MatCardModule,
     MatButtonModule,
     MatSelectModule,
     MatIconModule,
     MatTooltipModule,
-    FormsModule
+    FormsModule,
+    UiSelectComponent
   ]
 })
 export class ConnectionHealthCardComponent {
@@ -47,6 +50,12 @@ export class ConnectionHealthCardComponent {
   // 4. Configuration
   private readonly maxHistoryPoints = 50;
   private refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  readonly intervalOptions: UiSelectOption[] = [
+    { label: '3s', value: 3000 },
+    { label: '5s', value: 5000 },
+    { label: '10s', value: 10000 },
+    { label: '30s', value: 30000 }
+  ];
 
   // 5. Computed signals
   readonly statusClass = computed(() => {
@@ -59,20 +68,52 @@ export class ConnectionHealthCardComponent {
     return 'unknown';
   });
 
+  readonly gradientId = computed(() => 'latencyGlow_' + (this.connectionId() ? this.connectionId().replace(/[^a-zA-Z0-9]/g, '') : 'default'));
+
   readonly svgPath = computed(() => {
-    const points = this.latencyHistory();
-    if (points.length === 0) return '';
-    const max = Math.max(...points, 1);
-    const w = 200;
-    const h = 40;
-    const step = w / Math.max(points.length - 1, 1);
-    let d = '';
-    points.forEach((val, i) => {
-      const x = i * step;
-      const y = h - (val / max) * (h - 4) - 2; // padding
-      d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-    });
+    let points = this.latencyHistory();
+    const current = this.health()?.responseTimeMs ?? 0.3;
+    if (points.length < 3) {
+      points = [current * 0.9, current * 1.08, current * 0.94, current * 1.05, current];
+    }
+    const min = Math.min(...points) * 0.8;
+    const max = Math.max(...points, 0.5) * 1.2;
+    const range = max - min || 1;
+    const w = 240;
+    const h = 42;
+    const step = w / (points.length - 1);
+    
+    const coords = points.map((val, i) => ({
+      x: i * step,
+      y: h - ((val - min) / range) * (h - 12) - 6
+    }));
+
+    if (coords.length < 2 || !coords[0]) {
+      return '';
+    }
+
+    const first = coords[0];
+    let d = `M ${first.x.toFixed(1)} ${first.y.toFixed(1)}`;
+    for (let i = 0; i < coords.length - 1; i++) {
+      const p0 = coords[Math.max(0, i - 1)] ?? first;
+      const p1 = coords[i] ?? first;
+      const p2 = coords[i + 1] ?? p1;
+      const p3 = coords[Math.min(coords.length - 1, i + 2)] ?? p2;
+
+      const cp1x = p1.x + (p2.x - p0.x) / 6;
+      const cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6;
+      const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
     return d;
+  });
+
+  readonly svgAreaPath = computed(() => {
+    const linePath = this.svgPath();
+    if (!linePath) return '';
+    return `${linePath} L 240 42 L 0 42 Z`;
   });
 
   // 6. Constructor with effects

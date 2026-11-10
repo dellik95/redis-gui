@@ -33,14 +33,14 @@ public class GetConnectionByIdQueryHandlerTests
 	public async Task Handle_ConnectionExists_ReturnsConnection()
 	{
 		// Arrange
-		Guid connectionId = Guid.NewGuid();
-		GetConnectionByIdQuery query = new(connectionId);
 		RedisConnection connection = RedisConnection.Create(
 			new ConnectionName("Test Connection"),
 			new ConnectionHost("localhost"),
 			new ConnectionPort(6379),
 			new DatabaseNumber(0),
 			ConnectionOwnerId.None()).Value!;
+		Guid connectionId = connection.Id;
+		GetConnectionByIdQuery query = new(connectionId);
 
 		repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -79,4 +79,6 @@ public class GetConnectionByIdQueryHandlerTests
 		result.Error.Should().Be(DomainErrors.Connection.NotFound);
 	}
 }
+
+
 

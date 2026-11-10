@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Queries.ExportRedisData;
@@ -37,10 +37,11 @@ public class ExportRedisDataQueryHandlerTests
 		var query = new ExportRedisDataQuery(connectionId, "*", ExportFormat.Json);
 
 		var connection = RedisConnection.Create(
-			  new ConnectionName("Test Connection"),
-			  new ConnectionHost("localhost"),
-			  new ConnectionPort(6379),
+			new ConnectionName("Test Connection"),
+			new ConnectionHost("localhost"),
+			new ConnectionPort(6379),
 			new DatabaseNumber(0),
+			ConnectionOwnerId.None(),
 			null).Value;
 
 		var redisValues = new List<RedisValue>
@@ -56,7 +57,12 @@ public class ExportRedisDataQueryHandlerTests
 			.ReturnsAsync(Result.Success(connection));
 
 		connectionServiceMock
-			.Setup(x => x.GetAllValuesAsync(connection, "*", null, null, It.IsAny<CancellationToken>()))
+			.Setup(x => x.GetAllValuesAsync(
+				It.IsAny<RedisConnection>(),
+				It.IsAny<string>(),
+				It.IsAny<int?>(),
+				It.IsAny<int?>(),
+				It.IsAny<CancellationToken>()))
 			.ReturnsAsync(Result.Success(pagedValues));
 
 		// Act
@@ -78,10 +84,11 @@ public class ExportRedisDataQueryHandlerTests
 		var query = new ExportRedisDataQuery(connectionId, "*", ExportFormat.Csv);
 
 		var connection = RedisConnection.Create(
-			  new ConnectionName("Test Connection"),
-			  new ConnectionHost("localhost"),
-			  new ConnectionPort(6379),
+			new ConnectionName("Test Connection"),
+			new ConnectionHost("localhost"),
+			new ConnectionPort(6379),
 			new DatabaseNumber(0),
+			ConnectionOwnerId.None(),
 			null).Value;
 
 		var redisValues = new List<RedisValue>
@@ -96,7 +103,12 @@ public class ExportRedisDataQueryHandlerTests
 			.ReturnsAsync(Result.Success(connection));
 
 		connectionServiceMock
-			.Setup(x => x.GetAllValuesAsync(connection, "*", null, null, It.IsAny<CancellationToken>()))
+			.Setup(x => x.GetAllValuesAsync(
+				It.IsAny<RedisConnection>(),
+				It.IsAny<string>(),
+				It.IsAny<int?>(),
+				It.IsAny<int?>(),
+				It.IsAny<CancellationToken>()))
 			.ReturnsAsync(Result.Success(pagedValues));
 
 		// Act
@@ -110,7 +122,3 @@ public class ExportRedisDataQueryHandlerTests
 		result.Value.FileName.Should().EndWith(".csv");
 	}
 }
-
-
-
-

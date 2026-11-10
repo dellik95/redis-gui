@@ -10,12 +10,6 @@ import {
 	ExportRedisDataResponse,
 	ImportRedisDataRequest,
 	ImportRedisDataResponse,
-	PublishMessageRequest,
-	SubscribeToChannelResponse,
-	ExecuteTransactionRequest,
-	ExecuteTransactionResponse,
-	ExecuteLuaScriptRequest,
-	ExecuteLuaScriptResponse,
 	GetConnectionHealthResponse
 } from '../../models/redis-advanced.types';
 
@@ -34,21 +28,6 @@ interface RedisOperationsState {
 	connectionHealth: GetConnectionHealthResponse | null;
 
 	/**
-	 * Last transaction result
-	 */
-	lastTransactionResult: ExecuteTransactionResponse | null;
-
-	/**
-	 * Last Lua script result
-	 */
-	lastScriptResult: ExecuteLuaScriptResponse | null;
-
-	/**
-	 * Active subscriptions
-	 */
-	activeSubscriptions: SubscribeToChannelResponse[];
-
-	/**
 	 * Loading state
 	 */
 	isLoading: boolean;
@@ -65,48 +44,13 @@ interface RedisOperationsState {
 const initialState: RedisOperationsState = {
 	pagedValues: null,
 	connectionHealth: null,
-	lastTransactionResult: null,
-	lastScriptResult: null,
-	activeSubscriptions: [],
 	isLoading: false,
 	error: null
 };
 
 /**
  * Global Redis operations store using NgRx SignalStore
- * Provides centralized state management for Redis advanced operations
- * 
- * Features:
- * - Pagination
- * - Bulk delete operations
- * - Import/Export
- * - Pub/Sub
- * - Transactions
- * - Lua Scripts
- * - Health monitoring
- * 
- * @example
- * ```typescript
- * // Inject the store
- * private redisOpsStore = inject(RedisOperationsStore);
- * 
- * // Load paged values
- * this.redisOpsStore.loadPagedValues({
- *   connectionId: 'conn-123',
- *   pattern: 'user:*',
- *   pageNumber: 1,
- *   pageSize: 50
- * });
- * 
- * // Execute transaction
- * this.redisOpsStore.executeTransaction({
- *   connectionId: 'conn-123',
- *   request: { commands: ['SET key1 val1', 'GET key1'] }
- * });
- * 
- * // Check health
- * this.redisOpsStore.loadConnectionHealth({ connectionId: 'conn-123' });
- * ```
+ * Provides centralized state management for Redis core operations
  */
 export const RedisOperationsStore = signalStore(
 	{ providedIn: 'root' },
@@ -122,13 +66,6 @@ export const RedisOperationsStore = signalStore(
 		isHealthy: computed(() => {
 			const health = store.connectionHealth();
 			return health?.status === 'Healthy' || health?.status === 'Connected';
-		}),
-
-		/**
-		 * Number of active subscriptions
-		 */
-		subscriptionsCount: computed(() => {
-			return store.activeSubscriptions().length;
 		}),
 
 		/**
@@ -207,16 +144,26 @@ export const RedisOperationsStore = signalStore(
 			deleteKeysByPattern: rxMethod<{
 				connectionId: string;
 				pattern: string;
+				database?: number;
+				onSuccess?: () => void;
 			}>(
 				pipe(
 					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, pattern }) =>
-						httpClient
+					switchMap(({ connectionId, pattern, database, onSuccess }) => {
+						let params = new HttpParams();
+						if (database !== undefined && database !== null) {
+							params = params.set('database', database.toString());
+						}
+						return httpClient
 							.delete<DeleteKeysByPatternResponse>(
-								`/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`
+								`/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`,
+								{ params }
 							)
 							.pipe(
-								tap(() => patchState(store, { isLoading: false })),
+								tap(() => {
+									patchState(store, { isLoading: false });
+									onSuccess?.();
+								}),
 								catchError((error) => {
 									patchState(store, {
 										error: error.message || 'Failed to delete keys by pattern',
@@ -224,8 +171,8 @@ export const RedisOperationsStore = signalStore(
 									});
 									return of(null);
 								})
-							)
-					)
+							);
+					})
 				)
 			),
 
@@ -235,17 +182,27 @@ export const RedisOperationsStore = signalStore(
 			deleteMultipleKeys: rxMethod<{
 				connectionId: string;
 				keys: string[];
+				database?: number;
+				onSuccess?: () => void;
 			}>(
 				pipe(
 					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, keys }) =>
-						httpClient
+					switchMap(({ connectionId, keys, database, onSuccess }) => {
+						let params = new HttpParams();
+						if (database !== undefined && database !== null) {
+							params = params.set('database', database.toString());
+						}
+						return httpClient
 							.post<DeleteMultipleKeysResponse>(
 								`/api/v1/storage/${connectionId}/keys/delete-multiple`,
-								{ keys }
+								{ keys, database },
+								{ params }
 							)
 							.pipe(
-								tap(() => patchState(store, { isLoading: false })),
+								tap(() => {
+									patchState(store, { isLoading: false });
+									onSuccess?.();
+								}),
 								catchError((error) => {
 									patchState(store, {
 										error: error.message || 'Failed to delete multiple keys',
@@ -253,8 +210,8 @@ export const RedisOperationsStore = signalStore(
 									});
 									return of(null);
 								})
-							)
-					)
+							);
+					})
 				)
 			),
 
@@ -323,177 +280,6 @@ export const RedisOperationsStore = signalStore(
 				)
 			),
 
-			// ========== Pub/Sub ==========
-
-			/**
-			 * Publish a message to a Redis channel
-			 */
-			publishMessage: rxMethod<{
-				connectionId: string;
-				request: PublishMessageRequest;
-			}>(
-				pipe(
-					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, request }) =>
-						httpClient
-							.post<void>(`/api/v1/pubsub/${connectionId}/publish`, request)
-							.pipe(
-								tap(() => patchState(store, { isLoading: false })),
-								catchError((error) => {
-									patchState(store, {
-										error: error.message || 'Failed to publish message',
-										isLoading: false
-									});
-									return of(null);
-								})
-							)
-					)
-				)
-			),
-
-			/**
-			 * Subscribe to a Redis channel
-			 */
-			subscribeToChannel: rxMethod<{
-				connectionId: string;
-				channel: string;
-			}>(
-				pipe(
-					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, channel }) =>
-						httpClient
-							.post<SubscribeToChannelResponse>(
-								`/api/v1/pubsub/${connectionId}/subscribe/${encodeURIComponent(channel)}`,
-								{}
-							)
-							.pipe(
-								tap((subscription) => {
-									const subscriptions = [...store.activeSubscriptions(), subscription];
-									patchState(store, {
-										activeSubscriptions: subscriptions,
-										isLoading: false
-									});
-								}),
-								catchError((error) => {
-									patchState(store, {
-										error: error.message || 'Failed to subscribe to channel',
-										isLoading: false
-									});
-									return of(null);
-								})
-							)
-					)
-				)
-			),
-
-			/**
-			 * Unsubscribe from a Redis channel
-			 */
-			unsubscribeFromChannel: rxMethod<{
-				connectionId: string;
-				subscriptionId: string;
-			}>(
-				pipe(
-					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, subscriptionId }) =>
-						httpClient
-							.delete<void>(
-								`/api/v1/pubsub/${connectionId}/subscribe/${subscriptionId}`
-							)
-							.pipe(
-								tap(() => {
-									const subscriptions = store
-										.activeSubscriptions()
-										.filter((s) => s.subscriptionId !== subscriptionId);
-									patchState(store, {
-										activeSubscriptions: subscriptions,
-										isLoading: false
-									});
-								}),
-								catchError((error) => {
-									patchState(store, {
-										error: error.message || 'Failed to unsubscribe from channel',
-										isLoading: false
-									});
-									return of(null);
-								})
-							)
-					)
-				)
-			),
-
-			// ========== Transactions ==========
-
-			/**
-			 * Execute a Redis transaction
-			 */
-			executeTransaction: rxMethod<{
-				connectionId: string;
-				request: ExecuteTransactionRequest;
-			}>(
-				pipe(
-					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, request }) =>
-						httpClient
-							.post<ExecuteTransactionResponse>(
-								`/api/v1/transaction/${connectionId}/execute`,
-								request
-							)
-							.pipe(
-								tap((result) =>
-									patchState(store, {
-										lastTransactionResult: result,
-										isLoading: false
-									})
-								),
-								catchError((error) => {
-									patchState(store, {
-										error: error.message || 'Failed to execute transaction',
-										isLoading: false
-									});
-									return of(null);
-								})
-							)
-					)
-				)
-			),
-
-			// ========== Lua Scripts ==========
-
-			/**
-			 * Execute a Lua script
-			 */
-			executeLuaScript: rxMethod<{
-				connectionId: string;
-				request: ExecuteLuaScriptRequest;
-			}>(
-				pipe(
-					tap(() => patchState(store, { isLoading: true, error: null })),
-					switchMap(({ connectionId, request }) =>
-						httpClient
-							.post<ExecuteLuaScriptResponse>(
-								`/api/v1/script/${connectionId}/execute`,
-								request
-							)
-							.pipe(
-								tap((result) =>
-									patchState(store, {
-										lastScriptResult: result,
-										isLoading: false
-									})
-								),
-								catchError((error) => {
-									patchState(store, {
-										error: error.message || 'Failed to execute Lua script',
-										isLoading: false
-									});
-									return of(null);
-								})
-							)
-					)
-				)
-			),
-
 			// ========== Health Monitoring ==========
 
 			/**
@@ -531,20 +317,6 @@ export const RedisOperationsStore = signalStore(
 			 */
 			clearError(): void {
 				patchState(store, { error: null });
-			},
-
-			/**
-			 * Clear transaction result
-			 */
-			clearTransactionResult(): void {
-				patchState(store, { lastTransactionResult: null });
-			},
-
-			/**
-			 * Clear script result
-			 */
-			clearScriptResult(): void {
-				patchState(store, { lastScriptResult: null });
 			},
 
 			/**

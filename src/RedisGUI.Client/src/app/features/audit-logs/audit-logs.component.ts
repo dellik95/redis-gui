@@ -4,8 +4,8 @@ import { FormsModule } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatTableModule } from '@angular/material/table';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,8 @@ import { MatNativeDateModule } from '@angular/material/core';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { UiSelectComponent, UiSelectOption, UiInputComponent } from '../../shared/ui';
+import { PageHeaderComponent } from '../../shared/components';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AuditStore } from '../../core/stores/audit.store';
@@ -46,8 +48,8 @@ import type { AuditLogItem, GetAuditLogsRequest } from '../../models/audit.types
 		FormsModule,
 		MatCardModule,
 		MatTableModule,
-		MatPaginatorModule,
 		MatProgressSpinnerModule,
+		MatProgressBarModule,
 		MatIconModule,
 		MatButtonModule,
 		MatFormFieldModule,
@@ -57,7 +59,10 @@ import type { AuditLogItem, GetAuditLogsRequest } from '../../models/audit.types
 		MatNativeDateModule,
 		MatChipsModule,
 		MatTooltipModule,
-		MatExpansionModule
+		MatExpansionModule,
+		UiSelectComponent,
+		UiInputComponent,
+		PageHeaderComponent
 	],
 	templateUrl: './audit-logs.component.html',
 	styleUrl: './audit-logs.component.scss',
@@ -88,6 +93,44 @@ export class AuditLogsComponent {
 	// 4. Configuration
 	readonly displayedColumns = ['timestamp', 'action', 'entityType', 'entityId', 'userId', 'ipAddress', 'details'] as const;
 	readonly entityTypes = ['Connection', 'User', 'Redis'] as const;
+	readonly entityTypeOptions: UiSelectOption[] = [
+		{ label: 'All Types', value: undefined, icon: 'list' },
+		{ label: 'Connection', value: 'Connection', icon: 'dns' },
+		{ label: 'User', value: 'User', icon: 'person' },
+		{ label: 'Redis', value: 'Redis', icon: 'storage' }
+	];
+
+	readonly pageSizeOptions: UiSelectOption[] = [
+		{ label: '25 / page', value: 25 },
+		{ label: '50 / page', value: 50 },
+		{ label: '100 / page', value: 100 },
+		{ label: '200 / page', value: 200 }
+	];
+
+	readonly pageStart = computed(() => {
+		const count = this.totalCount();
+		if (count === 0) return 0;
+		return (this.currentPage() - 1) * this.pageSize() + 1;
+	});
+
+	readonly pageEnd = computed(() => {
+		return Math.min(this.currentPage() * this.pageSize(), this.totalCount());
+	});
+
+	onPageSizeChange(newSize: number): void {
+		this.pageSize.set(newSize);
+		this.goToPage(1);
+	}
+
+	goToPage(page: number): void {
+		if (page < 1 || (this.totalPages() > 0 && page > this.totalPages())) return;
+		const newSkip = (page - 1) * this.pageSize();
+		this.auditStore.loadAuditLogs({
+			...this.filters(),
+			skip: newSkip,
+			take: this.pageSize()
+		});
+	}
 
 	constructor() {
 		// Check admin access and load data
@@ -98,6 +141,11 @@ export class AuditLogsComponent {
 				this.snackBar.open('Access denied. Admin privileges required.', 'Close', { duration: 5000 });
 			}
 		});
+	}
+
+	formatDateForInput(iso?: string): string {
+		if (!iso) return '';
+		return iso.split('T')[0] ?? '';
 	}
 
 	// 5. Public methods
@@ -166,20 +214,6 @@ export class AuditLogsComponent {
 		this.filters.set({});
 		this.auditStore.resetFilters();
 		this.loadAuditLogs();
-	}
-
-	/**
-	 * Handle page change event
-	 */
-	onPageChange(event: PageEvent): void {
-		this.pageSize.set(event.pageSize);
-		const newSkip = event.pageIndex * event.pageSize;
-
-		this.auditStore.loadAuditLogs({
-			...this.filters(),
-			skip: newSkip,
-			take: event.pageSize
-		});
 	}
 
 	/**

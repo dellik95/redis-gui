@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, input, effect, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { StorageResourceDetailsService } from '../../services/storage-resource-details.service';
@@ -18,11 +18,11 @@ import { switchMap } from 'rxjs';
  * - Connection metrics
  * - Auto-updates via SignalR
  * 
- * This component is dynamically loaded into the section actions portal
+ * Can be used as a standalone component with [connectionId] or loaded via portal
  * 
  * @example
  * ```html
- * <app-storage-resources-info />
+ * <app-storage-resources-info [connectionId]="id()" />
  * ```
  */
 @Component({
@@ -36,26 +36,54 @@ import { switchMap } from 'rxjs';
 export class StorageResourcesInfoComponent {
 	// 1. Injected dependencies
 	private readonly resourceDetailsService = inject(StorageResourceDetailsService);
-	private readonly data = inject<Map<string, string>>(PORTAL_DATA);
+	private readonly data = inject<any>(PORTAL_DATA, { optional: true });
 	private readonly destroyRef = inject(DestroyRef);
 
-	// 2. State signals
+	// 2. Direct inputs
+	readonly connectionId = input<string>();
+
+	// 3. State signals
 	/** Current system metrics from SignalR */
 	readonly resourceInfo = signal<SystemMetrics | null>(null);
 
 	constructor() {
+		this.destroyRef.onDestroy(() => {
+			this.resourceDetailsService.stopConnection().subscribe({ error: () => {} });
+		});
+
 		effect(() => {
-			const id = this.data.get('id') ?? '';
+			const directId = this.connectionId();
+			const rawData = this.data;
+			const portalId = rawData instanceof Map ? (rawData.get('id') ?? '') : (rawData?.id ?? '');
+			const id = directId || portalId;
 			if (!id) return;
 
+			// Instantaneous metrics for zero-delay display
+			this.resourceDetailsService.getInstantMetrics(id).pipe(
+				takeUntilDestroyed(this.destroyRef)
+			).subscribe({
+				next: (metrics) => {
+					if (metrics) this.resourceInfo.set(metrics);
+				},
+				error: () => {
+					// Fallback to SignalR
+				}
+			});
+
+			// Real-time live metrics via SignalR
 			this.resourceDetailsService
 				.startConnection(id)
 				.pipe(
 					switchMap(() => this.resourceDetailsService.receiveMessage()),
 					takeUntilDestroyed(this.destroyRef)
 				)
-				.subscribe((metrics: SystemMetrics) => {
-					this.resourceInfo.set(metrics);
+				.subscribe({
+					next: (metrics: SystemMetrics) => {
+						this.resourceInfo.set(metrics);
+					},
+					error: (err) => {
+						console.warn('Realtime metrics connection error:', err);
+					}
 				});
 		});
 	}

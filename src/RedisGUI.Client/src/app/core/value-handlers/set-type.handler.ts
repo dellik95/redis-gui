@@ -1,5 +1,6 @@
+import { Injectable } from '@angular/core';
 import { RedisDataType } from '../../models/redis-keys.types';
-import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from './redis-type-handler.interface';
+import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type-handler.interface';
 
 /**
  * Handler for Redis Set data type
@@ -9,6 +10,9 @@ import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from 
  * Visual format: string[]
  * JSON format: { "members": ["member1", "member2", "member3"] }
  */
+@Injectable({
+  providedIn: 'root'
+})
 export class SetTypeHandler implements RedisTypeHandler {
   readonly type = RedisDataType.Set;
 
@@ -16,14 +20,20 @@ export class SetTypeHandler implements RedisTypeHandler {
    * Convert raw Redis value to visual editor format (string array)
    * Removes duplicates as Sets only contain unique values
    * 
-   * @param data Raw value from Redis (array of values)
+   * @param data Raw value from Redis (array or { members: [] })
    * @returns Array of unique strings
    */
   toVisual(data: unknown): string[] {
+    if (!data) {
+      return [];
+    }
+    if (typeof data === 'object' && 'members' in (data as Record<string, unknown>)) {
+      const members = (data as Record<string, unknown>)['members'];
+      return Array.isArray(members) ? [...new Set(members.map(m => String(m)))] : [];
+    }
     if (!Array.isArray(data)) {
       return [];
     }
-    // Remove duplicates and convert to strings
     return [...new Set(data.map(item => String(item)))];
   }
 
@@ -61,38 +71,15 @@ export class SetTypeHandler implements RedisTypeHandler {
 
   /**
    * Validate value structure for Set type
-   * Ensures array format and checks for duplicates
    * 
-   * @param value Value to validate (should be string array)
+   * @param value Value to validate (must be string array)
    * @returns Validation result with errors if invalid
    */
   validate(value: unknown): ValidationResult {
-    if (!Array.isArray(value)) {
-      return {
-        valid: false,
-        errors: ['Set value must be an array']
-      };
-    }
-
     const errors: string[] = [];
-    
-    value.forEach((item, index) => {
-      if (item === null || item === undefined) {
-        errors.push(`Member at index ${index}: cannot be null or undefined`);
-      }
-      if (typeof item === 'string' && item.trim() === '') {
-        errors.push(`Member at index ${index}: cannot be empty string`);
-      }
-    });
 
-    // Check for duplicates
-    const stringified = value.map(v => String(v));
-    const duplicates = stringified.filter((member, index) => 
-      stringified.indexOf(member) !== index
-    );
-    
-    if (duplicates.length > 0) {
-      errors.push(`Duplicate members found: ${duplicates.join(', ')}`);
+    if (!Array.isArray(value)) {
+      return { valid: false, errors: ['Value must be an array of members'] };
     }
 
     return {
@@ -101,28 +88,17 @@ export class SetTypeHandler implements RedisTypeHandler {
     };
   }
 
+  /**
+   * Get default empty value for Set type
+   * 
+   * @returns Default empty string array
+   */
   getDefaultValue(): string[] {
     return [];
   }
 
-  /**
-   * Format value for display in UI
-   * Shows first 3 members and total count
-   * 
-   * @param value Value to format
-   * @returns Human-readable string representation
-   */
   formatForDisplay(value: unknown): string {
-    const members = this.toVisual(value);
-    const count = members.length;
-    
-    if (count === 0) {
-      return 'Empty set';
-    }
-    
-    const preview = members.slice(0, 3).join(', ');
-    return count > 3 
-      ? `${preview}... (${count} members)`
-      : preview;
+    const visual = this.toVisual(value);
+    return `${visual.length} members`;
   }
 }

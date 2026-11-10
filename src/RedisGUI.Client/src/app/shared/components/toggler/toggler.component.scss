@@ -1,0 +1,45 @@
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  background: var(--color-canvas-subtle, #0d1322);
+  border: 1px solid var(--color-border, #1e293b);
+  border-radius: 8px;
+  gap: 3px;
+}
+
+.segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text-muted, #94a3b8);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1;
+
+  .segment-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &:hover {
+    color: var(--color-text, #f8fafc);
+  }
+
+  &.active {
+    background: var(--color-card, #0f172a);
+    color: var(--color-accent, #6366f1);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+}

@@ -1,5 +1,4 @@
-import { Component, input, output, ChangeDetectionStrategy } from '@angular/core';
-import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import { Component, input, output, model, ChangeDetectionStrategy } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 
 /**
@@ -12,50 +11,33 @@ export type TogglerConfig = {
   items: Array<{
     value: string;
     icon: string;
+    label?: string;
   }>;
 };
 
 /**
- * Toggler Component
- * Material button toggle group with icon support
- * 
- * Features:
- * - Icon-based toggle buttons
- * - Configurable default value
- * - Emits value changes
- * 
- * @example
- * ```html
- * <app-toggler
- *   [config]="{ defaultValue: 'list', items: [{ value: 'list', icon: 'list' }, { value: 'grid', icon: 'grid_on' }] }"
- *   (toggleChanged)="onViewChange($event)"
- * />
- * ```
+ * Modern Segmented Control / Toggler Component
+ * Clean developer-first segmented control without Material MDC bloat
  */
 @Component({
   selector: 'app-toggler',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonToggleModule, MatIconModule],
+  imports: [MatIconModule],
   templateUrl: './toggler.component.html',
   styleUrl: './toggler.component.scss'
 })
 export class TogglerComponent {
-  // 1. Inputs
-  /** Toggler configuration with items and default value */
+  // 1. Inputs & Models
   readonly config = input.required<TogglerConfig>();
+  readonly value = model<string>();
   
-  // 2. Outputs
-  /** Emitted when toggle selection changes */
+  // 2. Outputs (backward compatibility)
   readonly toggleChanged = output<string>();
 
-  // 3. Public methods
-  /**
-   * Handles toggle change event
-   * 
-   * @param event - Material button toggle change event
-   */
-  onToggle(event: MatButtonToggleChange): void {
-    this.toggleChanged.emit(event.value);
+  // 3. Handlers
+  selectItem(itemValue: string): void {
+    this.value.set(itemValue);
+    this.toggleChanged.emit(itemValue);
   }
 }

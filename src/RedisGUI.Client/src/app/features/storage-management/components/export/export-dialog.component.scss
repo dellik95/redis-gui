@@ -1,7 +1,20 @@
-mat-radio-group {
+mat-dialog-content {
+  min-width: 380px;
+  max-width: 520px;
+  padding: 20px 24px !important;
+  box-sizing: border-box;
+}
+
+.export-hint {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.format-options {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 1rem;
 }
 
@@ -10,14 +23,16 @@ mat-radio-group {
   align-items: center;
   gap: 12px;
   margin-top: 1rem;
+  font-size: 13.5px;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .error {
-  color: var(--mat-sys-error);
+  color: #ef4444;
   margin-top: 1rem;
   padding: 8px 12px;
-  background-color: var(--mat-sys-error-container);
-  border-radius: 4px;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
   font-size: 0.875rem;
 }
-

@@ -1,8 +1,19 @@
-import { Component, input, inject, effect, signal, output, ChangeDetectionStrategy } from '@angular/core';
+import {
+  Component,
+  input,
+  model,
+  inject,
+  effect,
+  signal,
+  computed,
+  viewChild,
+  output,
+  ChangeDetectionStrategy
+} from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTreeModule } from '@angular/material/tree';
+import { MatTree, MatTreeModule } from '@angular/material/tree';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -59,10 +70,13 @@ export class TreeViewListComponent {
   readonly connectionId = input.required<string>();
 
   /** Pattern to filter keys (default: '*') */
-  readonly pattern = input<string>('*');
+  readonly pattern = model<string>('*');
 
   /** Delimiter used to split key paths (default: ':') */
-  readonly delimiter = input<string>(':');
+  readonly delimiter = model<string>(':');
+
+  /** Currently active key path for selection highlight */
+  readonly activeKey = input<string | null>(null);
 
   // 3. Outputs
   /** Emitted when a key is selected from the tree */
@@ -70,18 +84,21 @@ export class TreeViewListComponent {
     key: string;
     type: RedisDataType;
     value: RedisValue;
-    ttl: number
+    ttl: number;
   }>();
 
-  // 4. State signals
+  // 4. View children
+  readonly tree = viewChild(MatTree);
+
+  // 5. State signals
   /** Tree data source for Material Tree */
   readonly dataSource = signal<TreeNode[]>([]);
 
-  /** Loading state indicator */
-  readonly isLoading = signal<boolean>(false);
+  /** Loading state indicator computed from store */
+  readonly isLoading = computed<boolean>(() => this.redisKeysStore.isLoading());
 
-  /** Currently loading key for emission tracking */
-  private readonly pendingKey = signal<{ key: string; type: string } | null>(null);
+  /** Persistent set of expanded group paths */
+  readonly expandedNodePaths = signal<Set<string>>(new Set<string>());
 
   constructor() {
     // Load keys when connectionId or pattern changes
@@ -97,69 +114,157 @@ export class TreeViewListComponent {
       }
     });
 
-    // Watch for changes in the store and group keys for tree display
+    // Watch for changes in the store keys or delimiter and group keys for tree display.
+    // Isolated from store.isLoading() so fetching individual key values doesn't reconstruct the tree.
     effect(() => {
       const keys = this.redisKeysStore.keys();
       const delimiter = this.delimiter();
 
       if (keys.length > 0) {
-        // Group keys as tree structure
         const groups = this.groupKeysAsTree(keys, delimiter);
         const treeNodes = this.buildTreeFromGroups(groups);
         this.dataSource.set(treeNodes);
+
+        // Re-apply expansion state so tree does not collapse on data refresh
+        setTimeout(() => {
+          const matTree = this.tree();
+          if (matTree) {
+            for (const path of this.expandedNodePaths()) {
+              const node = this.findGroupNodeByPath(treeNodes, path);
+              if (node) {
+                matTree.expand(node);
+              }
+            }
+          }
+        }, 50);
       } else {
         this.dataSource.set([]);
       }
-
-      this.isLoading.set(this.redisKeysStore.isLoading());
     });
 
-    // Watch for selectedKey changes and emit when it matches pending key
+    // Automatically expand parent folders of activeKey so it remains visible
     effect(() => {
-      const pending = this.pendingKey();
-      const selectedKey = this.redisKeysStore.selectedKey();
+      const active = this.activeKey();
+      const delimiter = this.delimiter();
+      const nodes = this.dataSource();
 
-      if (pending && selectedKey && selectedKey.key === pending.key) {
-        this.keySelected.emit({
-          key: pending.key,
-          type: this.mapTypeToRedisDataType(pending.type),
-          value: selectedKey.value,
-          ttl: selectedKey.ttl ?? -1
+      if (active && nodes.length > 0) {
+        queueMicrotask(() => {
+          this.expandParentsOfKey(active, delimiter, nodes);
         });
-        // Clear pending after emission
-        this.pendingKey.set(null);
       }
     });
   }
 
-  // 5. Tree accessors (for Material Tree)
+  // 6. Tree accessors and trackers (for Material Tree)
   /** Accessor function for Material Tree to get children */
   readonly childrenAccessor = (node: TreeNode) => node.children ?? [];
 
   /** Determines if a node has children (for expand/collapse) */
   readonly hasChild = (_: number, node: TreeNode) => node.isGroup && !!node.children && node.children.length > 0;
 
-  // 6. Public methods
+  /** TrackBy function for Material Tree recycling */
+  readonly trackByPath = (_: number, node: TreeNode) => node.path;
+
+  /** Key extractor function for preserving expansion state */
+  readonly getExpansionKey = (node: TreeNode) => node.path;
+
+  // 7. Public methods
   /**
-   * Handles key selection when a tree node is clicked
-   * Loads the key value and emits the selection event
+   * Handles key selection when a tree node is clicked.
+   * Emits the selected key immediately to open the edit panel,
+   * while ensuring the parent folder path remains expanded.
    *
    * @param node - The tree node that was clicked
    */
   onKeyClick(node: TreeNode): void {
     if (!node.isGroup && node.keyInfo) {
-      // Set pending key to track which key we're loading
-      this.pendingKey.set({
-        key: node.keyInfo.key,
-        type: node.keyInfo.type
-      });
+      // Ensure the parent groups of this clicked key remain expanded
+      this.expandParentsOfKey(node.keyInfo.key, this.delimiter(), this.dataSource());
 
-      // Load the key value - effect will handle emission when ready
-      this.redisKeysStore.loadValue({
-        connectionId: this.connectionId(),
-        key: node.keyInfo.key
+      this.keySelected.emit({
+        key: node.keyInfo.key,
+        type: this.mapTypeToRedisDataType(node.keyInfo.type),
+        value: null as any,
+        ttl: node.keyInfo.ttl ?? -1
       });
     }
+  }
+
+  /**
+   * Toggles a group node open or closed and persists its path in the set
+   */
+  toggleGroup(node: TreeNode, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const current = new Set(this.expandedNodePaths());
+    const isCurrentlyExpanded = current.has(node.path);
+
+    if (isCurrentlyExpanded) {
+      current.delete(node.path);
+    } else {
+      current.add(node.path);
+    }
+    this.expandedNodePaths.set(current);
+
+    const matTree = this.tree();
+    if (matTree) {
+      if (!isCurrentlyExpanded) {
+        matTree.expand(node);
+      } else {
+        matTree.collapse(node);
+      }
+    }
+  }
+
+  /**
+   * Checks whether a group node is currently expanded
+   */
+  isExpanded(node: TreeNode): boolean {
+    if (this.expandedNodePaths().has(node.path)) {
+      return true;
+    }
+    const matTree = this.tree();
+    return matTree ? matTree.isExpanded(node) : false;
+  }
+
+  /**
+   * Expands all parent folder nodes containing the specified key.
+   */
+  expandParentsOfKey(keyPath: string, delimiter: string, nodes: TreeNode[]): void {
+    if (!keyPath) return;
+
+    const parts = keyPath.split(delimiter).filter(p => p.length > 0);
+    if (parts.length <= 1) return;
+
+    const current = new Set(this.expandedNodePaths());
+    const matTree = this.tree();
+    let currentPath = '';
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      currentPath = currentPath ? `${currentPath}${delimiter}${parts[i]}` : parts[i]!;
+      current.add(currentPath);
+      const groupNode = this.findGroupNodeByPath(nodes, currentPath);
+      if (groupNode && matTree) {
+        matTree.expand(groupNode);
+      }
+    }
+
+    this.expandedNodePaths.set(current);
+  }
+
+  private findGroupNodeByPath(nodes: TreeNode[], targetPath: string): TreeNode | null {
+    for (const node of nodes) {
+      if (node.isGroup && node.path === targetPath) {
+        return node;
+      }
+      if (node.children && node.children.length > 0) {
+        const found = this.findGroupNodeByPath(node.children, targetPath);
+        if (found) return found;
+      }
+    }
+    return null;
   }
 
   /**

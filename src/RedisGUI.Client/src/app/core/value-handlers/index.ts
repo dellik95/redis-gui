@@ -6,3 +6,4 @@ export * from './hash-type.handler';
 export * from './list-type.handler';
 export * from './set-type.handler';
 export * from './sorted-set-type.handler';
+export * from './stream-type.handler';

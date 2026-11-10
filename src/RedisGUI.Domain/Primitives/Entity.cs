@@ -65,7 +65,7 @@ public abstract class Entity : IEquatable<Entity>
 	/// <param name="a">First entity</param>
 	/// <param name="b">Second entity</param>
 	/// <returns>True if entities are equal, false otherwise</returns>
-	public static bool operator ==(Entity a, Entity b)
+	public static bool operator ==(Entity? a, Entity? b)
 	{
 		if (a is null && b is null)
 		{
@@ -86,7 +86,7 @@ public abstract class Entity : IEquatable<Entity>
 	/// <param name="a">First entity</param>
 	/// <param name="b">Second entity</param>
 	/// <returns>True if entities are not equal, false otherwise</returns>
-	public static bool operator !=(Entity a, Entity b)
+	public static bool operator !=(Entity? a, Entity? b)
 	{
 		return !(a == b);
 	}
@@ -136,9 +136,9 @@ public abstract class Entity : IEquatable<Entity>
 	/// <summary>
 	/// Returns a hash code for this entity
 	/// </summary>
-	/// <returns>A hash code value generated from the entity's Id and domain events</returns>
+	/// <returns>A hash code value generated from the entity's type and Id</returns>
 	public override int GetHashCode()
 	{
-		return HashCode.Combine(Id, domainEvents);
+		return HashCode.Combine(GetType(), Id);
 	}
 }

@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Primitives;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -56,12 +57,12 @@ public sealed class RedisValue
     {
         if (string.IsNullOrWhiteSpace(key))
         {
-            return Result.Failure<RedisValue>(new Error("RedisValue.EmptyKey", "Redis key cannot be empty"));
+            return Result.Failure<RedisValue>(DomainErrors.RedisValue.EmptyKey);
         }
 
         if (string.IsNullOrWhiteSpace(type))
         {
-            return Result.Failure<RedisValue>(new Error("RedisValue.EmptyType", "Redis type cannot be empty"));
+            return Result.Failure<RedisValue>(DomainErrors.RedisValue.EmptyType);
         }
 
         return Result.Success(new RedisValue(key, value ?? string.Empty, type, timeToLive));
@@ -85,4 +86,4 @@ public sealed class RedisValue
     /// </summary>
     /// <returns>A string representation of the RedisValue</returns>
     public override string ToString() => $"{Key}: {Value} ({Type})";
-} 
+}

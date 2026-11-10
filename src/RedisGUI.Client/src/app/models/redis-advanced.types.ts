@@ -53,49 +53,6 @@ export interface ImportRedisDataResponse {
     failedKeys: string[];
 }
 
-// Pub/Sub types
-export interface PublishMessageRequest {
-    channel: string;
-    message: string;
-}
-
-export interface SubscribeToChannelResponse {
-    subscriptionId: string;
-    channel: string;
-    success: boolean;
-}
-
-// Transaction types
-export interface RedisOperation {
-    command: string;
-    key: string;
-    value?: string;
-    arguments?: string[];
-}
-
-export interface ExecuteTransactionRequest {
-    operations: RedisOperation[];
-}
-
-export interface ExecuteTransactionResponse {
-    success: boolean;
-    results: string[];
-    operationsExecuted: number;
-}
-
-// Lua script types
-export interface ExecuteLuaScriptRequest {
-    script: string;
-    keys?: string[];
-    arguments?: string[];
-}
-
-export interface ExecuteLuaScriptResponse {
-    result: string;
-    success: boolean;
-    scriptHash?: string;
-}
-
 // Health monitoring types
 export enum ConnectionHealthStatus {
     Unknown = 0,

@@ -29,10 +29,18 @@ public class Program
 	/// <param name="args">Command line arguments</param>
 	public static void Main(string[] args)
 	{
+		System.Globalization.CultureInfo.DefaultThreadCurrentCulture = System.Globalization.CultureInfo.InvariantCulture;
+		System.Globalization.CultureInfo.DefaultThreadCurrentUICulture = System.Globalization.CultureInfo.InvariantCulture;
+
 		WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 		builder.Logging.ConfigureApplicationLogging();
 		builder.Services.AddApiOpenTelemetry();
+
+		builder.Services.ConfigureHttpJsonOptions(options =>
+		{
+			options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+		});
 
 		// Configure response compression
 		builder.Services.AddResponseCompression(options =>
@@ -75,10 +83,10 @@ public class Program
 			options.AddFixedWindowLimiter("auth", limiter =>
 			{
 				limiter.Window = TimeSpan.FromMinutes(1);
-				limiter.PermitLimit = 5;
+				limiter.PermitLimit = 60;
 				limiter.QueueLimit = 0;
 			})
-			// General fallback limiter for sensitive endpoints (import/export/transactions/lua)
+			// General fallback limiter for sensitive endpoints
 			.AddFixedWindowLimiter("sensitive", limiter =>
 			{
 				limiter.Window = TimeSpan.FromMinutes(1);
@@ -108,31 +116,31 @@ public class Program
 		{
 			app.UseSwagger();
 			app.UseSwaggerUI();
-			app.ApplyMigrations();
-			app.SeedFakeData();
 		}
+
+		app.EnsureDatabaseReady();
 
 		app.UseAuthentication();
 		app.UseAuthorization();
 
 		// SignalR hubs
 		app.MapHub<RedisMetricsHub>("/hub/metrics");
-		app.MapHub<PubSubHub>("/hub/pubsub");
 		app.MapHub<KeyChangeHub>("/hub/keychange");
 
 		app.MapHealthChecks("/health");
 		app.MapHealthChecks("/health/ready");
-
 
 		ApiVersionSet apiVersionSet = app.NewApiVersionSet()
 			.HasApiVersion(new ApiVersion(1.0))
 			.ReportApiVersions()
 			.Build();
 
-		RouteGroupBuilder group = app.MapGroup("api/v{version:apiVersion}")
+		RouteGroupBuilder versionGroup = app.MapGroup("api/v{version:apiVersion}")
 			.WithApiVersionSet(apiVersionSet);
 
-		app.MapEndpoints(group);
+		app.MapEndpoints(versionGroup);
+
+		app.MapFallbackToFile("/index.html");
 
 		app.Run();
 	}

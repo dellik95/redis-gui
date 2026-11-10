@@ -66,7 +66,7 @@ public sealed class DomainEventsDispatcherInterceptor : SaveChangesInterceptor
 		InterceptionResult<int> saveResult = await base.SavingChangesAsync(eventData, result, cancellationToken);
 
 		// Dispatch events after successful save
-		if (!(saveResult.Result <= 0))
+		if (!saveResult.HasResult || saveResult.Result > 0)
 		{
 			logger.LogInformation(
 				"Dispatching {Count} domain event(s) after successful save",

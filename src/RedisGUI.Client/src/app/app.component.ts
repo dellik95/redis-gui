@@ -1,4 +1,4 @@
-import { Component, inject, signal, linkedSignal, ChangeDetectionStrategy } from "@angular/core";
+import { Component, inject, signal, linkedSignal, ChangeDetectionStrategy, HostListener } from "@angular/core";
 import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { NgTemplateOutlet } from "@angular/common";
 
@@ -10,14 +10,16 @@ import { MatSidenavModule } from "@angular/material/sidenav";
 import { MatMenuModule } from "@angular/material/menu";
 import { MatCheckboxModule } from "@angular/material/checkbox";
 import { MatDividerModule } from "@angular/material/divider";
+import { MatTooltipModule } from "@angular/material/tooltip";
+import { MatDialog, MatDialogModule } from "@angular/material/dialog";
 
 import { LoadingComponent } from "./shared/components/loading/loading.component";
-import { BreadcrumbComponent } from "./shared/components/breadcrumb/breadcrumb.component";
-import { SectionActionsComponent } from "./shared/components/section-actions/section-actions.component";
 import { ThemePicker } from "./shared/ui/theme-picker/theme-picker";
+import { CommandPaletteComponent } from "./shared/components/command-palette/command-palette.component";
 
 import { AuthStore } from "./core/stores/auth.store";
 import { SideNavStore } from "./core/stores/side-nav.store";
+import { ConnectionsStore } from "./core/stores/connections.store";
 import { AuthService } from "./core/services/auth/auth.service";
 import { useMediaQuery } from "./core/utils/signal-utilities";
 
@@ -43,7 +45,6 @@ type DensityType = "default" | "comfortable" | "compact";
 	imports: [
 		RouterOutlet,
 		LoadingComponent,
-		BreadcrumbComponent,
 		MatToolbarModule,
 		MatButtonModule,
 		MatSidenavModule,
@@ -52,11 +53,12 @@ type DensityType = "default" | "comfortable" | "compact";
 		MatMenuModule,
 		MatCheckboxModule,
 		MatDividerModule,
+		MatTooltipModule,
 		RouterLink,
 		RouterLinkActive,
-		SectionActionsComponent,
 		NgTemplateOutlet,
-		ThemePicker
+		ThemePicker,
+		MatDialogModule
 	],
 	templateUrl: "./app.component.html",
 	styleUrl: "./app.component.scss",
@@ -71,6 +73,26 @@ export class AppComponent {
 	readonly sideNavStore = inject(SideNavStore);
 	readonly authStore = inject(AuthStore);
 	readonly authService = inject(AuthService);
+	readonly connectionsStore = inject(ConnectionsStore);
+	private readonly dialog = inject(MatDialog);
+
+	openCommandPalette(): void {
+		this.dialog.open(CommandPaletteComponent, {
+			width: "680px",
+			maxWidth: "94vw",
+			panelClass: "command-palette-dialog-panel",
+			enterAnimationDuration: "0ms",
+			exitAnimationDuration: "0ms"
+		});
+	}
+
+	@HostListener('window:keydown', ['$event'])
+	onWindowKeyDown(e: KeyboardEvent): void {
+		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+			e.preventDefault();
+			this.openCommandPalette();
+		}
+	}
 
 	// 3. State signals
 	/** Whether the app is in mobile view (using custom hook) */

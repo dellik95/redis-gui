@@ -11,9 +11,29 @@
                 <mat-icon>menu</mat-icon>
             </button>
 
-            <div class="company-dedails">
-                <img src="noBgBlack.png" alt="">
+            <div class="brand-container">
+                <div class="brand-icon-wrap">
+                    <mat-icon class="brand-icon">storage</mat-icon>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-name">Redis<span class="brand-accent">Studio</span></span>
+                    <span class="brand-version">v2.2</span>
+                </div>
             </div>
+
+            @if (connectionsStore.selectedConnection(); as conn) {
+                <div class="active-connection-chip" [matTooltip]="conn.host + ':' + conn.port + ' (DB ' + conn.database + ')'">
+                    <span class="pulse-indicator"></span>
+                    <span class="conn-name">{{ conn.name }}</span>
+                    <span class="conn-details">{{ conn.host }}:{{ conn.port }}</span>
+                </div>
+            }
+
+            <button mat-stroked-button class="nav-cmd-palette-btn" (click)="openCommandPalette()" matTooltip="Command Palette (Ctrl+K)">
+                <mat-icon>search</mat-icon>
+                <span class="cmd-text">Search & Actions</span>
+                <kbd class="cmd-kbd">Ctrl+K</kbd>
+            </button>
 
             <span class="spacer"></span>
 
@@ -59,7 +79,7 @@
 
                 @for (link of sideNavStore.sideNavLinks(); track link.href) {
                 <mat-list-item class="sidenav-menu__item"
-                    [routerLink]="[link.href]" routerLinkActive="mdc-list-item--activated"
+                    [routerLink]="[link.href]" routerLinkActive="active-nav-item mdc-list-item--activated"
                     [routerLinkActiveOptions]="{exact: true}">
 
                     <div class="sidenav-menu__content">
@@ -89,10 +109,6 @@
 
         <mat-sidenav-content>
             <div class="main-content">
-                <div class="section-actions-container">
-                    <app-breadcrumb></app-breadcrumb>
-                    <app-section-actions></app-section-actions>
-                </div>
                 <router-outlet></router-outlet>
             </div>
         </mat-sidenav-content>

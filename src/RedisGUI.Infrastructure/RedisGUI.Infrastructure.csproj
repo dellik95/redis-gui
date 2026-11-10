@@ -1,5 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<ItemGroup>
+		<InternalsVisibleTo Include="RedisGUI.Infrastructure.Tests" />
+	</ItemGroup>
+	<ItemGroup>
 		<PackageReference Include="Asp.Versioning.Http" />
 		<PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
 		<PackageReference Include="BCrypt.Net-Next" />
@@ -13,7 +16,6 @@
 		</PackageReference>
 		<PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
 		<PackageReference Include="MySql.EntityFrameworkCore" />
-		<PackageReference Include="Pomelo.EntityFrameworkCore.MySql" />
 		<PackageReference Include="Microsoft.EntityFrameworkCore.Tools">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

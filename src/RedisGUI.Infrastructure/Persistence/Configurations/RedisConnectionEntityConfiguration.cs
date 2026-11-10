@@ -43,16 +43,13 @@ namespace RedisGUI.Infrastructure.Persistence.Configurations
 
 			builder.Ignore(x => x.OwnerId);
 
-			//builder.Property<Guid?>(nameof(RedisConnection.OwnerId));
-
-			//builder.HasOne<User>()
-			//	.WithMany()
-			//	.HasForeignKey(nameof(RedisConnection.OwnerId))
-			//	.HasPrincipalKey(u => u.Id)
-			//	.OnDelete(DeleteBehavior.Restrict);
-
 			// IsAvailable
 			builder.Property(x => x.IsAvailable)
+				.IsRequired()
+				.HasDefaultValue(false);
+
+			// IsReadOnly
+			builder.Property(x => x.IsReadOnly)
 				.IsRequired()
 				.HasDefaultValue(false);
 		}

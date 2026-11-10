@@ -1,35 +1,37 @@
 @if (resourceInfo(); as resourceInfo) {
-    <div class="storage-resources-cards">
-
-        <div class="resource-card">
-            <mat-icon class="resource-card-icon" fontIcon="speed"></mat-icon>
-            <div class="resource-value">{{ resourceInfo.cpuUsageInPercent | number }} %</div>
-            <!-- <div class="resource-unit">{{ resourceInfo.cpu.unit }}</div> -->
-        </div>
-    
-        <div class="divider"></div>
-    
-        <div class="resource-card">
-            <mat-icon class="resource-card-icon" fontIcon="memory"></mat-icon>
-            <div class="resource-value">{{ resourceInfo.memoryUsage | formatBytes }}</div>
-            <!-- <div class="resource-unit">{{ resourceInfo.memory.unit }}</div> -->
-        </div>
-    
-        <div class="divider"></div>
-    
-        <div class="resource-card">
-            <mat-icon class="resource-card-icon" fontIcon="network_check"></mat-icon>
-            <div class="resource-value">{{ resourceInfo.networkSpeedIn | number }} Kb/sec</div>
-            <!-- <div class="resource-unit">{{ resourceInfo.network.unit }}</div> -->
-        </div>
-        
-        <div class="divider"></div>
-    
-        <div class="resource-card">
-            <mat-icon class="resource-card-icon" fontIcon="key"></mat-icon>
-            <div class="resource-value">{{ resourceInfo.keyCount }}</div>
-        </div>
+  <div class="metrics-pill-container">
+    <div class="live-status-badge">
+      <span class="live-pulse"></span>
+      <span class="live-text">LIVE</span>
     </div>
+
+    <div class="metric-pill pill-cpu" title="CPU Usage">
+      <mat-icon class="metric-icon">speed</mat-icon>
+      <span class="metric-label">CPU</span>
+      <span class="metric-val">{{ resourceInfo.cpuUsageInPercent | number:'1.1-1' }}%</span>
+    </div>
+
+    <div class="metric-pill pill-memory" title="Memory Usage">
+      <mat-icon class="metric-icon">memory</mat-icon>
+      <span class="metric-label">Memory</span>
+      <span class="metric-val">{{ resourceInfo.memoryUsage | formatBytes }}</span>
+    </div>
+
+    <div class="metric-pill pill-network" title="Network Throughput">
+      <mat-icon class="metric-icon">swap_vert</mat-icon>
+      <span class="metric-label">Network</span>
+      <span class="metric-val">{{ resourceInfo.networkSpeedIn | number:'1.0-1' }} Kb/s</span>
+    </div>
+
+    <div class="metric-pill pill-keys" title="Total Keys">
+      <mat-icon class="metric-icon">key</mat-icon>
+      <span class="metric-label">Keys</span>
+      <span class="metric-val">{{ resourceInfo.keyCount }}</span>
+    </div>
+  </div>
 } @else {
-  <div class="empty-result">N/A</div>
+  <div class="metrics-placeholder">
+    <span class="placeholder-dot"></span>
+    <span>Connecting to live metrics...</span>
+  </div>
 }

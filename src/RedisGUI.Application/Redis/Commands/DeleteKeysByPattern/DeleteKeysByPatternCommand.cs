@@ -8,6 +8,8 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// </summary>
 /// <param name="ConnectionId">The Redis connection identifier.</param>
 /// <param name="Pattern">Pattern to match keys (e.g., "user:*", "session:*").</param>
+/// <param name="Database">Optional database index.</param>
 public sealed record DeleteKeysByPatternCommand(
     Guid ConnectionId,
-    string Pattern) : ICommand<DeleteKeysByPatternResponse>;
+    string Pattern,
+    int? Database = null) : ICommand<DeleteKeysByPatternResponse>;

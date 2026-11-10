@@ -62,30 +62,6 @@ const initialState: SideNavState = {
 	currentConnectionName: null
 };
 
-/**
- * Global side navigation store using NgRx SignalStore
- * Provides centralized navigation state management
- * 
- * Features:
- * - Dynamic navigation links
- * - Connection-specific routes
- * - Custom route management
- * 
- * @example
- * ```typescript
- * // Inject the store
- * private sideNavStore = inject(SideNavStore);
- * 
- * // Get navigation links
- * const links = this.sideNavStore.links();
- * 
- * // Add connection routes
- * this.sideNavStore.addConnectionRoutes('conn-123', 'My Redis');
- * 
- * // Clear connection routes
- * this.sideNavStore.clearConnectionRoutes();
- * ```
- */
 export const SideNavStore = signalStore(
 	{ providedIn: 'root' },
 
@@ -104,10 +80,7 @@ export const SideNavStore = signalStore(
 		 */
 		connectionRoutes: computed(() => 
 			store.links().filter(link => 
-				link.href.includes('/storage/') || 
-				link.href.includes('/pubsub/') ||
-				link.href.includes('/transaction/') ||
-				link.href.includes('/lua/')
+				link.href.includes('/storage/')
 			)
 		),
 
@@ -132,24 +105,6 @@ export const SideNavStore = signalStore(
 					title: connectionName,
 					description: 'Storage management',
 					badge: 'active'
-				},
-				{
-					href: `/pubsub/${connectionId}`,
-					icon: 'message',
-					title: 'Pub/Sub',
-					description: 'Publish and subscribe to channels'
-				},
-				{
-					href: `/transaction/${connectionId}`,
-					icon: 'swap_horiz',
-					title: 'Transactions',
-					description: 'Execute Redis transactions'
-				},
-				{
-					href: `/lua/${connectionId}`,
-					icon: 'code',
-					title: 'Lua Scripts',
-					description: 'Execute Lua scripts'
 				}
 			];
 
@@ -199,4 +154,3 @@ export const SideNavStore = signalStore(
 		}
 	}))
 );
-

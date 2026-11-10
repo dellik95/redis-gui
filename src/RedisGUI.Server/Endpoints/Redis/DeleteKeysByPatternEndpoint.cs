@@ -21,9 +21,9 @@ public class DeleteKeysByPatternEndpoint : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
     {
         routerBuilder.MapDelete("storage/{connectionId:guid}/keys/pattern/{pattern}",
-            async (IMediator sender, Guid connectionId, string pattern) =>
+            async (IMediator sender, Guid connectionId, string pattern, int? database) =>
             {
-                var command = new DeleteKeysByPatternCommand(connectionId, pattern);
+                var command = new DeleteKeysByPatternCommand(connectionId, pattern, database);
                 return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
             })
             .WithName("DeleteKeysByPattern")

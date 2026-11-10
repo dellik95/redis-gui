@@ -3,8 +3,6 @@ import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, Rout
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs/operators';
 
-import { MatProgressSpinner } from '@angular/material/progress-spinner';
-
 import { LoadingStore } from '../../../core/stores/loading.store';
 
 /**
@@ -30,7 +28,7 @@ import { LoadingStore } from '../../../core/stores/loading.store';
   templateUrl: './loading.component.html',
   styleUrl: './loading.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatProgressSpinner]
+  imports: []
 })
 export class LoadingComponent {
   // 1. Injected dependencies

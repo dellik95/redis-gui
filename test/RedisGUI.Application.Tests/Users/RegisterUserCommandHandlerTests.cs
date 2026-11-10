@@ -74,7 +74,7 @@ public class RegisterUserCommandHandlerTests
 			"Doe");
 
 		var emailResult = Email.Create("existing@example.com");
-		var passwordHashResult = PasswordHash.Create("hash", passwordHasherMock.Object);
+		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("Jane", "Doe");
 
 		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)

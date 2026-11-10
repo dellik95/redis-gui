@@ -1,82 +1,106 @@
-<h2 mat-dialog-title>Connection editor</h2>
-<mat-dialog-content>
-    <form [formGroup]="form">
+<h2 mat-dialog-title class="dialog-title">
+    <mat-icon class="title-icon">{{ isEditMode() ? 'edit' : 'add_link' }}</mat-icon>
+    <span>{{ dialogTitle() }}</span>
+</h2>
 
-        <mat-form-field appearance="outline">
-            <mat-label>Name</mat-label>
-            <input matInput formControlName="name">
-        </mat-form-field>
+<mat-dialog-content class="dialog-content">
+    <form class="connection-form" id="connectionForm" (submit)="saveConnection($event)">
 
-        <div class="host-details">
+        <ui-input
+            [formField]="connectionForm.name"
+            label="Connection Name"
+            placeholder="e.g. Local Redis, Production Cache"
+            icon="label"
+        />
 
-            <mat-form-field appearance="outline">
-                <mat-label>Host</mat-label>
-                <input matInput formControlName="host">
-            </mat-form-field>
+        <div class="host-port-row">
+            <div class="host-field">
+                <ui-input
+                    [formField]="connectionForm.host"
+                    label="Host"
+                    placeholder="localhost, redis, or 127.0.0.1"
+                    icon="dns"
+                />
+            </div>
 
-            <mat-form-field appearance="outline">
-                <mat-label>Port</mat-label>
-                <input type="number" matInput formControlName="port">
-            </mat-form-field>
-
+            <div class="port-field">
+                <ui-input
+                    [formField]="connectionForm.port"
+                    type="number"
+                    label="Port"
+                    placeholder="6379"
+                    icon="tag"
+                />
+            </div>
         </div>
-        <div class="database-details">
 
-            <mat-checkbox class="database-chekbox" [(ngModel)]="allDatabasesSelected"
-                [ngModelOptions]="{standalone: true}">All
-                databases</mat-checkbox>
+        <div class="database-details">
+            <ui-checkbox
+                [(checked)]="allDatabasesSelected"
+                label="All databases"
+                description="Scan across all Redis databases (0-15)"
+            />
 
             @if (!allDatabasesSelected()) {
-
-            <mat-form-field appearance="outline">
-                <mat-label>Database</mat-label>
-                <input type="number" matInput formControlName="database">
-            </mat-form-field>
+                <div class="db-field">
+                    <ui-input
+                        type="number"
+                        [formField]="connectionForm.database"
+                        label="Database (0-15)"
+                        placeholder="0"
+                    />
+                </div>
             }
         </div>
 
-        <mat-divider></mat-divider>
+        <mat-accordion class="credentials-accordion">
+            <mat-expansion-panel hideToggle>
+                <mat-expansion-panel-header>
+                    <mat-panel-title>
+                        <mat-icon class="panel-icon">key</mat-icon>
+                        <span>Connection credentials (optional)</span>
+                    </mat-panel-title>
+                </mat-expansion-panel-header>
 
-        <div class="credentials-details">
-            <mat-accordion>
-                <mat-expansion-panel hideToggle>
+                <div class="credentials-fields">
+                    <ui-input
+                        [formField]="connectionForm.userName"
+                        label="Username (optional)"
+                        placeholder="default"
+                        icon="person"
+                    />
 
-                    <mat-expansion-panel-header>
-                        <mat-panel-title> Connection credentials (optional) </mat-panel-title>
-                    </mat-expansion-panel-header>
-
-                    <mat-form-field appearance="outline">
-                        <mat-label>User name</mat-label>
-                        <input matInput formControlName="userName">
-                    </mat-form-field>
-
-                    <mat-form-field appearance="outline">
-                        <mat-label>Enter your password</mat-label>
-                        <input matInput [type]="hidePasswordMode() ? 'password' : 'text'" formControlName="password" />
-                        <button mat-icon-button matSuffix (click)="togglePasswordMode($event)">
-                            <mat-icon>{{ hidePasswordMode() ? 'visibility_off' : 'visibility' }}</mat-icon>
-                        </button>
-                    </mat-form-field>
-
-                </mat-expansion-panel>
-            </mat-accordion>
-        </div>
-
-        <div class="editor-actions">
-
-            <button mat-fab extended color="accent" [disabled]="!canTest()" (click)="checkConnections()">
-                <mat-icon>check_circle_outline</mat-icon>
-                @if (isTesting()) {
-                    <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-                }
-                Check connection
-            </button>
-
-            <button mat-fab extended [disabled]="!canSave()" (click)="saveConnection()">
-                <mat-icon>favorite</mat-icon>
-                Save
-            </button>
-
-        </div>
+                    <ui-input
+                        [type]="hidePasswordMode() ? 'password' : 'text'"
+                        [formField]="connectionForm.password"
+                        label="Password (optional)"
+                        placeholder="••••••••"
+                        icon="lock"
+                        [suffixIcon]="hidePasswordMode() ? 'visibility_off' : 'visibility'"
+                        (suffixClicked)="togglePasswordMode()"
+                    />
+                </div>
+            </mat-expansion-panel>
+        </mat-accordion>
     </form>
 </mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+    <button class="btn-secondary" type="button" (click)="cancel()">
+        Cancel
+    </button>
+
+    <button class="btn-secondary" type="button" [disabled]="!canTest()" (click)="checkConnections()">
+        @if (isTesting()) {
+            <mat-spinner diameter="18" class="btn-spinner"></mat-spinner>
+        } @else {
+            <mat-icon>network_check</mat-icon>
+        }
+        <span>Test Connection</span>
+    </button>
+
+    <button class="btn-primary" type="button" [disabled]="!canSave()" (click)="saveConnection()">
+        <mat-icon>{{ isEditMode() ? 'check' : 'add' }}</mat-icon>
+        <span>{{ isEditMode() ? 'Update' : 'Create' }}</span>
+    </button>
+</mat-dialog-actions>

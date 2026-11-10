@@ -1,18 +1,59 @@
-<mat-tree #tree [dataSource]="dataSource()" [childrenAccessor]="childrenAccessor">
-    <!-- This is the tree node template for leaf nodes -->
-    <mat-tree-node *matTreeNodeDef="let node" matTreeNodePadding>
-        <!-- use a disabled button to provide padding for tree leaf -->
-        <button mat-icon-button disabled></button>
-        {{node.name}}
-    </mat-tree-node>
-    <!-- This is the tree node template for expandable nodes -->
-    <mat-tree-node *matTreeNodeDef="let node;when: hasChild" matTreeNodePadding matTreeNodeToggle
-        [cdkTreeNodeTypeaheadLabel]="node.name">
-        <button mat-icon-button matTreeNodeToggle [attr.aria-label]="'Toggle ' + node.name">
-            <mat-icon class="mat-icon-rtl-mirror">
-                {{tree.isExpanded(node) ? 'expand_more' : 'chevron_right'}}
-            </mat-icon>
+<div class="tree-wrapper">
+  @if (isLoading() && dataSource().length === 0) {
+    <div class="tree-loading">
+      <mat-spinner diameter="32"></mat-spinner>
+      <p class="loading-text">Building tree structure...</p>
+    </div>
+  } @else if (dataSource().length === 0) {
+    <div class="tree-empty">
+      <mat-icon class="empty-icon">account_tree</mat-icon>
+      <p class="empty-text">No keys found matching pattern</p>
+    </div>
+  } @else {
+    <mat-tree #tree 
+              [dataSource]="dataSource()" 
+              [childrenAccessor]="childrenAccessor"
+              [trackBy]="trackByPath"
+              [expansionKey]="getExpansionKey"
+              class="tree-root">
+      <!-- Leaf node template (clickable key) -->
+      <mat-tree-node
+        *matTreeNodeDef="let node"
+        matTreeNodePadding
+        class="tree-leaf-node"
+        [class.active-node]="node.path === activeKey()"
+        (click)="onKeyClick(node)"
+        [matTooltip]="getNodeTooltip(node)">
+        
+        <span class="node-icon-wrapper type-{{ node.keyInfo?.type?.toLowerCase() }}">
+          <mat-icon class="tree-node-icon">{{ getNodeIcon(node) }}</mat-icon>
+        </span>
+        <span class="node-name">{{ node.name }}</span>
+        
+        @if (node.keyInfo) {
+          <span class="node-type-badge type-{{ node.keyInfo.type.toLowerCase() }}">
+            {{ node.keyInfo.type }}
+          </span>
+        }
+      </mat-tree-node>
+
+      <!-- Expandable node template (folder / group) -->
+      <mat-tree-node
+        *matTreeNodeDef="let node; when: hasChild"
+        matTreeNodePadding
+        [cdkTreeNodeTypeaheadLabel]="node.name"
+        class="tree-group-node"
+        (click)="toggleGroup(node, $event)">
+        
+        <button mat-icon-button type="button" [attr.aria-label]="'Toggle ' + node.name" class="toggle-btn" (click)="toggleGroup(node, $event)">
+          <mat-icon class="mat-icon-rtl-mirror">
+            {{ isExpanded(node) ? 'expand_more' : 'chevron_right' }}
+          </mat-icon>
         </button>
-        {{node.name}}
-    </mat-tree-node>
-</mat-tree>
+        <mat-icon class="group-folder-icon">{{ isExpanded(node) ? 'folder_open' : 'folder' }}</mat-icon>
+        <span class="group-name">{{ node.name }}</span>
+        <span class="group-count">{{ node.keyCount }} {{ node.keyCount === 1 ? 'key' : 'keys' }}</span>
+      </mat-tree-node>
+    </mat-tree>
+  }
+</div>

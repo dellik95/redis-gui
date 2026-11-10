@@ -1,0 +1,178 @@
+# RedisGUI — Modern Redis Studio & Observability Platform
+
+<p align="center">
+  <img src="docs/screenshots/03_storage_table.png" alt="RedisGUI Storage Manager" width="850">
+</p>
+
+<p align="center">
+  <strong>An enterprise-grade, high-performance Redis management studio and diagnostics platform built on .NET 10, ASP.NET Core Minimal APIs, and Angular 19 Signals.</strong>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
+  <img src="https://img.shields.io/badge/Angular-19.0-DD0031?logo=angular" alt="Angular 19">
+  <img src="https://img.shields.io/badge/Redis-7.x%20%7C%208.x-DC382D?logo=redis" alt="Redis">
+  <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker" alt="Docker">
+  <img src="https://img.shields.io/badge/Architecture-Clean%20%2F%20CQRS-brightgreen" alt="Clean Architecture">
+  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License">
+</p>
+
+---
+
+## 🌟 Key Features
+
+### 🗄️ Comprehensive Redis Data Structure Support
+Full visual inspection and editing across all native Redis types using the **Strategy Pattern**:
+- **Strings**: Raw text, JSON document syntax highlighting, and exact TTL control.
+- **Hashes**: Interactive field-value editor with one-click additions and deletions.
+- **Lists**: Push, pop, reorder, and element navigation.
+- **Sets & Sorted Sets**: Set member management and score-based ranking.
+- **Streams**: Append-only log inspector with entry IDs, field-value maps, and dual Visual/JSON modes.
+
+### ⚡ Real-Time Live Telemetry
+- Sub-second live metrics streamed over **SignalR WebSockets**: Ops/sec, Memory RSS, CPU usage, and network bandwidth.
+- Live status pills in the Storage Manager header with pulsing indicators.
+
+### 📂 Dual Exploration Modes
+- **Table View**: Fast, sortable data grid with instant search and type filtering.
+- **Namespace Tree View**: Hierarchical folder tree grouping keys by delimiter (e.g. `user:profile:1001`).
+
+### 🛠️ Interactive Redis CLI Drawer
+- Built-in slide-out terminal drawer.
+- Multi-database awareness (`DB 0` – `DB 15`).
+- Keyboard history navigation (`↑` / `↓`).
+- Output formatting for multi-bulk responses and arrays.
+
+### 🚀 Benchmarking & Load Testing
+- Run synthetic concurrent benchmarks directly from your browser.
+- Configure workers, total requests, and Read/Write ratios (Read Heavy, Write Heavy, Balanced).
+- Instant report of RPS, elapsed time, and `p50` / `p95` / `p99` latency percentiles.
+
+### 🧪 Realistic Sample Data Seeder
+- Populate test environments with up to 10,000 keys in seconds.
+- Customize key complexity (Simple, Hierarchical, UUID), payload styles, and TTL strategies.
+
+### 🔍 Diagnostics & Slowlog
+- Real-time Slowlog viewer displaying command duration in microseconds, client IP, and query arguments.
+
+### 🛡️ Enterprise Security & Safe Mode
+- **Safe Mode (Read-Only)**: Protect production environments from accidental data mutations.
+- **Audit Logging**: Full audit trail of all administrative actions and mutations.
+- **JWT Authentication & RBAC**: Role-based access control (`Admin`, `Standard`, `ReadOnly`).
+
+### 🎨 Theme Customization
+- 6 vibrant color schemes (Deep Violet, Emerald Green, Indigo Night, Crimson Gold, Cyan Amber, Charcoal).
+- One-click Dark and Light theme toggles.
+
+---
+
+## 📸 Screenshots Gallery
+
+| Dashboard & Metrics | Storage Manager (Table View) |
+| :---: | :---: |
+| ![Dashboard](docs/screenshots/02_dashboard.png) | ![Table View](docs/screenshots/03_storage_table.png) |
+
+| Namespace Tree View | Hash Key Visual Editor |
+| :---: | :---: |
+| ![Tree View](docs/screenshots/04_storage_tree.png) | ![Hash Editor](docs/screenshots/07_hash_editor.png) |
+
+| Synthetic Load Testing | Interactive CLI Terminal |
+| :---: | :---: |
+| ![Load Test Dialog](docs/screenshots/08_load_test_dialog.png) | ![CLI Drawer](docs/screenshots/10_redis_cli_drawer.png) |
+
+| Sample Data Seeder | Light Theme Preview |
+| :---: | :---: |
+| ![Seed Data Dialog](docs/screenshots/09_seed_data_dialog.png) | ![Light Theme](docs/screenshots/13_light_theme_preview.png) |
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+RedisGUI follows **Clean Architecture** and **CQRS**:
+
+```mermaid
+flowchart LR
+    Client["Angular 19 (Signals)"] <-->|REST & SignalR| Server["ASP.NET Core 10 Minimal APIs"]
+    Server --> MediatR["MediatR CQRS Pipeline"]
+    MediatR --> App["Application Core"]
+    App --> Domain["Domain (Pure Models & Contracts)"]
+    App --> Infra["Infrastructure (StackExchange.Redis, EF Core)"]
+    Infra <--> Redis[("Redis 7.x / 8.x")]
+```
+
+- **Backend**: .NET 10, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
+- **Frontend**: Angular 19 (Standalone Components, Signals, Signal Forms), Angular Material 19, Tailwind CSS, Monaco Editor.
+- **Architecture Highlights**:
+  - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`) synced between client and server.
+  - **Strategy & Factory Patterns**: Handlers registered in DI container and resolved dynamically without manual `new` instantiation.
+  - **Invariant Culture Parsers**: Resilient reflection metrics collectors supporting any OS locale.
+
+---
+
+## 🚀 Quickstart
+
+### Option 1: Run with Docker Compose (Recommended)
+
+Clone the repository and run:
+
+```bash
+docker compose up -d --build
+```
+
+Navigate to:
+- **Web Studio**: [http://localhost:5000](http://localhost:5000)
+- **Redis Server**: `localhost:6379`
+
+#### Default Credentials:
+- **Email**: `admin@redisgui.local`
+- **Password**: `AdminPassword123!`
+
+---
+
+### Option 2: Local Development
+
+#### Prerequisites
+- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- [Node.js 20+ & npm](https://nodejs.org/)
+- Running Redis instance on `127.0.0.1:6379` (e.g. via Docker or WSL)
+
+#### 1. Build and Run Backend
+```bash
+dotnet restore
+dotnet build RedisGUI.slnx -c Debug
+dotnet run --project src/RedisGUI.Server/RedisGUI.Server.csproj
+```
+
+#### 2. Run Angular Client
+```bash
+cd src/RedisGUI.Client
+npm install
+npm start
+```
+Open [http://localhost:4200](http://localhost:4200) in your browser.
+
+---
+
+## 🧪 Running Tests
+
+The test suite covers domain logic, CQRS handlers, type handlers, and infrastructure:
+
+```bash
+dotnet test RedisGUI.slnx
+```
+*(350+ automated unit & integration tests)*
+
+---
+
+## 📚 Documentation Links
+
+- 🏛️ [System Architecture & Design Details](docs/architecture.md)
+- 📖 [User Guide & Operations Manual](docs/user-guide.md)
+- 📋 [Comprehensive Feature Catalog](docs/features.md)
+- 🐳 [Docker Deployment & Configuration](docs/docker.md)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.

@@ -20,6 +20,7 @@ export interface Connection {
   username: string | null;
   password: string | null;
   database: number;
+  isReadOnly?: boolean;
 }
 
 /**

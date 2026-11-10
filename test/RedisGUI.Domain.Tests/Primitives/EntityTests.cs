@@ -118,7 +118,7 @@ public class EntityTests
 
 	private class TestDomainEvent : IDomainEvent
 	{
-		public DateTime OccurredOn => DateTime.UtcNow;
+		public DateTime OccurredOn { get; init; } = DateTime.UtcNow;
 	}
 }
 

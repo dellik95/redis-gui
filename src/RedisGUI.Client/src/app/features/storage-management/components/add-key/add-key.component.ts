@@ -1,5 +1,7 @@
 import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
 import { RedisDataType } from '../../../../models/redis-keys.types';
 import { StorageValueEditorComponent, ValueEditorInput, ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
 
@@ -14,24 +16,15 @@ export interface AddKeyDialogData {
 /**
  * Add Key Component
  * Modal dialog for creating new Redis keys
- *
- * Features:
- * - Key name input
- * - Data type selection
- * - Value editor for all Redis types
- * - TTL configuration
- *
- * @example
- * ```typescript
- * this.dialog.open(AddKeyComponent, {
- *   data: { connectionId: 'conn-123' }
- * });
- * ```
  */
 @Component({
   selector: 'app-add-key',
   standalone: true,
-  imports: [StorageValueEditorComponent],
+  imports: [
+    StorageValueEditorComponent,
+    MatButtonModule,
+    MatIconModule
+  ],
   templateUrl: './add-key.component.html',
   styleUrl: './add-key.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -56,20 +49,15 @@ export class AddKeyComponent {
   // 3. Public methods
   /**
    * Handles save action from value editor
-   * Closes dialog with the new key data
-   *
-   * @param data - Editor output with new key data
    */
   onSave(data: ValueEditorOutput): void {
     this.dialogRef.close(data);
   }
 
   /**
-   * Handles cancel action
-   * Closes dialog without saving
+   * Handles cancel action from value editor
    */
   onCancel(): void {
     this.dialogRef.close();
   }
 }
-

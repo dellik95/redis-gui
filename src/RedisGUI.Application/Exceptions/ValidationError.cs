@@ -1,4 +1,4 @@
-﻿namespace RedisGUI.Application.Exceptions;
+namespace RedisGUI.Application.Exceptions;
 
 /// <summary>
 /// Represents a validation error with property name and error message.

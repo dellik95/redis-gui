@@ -76,26 +76,26 @@ internal sealed class ConnectionPool : IConnectionPool
 		string configuration,
 		CancellationToken cancellationToken)
 	{
-		ConnectionMultiplexer connection = await ConnectionMultiplexer.ConnectAsync(configuration)
-			.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		ConnectionMultiplexer connection;
+
+		try
+		{
+			connection = await ConnectionMultiplexer.ConnectAsync(configuration)
+				.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		}
+		catch (Exception ex) when (configuration.StartsWith("redis:", StringComparison.OrdinalIgnoreCase) || configuration.StartsWith("redis,", StringComparison.OrdinalIgnoreCase))
+		{
+			// Fallback: If host "redis" cannot be resolved outside Docker, attempt 127.0.0.1
+			string fallbackConfig = "127.0.0.1" + configuration[5..];
+			logger.LogWarning(ex, "Failed to connect to '{Config}', attempting fallback to '{FallbackConfig}'", configuration, fallbackConfig);
+
+			connection = await ConnectionMultiplexer.ConnectAsync(fallbackConfig)
+				.WaitAsync(options.ConnectionTimeout, cancellationToken);
+		}
 
 		connection.ConnectionFailed += OnConnectionFailed;
 		connection.ConnectionRestored += OnConnectionRestored;
 		connection.ErrorMessage += OnErrorMessage;
-
-		// Monitor connection state and remove if idle
-		//_ = Task.Run(async () =>
-		//{
-		//	while (!disposed && connection.IsConnected)
-		//	{
-		//		await Task.Delay(options.IdleTimeout, cancellationToken);
-		//		if (connection.GetCounters().TotalOutstanding == 0)
-		//		{
-		//			await RemoveConnectionAsync(configuration.ToString());
-		//			break;
-		//		}
-		//	}
-		//}, cancellationToken);
 
 		return connection;
 	}

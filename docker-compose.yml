@@ -1,0 +1,85 @@
+services:
+  # ==========================================
+  # Redis Database Service
+  # ==========================================
+  redis:
+    image: redis:7.4-alpine
+    container_name: redisgui-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - redisgui-network
+
+  # ==========================================
+  # MySQL Database Service (Metadata & Auth)
+  # ==========================================
+  mysql:
+    image: mysql:8.4
+    container_name: redisgui-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: redisgui
+      MYSQL_USER: redisgui
+      MYSQL_PASSWORD: redisguipass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - redisgui-network
+
+  # ==========================================
+  # RedisGUI Web Application (.NET 10 + Angular 22)
+  # ==========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: redisgui-web
+    restart: unless-stopped
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Database__IsInMemory=false
+      - Database__ConnectionString=Server=mysql;Port=3306;Database=redisgui;Uid=redisgui;Pwd=redisguipass;
+      - JwtSettings__SecretKey=RedisGUI_Development_SuperSecret_JwtKey_ChangeInProduction_2026_Min32Bytes!
+      - JwtSettings__Issuer=RedisGUI
+      - JwtSettings__Audience=RedisGUI.Client
+      - JwtSettings__ExpirationMinutes=1440
+      - Cryptography__SecurityKey=RedisGUI_Default_Encryption_SecurityKey_32Chars!
+      - Redis__DefaultHost=redis
+      - Redis__DefaultPort=6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
+    networks:
+      - redisgui-network
+
+networks:
+  redisgui-network:
+    driver: bridge
+
+volumes:
+  redis_data:
+    driver: local
+  mysql_data:
+    driver: local

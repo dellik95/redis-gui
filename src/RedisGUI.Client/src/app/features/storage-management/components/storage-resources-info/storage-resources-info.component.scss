@@ -1,32 +1,112 @@
-.storage-resources-cards {
-    display: flex;
+:host {
+  display: flex;
+  align-items: center;
 }
 
-.resource-card {
-    margin-right: 15px;
-    display: flex;
-    flex-direction: row;
-    justify-items: center;
-    flex-wrap: nowrap;
-    align-items: center;
-
-    .resource-card-icon {
-        margin-right: 5px;
-    }
-
-    .resource-unit,
-    .resource-value {
-        font-style: italic;
-        width: max-content;
-    }
+.metrics-pill-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--mat-sys-surface-container-low, #f8f9fa);
+  border: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
+  border-radius: 20px;
+  padding: 4px 10px 4px 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
-    .divider {
-        width: 2px;
-        background-color: var(--mat-sys-outline, #c4c6d0);
-        margin: 0px 10px 0px 0px;
-    }
+.live-status-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 7px;
+  border-radius: 12px;
+  background: rgba(76, 175, 80, 0.12);
 
-.empty-result {
-    width: max-content;
+  .live-pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4caf50;
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    animation: live-pulse-anim 2s infinite;
+  }
+
+  .live-text {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #2e7d32;
+  }
+}
+
+.metric-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  font-size: 12px;
+
+  .metric-icon {
+    font-size: 15px;
+    width: 15px;
+    height: 15px;
+    color: var(--mat-sys-on-surface-variant, #666666);
+  }
+
+  .metric-label {
+    font-size: 11px;
+    color: var(--mat-sys-on-surface-variant, #777777);
+    font-weight: 500;
+  }
+
+  .metric-val {
+    font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--mat-sys-on-surface, #212121);
+  }
+
+  &.pill-cpu .metric-val {
+    color: #1565c0;
+  }
+
+  &.pill-memory .metric-val {
+    color: #6a1b9a;
+  }
+
+  &.pill-network .metric-val {
+    color: #e65100;
+  }
+
+  &.pill-keys .metric-val {
+    color: #2e7d32;
+  }
+}
+
+.metrics-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant, #888888);
+  padding: 4px 8px;
+
+  .placeholder-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #bdbdbd;
+  }
+}
+
+@keyframes live-pulse-anim {
+  0% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 5px rgba(76, 175, 80, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
+  }
 }

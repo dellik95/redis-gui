@@ -1,6 +1,8 @@
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
 using RedisGUI.Shared.Mediator;
+using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -42,16 +44,41 @@ internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQue
             return Result.Failure<GetRedisValueResponse>(connectionResult.Error);
         }
 
-        var result = await valueService.GetValueAsync(connectionResult.Value, request.Key, cancellationToken);
+        var result = await valueService.GetValueAsync(connectionResult.Value, request.Key, cancellationToken, request.Database);
         
         if (result.IsFailure)
         {
             return Result.Failure<GetRedisValueResponse>(result.Error);
         }
 
+        object parsedValue;
+        string rawValue = result.Value.Value;
+
+        if (string.Equals(result.Value.Type, "string", StringComparison.OrdinalIgnoreCase))
+        {
+            parsedValue = rawValue;
+        }
+        else
+        {
+            try
+            {
+                parsedValue = JsonSerializer.Deserialize<JsonElement>(rawValue);
+            }
+            catch
+            {
+                parsedValue = rawValue;
+            }
+        }
+
+        long? ttlSeconds = result.Value.TimeToLive.HasValue
+            ? (long)result.Value.TimeToLive.Value.TotalSeconds
+            : null;
+
         return Result.Success(new GetRedisValueResponse(
             request.Key,
-            result.Value.Value,
-            result.Value.TimeToLive));
+            parsedValue,
+            result.Value.Type,
+            result.Value.TimeToLive,
+            ttlSeconds));
     }
-} 
+}

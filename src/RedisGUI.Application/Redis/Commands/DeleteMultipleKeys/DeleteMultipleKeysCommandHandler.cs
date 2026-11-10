@@ -1,28 +1,20 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.Errors;
+using RedisGUI.Shared.Primitives;
+using RedisGUI.Shared.Mediator;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
-using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 
 /// <summary>
 /// Handles the command to delete multiple Redis keys.
 /// </summary>
-internal sealed class DeleteMultipleKeysCommandHandler
-    : ICommandHandler<DeleteMultipleKeysCommand, DeleteMultipleKeysResponse>
+internal sealed class DeleteMultipleKeysCommandHandler : ICommandHandler<DeleteMultipleKeysCommand, DeleteMultipleKeysResponse>
 {
     private readonly IRedisConnectionRepository connectionRepository;
     private readonly IRedisKeyService keyService;
 
-    /// <summary>
-    /// Initializes a new instance of the DeleteMultipleKeysCommandHandler.
-    /// </summary>
-    /// <param name="connectionRepository">Repository for Redis connections.</param>
-    /// <param name="keyService">Service for Redis key operations.</param>
     public DeleteMultipleKeysCommandHandler(
         IRedisConnectionRepository connectionRepository,
         IRedisKeyService keyService)
@@ -31,12 +23,6 @@ internal sealed class DeleteMultipleKeysCommandHandler
         this.keyService = keyService;
     }
 
-    /// <summary>
-    /// Handles the command to delete multiple keys.
-    /// </summary>
-    /// <param name="request">The command request.</param>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>A Result containing the response or an error.</returns>
     public async Task<Result<DeleteMultipleKeysResponse>> Handle(
         DeleteMultipleKeysCommand request,
         CancellationToken cancellationToken)
@@ -50,10 +36,16 @@ internal sealed class DeleteMultipleKeysCommandHandler
             return Result.Failure<DeleteMultipleKeysResponse>(connectionResult.Error);
         }
 
+        if (connectionResult.Value.IsReadOnly)
+        {
+            return Result.Failure<DeleteMultipleKeysResponse>(DomainErrors.Connection.ReadOnlyMode);
+        }
+
         var deleteResult = await keyService.DeleteMultipleKeysAsync(
             connectionResult.Value,
             request.Keys,
-            cancellationToken);
+            cancellationToken,
+            request.Database);
 
         if (deleteResult.IsFailure)
         {

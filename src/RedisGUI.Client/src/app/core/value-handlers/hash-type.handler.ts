@@ -1,5 +1,6 @@
+import { Injectable } from '@angular/core';
 import { RedisDataType } from '../../models/redis-keys.types';
-import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from './redis-type-handler.interface';
+import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type-handler.interface';
 
 /**
  * Field-value pair for Hash visual representation
@@ -12,48 +13,60 @@ export interface HashField {
 /**
  * Handler for Redis Hash data type
  * 
- * Hashes are maps of field-value pairs
- * 
- * Visual format: Array<{ key: string, value: string }>
- * JSON format: { "fields": { "field1": "value1", "field2": "value2" } }
+ * Supports both plain string values and nested JSON objects in fields!
  */
+@Injectable({
+  providedIn: 'root'
+})
 export class HashTypeHandler implements RedisTypeHandler {
   readonly type = RedisDataType.Hash;
 
   /**
    * Convert raw Redis value to visual editor format (HashField array)
-   * 
-   * @param data Raw value from Redis (object with key-value pairs)
-   * @returns Array of HashField objects
    */
   toVisual(data: unknown): HashField[] {
     if (!data || typeof data !== 'object') {
       return [];
     }
 
-    return Object.entries(data).map(([key, value]) => ({
+    const fields = 'fields' in (data as Record<string, unknown>)
+      ? (data as Record<string, unknown>)['fields']
+      : data;
+
+    if (!fields || typeof fields !== 'object') {
+      return [];
+    }
+
+    return Object.entries(fields as Record<string, unknown>).map(([key, value]) => ({
       key,
-      value: String(value)
+      value: typeof value === 'object' && value !== null
+        ? JSON.stringify(value, null, 2)
+        : String(value ?? '')
     }));
   }
 
   /**
    * Convert value to JSON representation
-   * 
-   * @param data Value in visual editor format (HashField array) or object format
-   * @returns JSON string representation
    */
   toJson(data: unknown): string {
-    let fields: { [key: string]: string } = {};
+    const fields: Record<string, unknown> = {};
 
     if (Array.isArray(data)) {
-      // From visual editor format
-      data.forEach(field => {
+      data.forEach((field: HashField) => {
+        if (!field.key) return;
+        const trimmed = (field.value || '').trim();
+        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+          try {
+            fields[field.key] = JSON.parse(trimmed);
+            return;
+          } catch {
+            // Not valid JSON, keep as string
+          }
+        }
         fields[field.key] = field.value;
       });
     } else if (data && typeof data === 'object') {
-      // Already in object format
-      fields = data as { [key: string]: string };
+      Object.assign(fields, data);
     }
 
     return JSON.stringify({ fields }, null, 2);
@@ -61,54 +74,49 @@ export class HashTypeHandler implements RedisTypeHandler {
 
   /**
    * Parse JSON back to visual editor format
-   * 
-   * @param json JSON string or parsed object
-   * @returns Array of HashField objects
-   * @throws Error if JSON is invalid
    */
   fromJson(json: string | RedisValueJson): HashField[] {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-      
-      if (!parsed.fields || typeof parsed.fields !== 'object') {
-        throw new Error('JSON must contain "fields" object');
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('JSON must be an object');
       }
 
-      return this.toVisual(parsed.fields);
+      const fields = 'fields' in parsed && parsed.fields && typeof parsed.fields === 'object'
+        ? parsed.fields
+        : parsed;
+
+      return Object.entries(fields as Record<string, unknown>).map(([key, value]) => ({
+        key,
+        value: typeof value === 'object' && value !== null
+          ? JSON.stringify(value, null, 2)
+          : String(value ?? '')
+      }));
     } catch (error) {
-      throw new Error(`Invalid JSON for Hash type: ${error}`);
+      throw new Error(`Invalid JSON for Hash type: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   /**
    * Validate value structure for Hash type
-   * 
-   * @param value Value to validate (should be HashField array)
-   * @returns Validation result with errors if invalid
    */
   validate(value: unknown): ValidationResult {
-    const errors: string[] = [];
-
     if (!Array.isArray(value)) {
-      errors.push('Hash value must be an array of field-value pairs');
-      return { valid: false, errors };
+      return { valid: false, errors: ['Value must be an array of fields'] };
     }
 
-    value.forEach((field, index) => {
-      if (!field.key || typeof field.key !== 'string') {
-        errors.push(`Field at index ${index}: key is required and must be a string`);
-      }
-      if (field.key.trim() === '') {
-        errors.push(`Field at index ${index}: key cannot be empty`);
+    const errors: string[] = [];
+    const keys = new Set<string>();
+
+    value.forEach((field: HashField, index: number) => {
+      if (!field.key || field.key.trim() === '') {
+        errors.push(`Field #${index + 1}: Key is required`);
+      } else if (keys.has(field.key)) {
+        errors.push(`Field "${field.key}": Duplicate key`);
+      } else {
+        keys.add(field.key);
       }
     });
-
-    // Check for duplicate keys
-    const keys = value.map(f => f.key);
-    const duplicates = keys.filter((key, index) => keys.indexOf(key) !== index);
-    if (duplicates.length > 0) {
-      errors.push(`Duplicate keys found: ${duplicates.join(', ')}`);
-    }
 
     return {
       valid: errors.length === 0,
@@ -118,29 +126,5 @@ export class HashTypeHandler implements RedisTypeHandler {
 
   getDefaultValue(): HashField[] {
     return [];
-  }
-
-  /**
-   * Format value for display in UI
-   * Shows first 3 fields and total count
-   * 
-   * @param value Value to format
-   * @returns Human-readable string representation
-   */
-  formatForDisplay(value: unknown): string {
-    const fields = Array.isArray(value) ? value : this.toVisual(value);
-    const count = fields.length;
-    
-    if (count === 0) {
-      return 'Empty hash';
-    }
-    
-    const preview = fields.slice(0, 3)
-      .map(f => `${f.key}: ${f.value}`)
-      .join(', ');
-    
-    return count > 3 
-      ? `${preview}... (${count} fields)`
-      : preview;
   }
 }

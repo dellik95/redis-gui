@@ -84,14 +84,15 @@ public class LoggingBehaviorTests
 			Times.Once);
 	}
 
-	private class TestRequest : IRequest<TestResponse>
+	public class TestRequest : IRequest<TestResponse>
 	{
 		public string Name { get; set; } = string.Empty;
 	}
 
-	private class TestResponse
+	public class TestResponse
 	{
 		public string Result { get; set; } = string.Empty;
 	}
 }
+
 

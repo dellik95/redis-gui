@@ -106,6 +106,6 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 		T? entity = await DbSet.FindAsync([id], cancellationToken);
 		return entity is null
 			? Result.Failure<T?>(DomainErrors.Storage.ItemNotFound)
-			: Result.Success(entity);
+			: Result.Success<T?>(entity);
 	}
 }

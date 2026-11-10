@@ -1,4 +1,4 @@
-﻿using FluentValidation;
+using FluentValidation;
 using RedisGUI.Domain.Primitives;
 using System;
 

@@ -1,6 +1,7 @@
 import { DataSource } from "@angular/cdk/collections";
 import { Observable } from "rxjs";
 import { inject, signal, effect } from "@angular/core";
+import { toObservable } from "@angular/core/rxjs-interop";
 import { RedisKeysStore } from "../../../core/stores/redis-keys.store";
 import { RedisKeyInfo } from "../../../models/redis-keys.types";
 
@@ -22,13 +23,16 @@ export type StorageValue = {
 }
 
 export class StorageValuesDataSource extends DataSource<StorageValue> {
-    private redisKeysStore = inject(RedisKeysStore);
-    public data$ = signal<StorageValue[]>([]);
-    public loading$ = signal<boolean>(false);
-    private previousKeysCount = signal<number>(0);
+    private readonly redisKeysStore = inject(RedisKeysStore);
+    public readonly data$ = signal<StorageValue[]>([]);
+    public readonly loading$ = signal<boolean>(false);
+    private readonly previousKeysCount = signal<number>(0);
+    private readonly dataObservable$: Observable<StorageValue[]>;
 
     constructor() {
         super();
+        this.dataObservable$ = toObservable(this.data$);
+
         // Watch store state changes - use raw keys directly
         effect(() => {
             const keys = this.redisKeysStore.keys();
@@ -63,11 +67,7 @@ export class StorageValuesDataSource extends DataSource<StorageValue> {
     }
 
     connect(): Observable<StorageValue[]> {
-        // If using signals, convert to observable for compatibility
-        return new Observable<StorageValue[]>( (subscriber: any) => {
-            subscriber.next(this.data$());
-            // No teardown logic needed for signals
-        });
+        return this.dataObservable$;
     }
 
     disconnect(): void {

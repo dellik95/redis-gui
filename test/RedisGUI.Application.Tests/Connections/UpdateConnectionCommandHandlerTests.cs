@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.UpdateConnection;
 using RedisGUI.Domain.Abstraction;
@@ -132,9 +132,7 @@ _connectionServiceMock
 .Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
 .ReturnsAsync(Result.Success());
 
-_unitOfWorkMock
-.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-.ReturnsAsync(Result.Failure<int>(DomainErrors.Storage.ConcurrencyConflict));
+_unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new RedisGUI.Domain.Exceptions.ErrorException(DomainErrors.Storage.ConcurrencyConflict));
 
 // Act
 Result result = await _handler.Handle(command, CancellationToken.None);
@@ -146,3 +144,5 @@ _repositoryMock.Verify(x => x.Update(existingConnection), Times.Once);
 _unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 }
 }
+
+

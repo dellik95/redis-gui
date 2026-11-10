@@ -1,16 +1,18 @@
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.Errors;
+using RedisGUI.Domain.Primitives;
+using RedisGUI.Domain.Redis;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using RedisGUI.Domain.Abstraction;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
-using RedisGUI.Shared.Primitives;
-using RedisGUI.Domain.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 
 /// <summary>
-/// Handles updating Redis values with type-specific logic.
+/// Handles the command to update a Redis value with type-specific handling
 /// </summary>
 internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRedisValueCommand>
 {
@@ -27,7 +29,6 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
 
     public async Task<Result> Handle(UpdateRedisValueCommand request, CancellationToken cancellationToken)
     {
-        // Get connection
         var connectionResult = await connectionRepository.GetConnectionByIdAsync(
             request.ConnectionId,
             cancellationToken);
@@ -39,16 +40,20 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
 
         var connection = connectionResult.Value;
 
-        // Convert type-specific value data to appropriate format
-        object valueToSet = request.Value switch
+        if (connection.IsReadOnly)
         {
-            StringValueData str => str.Value,
-            ListValueData list => list.Items,
-            SetValueData set => set.Members,
-            HashValueData hash => hash.Fields,
-            SortedSetValueData sorted => sorted.MembersWithScores,
-            StreamValueData stream => stream.Entries.Select(e => e.Fields).ToList(),
-            _ => null!
+            return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
+        }
+
+        object? valueToSet = request.Type switch
+        {
+            RedisDataType.String => request.Value.Value ?? string.Empty,
+            RedisDataType.List => (object?)request.Value.Items ?? new List<string>(),
+            RedisDataType.Set => (object?)request.Value.Members ?? new HashSet<string>(),
+            RedisDataType.Hash => (object?)request.Value.Fields ?? new Dictionary<string, string>(),
+            RedisDataType.SortedSet => (object?)request.Value.MembersWithScores ?? new Dictionary<string, double>(),
+            RedisDataType.Stream => (object?)request.Value.Entries?.Select(e => e.Fields).ToList() ?? new List<Dictionary<string, string>>(),
+            _ => null
         };
 
         if (valueToSet == null)
@@ -56,15 +61,13 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
             return Result.Failure(new Error("RedisValue.InvalidData", "Invalid value data for the specified type"));
         }
 
-        // Update the value using the value service
-        var result = await valueService.UpdateValueAsync(
+        return await valueService.UpdateValueAsync(
             connection,
             request.Key,
             valueToSet,
             request.Type.ToString(),
             request.Ttl,
-            cancellationToken);
-
-        return result;
+            cancellationToken,
+            request.Database);
     }
 }

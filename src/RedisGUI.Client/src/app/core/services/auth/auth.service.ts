@@ -14,27 +14,6 @@ import {
 
 /**
  * Service for handling user authentication
- * 
- * Features:
- * - User registration and login
- * - Token management and persistence
- * - Authentication state management
- * - Role-based access control
- * 
- * Integrates with AuthStore for centralized state management
- * 
- * @example
- * ```typescript
- * private authService = inject(AuthService);
- * 
- * // Login
- * this.authService.login({ email, password }).subscribe();
- * 
- * // Check authentication
- * if (this.authService.isAuthenticated()) {
- *   // User is authenticated
- * }
- * ```
  */
 @Injectable({
   providedIn: 'root'
@@ -49,7 +28,7 @@ export class AuthService {
   // 2. Constants
   private readonly API_BASE = '/api/v1/auth';
 
-  // 3. Exposed store signals (for backward compatibility and convenience)
+  // 3. Exposed store signals
   /** Current authenticated user */
   readonly currentUser = this.authStore.user;
   
@@ -67,15 +46,10 @@ export class AuthService {
 
   // 4. Initialization (runs on service creation)
   constructor() {
-    // Initialize state from storage on service creation
     this.initializeFromStorage();
   }
 
   // 5. Private helper methods
-  /**
-   * Initializes authentication state from localStorage
-   * Called automatically on service creation
-   */
   private initializeFromStorage(): void {
     const user = this.tokenStorage.getUser();
     const hasValidToken = this.tokenStorage.hasValidToken();
@@ -83,7 +57,6 @@ export class AuthService {
     if (user && hasValidToken) {
       this.authStore.setUser(user);
     } else {
-      // Token expired or invalid, clear storage
       this.tokenStorage.clear();
       this.authStore.clearUser();
     }
@@ -102,13 +75,23 @@ export class AuthService {
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.API_BASE}/login`, request).pipe(
       tap(response => {
-        // Map LoginResponse to User object
+        // Normalize role whether returned as number (1=Admin, 0=User, 2=ReadOnly) or string
+        let userRole: 'Admin' | 'User' | 'ReadOnly' = 'Admin';
+        const rawRole = (response as any).role;
+        if (rawRole === 1 || rawRole === '1' || rawRole === 'Admin' || rawRole === 'admin') {
+          userRole = 'Admin';
+        } else if (rawRole === 2 || rawRole === '2' || rawRole === 'ReadOnly' || rawRole === 'readonly') {
+          userRole = 'ReadOnly';
+        } else if (rawRole === 0 || rawRole === '0' || rawRole === 'User' || rawRole === 'user') {
+          userRole = 'User';
+        }
+
         const user: User = {
           id: response.userId,
           email: response.email,
           firstName: response.firstName,
           lastName: response.lastName,
-          role: response.role
+          role: userRole
         };
 
         // Store token and user data
@@ -125,13 +108,8 @@ export class AuthService {
    * Logs out the current user and clears authentication state
    */
   logout(): void {
-    // Clear storage
     this.tokenStorage.clear();
-
-    // Update store state
     this.authStore.clearUser();
-
-    // Redirect to login page
     this.router.navigate(['/login']);
   }
 

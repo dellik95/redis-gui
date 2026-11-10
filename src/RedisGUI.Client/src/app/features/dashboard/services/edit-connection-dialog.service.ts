@@ -9,24 +9,6 @@ import { ConnectionsStore } from "../../../core/stores/connections.store";
 
 /**
  * Service for managing Edit/Add connection dialogs
- * 
- * Features:
- * - Opens edit connection dialog
- * - Opens add connection dialog
- * - Handles dialog result and updates connections store
- * 
- * Uses ConnectionsStore for state notifications (replaces Subject pattern)
- * 
- * @example
- * ```typescript
- * private dialogService = inject(EditConnectionDialogService);
- * 
- * // Open edit dialog
- * this.dialogService.showEditConnectionDialog(connection);
- * 
- * // Open add dialog
- * this.dialogService.showAddConnectionDialog();
- * ```
  */
 @Injectable({
     providedIn: "root"
@@ -72,6 +54,8 @@ export class EditConnectionDialogService {
         const dialogRef = this.dialog.open(EditConnectionComponent, {
             enterAnimationDuration: this.ENTER_ANIMATION_DURATION,
             exitAnimationDuration: this.EXIT_ANIMATION_DURATION,
+            width: '540px',
+            maxWidth: '95vw',
             data
         });
 
@@ -87,4 +71,3 @@ export class EditConnectionDialogService {
             });
     }
 }
-

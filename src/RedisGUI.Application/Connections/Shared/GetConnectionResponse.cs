@@ -45,6 +45,11 @@ public sealed class GetConnectionResponse
 	public int Database { get; private set; }
 
 	/// <summary>
+	/// Indicates whether connection is in Safe Mode (Read-Only).
+	/// </summary>
+	public bool IsReadOnly { get; init; }
+
+	/// <summary>
 	/// Creates a response object from a Redis connection entity.
 	/// </summary>
 	/// <param name="connection">The Redis connection entity</param>
@@ -63,7 +68,6 @@ public sealed class GetConnectionResponse
 			userName = securedConnection.ConnectionCredentials.UserName;
 		}
 
-
 		return new GetConnectionResponse
 		{
 			Id = connection.Id,
@@ -73,6 +77,7 @@ public sealed class GetConnectionResponse
 			Username = userName,
 			Password = password,
 			Database = connection.DatabaseNumber.Value,
+			IsReadOnly = connection.IsReadOnly
 		};
 	}
 }

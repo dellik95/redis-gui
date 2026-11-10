@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
@@ -41,7 +41,7 @@ public class DeleteMultipleKeysCommandHandlerTests
 			  new ConnectionHost("localhost"),
 			  new ConnectionPort(6379),
 			new DatabaseNumber(0),
-			null).Value;
+			ConnectionOwnerId.None()).Value!;
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -49,7 +49,7 @@ public class DeleteMultipleKeysCommandHandlerTests
 
 		var failedKeys = new List<string> { "key3" }.AsReadOnly();
 		connectionServiceMock
-			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
 
 		// Act
@@ -76,7 +76,7 @@ public class DeleteMultipleKeysCommandHandlerTests
 			  new ConnectionHost("localhost"),
 			  new ConnectionPort(6379),
 			new DatabaseNumber(0),
-			null).Value;
+			ConnectionOwnerId.None()).Value!;
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
@@ -84,7 +84,7 @@ public class DeleteMultipleKeysCommandHandlerTests
 
 		var failedKeys = new List<string>().AsReadOnly();
 		connectionServiceMock
-			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<List<string>>(), It.IsAny<CancellationToken>()))
+			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
 			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
 
 		// Act
@@ -96,6 +96,8 @@ public class DeleteMultipleKeysCommandHandlerTests
 		result.Value.FailedKeys.Should().BeEmpty();
 	}
 }
+
+
 
 
 

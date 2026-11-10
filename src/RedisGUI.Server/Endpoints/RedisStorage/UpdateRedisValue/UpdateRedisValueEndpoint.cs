@@ -24,14 +24,20 @@ public class UpdateRedisValueEndpoint : IEndpoint
 			IMediator sender,
 			Guid connectionId,
 			string key,
-			UpdateRedisValueRequest request) =>
+			UpdateRedisValueRequest request,
+			int? database) =>
 		{
+			TimeSpan? ttl = request.Ttl.HasValue && request.Ttl.Value > 0
+				? TimeSpan.FromSeconds(request.Ttl.Value)
+				: null;
+
 			var command = new UpdateRedisValueCommand(
 				connectionId,
 				key,
 				request.Type,
 				request.Value,
-				request.Ttl);
+				ttl,
+				database ?? request.Database);
 
 			return await sender.Send(command).Match(() => Results.Ok(), Results.BadRequest);
 		})

@@ -197,10 +197,11 @@ public class PasswordEncryptorTests
 		var differentEncryptor = new PasswordEncryptor(differentOptions);
 
 		// Act
-		var decrypted = differentEncryptor.DecryptPassword(encrypted);
+		var act = () => differentEncryptor.DecryptPassword(encrypted);
+		act.Should().Throw<System.Security.Cryptography.CryptographicException>();
 
 		// Assert
-		decrypted.Should().NotBe(password); // Should not decrypt correctly with different key
+
 	}
 
 	[Test]

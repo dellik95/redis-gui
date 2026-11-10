@@ -1,5 +1,6 @@
 using RedisGUI.Domain.RedisMetrics;
 using RedisGUI.Domain.RedisMetrics.Attributes;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -35,7 +36,8 @@ public static class RedisMetricsExtensions
 				continue;
 			}
 
-			object convertedValue = Convert.ChangeType(sectionValue, property.PropertyType);
+			Type targetType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+			object convertedValue = Convert.ChangeType(sectionValue, targetType, CultureInfo.InvariantCulture);
 
 			property.SetValue(metrics, convertedValue);
 		}
@@ -58,7 +60,8 @@ public static class RedisMetricsExtensions
 			string? currentPropertyValue = property.GetValue(currentMetrics)?.ToString();
 			string? previousPropertyValue = property.GetValue(previousMetrics)?.ToString();
 
-			if (!double.TryParse(currentPropertyValue, out double currentValue) || !double.TryParse(previousPropertyValue, out double previousValue))
+			if (!double.TryParse(currentPropertyValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double currentValue) ||
+				!double.TryParse(previousPropertyValue, NumberStyles.Any, CultureInfo.InvariantCulture, out double previousValue))
 			{
 				continue;
 			}

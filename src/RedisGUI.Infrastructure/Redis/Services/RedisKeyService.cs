@@ -49,7 +49,7 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Deletes a specific key from Redis
 	/// </summary>
-	public async Task<Result<bool>> DeleteKeyAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default)
+	public async Task<Result<bool>> DeleteKeyAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -57,8 +57,9 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<bool>(multiplexerResult.Error);
 		}
 
-		IDatabase database = multiplexerResult.Value.GetDatabase(connection.DatabaseNumber.Value);
-		bool deleted = await database.KeyDeleteAsync(key);
+		int targetDb = database ?? connection.DatabaseNumber.Value;
+		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
+		bool deleted = await db.KeyDeleteAsync(key);
 		
 		return Result.Success(deleted);
 	}
@@ -66,7 +67,7 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Deletes multiple keys from the Redis database
 	/// </summary>
-	public async Task<Result<long>> DeleteKeysAsync(RedisConnection connection, string[] keys, CancellationToken cancellationToken = default)
+	public async Task<Result<long>> DeleteKeysAsync(RedisConnection connection, string[] keys, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -75,9 +76,10 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<long>(multiplexerResult.Error);
 		}
 
-		IDatabase database = multiplexerResult.Value.GetDatabase(connection.DatabaseNumber.Value);
+		int targetDb = database ?? connection.DatabaseNumber.Value;
+		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		RedisKey[] redisKeys = keys.Select(x => new RedisKey(x)).ToArray();
-		long deletedCount = await database.KeyDeleteAsync(redisKeys);
+		long deletedCount = await db.KeyDeleteAsync(redisKeys);
 		
 		return Result.Success(deletedCount);
 	}
@@ -88,7 +90,8 @@ public class RedisKeyService : IRedisKeyService
 	public async Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysAsync(
 		RedisConnection connection,
 		IReadOnlyList<string> keys,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default,
+		int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -96,7 +99,8 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<(int, IReadOnlyList<string>)>(multiplexerResult.Error);
 		}
 
-		IDatabase database = multiplexerResult.Value.GetDatabase(connection.DatabaseNumber.Value);
+		int targetDb = database ?? connection.DatabaseNumber.Value;
+		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		List<string> failedKeys = [];
 		int deletedCount = 0;
 
@@ -104,7 +108,7 @@ public class RedisKeyService : IRedisKeyService
 		{
 			try
 			{
-				bool deleted = await database.KeyDeleteAsync(key);
+				bool deleted = await db.KeyDeleteAsync(key);
 				if (deleted)
 				{
 					deletedCount++;
@@ -127,7 +131,7 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Delete keys from redis matching a pattern
 	/// </summary>
-	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default)
+	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -135,20 +139,21 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<int>(multiplexerResult.Error);
 		}
 
+		int targetDb = database ?? connection.DatabaseNumber.Value;
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
-		IDatabase database = multiplexer.GetDatabase(connection.DatabaseNumber.Value);
+		IDatabase db = multiplexer.GetDatabase(targetDb);
 		IServer server = multiplexer.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
 
 		try
 		{
-			RedisKey[] keys = server.Keys(database.Database, pattern).ToArray();
+			RedisKey[] keys = server.Keys(targetDb, pattern).ToArray();
 
 			if (keys.Length == 0)
 			{
 				return Result.Success(0);
 			}
 
-			long deletedCount = await database.KeyDeleteAsync(keys);
+			long deletedCount = await db.KeyDeleteAsync(keys);
 			return Result.Success((int)deletedCount);
 		}
 		catch (Exception ex)
@@ -161,7 +166,7 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Gets the type of value stored at a specific key
 	/// </summary>
-	public async Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default)
+	public async Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -169,8 +174,9 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<string>(multiplexerResult.Error);
 		}
 
-		IDatabase database = multiplexerResult.Value.GetDatabase(connection.DatabaseNumber.Value);
-		RedisType type = await database.KeyTypeAsync(key);
+		int targetDb = database ?? connection.DatabaseNumber.Value;
+		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
+		RedisType type = await db.KeyTypeAsync(key);
 		
 		return Result.Success(type.ToString());
 	}

@@ -14,5 +14,5 @@ public record CreateConnectionRequest(
 	string Host,
 	int Port,
 	int Database,
-	string UserName,
-	string Password);
+	string? UserName = null,
+	string? Password = null);

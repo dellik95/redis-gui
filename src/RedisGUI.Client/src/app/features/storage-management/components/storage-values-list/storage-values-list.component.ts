@@ -1,4 +1,7 @@
-import { Component, signal, viewChild, input, inject, effect, computed, ChangeDetectionStrategy, DestroyRef, output } from "@angular/core";
+import { TypeBadgeComponent } from '../storage-value-editor/components/type-badge.component';
+import { UiInputComponent, UiButtonGroupComponent, UiButtonGroupOption } from '../../../../shared/ui';
+import { Component, signal, model, viewChild, input, inject, effect, computed, ChangeDetectionStrategy, DestroyRef, output, HostListener } from "@angular/core";
+import { interval } from "rxjs";
 import { takeUntilDestroyed } from "@angular/core/rxjs-interop";
 import { FormsModule } from "@angular/forms";
 
@@ -8,6 +11,7 @@ import { MatTable, MatTableModule } from "@angular/material/table";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 import { MatProgressSpinnerModule } from "@angular/material/progress-spinner";
+import { MatProgressBarModule } from "@angular/material/progress-bar";
 import { MatTooltipModule } from "@angular/material/tooltip";
 import { MatDialog } from "@angular/material/dialog";
 import { MatSnackBar } from "@angular/material/snack-bar";
@@ -19,6 +23,7 @@ import { MatButtonToggleModule } from "@angular/material/button-toggle";
 import { MatTreeModule } from "@angular/material/tree";
 import { MatSelectModule } from "@angular/material/select";
 import { MatOptionModule } from "@angular/material/core";
+import { MatChipsModule } from "@angular/material/chips";
 
 import { ScrollingModule } from "@angular/cdk/scrolling";
 import { SelectionModel } from "@angular/cdk/collections";
@@ -31,6 +36,11 @@ import { AddKeyComponent } from "../add-key/add-key.component";
 import { ImportDialogComponent } from "../import/import-dialog.component";
 import { ExportDialogComponent } from "../export/export-dialog.component";
 import { ConfirmDialogComponent, PromptDialogComponent } from "../../../../shared/components";
+import { SlowlogDialogComponent } from "../slowlog-dialog/slowlog-dialog.component";
+import { LoadTestDialogComponent } from "../load-test-dialog/load-test-dialog.component";
+import { SeedDataDialogComponent } from "../seed-data-dialog/seed-data-dialog.component";
+import { CommandPaletteComponent } from "../../../../shared/components/command-palette/command-palette.component";
+import { FormatBytesPipe } from "../../../../shared/pipes/format-bytes.pipe";
 import { filter } from "rxjs/operators";
 
 import { StorageValuesDataSource, StorageValue, StorageValueType } from "../../services/storage-values.datasource";
@@ -39,25 +49,19 @@ import { RedisKeysStore } from "../../../../core/stores/redis-keys.store";
 import { RedisOperationsStore } from "../../../../core/stores/redis-operations.store";
 import { RedisDataType, RedisValue } from "../../../../models/redis-keys.types";
 
+export interface RedisTypeCounts {
+	all: number;
+	string: number;
+	list: number;
+	set: number;
+	hash: number;
+	sortedset: number;
+	stream: number;
+}
+
 /**
- * Storage Values List Component
- * Main component for displaying and managing Redis keys
- *
- * Features:
- * - Table and tree view modes
- * - Key search and filtering
- * - Bulk operations (delete, export, import)
- * - Key selection and editing
- * - Pagination
- * - Real-time updates
- *
- * @example
- * ```html
- * <app-storage-values-list
- *   [connectionId]="connectionId"
- *   (keySelected)="onKeySelected($event)"
- * />
- * ```
+ * Storage Values List Component (Angular 22)
+ * Main component for exploring, filtering, and managing Redis keys
  */
 @Component({
 	selector: "app-storage-values-list",
@@ -77,15 +81,19 @@ import { RedisDataType, RedisValue } from "../../../../models/redis-keys.types";
 		MatFormFieldModule,
 		MatInputModule,
 		MatProgressSpinnerModule,
+		MatProgressBarModule,
 		MatTooltipModule,
 		MatPaginatorModule,
 		MatCheckboxModule,
 		MatMenuModule,
 		MatDividerModule,
 		MatButtonToggleModule,
+		MatChipsModule,
 		FormsModule,
 		MatSelectModule,
-		MatOptionModule
+		MatOptionModule,
+		FormatBytesPipe,
+		TypeBadgeComponent
 	],
 })
 export class StorageValuesListComponent {
@@ -97,24 +105,42 @@ export class StorageValuesListComponent {
 	private readonly redisOperationsStore = inject(RedisOperationsStore);
 	private readonly destroyRef = inject(DestroyRef);
 
-	// 2. Inputs
+	// 2. Inputs & Outputs
 	readonly connectionId = input.required<string>();
-
-	// 3. Outputs
+	readonly activeKey = input<string | null>(null);
 	readonly keySelected = output<{ key: string, type: RedisDataType, value: RedisValue, ttl: number }>();
 
-	// 4. View queries
+	// 3. View queries
 	readonly table = viewChild(MatTable);
 
+	// 4. Model signals (Angular 22 two-way signal bindings)
+	readonly viewMode = model<"table" | "tree">("table");
+	readonly keyDelimiter = model<string>(":");
+	readonly searchPattern = model<string>("*");
+	readonly typeFilter = model<string>("");
+	readonly sortField = model<string>("key");
+	readonly sortDir = model<"asc" | "desc">("asc");
+
 	// 5. State signals
-	readonly viewMode = signal<"table" | "tree">("table");
-	readonly keyDelimiter = signal<string>(":");
-	readonly searchPattern = signal<string>("*");
 	readonly isLoading = signal<boolean>(false);
 	readonly chunkLoading = signal<boolean>(false);
-	readonly totalCount = signal<number>(0);
 	readonly pageSize = signal<number>(50);
 	readonly pageNumber = signal<number>(1);
+	readonly selectedDb = signal<number>(0);
+	readonly fetchTimestamp = signal<number>(Date.now());
+	readonly currentTimestamp = signal<number>(Date.now());
+
+	readonly availableDatabases = computed<{ index: number; count: number }[]>(() => {
+		const keyspace = this.redisKeysStore.keyspace();
+		const result: { index: number; count: number }[] = [];
+		for (let i = 0; i <= 15; i++) {
+			result.push({
+				index: i,
+				count: keyspace[i] ?? 0
+			});
+		}
+		return result;
+	});
 
 	// 6. Data source and selection
 	readonly dataSource = new StorageValuesDataSource();
@@ -125,98 +151,66 @@ export class StorageValuesListComponent {
 	readonly modesTogglerConfig: TogglerConfig = {
 		defaultValue: "table",
 		items: [
-			{ value: "table", icon: "format_list_bulleted" },
-			{ value: "tree", icon: "account_tree" }
+			{ value: "table", icon: "format_list_bulleted", label: "Table" },
+			{ value: "tree", icon: "account_tree", label: "Tree" }
 		]
 	};
 
-	// 8. Filter/sort state
-	readonly typeFilter = signal<string>("");
-	readonly sortField = signal<string>("key");
-	readonly sortDir = signal<"asc" | "desc">("asc");
 
-	// 9. Private state
-	private readonly previousConnectionId = signal<string | null>(null);
+	readonly viewModeOptions: UiButtonGroupOption[] = [
+		{ label: 'Table', value: 'table', icon: 'table_chart' },
+		{ label: 'Tree', value: 'tree', icon: 'account_tree' }
+	];
 
-	// 10. TrackBy functions for performance
-	readonly trackByKey = (index: number, item: StorageValue) => item.key;
-
-	// 11. Constructor with effects
-	// 8. Constructor with effects
-	constructor() {
-		// Watch for loading state changes from data source
-		effect(() => {
-			this.isLoading.set(this.dataSource.loading$());
-		});
-
-		// Load keys when connectionId becomes available or changes
-		effect(() => {
-			const connId = this.connectionId();
-			const prevId = this.previousConnectionId();
-
-			// Only load if connectionId changed to avoid unnecessary reloads
-			if (connId && connId !== prevId) {
-				this.previousConnectionId.set(connId);
-				this.loadKeys();
+	// 8. Type counting for filter badges
+	readonly typeCounts = computed<RedisTypeCounts>(() => {
+		const data = this.dataSource.data$();
+		const counts: RedisTypeCounts = {
+			all: data.length,
+			string: 0,
+			list: 0,
+			set: 0,
+			hash: 0,
+			sortedset: 0,
+			stream: 0
+		};
+		data.forEach(item => {
+			const t = item.type.toLowerCase();
+			switch (t) {
+				case 'string': counts.string++; break;
+				case 'list': counts.list++; break;
+				case 'set': counts.set++; break;
+				case 'hash': counts.hash++; break;
+				case 'sortedset':
+				case 'zset': counts.sortedset++; break;
+				case 'stream': counts.stream++; break;
 			}
 		});
+		return counts;
+	});
 
-		// Apply filters when data changes in table mode
-		effect(() => {
-			const data = this.dataSource.data$();
-			const mode = this.viewMode();
+	// 9. Computed filtered data and total count
+	readonly filteredData = computed<StorageValue[]>(() => {
+		let data = this.dataSource.data$();
+		const filterVal = this.typeFilter();
 
-			// Only apply filters in table mode and if we have data
-			if (mode === 'table' && data.length > 0 && this.table()) {
-				// Use requestAnimationFrame to ensure table is ready before applying filters
-				requestAnimationFrame(() => {
-					this.applyFilters();
-				});
-			}
-		});
-
-		// Cleanup on destroy
-		this.destroyRef.onDestroy(() => {
-			this.dataSource.disconnect();
-		});
-	}
-
-	/**
-	 * Handles virtual scroll events
-	 * Loads more data chunks when scrolling near the end
-	 *
-	 * @param index - Current scroll index
-	 */
-	onScroll(index: number): void {
-		const dataLength = this.dataSource.data$().length;
-		if (dataLength >= this.pageSize() * this.pageNumber() && index > dataLength - 20 && !this.chunkLoading()) {
-			this.chunkLoading.set(true);
-			// Use requestAnimationFrame for better performance than setTimeout
-			requestAnimationFrame(() => {
-				requestAnimationFrame(() => {
-					this.chunkLoading.set(false);
-				});
+		if (filterVal) {
+			const target = filterVal.toLowerCase();
+			data = data.filter((d) => {
+				const itemType = d.type.toLowerCase();
+				if (target === 'sortedset' || target === 'zset') {
+					return itemType === 'sortedset' || itemType === 'zset';
+				}
+				return itemType === target;
 			});
 		}
-	}
 
-	// 7. Public methods
-	/**
-	 * Apply filters and sorting to table data
-	 * Updates the Material table data source with filtered and sorted data
-	 */
-	applyFilters(): void {
-		let data = this.dataSource.data$();
-		const filter = this.typeFilter();
+		const field = this.sortField();
+		const dir = this.sortDir();
 
-		if (filter) {
-			data = data.filter((d) => d.type === filter);
-		}
-
-		data = [...data].sort((a, b) => {
+		return [...data].sort((a, b) => {
 			let vA: string | number;
 			let vB: string | number;
-			const field = this.sortField();
 
 			switch (field) {
 				case "key":
@@ -228,29 +222,77 @@ export class StorageValuesListComponent {
 					vB = b.type;
 					break;
 				case "ttl":
-					vA = Number(a.ttl ?? 0);
-					vB = Number(b.ttl ?? 0);
+					vA = Number(a.ttl ?? -1);
+					vB = Number(b.ttl ?? -1);
 					break;
 				case "size":
-					vA = Number(a.size);
-					vB = Number(b.size);
+					vA = Number(a.size ?? 0);
+					vB = Number(b.size ?? 0);
 					break;
 				default:
 					vA = a.key;
 					vB = b.key;
 			}
 
-			const dir = this.sortDir();
 			if (vA < vB) return dir === "asc" ? -1 : 1;
 			if (vA > vB) return dir === "asc" ? 1 : -1;
 			return 0;
 		});
+	});
 
-		// Check if table is available before setting dataSource
-		const table = this.table();
-		if (table) {
-			table.dataSource = data;
+	readonly totalCount = computed<number>(() => this.filteredData().length);
+
+	// 10. Private tracking
+	private readonly previousConnectionId = signal<string | null>(null);
+
+	readonly trackByKey = (index: number, item: StorageValue) => item.key;
+
+	constructor() {
+		effect(() => {
+			this.isLoading.set(this.dataSource.loading$());
+		});
+
+		effect(() => {
+			const connId = this.connectionId();
+			const prevId = this.previousConnectionId();
+
+			if (connId && connId !== prevId) {
+				this.previousConnectionId.set(connId);
+				this.loadKeys();
+			}
+		});
+
+		// Live countdown interval ticker
+		interval(1000)
+			.pipe(takeUntilDestroyed(this.destroyRef))
+			.subscribe(() => {
+				this.currentTimestamp.set(Date.now());
+			});
+
+		this.destroyRef.onDestroy(() => {
+			this.dataSource.disconnect();
+		});
+	}
+
+	onScroll(index: number): void {
+		const dataLength = this.dataSource.data$().length;
+		if (dataLength >= this.pageSize() * this.pageNumber() && index > dataLength - 20 && !this.chunkLoading()) {
+			this.chunkLoading.set(true);
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					this.chunkLoading.set(false);
+				});
+			});
 		}
+	}
+
+	setTypeFilter(type: string): void {
+		this.typeFilter.set(this.typeFilter() === type ? '' : type);
+	}
+
+	clearSearch(): void {
+		this.searchPattern.set('*');
+		this.loadKeys();
 	}
 
 	toggleViewMode(mode: string): void {
@@ -258,13 +300,7 @@ export class StorageValuesListComponent {
 		this.loadKeys();
 	}
 
-	onDelimiterChange(delimiter: string): void {
-		this.keyDelimiter.set(delimiter);
-		this.loadKeys();
-	}
-
 	changeKeyDelimiter(): void {
-		// Cycle through common delimiters
 		const delimiters = [':', '.', '/', '-', '_'];
 		const current = this.keyDelimiter();
 		const currentIndex = delimiters.indexOf(current);
@@ -276,21 +312,74 @@ export class StorageValuesListComponent {
 		}
 	}
 
+	toggleSort(field: string): void {
+		if (this.sortField() === field) {
+			this.sortDir.set(this.sortDir() === "asc" ? "desc" : "asc");
+		} else {
+			this.sortField.set(field);
+			this.sortDir.set("asc");
+		}
+	}
+
 	onSearchPatternChange(pattern: string): void {
 		this.searchPattern.set(pattern || "*");
 		this.loadKeys();
 	}
 
 	loadKeys(): void {
-		// Update store preferences and load keys
-		this.storageStore.loadKeys(this.searchPattern(), this.keyDelimiter());
-		// Data source will react to store changes via effect
+		this.fetchTimestamp.set(Date.now());
+		this.storageStore.loadKeys(this.searchPattern(), this.keyDelimiter(), this.selectedDb());
+		this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+	}
+
+	onDatabaseChange(db: number): void {
+		this.selectedDb.set(db);
+		this.redisKeysStore.setActiveDatabase(db);
+		this.loadKeys();
+	}
+
+	getLiveTtl(originalTtl: number | null): number | null {
+		if (originalTtl === null || originalTtl <= 0) return originalTtl;
+		const elapsedSec = Math.floor((this.currentTimestamp() - this.fetchTimestamp()) / 1000);
+		return Math.max(0, originalTtl - elapsedSec);
+	}
+
+	openCommandPalette(): void {
+		this.dialog.open(CommandPaletteComponent, {
+			width: "680px",
+			maxWidth: "94vw",
+			panelClass: "command-palette-dialog-panel",
+			enterAnimationDuration: "0ms",
+			exitAnimationDuration: "0ms",
+			data: {
+				connectionId: this.connectionId(),
+				onAddNewKey: () => this.addNewKey(),
+				onSeedData: () => this.seedDemoData(),
+				onOpenSlowlog: () => this.openSlowlog(),
+				onOpenLoadTest: () => this.openLoadTest(),
+				onExport: () => this.exportData('json'),
+				onImport: () => this.importData(),
+				onRefresh: () => this.loadKeys(),
+				onSelectKey: (k: string) => this.editKey(k),
+				onSwitchDb: (db: number) => this.onDatabaseChange(db)
+			}
+		});
+	}
+
+	@HostListener('window:keydown', ['$event'])
+	onWindowKeyDown(e: KeyboardEvent): void {
+		if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+			e.preventDefault();
+			this.openCommandPalette();
+		}
 	}
 
 	addNewKey(): void {
 		const dialogRef = this.dialog.open(AddKeyComponent, {
 			width: "900px",
+			maxWidth: "92vw",
 			maxHeight: "90vh",
+			panelClass: 'custom-key-dialog',
 			data: {
 				connectionId: this.connectionId()
 			},
@@ -301,17 +390,15 @@ export class StorageValuesListComponent {
 			.subscribe((result: ValueEditorOutput | undefined) => {
 				if (result) {
 					this.isLoading.set(true);
-					// Use store directly for adding new keys
 					this.redisKeysStore.addValue({
 						connectionId: this.connectionId(),
 						key: result.key,
-						value: typeof result.value === 'object' && 'value' in result.value
-							? String(result.value.value)
-							: String(result.value),
-					...(result.ttl !== undefined ? { ttl: result.ttl } : {})
+						type: result.type,
+						value: result.value,
+						...(result.ttl !== undefined ? { ttl: result.ttl } : {})
 					});
 					this.redisKeysStore.clearCache();
-					this.snackBar.open("Key created successfully", "Close", { duration: 3000 });
+					this.snackBar.open(`Key "${result.key}" created successfully`, "Close", { duration: 3000 });
 					this.loadKeys();
 					this.isLoading.set(false);
 				}
@@ -331,106 +418,88 @@ export class StorageValuesListComponent {
 			.pipe(filter((confirmed): confirmed is boolean => confirmed === true))
 			.subscribe(() => {
 				this.isLoading.set(true);
+				this.selection.deselect(key);
 				this.redisKeysStore.deleteKey({
 					connectionId: this.connectionId(),
-					key
+					key,
+					database: this.selectedDb(),
+					onSuccess: () => {
+						this.redisKeysStore.clearCache();
+						this.loadKeys();
+						this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+						this.snackBar.open(`Key "${key}" deleted`, "Close", { duration: 3000 });
+						this.isLoading.set(false);
+					}
 				});
-				this.redisKeysStore.clearCache();
-				this.snackBar.open("Key deleted successfully", "Close", { duration: 3000 });
-				this.loadKeys();
-				this.isLoading.set(false);
 			});
 	}
 
+	copyKey(key: string, event?: Event): void {
+		if (event) event.stopPropagation();
+		navigator.clipboard.writeText(key);
+		this.snackBar.open(`Copied "${key}" to clipboard`, "Close", { duration: 2000 });
+	}
+
 	editKey(key: string): void {
-		// Find the key data from current data source
 		const data = this.dataSource.data$();
 		const keyData = data.find(item => item.key === key);
 
 		if (keyData) {
-			// Map StorageValueType to RedisDataType
 			const redisType = this.mapTypeToRedisDataType(keyData.type);
-
-			// Emit keySelected event to show edit panel
-			// The value will be loaded by the edit component
 			this.keySelected.emit({
 				key: keyData.key,
 				type: redisType,
-				value: null as any, // Will be loaded by edit component
+				value: null as any,
 				ttl: keyData.ttl ?? -1
 			});
-
-			// Also load the value in the store for the edit component
-			this.redisKeysStore.loadValue({ connectionId: this.connectionId(), key });
+			this.redisKeysStore.loadValue({ connectionId: this.connectionId(), key, database: this.selectedDb() });
 		} else {
-			// Fallback: if key not found in current data, still try to load it
-			// This can happen if the key is filtered out or not yet loaded
-			this.snackBar.open("Loading key data...", "Close", { duration: 2000 });
-			this.redisKeysStore.loadValue({ connectionId: this.connectionId(), key });
-
-			// Emit with default type - will be updated when value loads
+			this.redisKeysStore.loadValue({ connectionId: this.connectionId(), key, database: this.selectedDb() });
 			this.keySelected.emit({
 				key: key,
-				type: RedisDataType.String, // Default, will be updated when loaded
+				type: RedisDataType.String,
 				value: null as any,
 				ttl: -1
 			});
 		}
 	}
 
-	/**
-	 * Handle key selection from tree view
-	 */
 	onTreeKeySelected(event: { key: string, type: RedisDataType, value: RedisValue, ttl: number }): void {
-		// Emit to parent for sidebar editing
 		this.keySelected.emit(event);
 	}
 
-	/**
-	 * Maps StorageValueType to RedisDataType enum
-	 *
-	 * @param type - Storage value type from data source
-	 * @returns Corresponding RedisDataType enum value
-	 */
+	formatTtl(seconds: number): string {
+		if (seconds <= 0) return 'No expiry';
+		if (seconds < 60) return `${seconds}s`;
+		if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+		if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+		return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
+	}
+
 	private mapTypeToRedisDataType(type: StorageValueType): RedisDataType {
 		switch (type) {
-			case StorageValueType.STRING:
-				return RedisDataType.String;
-			case StorageValueType.LIST:
-				return RedisDataType.List;
-			case StorageValueType.SET:
-				return RedisDataType.Set;
-			case StorageValueType.HASH:
-				return RedisDataType.Hash;
-			case StorageValueType.SORTED_SET:
-				return RedisDataType.SortedSet;
-			case StorageValueType.STREAM:
-				return RedisDataType.Stream;
-			default:
-				return RedisDataType.String;
+			case StorageValueType.STRING: return RedisDataType.String;
+			case StorageValueType.LIST: return RedisDataType.List;
+			case StorageValueType.SET: return RedisDataType.Set;
+			case StorageValueType.HASH: return RedisDataType.Hash;
+			case StorageValueType.SORTED_SET: return RedisDataType.SortedSet;
+			case StorageValueType.STREAM: return RedisDataType.Stream;
+			default: return RedisDataType.String;
 		}
 	}
 
-	getTypeIcon(type: StorageValueType): string {
-		switch (type) {
-			case StorageValueType.STRING:
-				return "text_fields";
-			case StorageValueType.LIST:
-				return "list";
-			case StorageValueType.SET:
-				return "group_work";
-			case StorageValueType.HASH:
-				return "tag";
-			case StorageValueType.SORTED_SET:
-				return "sort";
-			case StorageValueType.STREAM:
-				return "stream";
-			default:
-				return "description";
+	getTypeIcon(type: StorageValueType | string): string {
+		switch (String(type).toLowerCase()) {
+			case 'string': return "text_fields";
+			case 'list': return "list";
+			case 'set': return "group_work";
+			case 'hash': return "tag";
+			case 'sortedset':
+			case 'zset': return "sort";
+			case 'stream': return "stream";
+			default: return "description";
 		}
 	}
-
-	// ========== Pagination ==========
 
 	onPageChange(event: PageEvent): void {
 		this.pageSize.set(event.pageSize);
@@ -438,11 +507,9 @@ export class StorageValuesListComponent {
 		this.loadKeys();
 	}
 
-	// ========== Selection ==========
-
 	isAllSelected(): boolean {
 		const numSelected = this.selection.selected.length;
-		const currentPageData = this.dataSource.data$();
+		const currentPageData = this.filteredData();
 		return numSelected === currentPageData.length && currentPageData.length > 0;
 	}
 
@@ -450,16 +517,13 @@ export class StorageValuesListComponent {
 		if (this.isAllSelected()) {
 			this.selection.clear();
 		} else {
-			const currentPageData = this.dataSource.data$();
+			const currentPageData = this.filteredData();
 			currentPageData.forEach((row: StorageValue) => this.selection.select(row.key));
 		}
 	}
 
-	// ========== Bulk Operations ==========
-
 	deleteSelected(): void {
-		const selectedKeys = this.selection.selected;
-
+		const selectedKeys = [...this.selection.selected];
 		if (selectedKeys.length === 0) {
 			this.snackBar.open("No keys selected", "Close", { duration: 3000 });
 			return;
@@ -479,13 +543,17 @@ export class StorageValuesListComponent {
 				this.isLoading.set(true);
 				this.redisOperationsStore.deleteMultipleKeys({
 					connectionId: this.connectionId(),
-					keys: selectedKeys
+					keys: selectedKeys,
+					database: this.selectedDb(),
+					onSuccess: () => {
+						this.selection.clear();
+						this.redisKeysStore.clearCache();
+						this.loadKeys();
+						this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+						this.snackBar.open(`Deleted ${selectedKeys.length} key(s)`, "Close", { duration: 4000 });
+						this.isLoading.set(false);
+					}
 				});
-				this.redisKeysStore.clearCache();
-				this.snackBar.open(`Deleted ${selectedKeys.length} key(s) successfully`, "Close", { duration: 5000 });
-				this.selection.clear();
-				this.loadKeys();
-				this.isLoading.set(false);
 			});
 	}
 
@@ -515,26 +583,29 @@ export class StorageValuesListComponent {
 						this.isLoading.set(true);
 						this.redisOperationsStore.deleteKeysByPattern({
 							connectionId: this.connectionId(),
-							pattern
+							pattern,
+							database: this.selectedDb(),
+							onSuccess: () => {
+								this.selection.clear();
+								this.redisKeysStore.clearCache();
+								this.loadKeys();
+								this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+								this.snackBar.open(`Deleted keys matching "${pattern}"`, "Close", { duration: 4000 });
+								this.isLoading.set(false);
+							}
 						});
-						this.redisKeysStore.clearCache();
-						this.snackBar.open(`Deleted keys matching "${pattern}"`, "Close", { duration: 5000 });
-						this.loadKeys();
-						this.isLoading.set(false);
 					});
 			});
 	}
 
-	// ========== Export/Import ==========
-
 	exportData(format: "json" | "csv"): void {
-	const ref = this.dialog.open(ExportDialogComponent, {
-		data: { connectionId: this.connectionId() }
-	});
-	ref.afterClosed().subscribe(success => {
-		if (success) this.snackBar.open('Export started!', 'Close', { duration: 3000 });
-	});
-}
+		const ref = this.dialog.open(ExportDialogComponent, {
+			data: { connectionId: this.connectionId() }
+		});
+		ref.afterClosed().subscribe(success => {
+			if (success) this.snackBar.open('Export completed', 'Close', { duration: 3000 });
+		});
+	}
 
 	importData(): void {
 		const dialogRef = this.dialog.open(ImportDialogComponent, {
@@ -551,4 +622,126 @@ export class StorageValuesListComponent {
 				}
 			});
 	}
+
+	renameKey(oldKey: string): void {
+		this.dialog.open(PromptDialogComponent, {
+			data: {
+				title: 'Rename Key',
+				message: `Enter new name for key "${oldKey}":`,
+				placeholder: 'New key name',
+				defaultValue: oldKey,
+				required: true
+			}
+		}).afterClosed()
+			.pipe(filter((newKey): newKey is string => newKey !== null && newKey.trim().length > 0 && newKey !== oldKey))
+			.subscribe(newKey => {
+				this.redisKeysStore.renameKey({
+					connectionId: this.connectionId(),
+					oldKey,
+					newKey: newKey.trim(),
+					database: this.selectedDb(),
+					onSuccess: () => {
+						this.snackBar.open(`Renamed "${oldKey}" to "${newKey}"`, 'Close', { duration: 3000 });
+						this.loadKeys();
+						this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+					}
+				});
+			});
+	}
+
+	duplicateKey(sourceKey: string): void {
+		this.dialog.open(PromptDialogComponent, {
+			data: {
+				title: 'Duplicate Key',
+				message: 'Enter name for cloned key:',
+				placeholder: 'Target key name',
+				defaultValue: `${sourceKey}_copy`,
+				required: true
+			}
+		}).afterClosed()
+			.pipe(filter((targetKey): targetKey is string => targetKey !== null && targetKey.trim().length > 0))
+			.subscribe(targetKey => {
+				this.redisKeysStore.duplicateKey({
+					connectionId: this.connectionId(),
+					sourceKey,
+					targetKey: targetKey.trim(),
+					database: this.selectedDb(),
+					onSuccess: () => {
+						this.snackBar.open(`Cloned "${sourceKey}" as "${targetKey}"`, 'Close', { duration: 3000 });
+						this.loadKeys();
+						this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+					}
+				});
+			});
+	}
+
+	openBulkTtl(): void {
+		const selected = this.selection.selected;
+		if (selected.length === 0) return;
+
+		this.dialog.open(PromptDialogComponent, {
+			data: {
+				title: `Set TTL for ${selected.length} keys`,
+				message: 'Enter TTL in seconds (e.g. 300 for 5m, 3600 for 1h, or 0 to PERSIST indefinitely):',
+				placeholder: 'TTL in seconds (0 = persist)',
+				defaultValue: '300',
+				required: true
+			}
+		}).afterClosed()
+			.pipe(filter((val): val is string => val !== null && val.trim().length > 0))
+			.subscribe(val => {
+				const seconds = parseInt(val.trim(), 10);
+				const ttlSeconds = isNaN(seconds) || seconds <= 0 ? null : seconds;
+
+				this.redisKeysStore.bulkUpdateTtl({
+					connectionId: this.connectionId(),
+					keys: selected,
+					ttlSeconds,
+					database: this.selectedDb(),
+					onSuccess: (count) => {
+						const label = ttlSeconds ? `TTL set to ${ttlSeconds}s for ${count} keys` : `Persisted ${count} keys indefinitely`;
+						this.snackBar.open(label, 'Close', { duration: 3000 });
+						this.selection.clear();
+						this.loadKeys();
+					}
+				});
+			});
+	}
+
+	seedDemoData(): void {
+		this.dialog.open(SeedDataDialogComponent, {
+			width: '740px',
+			maxWidth: '92vw',
+			data: {
+				connectionId: this.connectionId(),
+				database: this.selectedDb()
+			}
+		}).afterClosed()
+			.pipe(filter((seeded): seeded is boolean => seeded === true))
+			.subscribe(() => {
+				this.snackBar.open('Demo data successfully seeded!', 'Close', { duration: 3000 });
+				this.loadKeys();
+				this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+			});
+	}
+
+	openSlowlog(): void {
+		this.dialog.open(SlowlogDialogComponent, {
+			width: '760px',
+			maxWidth: '92vw',
+			data: { connectionId: this.connectionId() }
+		});
+	}
+
+	openLoadTest(): void {
+		this.dialog.open(LoadTestDialogComponent, {
+			width: '680px',
+			maxWidth: '94vw',
+			data: {
+				connectionId: this.connectionId(),
+				database: this.selectedDb()
+			}
+		});
+	}
 }
+

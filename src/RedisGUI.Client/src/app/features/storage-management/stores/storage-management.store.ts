@@ -129,7 +129,8 @@ export const StorageManagementStore = signalStore(
 			 */
 			loadKeys(
 				pattern?: string,
-				delimiter?: string
+				delimiter?: string,
+				database?: number
 			): void {
 				const connectionId = store.connectionId();
 				if (!connectionId) {
@@ -153,7 +154,8 @@ export const StorageManagementStore = signalStore(
 				// Call store directly instead of going through service
 				redisKeysStore.loadKeys({
 					connectionId,
-					pattern: finalPattern
+					pattern: finalPattern,
+					...(database !== undefined ? { database } : {})
 				});
 			},
 
@@ -190,7 +192,8 @@ export const StorageManagementStore = signalStore(
 							key: valueData.key,
 							type: valueData.type,
 							value: valueData.value,
-							...(valueData.ttl !== undefined ? { ttl: valueData.ttl } : {})
+							...(valueData.ttl !== undefined ? { ttl: valueData.ttl } : {}),
+							database: redisKeysStore.activeDatabase()
 						});
 
 						// Clear cache to force refresh
@@ -201,7 +204,8 @@ export const StorageManagementStore = signalStore(
 						if (prefs) {
 							redisKeysStore.loadKeys({
 								connectionId,
-								pattern: prefs.pattern
+								pattern: prefs.pattern,
+								database: redisKeysStore.activeDatabase()
 							});
 						}
 
@@ -229,18 +233,23 @@ export const StorageManagementStore = signalStore(
 							return of(null);
 						}
 
-						// Call store directly instead of going through service
-						redisKeysStore.deleteKey({ connectionId, key });
-
-						// Clear cache and reload
-						redisKeysStore.clearCache();
-						const prefs = store.viewPreferences();
-						if (prefs) {
-							redisKeysStore.loadKeys({
-								connectionId,
-								pattern: prefs.pattern
-							});
-						}
+						// Call store directly with onSuccess callback
+						redisKeysStore.deleteKey({
+							connectionId,
+							key,
+							database: redisKeysStore.activeDatabase(),
+							onSuccess: () => {
+								redisKeysStore.clearCache();
+								const prefs = store.viewPreferences();
+								if (prefs) {
+									redisKeysStore.loadKeys({
+										connectionId,
+										pattern: prefs.pattern,
+										database: redisKeysStore.activeDatabase()
+									});
+								}
+							}
+						});
 
 						// Clear selection if deleted key was selected
 						if (store.selectedKey()?.key === key) {

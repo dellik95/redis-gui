@@ -71,6 +71,16 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 	public bool IsAvailable { get; private set; }
 
 	/// <summary>
+	/// Indicates whether connection is in safe read-only mode.
+	/// </summary>
+	public bool IsReadOnly { get; private set; }
+
+	/// <summary>
+	/// Sets the read-only mode for this connection.
+	/// </summary>
+	public void SetReadOnly(bool isReadOnly) => IsReadOnly = isReadOnly;
+
+	/// <summary>
 	/// Gets the owner of this connection (None for legacy/public connections)
 	/// </summary>
 	public ConnectionOwnerId OwnerId { get; private set; } = null!;
@@ -213,9 +223,9 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 	{
 		string baseConnectionString = $"{GetBaseConnectionString()},allowAdmin=True,connectTimeout=30,abortConnect=False";
 
-		if (!baseConnectionString.Contains("database") && DatabaseNumber.Value > 0)
+		if (!baseConnectionString.Contains("defaultDatabase") && DatabaseNumber.Value > 0)
 		{
-			baseConnectionString = $"{baseConnectionString}/database={DatabaseNumber.Value}";
+			baseConnectionString = $"{baseConnectionString},defaultDatabase={DatabaseNumber.Value}";
 		}
 
 		return baseConnectionString;

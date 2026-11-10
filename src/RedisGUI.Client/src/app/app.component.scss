@@ -21,57 +21,128 @@
 // ============================================================================
 
 .sidenav-menu {
-	border-right: 1px solid var(--mat-sys-outline);
+	border-right: 1px solid var(--color-border, #1e293b);
 	border-radius: 0;
-	padding: $spacing-xs;
-	background: var(--mat-sys-surface);
-	color: var(--mat-sys-on-surface);
+	padding: 12px 8px;
+	background: var(--color-canvas, #090d16) !important;
+	color: var(--color-text, #f8fafc);
 	overflow-y: auto;
 	overflow-x: hidden;
+	box-sizing: border-box;
 	@include custom-scrollbar;
 }
 
-.sidenav-menu__item:not(:nth-last-child(1)) {
-	margin-bottom: $spacing-md;
+.sidenav-menu_items {
+	padding: 0 !important;
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.sidenav-menu__item {
+	margin: 0 !important;
+	border-radius: 8px !important;
+	height: auto !important;
+	min-height: 48px !important;
+	padding: 8px 12px !important;
+	box-sizing: border-box;
+	transition: background-color 0.18s ease, color 0.18s ease;
+	cursor: pointer;
+	color: var(--color-text, #f8fafc) !important;
+	opacity: 0.88;
+
+	&:hover {
+		background-color: var(--color-card-hover, #1e293b) !important;
+		opacity: 1;
+
+		.sidenav-menu_icon {
+			color: var(--color-text, #f8fafc) !important;
+		}
+
+		.sidenav-menu__title {
+			color: #ffffff !important;
+		}
+
+		.sidenav-menu__description {
+			color: var(--color-text, #f8fafc) !important;
+			opacity: 0.9;
+		}
+	}
+
+	&.active-nav-item, &.mdc-list-item--activated {
+		background-color: var(--color-card-hover, #1e293b) !important;
+		color: var(--color-accent, #6366f1) !important;
+		border-left: 3px solid var(--color-accent, #6366f1) !important;
+		opacity: 1 !important;
+
+		.sidenav-menu_icon {
+			color: var(--color-accent, #6366f1) !important;
+		}
+
+		.sidenav-menu__title {
+			color: var(--color-accent, #6366f1) !important;
+			font-weight: 600 !important;
+		}
+
+		.sidenav-menu__description {
+			color: var(--color-text-muted, #94a3b8) !important;
+			opacity: 0.95 !important;
+		}
+	}
 }
 
 .sidenav-menu__content {
-	@include flex-row;
+	display: flex;
 	align-items: center;
+	gap: 12px;
 	width: 100%;
 
 	> .sidenav-menu_icon {
 		flex-shrink: 0;
+		font-size: 20px;
+		width: 20px;
+		height: 20px;
+		color: var(--color-text-muted, #94a3b8) !important;
+		transition: color 0.15s ease;
 	}
 
 	> .sidenav-menu__text {
-		margin-left: $spacing-lg;
-		@include flex-fill;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		flex: 1;
+		min-width: 0;
 
 		.sidenav-menu__title {
-			font-size: $font-size-sm;
-			font-weight: $font-weight-medium;
-			@include flex-row;
+			font-size: 13.5px;
+			font-weight: 500;
+			display: flex;
 			align-items: center;
-			gap: $spacing-sm;
+			justify-content: space-between;
+			gap: 8px;
+			color: var(--color-text, #f8fafc) !important;
 		}
 
 		.sidenav-menu__description {
-			font-size: $font-size-xs;
-			opacity: 0.7;
-			margin-top: 2px;
-			@include text-truncate;
+			font-size: 11px;
+			color: var(--color-text-muted, #94a3b8) !important;
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			line-height: 1.3;
 		}
 
 		.sidenav-menu__badge {
 			display: inline-block;
-			background: var(--mat-sys-primary);
-			color: var(--mat-sys-on-primary);
-			padding: 2px $spacing-sm;
-			border-radius: $border-radius-lg;
-			font-size: 11px;
-			font-weight: $font-weight-semibold;
+			background: rgba(99, 102, 241, 0.2);
+			color: var(--color-accent, #6366f1);
+			border: 1px solid rgba(99, 102, 241, 0.4);
+			padding: 1px 6px;
+			border-radius: 8px;
+			font-size: 10px;
+			font-weight: 600;
 			line-height: 1.2;
+			text-transform: uppercase;
 		}
 	}
 }
@@ -81,8 +152,9 @@
 // ============================================================================
 
 .loyout-toolbar {
-	background: var(--mat-sys-primary-container);
-	color: var(--mat-sys-on-primary-container);
+	background: var(--color-canvas, #090d16) !important;
+	color: var(--color-text, #f8fafc) !important;
+	border-bottom: 1px solid var(--color-border, #1e293b);
 	flex-shrink: 0;
 	@include sticky(top, 0, $z-index-toolbar);
 
@@ -90,10 +162,144 @@
 		flex: 1 1 auto;
 	}
 
+	.brand-container {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-left: 8px;
+		margin-right: 16px;
+		user-select: none;
+
+		.brand-icon-wrap {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			width: 32px;
+			height: 32px;
+			border-radius: 8px;
+			background: linear-gradient(135deg, #ef4444, #dc2626);
+			color: #ffffff;
+			box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+
+			.brand-icon {
+				font-size: 20px;
+				width: 20px;
+				height: 20px;
+			}
+		}
+
+		.brand-text {
+			display: flex;
+			align-items: baseline;
+			gap: 6px;
+
+			.brand-name {
+				font-size: 17px;
+				font-weight: 700;
+				letter-spacing: -0.3px;
+				color: var(--color-text, #f8fafc);
+
+				.brand-accent {
+					color: var(--color-accent, #6366f1);
+					margin-left: 1px;
+				}
+			}
+
+			.brand-version {
+				font-size: 10px;
+				font-weight: 600;
+				padding: 2px 6px;
+				border-radius: 10px;
+				background: rgba(99, 102, 241, 0.15);
+				color: var(--color-accent, #6366f1);
+				line-height: 1.2;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+		}
+	}
+
+	.active-connection-chip {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 4px 12px;
+		border-radius: 20px;
+		background: rgba(255, 255, 255, 0.05);
+		border: 1px solid var(--color-border, #1e293b);
+		font-size: 12px;
+		margin-left: 12px;
+
+		.pulse-indicator {
+			width: 8px;
+			height: 8px;
+			border-radius: 50%;
+			background: #10b981;
+			box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+			animation: pulse-green 2s infinite;
+		}
+
+		.conn-name {
+			font-weight: 600;
+			color: var(--color-text, #f8fafc);
+		}
+
+		.conn-details {
+			font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+			font-size: 11px;
+			color: var(--color-text-muted, #94a3b8);
+		}
+	}
+
+	.nav-cmd-palette-btn {
+		margin-left: 12px;
+		height: 32px;
+		line-height: 32px;
+		font-size: 12px;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		border-radius: 6px;
+		opacity: 0.9;
+		transition: opacity 0.15s ease;
+
+		&:hover {
+			opacity: 1;
+		}
+
+		mat-icon {
+			font-size: 16px;
+			width: 16px;
+			height: 16px;
+		}
+
+		.cmd-kbd {
+			background: rgba(255, 255, 255, 0.15);
+			border: 1px solid rgba(255, 255, 255, 0.25);
+			border-radius: 3px;
+			padding: 1px 5px;
+			font-size: 10px;
+			font-family: monospace;
+			margin-left: 4px;
+		}
+	}
+
 	.github-logo {
 		margin-right: $spacing-sm;
 		width: 24px;
 		height: 24px;
+	}
+}
+
+@keyframes pulse-green {
+	0% {
+		box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+	}
+	70% {
+		box-shadow: 0 0 0 6px rgba(76, 175, 80, 0);
+	}
+	100% {
+		box-shadow: 0 0 0 0 rgba(76, 175, 80, 0);
 	}
 }
 
@@ -121,15 +327,19 @@ h1.header-company-name {
 	@include flex-fill;
 	@include flex-column;
 	overflow: hidden;
-	background: var(--mat-sys-surface);
-	color: var(--mat-sys-on-surface);
+	background: var(--color-canvas, #090d16);
+	color: var(--color-text, #f8fafc);
 	
-	// Ensure router-outlet fills available space
+	// Ensure routed views fill space and provide clean scrolling
 	router-outlet {
 		+ * {
-			display: block;
+			display: flex;
+			flex-direction: column;
 			height: 100%;
 			width: 100%;
+			min-height: 0;
+			overflow-y: auto;
+			box-sizing: border-box;
 		}
 	}
 }
@@ -142,7 +352,7 @@ h1.header-company-name {
 	@include flex-between;
 	flex-wrap: nowrap;
 	gap: $spacing-md;
-	border-bottom: 1px solid var(--mat-sys-outline);
+	border-bottom: 1px solid var(--color-border, #1e293b);
 	padding-bottom: $spacing-sm;
 	margin-bottom: $spacing-md;
 	flex-shrink: 0;
@@ -159,12 +369,6 @@ h1.header-company-name {
 // Router outlet wrapper
 router-outlet {
 	display: none;
-}
-
-router-outlet + * {
-	@include flex-row;
-	@include flex-fill;
-	overflow: hidden;
 }
 
 // ============================================================================
@@ -206,8 +410,8 @@ router-outlet + * {
 }
 
 .mat-header-row, .mat-header-cell {
-	background: var(--mat-sys-surface-variant);
-	color: var(--mat-sys-on-surface);
+	background: var(--color-card, #0f172a);
+	color: var(--color-text-muted, #94a3b8);
 }
 
 .mat-row, .mat-cell {
@@ -333,19 +537,6 @@ router-outlet + * {
 }
 
 // ============================================================================
-// Auth Layout
-// ============================================================================
-
-.auth-layout {
-	height: 100vh;
-	width: 100vw;
-	@include flex-center;
-	background: var(--mat-sys-surface);
-	color: var(--mat-sys-on-surface);
-	overflow: auto;
-}
-
-// ============================================================================
 // User Profile Menu
 // ============================================================================
 
@@ -376,19 +567,19 @@ router-outlet + * {
 			.user-name {
 				font-weight: $font-weight-medium;
 				font-size: $font-size-sm;
-				color: var(--mat-sys-on-surface);
+				color: var(--color-text, #f8fafc);
 				@include text-truncate;
 			}
 
 			.user-email {
 				font-size: $font-size-xs;
-				color: var(--mat-sys-on-surface-variant);
+				color: var(--color-text-muted, #94a3b8);
 				@include text-truncate;
 			}
 
 			.user-role {
 				font-size: 11px;
-				color: var(--mat-sys-primary);
+				color: var(--color-accent, #6366f1);
 				font-weight: $font-weight-medium;
 				text-transform: uppercase;
 			}

@@ -16,5 +16,5 @@ public sealed class CryptographyConfiguration
 	/// Gets or sets the security key used for encryption and decryption operations.
 	/// This property is required and must not be empty.
 	/// </summary>
-	[Required] public string SecurityKey { get; set; }
+	[Required] public string SecurityKey { get; set; } = string.Empty;
 }

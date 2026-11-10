@@ -40,6 +40,7 @@
   <Folder Name="/test/">
     <Project Path="test/RedisGUI.Application.Tests/RedisGUI.Application.Tests.csproj" />
     <Project Path="test/RedisGUI.Domain.Tests/RedisGUI.Domain.Tests.csproj" />
+    <Project Path="test/RedisGUI.Infrastructure.Tests/RedisGUI.Infrastructure.Tests.csproj" />
     <Project Path="test/RedisGUI.Shared.Tests/RedisGUI.Shared.Tests.csproj" />
   </Folder>
 </Solution>

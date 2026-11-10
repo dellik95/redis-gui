@@ -1,5 +1,4 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy, effect } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
@@ -15,6 +14,8 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ConnectionsStore } from '../../core/stores/connections.store';
 import { RedisOperationsStore } from '../../core/stores/redis-operations.store';
 import { ConnectionHealthCardComponent } from './connection-health-card.component';
+import { UiSelectComponent } from '../../shared/ui';
+import { PageHeaderComponent } from '../../shared/components';
 
 /**
  * Health Monitoring Dashboard Component
@@ -33,7 +34,6 @@ import { ConnectionHealthCardComponent } from './connection-health-card.componen
 	selector: 'app-health-monitoring',
 	standalone: true,
 	imports: [
-		NgClass,
 		FormsModule,
 		RouterModule,
 		MatCardModule,
@@ -44,7 +44,9 @@ import { ConnectionHealthCardComponent } from './connection-health-card.componen
 		MatTooltipModule,
 		MatChipsModule,
 		MatSlideToggleModule,
-		ConnectionHealthCardComponent
+		ConnectionHealthCardComponent,
+		UiSelectComponent,
+		PageHeaderComponent
 	],
 	templateUrl: './health-monitoring.component.html',
 	styleUrl: './health-monitoring.component.scss',

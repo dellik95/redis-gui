@@ -13,6 +13,10 @@ public class RedisConnectionRedisConnectionWithCredentials : IEntityTypeConfigur
 	/// <param name="builder">The entity type builder used to configure the entity</param>
 	public void Configure(EntityTypeBuilder<RedisConnectionWithCredentials> builder)
 	{
-		builder.OwnsOne(x => x.ConnectionCredentials);
+		builder.OwnsOne(x => x.ConnectionCredentials, credentials =>
+		{
+			credentials.Property(c => c.UserName).IsRequired(false);
+			credentials.Property(c => c.PasswordHash).IsRequired(false);
+		});
 	}
 }

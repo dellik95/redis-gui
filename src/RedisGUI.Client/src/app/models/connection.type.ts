@@ -37,4 +37,9 @@ export interface Connection {
 	 * Redis database index (0-15)
 	 */
 	database: number;
+
+	/**
+	 * Safe Mode (Read-Only) flag
+	 */
+	isReadOnly?: boolean | undefined;
 }

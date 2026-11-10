@@ -34,6 +34,7 @@ export const API_ROUTES = {
     DELETE: (id: string) => `/api/v1/connections/${id}`,
     CHECK: '/api/v1/connections/check',
     HEALTH: (connectionId: string) => `/api/v1/connections/${connectionId}/health`,
+    METRICS: (connectionId: string) => `/api/v1/connections/${connectionId}/metrics`,
     INFO: (connectionId: string) => `/api/v1/connections/${connectionId}/info`,
     CONFIG: (connectionId: string) => `/api/v1/connections/${connectionId}/config`
   },
@@ -114,14 +115,6 @@ export const API_ROUTES = {
  * Centralized definition of all SignalR hub routes
  */
 export const SIGNALR_HUBS = {
-  /**
-   * Pub/Sub hub for Redis Pub/Sub messaging
-   */
-  PUBSUB: '/hub/pubsub',
-
-  /**
-   * Key change hub for Redis key change notifications
-   */
   KEY_CHANGE: '/hub/keychange',
 
   /**
@@ -140,25 +133,7 @@ export const SIGNALR_METHODS = {
   /**
    * Pub/Sub hub methods
    */
-  PUBSUB: {
-    /**
-     * Server-to-client: Receive a message from a subscribed Redis channel
-     * Matches: IPubSubClientMethods.ReceiveMessage
-     */
-    RECEIVE_MESSAGE: 'ReceiveMessage',
-    
-    /**
-     * Client-to-server: Join a subscription group
-     * Matches: PubSubHub.JoinSubscription
-     */
-    JOIN_SUBSCRIPTION: 'JoinSubscription',
-    
-    /**
-     * Client-to-server: Leave a subscription group
-     * Matches: PubSubHub.LeaveSubscription
-     */
-    LEAVE_SUBSCRIPTION: 'LeaveSubscription'
-  },
+  
 
   /**
    * Key Change hub methods
@@ -194,4 +169,5 @@ export const SIGNALR_METHODS = {
     NOTIFY_USER: 'NotifyUserAsync'
   }
 } as const;
+
 

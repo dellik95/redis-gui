@@ -30,16 +30,8 @@ export interface ValidationResult {
 /**
  * Strategy interface for handling different Redis data types
  * 
- * Each Redis data type (String, Hash, List, Set, SortedSet) has its own handler
+ * Each Redis data type (String, Hash, List, Set, SortedSet, Stream) has its own handler
  * that knows how to transform data between visual editor, JSON, and Redis formats
- * 
- * @example
- * ```typescript
- * const handler = new StringTypeHandler();
- * const json = handler.toJson('hello world');
- * const visual = handler.toVisual('hello world');
- * const valid = handler.validate('hello world');
- * ```
  */
 export interface RedisTypeHandler {
   /**
@@ -86,5 +78,5 @@ export interface RedisTypeHandler {
    * @param value Value to format (can be any type)
    * @returns Human-readable string representation
    */
-  formatForDisplay(value: unknown): string;
+  formatForDisplay?(value: unknown): string;
 }

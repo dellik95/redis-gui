@@ -1,7 +1,20 @@
-<app-storage-value-editor
-  [data]="editorData"
-  [connectionId]="connectionId"
-  (save)="onSave($event)"
-  (cancel)="onCancel()">
-</app-storage-value-editor>
-
+<div class="add-key-dialog-wrapper">
+  <div class="dialog-header">
+    <div class="title-wrap">
+      <mat-icon class="header-icon">add_circle</mat-icon>
+      <h2 class="dialog-title">Add New Key</h2>
+    </div>
+    <button mat-icon-button (click)="onCancel()" aria-label="Close dialog">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+  
+  <div class="dialog-body">
+    <app-storage-value-editor
+      [data]="editorData"
+      [connectionId]="connectionId"
+      (save)="onSave($event)"
+      (cancel)="onCancel()">
+    </app-storage-value-editor>
+  </div>
+</div>

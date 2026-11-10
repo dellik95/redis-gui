@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Errors;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -26,7 +27,7 @@ public sealed class GetConnectionHealthQueryHandler : IQueryHandler<GetConnectio
 		if (health == null)
 		{
 			return Task.FromResult(Result.Failure<GetConnectionHealthResponse>(
-				new Error("Health.NotFound", "No health information available for this connection")));
+				DomainErrors.Health.NotFound));
 		}
 
 		var response = new GetConnectionHealthResponse(
@@ -40,3 +41,4 @@ public sealed class GetConnectionHealthQueryHandler : IQueryHandler<GetConnectio
 		return Task.FromResult(Result.Success(response));
 	}
 }
+

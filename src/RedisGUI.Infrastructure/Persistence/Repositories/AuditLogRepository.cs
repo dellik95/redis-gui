@@ -142,7 +142,7 @@ internal sealed class AuditLogRepository(ApplicationDbContext context) : IAuditL
 		AuditLog? entity = await context.AuditLogs.FindAsync([id], cancellationToken);
 		return entity is null
 			? Result.Failure<AuditLog?>(DomainErrors.Storage.ItemNotFound)
-			: Result.Success(entity);
+			: Result.Success<AuditLog?>(entity);
 	}
 
 	public void Update(AuditLog entity)

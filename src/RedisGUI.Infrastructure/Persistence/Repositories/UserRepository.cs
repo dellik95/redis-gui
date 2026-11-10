@@ -110,7 +110,7 @@ internal sealed class UserRepository(ApplicationDbContext context) : IUserReposi
 		User? entity = await context.Users.FindAsync([id], cancellationToken);
 		return entity is null
 			? Result.Failure<User?>(Domain.Errors.DomainErrors.User.NotFound)
-			: Result.Success(entity);
+			: Result.Success<User?>(entity);
 	}
 
 	public void Update(User entity)

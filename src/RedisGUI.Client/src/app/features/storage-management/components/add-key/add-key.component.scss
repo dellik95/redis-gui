@@ -1,4 +1,43 @@
-// Add Key Component Styles
-// This component is a wrapper around StorageValueEditorComponent
-// No additional styles needed as it's used in a dialog
+.add-key-dialog-wrapper {
+  padding: 24px;
+  box-sizing: border-box;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card, #0f172a);
+  color: var(--color-text, #f8fafc);
+}
 
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border, #1e293b);
+
+  .title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .header-icon {
+      color: var(--color-accent, #6366f1);
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    .dialog-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0;
+      color: var(--color-text, #f8fafc);
+    }
+  }
+}
+
+.dialog-body {
+  overflow-y: auto;
+  flex: 1;
+}

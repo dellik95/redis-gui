@@ -1,20 +1,27 @@
-input[type="file"] {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 1rem;
-  border: 1px solid var(--mat-divider-color);
-  border-radius: 4px;
-  background-color: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
-  cursor: pointer;
+mat-dialog-content {
+  min-width: 380px;
+  max-width: 520px;
+  padding: 20px 24px !important;
+  box-sizing: border-box;
+}
 
-  &:hover:not(:disabled) {
-    border-color: var(--mat-sys-primary);
-  }
+.import-hint {
+  margin: 0 0 16px 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #94a3b8);
+}
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+.file-input-wrapper {
+  padding: 16px;
+  border: 1px dashed var(--color-border, #1e293b);
+  border-radius: 8px;
+  background: var(--color-card-hover, #1e293b);
+  margin-bottom: 16px;
+
+  .file-input {
+    width: 100%;
+    font-size: 14px;
+    color: var(--color-text, #f8fafc);
   }
 }
 
@@ -23,14 +30,16 @@ input[type="file"] {
   align-items: center;
   gap: 12px;
   margin-top: 1rem;
+  font-size: 13.5px;
+  color: var(--color-text-muted, #94a3b8);
 }
 
 .error {
-  color: var(--mat-sys-error);
+  color: #ef4444;
   margin-top: 1rem;
   padding: 8px 12px;
-  background-color: var(--mat-sys-error-container);
-  border-radius: 4px;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
   font-size: 0.875rem;
 }
-

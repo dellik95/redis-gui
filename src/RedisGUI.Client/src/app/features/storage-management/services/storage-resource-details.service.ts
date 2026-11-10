@@ -1,8 +1,9 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SignalRHubService } from '../../../core/services/signalr-hub.service';
 import { SystemMetrics } from '../models/system-metrics.type';
-import { SIGNALR_HUBS, SIGNALR_METHODS } from '../../../core/constants/api-routes.constants';
+import { API_ROUTES, SIGNALR_HUBS, SIGNALR_METHODS } from '../../../core/constants/api-routes.constants';
 
 /**
  * SignalR service for real-time storage resource metrics
@@ -29,8 +30,16 @@ import { SIGNALR_HUBS, SIGNALR_METHODS } from '../../../core/constants/api-route
 	providedIn: 'root'
 })
 export class StorageResourceDetailsService extends SignalRHubService<SystemMetrics> {
+	private readonly http = inject(HttpClient);
 	protected override hubUrl = SIGNALR_HUBS.METRICS;
 	protected override eventName = SIGNALR_METHODS.METRICS.NOTIFY_USER;
+
+	/**
+	 * Get instantaneous metrics via REST API for immediate display
+	 */
+	getInstantMetrics(id: string): Observable<SystemMetrics> {
+		return this.http.get<SystemMetrics>(API_ROUTES.CONNECTIONS.METRICS(id));
+	}
 
 	/**
 	 * Start connection with connection ID

@@ -42,7 +42,7 @@ public class LoginUserCommandHandlerTests
 			"Password123!");
 
 		var emailResult = Email.Create("test@example.com");
-		var passwordHashResult = PasswordHash.Create("hashed", passwordHasherMock.Object);
+		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
 		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
@@ -121,7 +121,7 @@ public class LoginUserCommandHandlerTests
 			"WrongPassword");
 
 		var emailResult = Email.Create("test@example.com");
-		var passwordHashResult = PasswordHash.Create("hashed", passwordHasherMock.Object);
+		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
 		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
@@ -169,7 +169,7 @@ public class LoginUserCommandHandlerTests
 			"Password123!");
 
 		var emailResult = Email.Create("test@example.com");
-		var passwordHashResult = PasswordHash.Create("hashed", passwordHasherMock.Object);
+		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
 		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)

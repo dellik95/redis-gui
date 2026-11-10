@@ -21,16 +21,11 @@ internal sealed class CreateConnectionCommandHandler(
 	ICurrentUserService currentUserService)
 	: ICommandHandler<CreateConnectionCommand, Guid>
 {
-
 	/// <summary>
 	/// Handles the creation of a new Redis connection, validates it, and persists it to the repository.
 	/// </summary>
-	/// <param name="request">The connection creation command</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>Result containing the new connection's ID if successful</returns>
 	public async Task<Result<Guid>> Handle(CreateConnectionCommand request, CancellationToken cancellationToken)
 	{
-		// Create and validate credentials
 		Result<ConnectionCredentials?> credentialsResult = ConnectionCredentials.Create(
 			request.UserName,
 			request.Password,
@@ -39,18 +34,15 @@ internal sealed class CreateConnectionCommandHandler(
 		if (credentialsResult.IsFailure)
 			return Result.Failure<Guid>(credentialsResult.Error);
 
-		// Get current user ID for connection ownership
 		Guid? userId = currentUserService.UserId;
 		if (!userId.HasValue)
 		{
 			return Result.Failure<Guid>(Domain.Errors.DomainErrors.User.Unauthorized);
 		}
 
-		// Create value objects
 		DatabaseNumber databaseNumber = new(request.Database);
 		ConnectionOwnerId ownerId = ConnectionOwnerId.Some(userId.Value);
 
-		// Create connection with value objects
 		Result<RedisConnection> createResult = RedisConnection.Create(
 			new ConnectionName(request.Name),
 			new ConnectionHost(request.Host),
@@ -62,11 +54,13 @@ internal sealed class CreateConnectionCommandHandler(
 		if (createResult.IsFailure)
 			return Result.Failure<Guid>(createResult.Error);
 
-		// Test the connection
+		createResult.Value.SetReadOnly(request.IsReadOnly);
+
 		Result testResult = await connectionService.CheckConnectionAsync(createResult.Value, cancellationToken);
+		if (testResult.IsFailure)
+			return Result.Failure<Guid>(testResult.Error);
 		createResult.Value.UpdateAvailability(testResult.IsSuccess);
 
-		// Save to repository
 		connectionRepository.Add(createResult.Value);
 		Result<int> saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
 

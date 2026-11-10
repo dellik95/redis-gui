@@ -7,6 +7,8 @@ import { MatPaginatorModule, MatPaginator } from '@angular/material/paginator';
 import { MatSortModule, MatSort } from '@angular/material/sort';
 import { MatIcon } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { StorageConnectionsDataSource } from './storage-connections-datasource';
 import { EditConnectionDialogService } from '../../services/edit-connection-dialog.service';
@@ -17,32 +19,29 @@ import { Connection as ConnectionType } from '../../../../models/connection.type
 
 /**
  * Storage Connections List Component
- * Displays a table of Redis connections with sorting, pagination, and actions
- * 
- * Features:
- * - Material table with sorting and pagination
- * - Connection management (edit, delete)
- * - Navigation to connection storage view
- * - Reactive updates from ConnectionsStore
- * 
- * @example
- * ```html
- * <app-connections [config]="connectionListConfig" />
- * ```
+ * Displays interactive cards and table of Redis connections with actions
  */
 @Component({
   selector: 'app-connections',
   standalone: true,
   templateUrl: './storage-connections-list.component.html',
   styleUrl: './storage-connections-list.component.scss',
-  imports: [MatTableModule, MatPaginatorModule, MatSortModule, MatIcon, MatButtonModule],
+  imports: [
+    MatTableModule,
+    MatPaginatorModule,
+    MatSortModule,
+    MatIcon,
+    MatButtonModule,
+    MatTooltipModule,
+    MatProgressSpinnerModule
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class StorageConnectionsListComponent {
   // 1. Injected dependencies
-  private readonly connectionsStore = inject(ConnectionsStore);
+  readonly connectionsStore = inject(ConnectionsStore);
   private readonly sideNavStore = inject(SideNavStore);
-  private readonly connectionDialogService = inject(EditConnectionDialogService);
+  readonly connectionDialogService = inject(EditConnectionDialogService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly destroyRef = inject(DestroyRef);
@@ -51,9 +50,9 @@ export class StorageConnectionsListComponent {
   readonly config = input.required<SectionConfigType<ConnectionType>>();
 
   // 3. View queries
-  readonly paginator = viewChild.required(MatPaginator);
-  readonly sort = viewChild.required(MatSort);
-  readonly table = viewChild.required(MatTable);
+  readonly paginator = viewChild(MatPaginator);
+  readonly sort = viewChild(MatSort);
+  readonly table = viewChild(MatTable);
 
   // 4. Data source
   readonly dataSource = new StorageConnectionsDataSource();
@@ -83,6 +82,13 @@ export class StorageConnectionsListComponent {
 
   // 6. TrackBy function for performance
   readonly trackById = (index: number, connection: ConnectionType) => connection.id;
+
+  /**
+   * Adds a new connection
+   */
+  addConnection(): void {
+    this.connectionDialogService.showAddConnectionDialog();
+  }
 
   /**
    * Deletes a connection

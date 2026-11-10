@@ -21,9 +21,9 @@ public class DeleteMultipleKeysEndpoint : IEndpoint
     public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
     {
         routerBuilder.MapPost("storage/{connectionId:guid}/keys/delete-multiple",
-            async (IMediator sender, Guid connectionId, DeleteKeysRequest request) =>
+            async (IMediator sender, Guid connectionId, DeleteKeysRequest request, int? database) =>
             {
-                var command = new DeleteMultipleKeysCommand(connectionId, request.Keys);
+                var command = new DeleteMultipleKeysCommand(connectionId, request.Keys, database ?? request.Database);
                 return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
             })
             .WithName("DeleteMultipleKeys")
@@ -35,5 +35,6 @@ public class DeleteMultipleKeysEndpoint : IEndpoint
     /// Request model for deleting multiple keys.
     /// </summary>
     /// <param name="Keys">List of keys to delete.</param>
-    public sealed record DeleteKeysRequest(string[] Keys);
+    /// <param name="Database">Optional database number.</param>
+    public sealed record DeleteKeysRequest(string[] Keys, int? Database = null);
 }

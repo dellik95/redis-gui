@@ -53,7 +53,8 @@ internal sealed class GetAllRedisValuesQueryHandler
             request.Pattern,
             request.PageSize,
             request.PageNumber,
-            cancellationToken);
+            cancellationToken,
+            request.Database);
 
         if (result.IsFailure)
         {
@@ -76,4 +77,4 @@ internal sealed class GetAllRedisValuesQueryHandler
 
         return Result.Success(response);
     }
-} 
+}

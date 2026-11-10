@@ -1,30 +1,25 @@
 <h2 mat-dialog-title>Export Redis Data</h2>
 <mat-dialog-content>
-  <mat-radio-group [formControl]="formatCtrl">
-    <mat-radio-button value="json">JSON</mat-radio-button>
-    <mat-radio-button value="csv">CSV</mat-radio-button>
-  </mat-radio-group>
+  <p class="export-hint">Select the export format for your Redis keys and values:</p>
+  
+  <ui-radio-group [formField]="exportForm.format" [options]="formatOptions" />
+
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-      <span>Exporting...</span>
+      <span>Preparing and downloading export...</span>
     </div>
   }
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
 </mat-dialog-content>
-<mat-dialog-actions>
-  <button 
-    mat-button 
-    [disabled]="isLoading()" 
+<mat-dialog-actions align="end" class="dialog-actions">
+  <ui-button variant="ghost" (click)="dialogRef.close()">Cancel</ui-button>
+  <ui-button 
+    variant="primary" 
+    [loading]="isLoading()" 
     (click)="onExport()">
     Export
-  </button>
-  <button 
-    mat-button 
-    (click)="dialogRef.close()">
-    Cancel
-  </button>
+  </ui-button>
 </mat-dialog-actions>
-

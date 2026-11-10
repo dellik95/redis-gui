@@ -9,6 +9,8 @@ namespace RedisGUI.Domain.Tests.Connection;
 public class ConnectionHostTests
 {
 	[TestCase("localhost")]
+	[TestCase("redis")]
+	[TestCase("redisgui-redis")]
 	[TestCase("127.0.0.1")]
 	[TestCase("redis.example.com")]
 	[TestCase("192.168.1.100")]

@@ -3,21 +3,12 @@ import {
   inject,
   signal,
   computed,
-  ChangeDetectionStrategy
+  ChangeDetectionStrategy,
+  DestroyRef
 } from '@angular/core';
-
-import {
-  FormControl,
-  FormGroup,
-  ReactiveFormsModule,
-  Validators,
-  AbstractControl,
-  ValidationErrors
-} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { form, FormField, required, email, minLength, validate, submit } from '@angular/forms/signals';
 import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -25,51 +16,36 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../../core/services/auth/auth.service';
 import { RegisterRequest } from '../../../core/models/auth';
+import { UiInputComponent, UiButtonComponent } from '../../../shared/ui';
 
 /**
  * Sign Up Component
- * Handles new user registration with Angular 21 signal-based patterns
- *
- * Features:
- * - Form validation (name, email, password)
- * - Password confirmation matching
- * - Password visibility toggles
- * - Loading state management
- * - Error handling with user-friendly messages
- * - Automatic redirect to login on successful registration
- * - Modern reactive forms with signals
- * - Zoneless change detection compatible
- *
- * @example
- * ```html
- * <app-signup />
- * ```
+ * Handles new user registration with Angular Signal Forms
  */
 @Component({
   selector: 'app-signup',
   standalone: true,
   imports: [
-    ReactiveFormsModule,
+    FormField,
     MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    RouterLink
+    RouterLink,
+    UiInputComponent,
+    UiButtonComponent
   ],
   templateUrl: './signup.component.html',
   styleUrl: './signup.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SignupComponent {
-  // 1. Injected dependencies
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly destroyRef = inject(DestroyRef);
 
-  // 2. State signals
   /** Loading state during registration */
   readonly isLoading = signal(false);
 
@@ -79,168 +55,107 @@ export class SignupComponent {
   /** Confirm password visibility toggle state */
   readonly hideConfirmPassword = signal(true);
 
-  // 3. Form definition
-  /** Registration form with validation */
-  readonly registerForm = new FormGroup(
-    {
-      firstName: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required, Validators.minLength(2)]
-      }),
-      lastName: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required, Validators.minLength(2)]
-      }),
-      email: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required, Validators.email]
-      }),
-      password: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required, Validators.minLength(6)]
-      }),
-      confirmPassword: new FormControl('', {
-        nonNullable: true,
-        validators: [Validators.required]
-      })
-    },
-    {
-      validators: this.passwordMatchValidator
-    }
-  );
-
-  // 4. Form control references for easier access
-  private readonly firstNameControl = this.registerForm.controls.firstName;
-  private readonly lastNameControl = this.registerForm.controls.lastName;
-  private readonly emailControl = this.registerForm.controls.email;
-  private readonly passwordControl = this.registerForm.controls.password;
-  private readonly confirmPasswordControl = this.registerForm.controls.confirmPassword;
-
-  // 5. Computed signals for form state
-  /** Whether the form can be submitted */
-  readonly canSubmit = computed(() =>
-    this.registerForm.valid && !this.isLoading()
-  );
-
-  /** First name field error message */
-  readonly firstNameError = computed(() => {
-    const control = this.firstNameControl;
-    if (!control.touched) return null;
-    if (control.hasError('required')) return 'First name is required';
-    if (control.hasError('minlength')) return 'First name must be at least 2 characters';
-    return null;
+  /** Registration signal model */
+  readonly registerModel = signal({
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
   });
 
-  /** Last name field error message */
-  readonly lastNameError = computed(() => {
-    const control = this.lastNameControl;
-    if (!control.touched) return null;
-    if (control.hasError('required')) return 'Last name is required';
-    if (control.hasError('minlength')) return 'Last name must be at least 2 characters';
-    return null;
-  });
+  /** Registration Signal Form with declarative schema rules */
+  readonly registerForm = form(this.registerModel, (s) => {
+    required(s.firstName, { message: 'First name is required' });
+    minLength(s.firstName, 2, { message: 'First name must be at least 2 characters' });
 
-  /** Email field error message */
-  readonly emailError = computed(() => {
-    const control = this.emailControl;
-    if (!control.touched) return null;
-    if (control.hasError('required')) return 'Email is required';
-    if (control.hasError('email')) return 'Please enter a valid email address';
-    return null;
-  });
+    required(s.lastName, { message: 'Last name is required' });
+    minLength(s.lastName, 2, { message: 'Last name must be at least 2 characters' });
 
-  /** Password field error message */
-  readonly passwordError = computed(() => {
-    const control = this.passwordControl;
-    if (!control.touched) return null;
-    if (control.hasError('required')) return 'Password is required';
-    if (control.hasError('minlength')) return 'Password must be at least 6 characters';
-    return null;
-  });
+    required(s.email, { message: 'Email is required' });
+    email(s.email, { message: 'Please enter a valid email address' });
 
-  /** Confirm password field error message */
-  readonly confirmPasswordError = computed(() => {
-    const control = this.confirmPasswordControl;
-    if (!control.touched) return null;
-    if (control.hasError('required')) return 'Please confirm your password';
-    if (this.registerForm.hasError('passwordMismatch')) return 'Passwords do not match';
-    return null;
-  });
+    required(s.password, { message: 'Password is required' });
+    minLength(s.password, 6, { message: 'Password must be at least 6 characters' });
 
-  /**
-   * Custom validator to check if password and confirmPassword match
-   */
-  private passwordMatchValidator(control: AbstractControl): ValidationErrors | null {
-    const password = control.get('password');
-    const confirmPassword = control.get('confirmPassword');
-
-    if (!password || !confirmPassword) {
+    required(s.confirmPassword, { message: 'Please confirm your password' });
+    validate(s.confirmPassword, (ctx) => {
+      if (ctx.value() !== this.registerModel().password) {
+        return { kind: 'passwordMismatch', message: 'Passwords do not match' };
+      }
       return null;
-    }
+    });
+  });
 
-    return password.value === confirmPassword.value ? null : { passwordMismatch: true };
+  /** Whether the form can be submitted */
+  readonly canSubmit = computed(() => {
+    return this.registerForm().valid() && !this.isLoading();
+  });
+
+  /**
+   * Pre-fills demo user data for quick testing
+   */
+  fillDemoCredentials(): void {
+    this.registerModel.set({
+      firstName: 'Demo',
+      lastName: 'User',
+      email: 'demo@redisgui.local',
+      password: 'AdminPassword123!',
+      confirmPassword: 'AdminPassword123!'
+    });
   }
 
   /**
-   * Handles form submission for user registration
+   * Handles form submission for user registration using Signal Forms submit()
    */
-  onSubmit(): void {
-    if (!this.registerForm.valid) {
-      this.registerForm.markAllAsTouched();
-      return;
-    }
+  onSubmit(event?: Event): void {
+    if (event) event.preventDefault();
 
-    this.isLoading.set(true);
+    submit(this.registerForm, async () => {
+      this.isLoading.set(true);
 
-    const request: RegisterRequest = {
-      email: this.emailControl.value,
-      password: this.passwordControl.value,
-      firstName: this.firstNameControl.value,
-      lastName: this.lastNameControl.value
-    };
+      const { firstName, lastName, email, password } = this.registerModel();
+      const request: RegisterRequest = {
+        firstName,
+        lastName,
+        email,
+        password
+      };
 
-    this.authService
-      .register(request)
-      .pipe(takeUntilDestroyed())
-      .subscribe({
-        next: () => {
-          this.snackBar.open('Registration successful! Please log in.', 'Close', {
-            duration: 4000,
-            horizontalPosition: 'end',
-            verticalPosition: 'top',
-            panelClass: ['success-snackbar']
-          });
-          this.router.navigate(['/login']);
-        },
-        error: error => {
-          this.isLoading.set(false);
-          const errorMessage = error.error?.message || 'Registration failed. Please try again.';
-          this.snackBar.open(errorMessage, 'Close', {
-            duration: 5000,
-            horizontalPosition: 'end',
-            verticalPosition: 'top',
-            panelClass: ['error-snackbar']
-          });
-        },
-        complete: () => {
-          this.isLoading.set(false);
-        }
-      });
+      this.authService.register(request)
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe({
+          next: () => {
+            this.snackBar.open('Registration successful! Please sign in.', 'Close', {
+              duration: 4000,
+              horizontalPosition: 'end',
+              verticalPosition: 'top',
+              panelClass: ['success-snackbar']
+            });
+            this.router.navigate(['/login']);
+          },
+          error: (error) => {
+            this.isLoading.set(false);
+            const errorMessage = error.error?.message || error.error?.detail || 'Registration failed';
+            this.snackBar.open(errorMessage, 'Close', {
+              duration: 5000,
+              horizontalPosition: 'end',
+              verticalPosition: 'top',
+              panelClass: ['error-snackbar']
+            });
+          },
+          complete: () => {
+            this.isLoading.set(false);
+          }
+        });
+    });
   }
 
-  /**
-   * Toggles password visibility
-   */
   togglePasswordVisibility(): void {
-    this.hidePassword.update(v => !v);
+    this.hidePassword.update(visible => !visible);
   }
 
-  /**
-   * Toggles confirm password visibility
-  /**
-   * Toggles confirm password visibility
-   */
   toggleConfirmPasswordVisibility(): void {
-    this.hideConfirmPassword.update(v => !v);
+    this.hideConfirmPassword.update(visible => !visible);
   }
 }

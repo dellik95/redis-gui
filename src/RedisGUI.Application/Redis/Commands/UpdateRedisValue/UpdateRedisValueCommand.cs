@@ -7,17 +7,13 @@ namespace RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 /// <summary>
 /// Command to update a Redis value with type-specific handling.
 /// </summary>
-/// <param name="ConnectionId">The Redis connection identifier.</param>
-/// <param name="Key">The key to update.</param>
-/// <param name="Type">The Redis data type (String, List, Hash, Set, SortedSet, Stream).</param>
-/// <param name="Value">The value(s) to set - format depends on type.</param>
-/// <param name="Ttl">Optional time-to-live for the key.</param>
 public sealed record UpdateRedisValueCommand(
     Guid ConnectionId,
     string Key,
     RedisDataType Type,
     RedisValueData Value,
-    TimeSpan? Ttl = null) : ICommand;
+    TimeSpan? Ttl = null,
+    int? Database = null) : ICommand;
 
 /// <summary>
 /// Redis data types.
@@ -33,41 +29,55 @@ public enum RedisDataType
 }
 
 /// <summary>
-/// Base class for Redis value data.
+/// Container class for Redis value data across all types.
 /// </summary>
-public abstract record RedisValueData;
+public class RedisValueData
+{
+    public string? Value { get; set; }
+    public List<string>? Items { get; set; }
+    public HashSet<string>? Members { get; set; }
+    public Dictionary<string, string>? Fields { get; set; }
+    public Dictionary<string, double>? MembersWithScores { get; set; }
+    public List<StreamEntry>? Entries { get; set; }
 
-/// <summary>
-/// String value data.
-/// </summary>
-public sealed record StringValueData(string Value) : RedisValueData;
+    public RedisValueData() { }
+    public RedisValueData(string? value) => Value = value;
+}
 
-/// <summary>
-/// List value data.
-/// </summary>
-public sealed record ListValueData(List<string> Items) : RedisValueData;
+public sealed class StringValueData : RedisValueData
+{
+    public StringValueData() { }
+    public StringValueData(string value) : base(value) { }
+}
 
-/// <summary>
-/// Set value data.
-/// </summary>
-public sealed record SetValueData(HashSet<string> Members) : RedisValueData;
+public sealed class ListValueData : RedisValueData
+{
+    public ListValueData() { }
+    public ListValueData(List<string> items) { Items = items; }
+}
 
-/// <summary>
-/// Hash value data.
-/// </summary>
-public sealed record HashValueData(Dictionary<string, string> Fields) : RedisValueData;
+public sealed class SetValueData : RedisValueData
+{
+    public SetValueData() { }
+    public SetValueData(HashSet<string> members) { Members = members; }
+}
 
-/// <summary>
-/// Sorted Set value data.
-/// </summary>
-public sealed record SortedSetValueData(Dictionary<string, double> MembersWithScores) : RedisValueData;
+public sealed class HashValueData : RedisValueData
+{
+    public HashValueData() { }
+    public HashValueData(Dictionary<string, string> fields) { Fields = fields; }
+}
 
-/// <summary>
-/// Stream value data.
-/// </summary>
-public sealed record StreamValueData(List<StreamEntry> Entries) : RedisValueData;
+public sealed class SortedSetValueData : RedisValueData
+{
+    public SortedSetValueData() { }
+    public SortedSetValueData(Dictionary<string, double> membersWithScores) { MembersWithScores = membersWithScores; }
+}
 
-/// <summary>
-/// Stream entry.
-/// </summary>
+public sealed class StreamValueData : RedisValueData
+{
+    public StreamValueData() { }
+    public StreamValueData(List<StreamEntry> entries) { Entries = entries; }
+}
+
 public sealed record StreamEntry(string Id, Dictionary<string, string> Fields);

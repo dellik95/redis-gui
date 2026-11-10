@@ -1,4 +1,33 @@
 <div class="info-container">
+  <!-- Unified Primary Header -->
+  <app-page-header
+    icon="dns"
+    title="Server Information"
+    subtitle="Inspect Redis server telemetry, runtime configuration, and client statistics"
+  >
+    <div actions class="flex items-center gap-3">
+      <div class="connection-picker">
+        <ui-select
+          [value]="activeConnectionId()"
+          (valueChange)="onConnectionChange($event)"
+          [options]="connectionOptions()"
+          label="Redis Connection"
+          icon="dns"
+          [fullWidth]="false"
+        />
+      </div>
+
+      <button class="btn-secondary" (click)="loadData()" [disabled]="store.isLoading()" matTooltip="Reload Server Information">
+        <mat-icon [class.spinning]="store.isLoading()">refresh</mat-icon>
+        <span>Refresh</span>
+      </button>
+    </div>
+  </app-page-header>
+
+  @if (store.isLoading() && store.serverInfo()) {
+    <mat-progress-bar mode="indeterminate" class="info-progress-bar"></mat-progress-bar>
+  }
+
   <!-- Error Display -->
   @if (store.error()) {
     <mat-card class="error-card">
@@ -17,8 +46,23 @@
   <!-- Loading State -->
   @if (store.isLoadingInfo() && !store.serverInfo()) {
     <div class="loading-container">
-      <mat-spinner></mat-spinner>
-      <p>Loading server information...</p>
+      <mat-spinner diameter="44"></mat-spinner>
+      <p>Loading server information from Redis...</p>
+    </div>
+  }
+
+  <!-- Empty / Fallback State -->
+  @if (!store.isLoadingInfo() && !store.serverInfo()) {
+    <div class="empty-info-card">
+      <div class="empty-icon-wrap">
+        <mat-icon>dns</mat-icon>
+      </div>
+      <h3>No Server Information Loaded</h3>
+      <p>Select a Redis connection above to inspect live server metrics, memory, and configurations.</p>
+      <button class="btn-primary" (click)="loadData()" [disabled]="!activeConnectionId()">
+        <mat-icon>refresh</mat-icon>
+        <span>Load Server Info</span>
+      </button>
     </div>
   }
 
@@ -132,16 +176,17 @@
             <mat-card-content>
               <!-- Search -->
               <div class="search-bar">
-                <mat-form-field appearance="outline">
-                  <mat-label>Search configuration</mat-label>
-                  <input matInput [ngModel]="configSearchQuery()" (ngModelChange)="configSearchQuery.set($event)" (keyup.enter)="searchConfig()" placeholder="e.g., maxmemory">
-                  <button mat-icon-button matSuffix (click)="searchConfig()">
-                    <mat-icon>search</mat-icon>
-                  </button>
-                </mat-form-field>
-                <button mat-raised-button color="primary" (click)="loadData()">
+                <ui-input
+                  [(value)]="configSearchQuery"
+                  (enter)="searchConfig()"
+                  placeholder="Search configuration (e.g., maxmemory)"
+                  icon="search"
+                  [clearable]="true"
+                  (cleared)="searchConfig()"
+                />
+                <button class="btn-primary" (click)="loadData()">
                   <mat-icon>refresh</mat-icon>
-                  Refresh
+                  <span>Refresh</span>
                 </button>
               </div>
 
@@ -226,4 +271,3 @@
     </mat-tab-group>
   }
 </div>
-

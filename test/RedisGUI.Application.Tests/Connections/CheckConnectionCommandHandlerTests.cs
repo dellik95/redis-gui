@@ -59,7 +59,7 @@ public class CheckConnectionCommandHandlerTests
 	{
 		// Arrange
 		CheckConnectionCommand command = new(
-			"invalid-host",
+			"invalid-host.local",
 			6379,
 			0,
 			null,
@@ -107,4 +107,5 @@ public class CheckConnectionCommandHandlerTests
 		passwordEncryptorMock.Verify(x => x.EncryptPassword("password"), Times.Once);
 	}
 }
+
 

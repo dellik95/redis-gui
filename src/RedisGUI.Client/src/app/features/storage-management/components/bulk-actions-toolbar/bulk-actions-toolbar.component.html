@@ -1,49 +1,50 @@
 <div class="bulk-toolbar" [class.has-selection]="hasSelection()">
-  <div class="left-group">
-    @if (hasSelection()) {
+  @if (hasSelection()) {
+    <div class="selection-actions-bar">
       <span class="count">{{ selectedCount() }} selected</span>
-      <button mat-raised-button color="warn" (click)="deleteSelected.emit()" matTooltip="Delete all selected keys" [disabled]="loading()">
+      <button class="btn-danger-compact" (click)="deleteSelected.emit()" matTooltip="Delete all selected keys" [disabled]="loading()">
         <mat-icon>delete_sweep</mat-icon>
-        Delete Selected
+        <span>Delete ({{ selectedCount() }})</span>
       </button>
-      <button mat-button (click)="clearSelection.emit()" matTooltip="Clear selection" [disabled]="loading()">
+      <button class="btn-secondary-compact" (click)="setBulkTtl.emit()" matTooltip="Set TTL or persist selected keys" [disabled]="loading()">
+        <mat-icon>timer</mat-icon>
+        <span>TTL</span>
+      </button>
+      <button class="btn-ghost-compact" (click)="clearSelection.emit()" matTooltip="Clear selection" [disabled]="loading()">
         <mat-icon>close</mat-icon>
-        Clear
       </button>
-    } @else {
-      <span class="placeholder">No selection</span>
-    }
-  </div>
+    </div>
+  }
 
-  <div class="right-group">
-    <button mat-button [matMenuTriggerFor]="exportMenu" matTooltip="Export or Import Redis data" [disabled]="loading()">
+  <div class="menu-actions-group">
+    <button class="btn-secondary compact-btn" [matMenuTriggerFor]="exportMenu" matTooltip="Export or Import Redis data" [disabled]="loading()">
       <mat-icon>import_export</mat-icon>
-      Export / Import
+      <span>Export / Import</span>
     </button>
     <mat-menu #exportMenu="matMenu">
       <button mat-menu-item (click)="exportJson.emit()">
         <mat-icon>download</mat-icon>
-        Export JSON (pattern {{ pattern() }})
+        <span>Export JSON (pattern {{ pattern() }})</span>
       </button>
       <button mat-menu-item (click)="exportCsv.emit()">
         <mat-icon>download</mat-icon>
-        Export CSV (pattern {{ pattern() }})
+        <span>Export CSV (pattern {{ pattern() }})</span>
       </button>
       <mat-divider></mat-divider>
       <button mat-menu-item (click)="importData.emit()">
         <mat-icon>upload</mat-icon>
-        Import Data
+        <span>Import Data</span>
       </button>
     </mat-menu>
 
-    <button mat-button [matMenuTriggerFor]="patternMenu" matTooltip="Bulk delete by pattern" [disabled]="loading()">
+    <button class="btn-secondary compact-btn" [matMenuTriggerFor]="patternMenu" matTooltip="Bulk delete by pattern" [disabled]="loading()">
       <mat-icon>filter_list</mat-icon>
-      Delete by Pattern
+      <span>Delete by Pattern</span>
     </button>
     <mat-menu #patternMenu="matMenu">
       <button mat-menu-item (click)="deleteByPattern.emit()">
         <mat-icon>delete</mat-icon>
-        Delete keys matching '{{ pattern() }}'
+        <span>Delete keys matching '{{ pattern() }}'</span>
       </button>
     </mat-menu>
   </div>

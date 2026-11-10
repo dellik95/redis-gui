@@ -1,33 +1,88 @@
-<div class="table-container mat-elevation-z2">
-  <table mat-table class="full-width-table" matSort aria-label="Elements">
+<div class="connections-wrapper">
+  @if (connectionsStore.isLoading()) {
+    <div class="loading-state">
+      <mat-spinner diameter="44"></mat-spinner>
+      <span class="loading-label">Loading connections...</span>
+    </div>
+  } @else if (connectionsStore.connections().length === 0) {
+    <div class="welcome-card">
+      <div class="welcome-icon-wrap">
+        <mat-icon class="welcome-icon">storage</mat-icon>
+      </div>
+      <h2 class="welcome-title">Welcome to Redis Studio</h2>
+      <p class="welcome-text">
+        Connect to your local or remote Redis instances to browse keys, inspect memory, monitor metrics, and manage your data with ease.
+      </p>
+      <button class="btn-primary" (click)="addConnection()">
+        <mat-icon>add</mat-icon>
+        <span>Add Your First Connection</span>
+      </button>
+    </div>
+  } @else {
+    <div class="connections-header">
+      <div class="header-info">
+        <h2 class="section-title">Redis Connections</h2>
+        <span class="count-badge">{{ connectionsStore.connections().length }} active</span>
+      </div>
+      <button class="btn-primary" (click)="addConnection()">
+        <mat-icon>add</mat-icon>
+        <span>New Connection</span>
+      </button>
+    </div>
 
-    @for (item of getColumns(); track item.name) {
-      <ng-container [matColumnDef]="item.name">
-        <th mat-header-cell *matHeaderCellDef mat-sort-header [hidden]="item.hidden">{{ item.title }}</th>
-        <td mat-cell *matCellDef="let row" [hidden]="item.hidden">{{ getColumnValue(item, row) }}</td>
-      </ng-container>
-    }
+    <div class="connections-grid">
+      @for (conn of connectionsStore.connections(); track conn.id) {
+        <div class="connection-card" (click)="rowClick(conn)">
+          <div class="card-header">
+            <div class="card-title-row">
+              <div class="conn-icon-box">
+                <mat-icon>dns</mat-icon>
+              </div>
+              <div class="conn-name-block">
+                <h3 class="conn-name" [matTooltip]="conn.name">{{ conn.name }}</h3>
+                <span class="conn-endpoint">{{ conn.host }}:{{ conn.port }}</span>
+              </div>
+            </div>
+            
+            <div class="card-actions-menu" (click)="$event.stopPropagation()">
+              <button mat-icon-button (click)="editRecord(conn, $event)" matTooltip="Edit Connection" class="action-btn">
+                <mat-icon>edit_note</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deleteRecord(conn.id, $event)" matTooltip="Delete Connection" color="warn" class="action-btn">
+                <mat-icon>delete_outline</mat-icon>
+              </button>
+            </div>
+          </div>
 
-    <ng-container matColumnDef="actions">
-      <th mat-header-cell *matHeaderCellDef aria-label="row actions">&nbsp;</th>
-      <td mat-cell *matCellDef="let row">
-        <div class="item-actions-container">
-          <button mat-mini-fab (click)="editRecord(row, $event)">
-            <mat-icon>edit</mat-icon>
-          </button>
-          <button mat-mini-fab (click)="deleteRecord(row.id, $event)">
-            <mat-icon>delete</mat-icon>
-          </button>
+          <div class="card-body">
+            <div class="meta-tags">
+              <span class="meta-tag tag-db">
+                <mat-icon>dataset</mat-icon>
+                <span>DB {{ conn.database }}</span>
+              </span>
+              @if (conn.password) {
+                <span class="meta-tag tag-auth" matTooltip="Authentication protected">
+                  <mat-icon>lock</mat-icon>
+                  <span>Protected</span>
+                </span>
+              } @else {
+                <span class="meta-tag tag-no-auth" matTooltip="No password set">
+                  <mat-icon>lock_open</mat-icon>
+                  <span>Public</span>
+                </span>
+              }
+            </div>
+          </div>
+
+          <div class="card-footer">
+            <span class="click-hint">Click card to open database</span>
+            <button mat-button class="connect-action-btn" color="primary">
+              <span>Connect</span>
+              <mat-icon>arrow_forward</mat-icon>
+            </button>
+          </div>
         </div>
-      </td>
-    </ng-container>
-
-    <tr mat-header-row *matHeaderRowDef="getDisplayedColumns()"></tr>
-    <tr mat-row *matRowDef="let row; columns: getDisplayedColumns();" (click)="rowClick(row)"></tr>
-
-  </table>
-
-  <mat-paginator #paginator class="mat-paginator-sticky" [pageIndex]="0" [pageSize]="10" [pageSizeOptions]="[5, 10, 20]"
-    aria-label="Select page">
-  </mat-paginator>
+      }
+    </div>
+  }
 </div>

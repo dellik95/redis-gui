@@ -46,6 +46,7 @@
 // Custom scrollbar
 @mixin custom-scrollbar($size: $scrollbar-size, $track-bg: transparent) {
   scrollbar-width: thin;
+  scrollbar-color: var(--color-border-light, #334155) $track-bg;
   
   &::-webkit-scrollbar {
     width: $size;
@@ -57,11 +58,11 @@
   }
   
   &::-webkit-scrollbar-thumb {
-    background: var(--mat-sys-outline);
+    background: var(--color-border-light, #334155);
     border-radius: $border-radius-sm;
     
     &:hover {
-      background: var(--mat-sys-outline-variant);
+      background: var(--color-text-muted, #64748b);
     }
   }
 }
@@ -100,27 +101,28 @@
   }
 }
 
-// Material Design elevation
+// Elevation
 @mixin elevation($level: 2) {
   @if $level == 1 {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   } @else if $level == 2 {
-    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
   } @else if $level == 3 {
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.19), 0 6px 6px rgba(0, 0, 0, 0.23);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4);
   }
 }
 
 // Focus ring
 @mixin focus-ring($offset: 2px) {
-  outline: 2px solid var(--mat-sys-primary);
+  outline: 2px solid var(--color-accent, #6366f1);
   outline-offset: $offset;
 }
 
 // Card style
 @mixin card {
-  background: var(--mat-sys-surface);
-  color: var(--mat-sys-on-surface);
+  background: var(--color-card, #0f172a);
+  color: var(--color-text, #f8fafc);
+  border: 1px solid var(--color-border, #1e293b);
   border-radius: $border-radius-md;
   @include elevation(2);
 }
@@ -154,8 +156,8 @@
   width: $size;
   height: $size;
   border-radius: $border-radius-circle;
-  background: var(--mat-sys-primary);
-  color: var(--mat-sys-on-primary);
+  background: var(--color-accent, #6366f1);
+  color: #ffffff;
   @include flex-center;
   font-weight: $font-weight-semibold;
   font-size: calc($size / 2.5);

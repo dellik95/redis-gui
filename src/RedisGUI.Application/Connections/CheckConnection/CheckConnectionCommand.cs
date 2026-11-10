@@ -14,5 +14,5 @@ public sealed record CheckConnectionCommand(
 	string Host,
 	int Port,
 	int Database = 0,
-	string UserName = "",
-	string Password = "") : ICommand;
+	string? UserName = null,
+	string? Password = null) : ICommand;

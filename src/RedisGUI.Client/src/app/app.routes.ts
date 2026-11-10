@@ -49,30 +49,6 @@ export const routes: Routes = [
         }
     },
     {
-        path: "transaction/:id",
-        loadComponent: () => import("./features/redis-operations/transaction/transaction-builder.component").then(x => x.TransactionBuilderComponent),
-        canActivate: [authGuard],
-        data: {
-            breadcrumb: "Transactions"
-        }
-    },
-    {
-        path: "lua/:id",
-        loadComponent: () => import("./features/redis-operations/lua/lua-script-console.component").then(x => x.LuaScriptConsoleComponent),
-        canActivate: [authGuard],
-        data: {
-            breadcrumb: "Lua Scripts"
-        }
-    },
-    {
-        path: "pubsub/:id",
-        loadComponent: () => import("./features/redis-operations/pubsub/pub-sub-panel.component").then(x => x.PubSubPanelComponent),
-        canActivate: [authGuard],
-        data: {
-            breadcrumb: "Pub/Sub"
-        }
-    },
-    {
         path: 'health',
         loadComponent: () => import("./features/health-monitoring/health-monitoring.component").then(x => x.HealthMonitoringComponent),
         canActivate: [authGuard],
@@ -90,6 +66,14 @@ export const routes: Routes = [
     },
     {
         path: 'info', 
+        component: InfoComponent,
+        canActivate: [authGuard],
+        data: {
+            breadcrumb: "Information"
+        }
+    },
+    {
+        path: 'info/:connectionId', 
         component: InfoComponent,
         canActivate: [authGuard],
         data: {

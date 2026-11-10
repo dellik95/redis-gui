@@ -13,10 +13,10 @@
   color: var(--mat-sys-on-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border-radius: $border-radius-lg;
-  font-family: 'Roboto', sans-serif; // Consistent font with app
+  font-family: 'Roboto', sans-serif;
 
   mat-card-header {
-    margin-bottom: $spacing-xl;
+    margin-bottom: $spacing-lg;
     text-align: center;
     padding: 0;
     display: flex;
@@ -45,6 +45,65 @@
 
   mat-card-content {
     padding: 0;
+  }
+}
+
+// ============================================================================
+// Demo Quick Access Banner
+// ============================================================================
+
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-lg;
+  background: rgba(33, 150, 243, 0.08);
+  border: 1px solid rgba(33, 150, 243, 0.25);
+  border-radius: $border-radius-md;
+  gap: $spacing-sm;
+
+  .demo-info {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    font-size: $font-size-xs;
+
+    .demo-icon {
+      color: #1976d2;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .demo-text {
+      display: flex;
+      flex-direction: column;
+
+      strong {
+        color: #1976d2;
+        font-weight: 600;
+      }
+
+      span {
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+  }
+
+  .demo-fill-btn {
+    font-size: $font-size-xs;
+    height: 32px;
+    line-height: 32px;
+    padding: 0 $spacing-sm;
+    color: #1976d2;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+    }
   }
 }
 

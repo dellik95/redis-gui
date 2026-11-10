@@ -5,10 +5,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Audit;
+using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Domain.Users;
 using RedisGUI.Infrastructure.Authentication;
@@ -20,14 +23,17 @@ using RedisGUI.Infrastructure.Persistence;
 using RedisGUI.Infrastructure.Persistence.Cache;
 using RedisGUI.Infrastructure.Persistence.Interceptors;
 using RedisGUI.Infrastructure.Persistence.Repositories;
+using RedisGUI.Infrastructure.Redis.Services;
+using RedisGUI.Infrastructure.Redis.TypeHandlers;
 using RedisGUI.Infrastructure.Persistence.SqlProcessor;
 using RedisGUI.Infrastructure.Redis;
-using RedisGUI.Infrastructure.Redis.Mock;
 using RedisGUI.Infrastructure.RedisMetrics;
 using RedisGUI.Infrastructure.Services;
 using RedisGUI.Infrastructure.SignalR;
 using System.Linq;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using MySql.EntityFrameworkCore.Extensions;
 
 namespace RedisGUI.Infrastructure;
 
@@ -49,53 +55,29 @@ public static class DependencyInjection
 		services.AddSingleton<IPasswordDecrypt, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 		services.AddSingleton<IPasswordEncryptor, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 
-		services.AddOptions<RedisMockOptions>()
-			.Bind(configuration.GetSection(RedisMockOptions.Key))
-			.ValidateDataAnnotations()
-			.ValidateOnStart();
-		RedisMockOptions mockOptions = configuration.GetSection(RedisMockOptions.Key).Get<RedisMockOptions>() ?? new RedisMockOptions();
-
 		services.AddOptions<ConnectionPoolOptions>()
 			.Bind(configuration.GetSection(ConnectionPoolOptions.Key));
 
 		services.AddSingleton<IConnectionPool, ConnectionPool>();
-		
-		// Register specialized Redis services
-		if (mockOptions.Enabled)
-		{
-			// Register shared mock store as singleton
-			services.AddSingleton<MockRedisStore>(sp =>
-			{
-				var logger = sp.GetService<ILogger<MockRedisStore>>();
-				var store = new MockRedisStore(logger);
-				store.SeedData(mockOptions.DummyDataKeyCount);
-				return store;
-			});
 
-			// Register mock implementations for specialized services
-			services.AddSingleton<IRedisConnectionService, MockRedisConnectionService>();
-			services.AddSingleton<IRedisKeyService, MockRedisKeyService>();
-			services.AddSingleton<IRedisValueService, MockRedisValueService>();
-			services.AddSingleton<IRedisPubSubService, MockRedisPubSubService>();
-			services.AddSingleton<IRedisTransactionService, MockRedisTransactionService>();
-			services.AddSingleton<IRedisScriptService, MockRedisScriptService>();
-			
-			// Keep legacy IConnectionService for backward compatibility
-			services.AddSingleton<IConnectionService, ConnectionService>();
-		}
-		else
-		{
-			// Register real Redis implementations
-			services.AddScoped<IRedisConnectionService, RedisConnectionService>();
-			services.AddScoped<IRedisKeyService, RedisKeyService>();
-			services.AddScoped<IRedisValueService, RedisValueService>();
-			services.AddScoped<IRedisPubSubService, RedisPubSubService>();
-			services.AddScoped<IRedisTransactionService, RedisTransactionService>();
-			services.AddScoped<IRedisScriptService, RedisScriptService>();
-			
-			// Keep legacy IConnectionService for backward compatibility
-			services.AddScoped<IConnectionService, ConnectionService>();
-		}
+		// Register specialized Redis services
+		services.AddSingleton<IRedisTypeHandler, StringTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, ListTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, SetTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, SortedSetTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, HashTypeHandler>();
+		services.AddSingleton<IRedisTypeHandler, StreamTypeHandler>();
+		services.AddSingleton<IRedisTypeHandlerFactory, RedisTypeHandlerFactory>();
+		services.AddScoped<IRedisConnectionService, RedisConnectionService>();
+		services.AddScoped<IRedisKeyService, RedisKeyService>();
+		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
+		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
+		services.AddScoped<IRedisCliService, RedisCliService>();
+		services.AddScoped<IRedisDiagnosticsService, RedisDiagnosticsService>();
+		services.AddScoped<IRedisValueService, RedisValueService>();
+
+		// Keep legacy IConnectionService for backward compatibility
+		services.AddScoped<IConnectionService, ConnectionService>();
 
 		AddAuthentication(services, configuration);
 
@@ -221,7 +203,7 @@ public static class DependencyInjection
 					return;
 				}
 
-				cgf.UseMySql(config.ConnectionString, ServerVersion.AutoDetect(config.ConnectionString), builder =>
+				cgf.UseMySQL(config.ConnectionString, builder =>
 				{
 					builder.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
 				}).AddInterceptors(
@@ -273,7 +255,7 @@ public static class DependencyInjection
 			return allocated < threshold
 				? HealthCheckResult.Healthy($"Memory usage: {allocatedMB}MB")
 				: HealthCheckResult.Degraded($"Memory usage high: {allocatedMB}MB");
-		}, tags: new[] { "memory" });
+		}, tags: ["memory"]);
 
 		// Background services health check
 		healthChecks.AddCheck<BackgroundServicesHealthCheck>(
@@ -305,7 +287,6 @@ public static class DependencyInjection
 			});
 	}
 
-
 	private static void AddBackgroundJobs(IServiceCollection services)
 	{
 		services.AddHostedService<RedisMetricsBackgroundJob>();
@@ -322,10 +303,6 @@ public static class DependencyInjection
 		services.AddSingleton<INotificationService, NotificationService>();
 		services.AddSingleton<IHubSubscribersManager, HubSubscribersManager>();
 
-		// Pub/Sub hub services
-		services.AddSingleton<IPubSubSubscriptionManager, PubSubSubscriptionManager>();
-		services.AddSingleton<IPubSubNotificationService, PubSubNotificationService>();
-
 		// Key change hub services
 		services.AddSingleton<IKeyChangeSubscriptionManager, KeyChangeSubscriptionManager>();
 		services.AddSingleton<IKeyChangeNotificationService, KeyChangeNotificationService>();
@@ -336,19 +313,8 @@ public static class DependencyInjection
 	private static void AddRedisMetrics(IServiceCollection services, IConfiguration configuration)
 	{
 		services.Configure<MetricsCollectorOptions>(configuration.GetSection(MetricsCollectorOptions.Key));
-		
-		// Use mock metrics collector if Redis mock is enabled
-		RedisMockOptions mockOptions = configuration.GetSection(RedisMockOptions.Key).Get<RedisMockOptions>() ?? new RedisMockOptions();
-		if (mockOptions.Enabled)
-		{
-			services.AddSingleton<IMetricsCollector, MockMetricsCollector>();
-		}
-		else
-		{
-			services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
-		}
+		services.AddSingleton<IMetricsCollector, RedisMetricsCollector>();
 	}
-
 
 	private static void AddCaching(IServiceCollection services, IConfiguration configuration)
 	{

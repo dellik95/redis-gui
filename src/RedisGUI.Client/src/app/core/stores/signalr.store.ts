@@ -4,16 +4,6 @@ import * as signalR from '@microsoft/signalr';
 import { SIGNALR_HUBS, SIGNALR_METHODS } from '../constants/api-routes.constants';
 
 /**
- * Pub/Sub message interface
- */
-export interface PubSubMessage {
-	connectionId: string;
-	channel: string;
-	message: string;
-	timestamp: string;
-}
-
-/**
  * Key change event interface
  */
 export interface KeyChangeEvent {
@@ -29,29 +19,14 @@ export interface KeyChangeEvent {
  */
 interface SignalRState {
 	/**
-	 * Pub/Sub messages
-	 */
-	pubSubMessages: PubSubMessage[];
-
-	/**
 	 * Key change events
 	 */
 	keyChangeEvents: KeyChangeEvent[];
 
 	/**
-	 * Pub/Sub hub connection status
-	 */
-	isPubSubConnected: boolean;
-
-	/**
 	 * Key change hub connection status
 	 */
 	isKeyChangeConnected: boolean;
-
-	/**
-	 * Active subscription IDs
-	 */
-	activeSubscriptions: string[];
 
 	/**
 	 * Watched connection IDs for key changes
@@ -68,44 +43,15 @@ interface SignalRState {
  * Initial state
  */
 const initialState: SignalRState = {
-	pubSubMessages: [],
 	keyChangeEvents: [],
-	isPubSubConnected: false,
 	isKeyChangeConnected: false,
-	activeSubscriptions: [],
 	watchedConnections: [],
 	error: null
 };
 
 /**
  * Global SignalR store using NgRx SignalStore
- * Manages real-time SignalR connections for Pub/Sub and Key Change events
- *
- * Features:
- * - Pub/Sub message handling
- * - Key change notifications
- * - Connection state management
- * - Automatic reconnection
- *
- * @example
- * ```typescript
- * // Inject the store
- * private signalRStore = inject(SignalRStore);
- *
- * // Connect to hubs
- * this.signalRStore.connectPubSub();
- * this.signalRStore.connectKeyChange('conn-123');
- *
- * // Join a subscription
- * this.signalRStore.joinSubscription('sub-123');
- *
- * // Read messages
- * const messages = this.signalRStore.pubSubMessages();
- * const events = this.signalRStore.keyChangeEvents();
- *
- * // Disconnect
- * this.signalRStore.disconnectAll();
- * ```
+ * Manages real-time SignalR connection for Key Change events
  */
 export const SignalRStore = signalStore(
 	{ providedIn: 'root' },
@@ -116,22 +62,9 @@ export const SignalRStore = signalStore(
 	// Define computed signals
 	withComputed((store) => ({
 		/**
-		 * Total number of Pub/Sub messages
-		 */
-		pubSubMessageCount: computed(() => store.pubSubMessages().length),
-
-		/**
 		 * Total number of key change events
 		 */
 		keyChangeEventCount: computed(() => store.keyChangeEvents().length),
-
-		/**
-		 * Latest Pub/Sub message
-		 */
-		latestPubSubMessage: computed(() => {
-			const messages = store.pubSubMessages();
-			return messages.length > 0 ? messages[messages.length - 1] : null;
-		}),
 
 		/**
 		 * Latest key change event
@@ -142,16 +75,9 @@ export const SignalRStore = signalStore(
 		}),
 
 		/**
-		 * Whether any hub is connected
+		 * Whether key change hub is connected
 		 */
-		isAnyHubConnected: computed(() => {
-			return store.isPubSubConnected() || store.isKeyChangeConnected();
-		}),
-
-		/**
-		 * Number of active subscriptions
-		 */
-		subscriptionCount: computed(() => store.activeSubscriptions().length),
+		isConnected: computed(() => store.isKeyChangeConnected()),
 
 		/**
 		 * Number of watched connections
@@ -161,13 +87,8 @@ export const SignalRStore = signalStore(
 
 	// Define methods
 	withMethods((store) => {
-		// Hub connections
-		let pubSubConnection: signalR.HubConnection | undefined;
 		let keyChangeConnection: signalR.HubConnection | undefined;
 
-		/**
-		 * Create SignalR connection with reconnection strategy
-		 */
 		const createConnection = (hubUrl: string, queryParams?: Record<string, string>): signalR.HubConnection => {
 			let url = hubUrl;
 			if (queryParams) {
@@ -192,50 +113,6 @@ export const SignalRStore = signalStore(
 
 		return {
 			/**
-			 * Connect to Pub/Sub hub
-			 */
-			connectPubSub(): void {
-				if (pubSubConnection) return;
-
-				pubSubConnection = createConnection(SIGNALR_HUBS.PUBSUB);
-
-				// Register event handler
-				pubSubConnection.on(SIGNALR_METHODS.PUBSUB.RECEIVE_MESSAGE, (msg: PubSubMessage) => {
-					const messages = [...store.pubSubMessages(), msg];
-					patchState(store, { pubSubMessages: messages });
-				});
-
-				// Setup lifecycle handlers
-				pubSubConnection.onreconnecting(() => {
-					patchState(store, { isPubSubConnected: false });
-				});
-
-				pubSubConnection.onreconnected(() => {
-					patchState(store, { isPubSubConnected: true });
-				});
-
-				pubSubConnection.onclose(() => {
-					patchState(store, { isPubSubConnected: false });
-				});
-
-				// Start connection
-				pubSubConnection
-					.start()
-					.then(() => {
-						patchState(store, {
-							isPubSubConnected: true,
-							error: null
-						});
-					})
-					.catch((err) => {
-						patchState(store, {
-							isPubSubConnected: false,
-							error: err.message || 'Failed to connect to PubSub hub'
-						});
-					});
-			},
-
-			/**
 			 * Connect to Key Change notification hub
 			 * @param connectionId Optional Redis connection ID to watch immediately
 			 */
@@ -245,13 +122,11 @@ export const SignalRStore = signalStore(
 				const queryParams = connectionId ? { connectionId } : undefined;
 				keyChangeConnection = createConnection(SIGNALR_HUBS.KEY_CHANGE, queryParams);
 
-				// Register event handler
 				keyChangeConnection.on(SIGNALR_METHODS.KEY_CHANGE.KEY_CHANGED, (evt: KeyChangeEvent) => {
 					const events = [...store.keyChangeEvents(), evt];
 					patchState(store, { keyChangeEvents: events });
 				});
 
-				// Setup lifecycle handlers
 				keyChangeConnection.onreconnecting(() => {
 					patchState(store, { isKeyChangeConnected: false });
 				});
@@ -264,7 +139,6 @@ export const SignalRStore = signalStore(
 					patchState(store, { isKeyChangeConnected: false });
 				});
 
-				// Start connection
 				keyChangeConnection
 					.start()
 					.then(() => {
@@ -284,48 +158,6 @@ export const SignalRStore = signalStore(
 							error: err.message || 'Failed to connect to key change hub'
 						});
 					});
-			},
-
-			/**
-			 * Join a Pub/Sub subscription group
-			 * @param subscriptionId The subscription ID to join
-			 */
-			async joinSubscription(subscriptionId: string): Promise<void> {
-				if (!pubSubConnection || pubSubConnection.state !== signalR.HubConnectionState.Connected) {
-					return;
-				}
-
-				try {
-					await pubSubConnection.invoke(SIGNALR_METHODS.PUBSUB.JOIN_SUBSCRIPTION, subscriptionId);
-					patchState(store, {
-						activeSubscriptions: [...store.activeSubscriptions(), subscriptionId]
-					});
-				} catch (err) {
-					patchState(store, {
-						error: (err as Error).message || 'Failed to join subscription'
-					});
-				}
-			},
-
-			/**
-			 * Leave a Pub/Sub subscription group
-			 * @param subscriptionId The subscription ID to leave
-			 */
-			async leaveSubscription(subscriptionId: string): Promise<void> {
-				if (!pubSubConnection || pubSubConnection.state !== signalR.HubConnectionState.Connected) {
-					return;
-				}
-
-				try {
-					await pubSubConnection.invoke(SIGNALR_METHODS.PUBSUB.LEAVE_SUBSCRIPTION, subscriptionId);
-					patchState(store, {
-						activeSubscriptions: store.activeSubscriptions().filter((id) => id !== subscriptionId)
-					});
-				} catch (err) {
-					patchState(store, {
-						error: (err as Error).message || 'Failed to leave subscription'
-					});
-				}
 			},
 
 			/**
@@ -371,28 +203,6 @@ export const SignalRStore = signalStore(
 			},
 
 			/**
-			 * Disconnect from Pub/Sub hub
-			 */
-			disconnectPubSub(): void {
-				if (!pubSubConnection) return;
-
-				pubSubConnection
-					.stop()
-					.then(() => {
-						pubSubConnection = undefined;
-						patchState(store, {
-							isPubSubConnected: false,
-							activeSubscriptions: []
-						});
-					})
-					.catch((err) => {
-						patchState(store, {
-							error: err.message || 'Failed to disconnect from PubSub hub'
-						});
-					});
-			},
-
-			/**
 			 * Disconnect from Key Change hub
 			 */
 			disconnectKeyChange(): void {
@@ -418,33 +228,15 @@ export const SignalRStore = signalStore(
 			 * Disconnect from all hubs
 			 */
 			disconnectAll(): void {
-				if (pubSubConnection) {
-					pubSubConnection.stop().catch(() => {
-						// Silent fail
-					});
-					pubSubConnection = undefined;
-				}
-
 				if (keyChangeConnection) {
-					keyChangeConnection.stop().catch(() => {
-						// Silent fail
-					});
+					keyChangeConnection.stop().catch(() => {});
 					keyChangeConnection = undefined;
 				}
 
 				patchState(store, {
-					isPubSubConnected: false,
 					isKeyChangeConnected: false,
-					activeSubscriptions: [],
 					watchedConnections: []
 				});
-			},
-
-			/**
-			 * Clear all Pub/Sub messages
-			 */
-			clearPubSubMessages(): void {
-				patchState(store, { pubSubMessages: [] });
 			},
 
 			/**
@@ -455,16 +247,6 @@ export const SignalRStore = signalStore(
 			},
 
 			/**
-			 * Clear all messages and events
-			 */
-			clearAll(): void {
-				patchState(store, {
-					pubSubMessages: [],
-					keyChangeEvents: []
-				});
-			},
-
-			/**
 			 * Clear error state
 			 */
 			clearError(): void {
@@ -472,19 +254,11 @@ export const SignalRStore = signalStore(
 			},
 
 			/**
-			 * Reset store to initial state (disconnects all hubs)
+			 * Reset store to initial state
 			 */
 			reset(): void {
-				if (pubSubConnection) {
-					pubSubConnection.stop().catch(() => {
-						// Silent fail
-					});
-					pubSubConnection = undefined;
-				}
 				if (keyChangeConnection) {
-					keyChangeConnection.stop().catch(() => {
-						// Silent fail
-					});
+					keyChangeConnection.stop().catch(() => {});
 					keyChangeConnection = undefined;
 				}
 

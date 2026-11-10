@@ -1,5 +1,6 @@
+import { Injectable } from '@angular/core';
 import { RedisDataType } from '../../models/redis-keys.types';
-import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from './redis-type-handler.interface';
+import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type-handler.interface';
 
 /**
  * Handler for Redis List data type
@@ -9,16 +10,26 @@ import { RedisTypeHandler, RedisValueJson, ValidationResult, VisualValue } from 
  * Visual format: string[]
  * JSON format: { "items": ["item1", "item2", "item3"] }
  */
+@Injectable({
+  providedIn: 'root'
+})
 export class ListTypeHandler implements RedisTypeHandler {
   readonly type = RedisDataType.List;
 
   /**
    * Convert raw Redis value to visual editor format (string array)
    * 
-   * @param data Raw value from Redis (array of values)
+   * @param data Raw value from Redis (array of values or { items: [] })
    * @returns Array of strings
    */
   toVisual(data: unknown): string[] {
+    if (!data) {
+      return [];
+    }
+    if (typeof data === 'object' && 'items' in (data as Record<string, unknown>)) {
+      const items = (data as Record<string, unknown>)['items'];
+      return Array.isArray(items) ? items.map(item => String(item)) : [];
+    }
     if (!Array.isArray(data)) {
       return [];
     }
@@ -60,24 +71,15 @@ export class ListTypeHandler implements RedisTypeHandler {
   /**
    * Validate value structure for List type
    * 
-   * @param value Value to validate (should be string array)
+   * @param value Value to validate (must be string array)
    * @returns Validation result with errors if invalid
    */
   validate(value: unknown): ValidationResult {
-    if (!Array.isArray(value)) {
-      return {
-        valid: false,
-        errors: ['List value must be an array']
-      };
-    }
-
     const errors: string[] = [];
-    
-    value.forEach((item, index) => {
-      if (item === null || item === undefined) {
-        errors.push(`Item at index ${index}: cannot be null or undefined`);
-      }
-    });
+
+    if (!Array.isArray(value)) {
+      return { valid: false, errors: ['Value must be an array of items'] };
+    }
 
     return {
       valid: errors.length === 0,
@@ -85,28 +87,17 @@ export class ListTypeHandler implements RedisTypeHandler {
     };
   }
 
+  /**
+   * Get default empty value for List type
+   * 
+   * @returns Default empty string array
+   */
   getDefaultValue(): string[] {
     return [];
   }
 
-  /**
-   * Format value for display in UI
-   * Shows first 3 items and total count
-   * 
-   * @param value Value to format
-   * @returns Human-readable string representation
-   */
   formatForDisplay(value: unknown): string {
-    const items = this.toVisual(value);
-    const count = items.length;
-    
-    if (count === 0) {
-      return 'Empty list';
-    }
-    
-    const preview = items.slice(0, 3).join(', ');
-    return count > 3 
-      ? `${preview}... (${count} items)`
-      : preview;
+    const visual = this.toVisual(value);
+    return `${visual.length} items`;
   }
 }

@@ -5,59 +5,52 @@
   </mat-card-header>
 
   <mat-card-content>
-      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input
-            matInput
-            type="email"
-            formControlName="email"
-            placeholder="your.email@example.com"
-            autocomplete="email">
-          <mat-icon matPrefix>email</mat-icon>
-          @if (emailError()) {
-            <mat-error>{{ emailError() }}</mat-error>
-          }
-        </mat-form-field>
-
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Password</mat-label>
-          <input
-            matInput
-            [type]="hidePassword() ? 'password' : 'text'"
-            formControlName="password"
-            autocomplete="current-password">
-          <mat-icon matPrefix>lock</mat-icon>
-          <button
-            mat-icon-button
-            matSuffix
-            type="button"
-            (click)="togglePasswordVisibility()"
-            [attr.aria-label]="'Toggle password visibility'">
-            <mat-icon>{{ hidePassword() ? 'visibility' : 'visibility_off' }}</mat-icon>
-          </button>
-          @if (passwordError()) {
-            <mat-error>{{ passwordError() }}</mat-error>
-          }
-        </mat-form-field>
-
-        <button
-          mat-raised-button
-          color="primary"
-          type="submit"
-          class="full-width submit-button"
-          [disabled]="!canSubmit()">
-          @if (isLoading()) {
-            <mat-spinner diameter="20" class="inline-spinner"></mat-spinner>
-            <span>Signing in...</span>
-          } @else {
-            <span>Sign In</span>
-          }
-        </button>
-
-        <div class="register-link">
-          <p>Don't have an account? <a routerLink="/register">Register here</a></p>
+    <div class="demo-banner">
+      <div class="demo-info">
+        <mat-icon class="demo-icon">verified_user</mat-icon>
+        <div class="demo-text">
+          <strong>Demo Admin Account</strong>
+          <span>admin&#64;redisgui.local &bull; AdminPassword123!</span>
         </div>
-      </form>
-    </mat-card-content>
-  </mat-card>
+      </div>
+      <button mat-button type="button" (click)="fillDemoCredentials()" class="demo-fill-btn">
+        <mat-icon>auto_fix_high</mat-icon>
+        Pre-fill
+      </button>
+    </div>
+
+    <form (submit)="onSubmit($event)" class="signin-form-fields">
+      <ui-input
+        type="email"
+        [formField]="loginForm.email"
+        label="Email"
+        placeholder="admin@redisgui.local"
+        icon="email"
+      />
+
+      <ui-input
+        [type]="hidePassword() ? 'password' : 'text'"
+        [formField]="loginForm.password"
+        label="Password"
+        placeholder="••••••••"
+        icon="lock"
+        [suffixIcon]="hidePassword() ? 'visibility' : 'visibility_off'"
+        (suffixClicked)="togglePasswordVisibility()"
+      />
+
+      <ui-button
+        type="submit"
+        variant="primary"
+        size="lg"
+        [fullWidth]="true"
+        [disabled]="!canSubmit()"
+        [loading]="isLoading()">
+        Sign In
+      </ui-button>
+
+      <div class="register-link">
+        <p>Don't have an account? <a routerLink="/register">Register here</a></p>
+      </div>
+    </form>
+  </mat-card-content>
+</mat-card>

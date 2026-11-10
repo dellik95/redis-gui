@@ -25,7 +25,7 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\RedisGUI.Application\RedisGUI.Application.csproj" />
-		<ProjectReference Include="..\RedisGUI.Client\RedisGUI.Client.esproj">
+		<ProjectReference Include="..\RedisGUI.Client\RedisGUI.Client.esproj" Condition="'$(BuildingInsideDocker)' != 'true'">
 			<ReferenceOutputAssembly>false</ReferenceOutputAssembly>
 		</ProjectReference>
 		<ProjectReference Include="..\RedisGUI.Infrastructure\RedisGUI.Infrastructure.csproj" />

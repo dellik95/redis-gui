@@ -51,6 +51,8 @@ public static class DomainErrors
 		/// Connection update failed
 		/// </summary>
 		public static Error UpdateFailed => new("Connection.UpdateFailed", "Failed to update the connection.");
+
+		public static Error ReadOnlyMode => new("Connection.ReadOnlyMode", "Connection is in Safe Mode (Read-Only). Write operations are not allowed.");
 	}
 
 	/// <summary>

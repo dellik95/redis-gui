@@ -7,6 +7,7 @@ using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Extensions;
 using System;
+using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 {
@@ -26,16 +27,20 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
-			routerBuilder.MapGet("storage/{connectionId:guid}/{key}", async (
+			async Task<IResult> HandleGet(
 				IMediator sender,
 				HttpContext httpContext,
 				Guid connectionId,
-				string key) =>
+				string key,
+				int? database)
 			{
-				var query = new GetRedisValueQuery(connectionId, key);
+				var query = new GetRedisValueQuery(connectionId, key, database);
 				var result = await sender.Send<GetRedisValueResponse>(query);
 				return result.MatchHttp(Results.Ok, httpContext);
-			}).WithOpenApi();
+			}
+
+			routerBuilder.MapGet("storage/{connectionId:guid}/{*key}", HandleGet).WithOpenApi();
+			routerBuilder.MapGet("storage/{connectionId:guid}/keys/{*key}", HandleGet).WithOpenApi();
 		}
 	}
 

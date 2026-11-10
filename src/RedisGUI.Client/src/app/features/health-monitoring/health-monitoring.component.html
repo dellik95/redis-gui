@@ -1,82 +1,87 @@
 <div class="health-monitoring-container">
-	<!-- Header -->
-	<div class="page-header">
-		<div class="header-content">
-			<mat-icon class="header-icon" [ngClass]="overallStatusClass()">{{ overallStatusIcon() }}</mat-icon>
-			<div>
-				<h1>Health Monitoring</h1>
-				<p class="subtitle">Monitor the health status of all Redis connections</p>
-			</div>
-		</div>
-		<div class="header-actions">
+	<!-- Unified Primary Header -->
+	<app-page-header
+		[icon]="overallStatusIcon()"
+		title="Health Monitoring"
+		subtitle="Monitor the health status of all Redis connections"
+	>
+		<div actions class="flex items-center gap-3">
 			<mat-slide-toggle [checked]="autoRefreshEnabled()" (change)="toggleAutoRefresh()">
 				Auto-refresh
 			</mat-slide-toggle>
 			
 			@if (autoRefreshEnabled()) {
-				<mat-form-field appearance="outline" class="interval-select">
-					<mat-label>Interval</mat-label>
-					<mat-select [value]="refreshIntervalMs()" (selectionChange)="refreshIntervalMs.set($event.value)">
-						@for (interval of refreshIntervals; track interval.value) {
-							<mat-option [value]="interval.value">{{ interval.label }}</mat-option>
-						}
-					</mat-select>
-				</mat-form-field>
+				<div class="interval-select">
+					<ui-select
+						[value]="refreshIntervalMs()"
+						(valueChange)="refreshIntervalMs.set($event)"
+						[options]="refreshIntervals"
+						size="sm"
+						[fullWidth]="false"
+						icon="timer"
+					/>
+				</div>
 			}
 			
-			<button mat-raised-button color="primary" (click)="refreshAll()">
+			<button class="btn-primary" (click)="refreshAll()">
 				<mat-icon>refresh</mat-icon>
-				Refresh All
+				<span>Refresh All</span>
 			</button>
 		</div>
-	</div>
+	</app-page-header>
 
 	<!-- Error Display -->
 	@if (error()) {
-		<mat-card class="error-card">
-			<mat-card-content>
-				<mat-icon color="warn">error</mat-icon>
-				<span>{{ error() }}</span>
-				<button mat-icon-button (click)="connectionsStore.clearError()">
-					<mat-icon>close</mat-icon>
-				</button>
-			</mat-card-content>
-		</mat-card>
+		<div class="error-card">
+			<mat-icon color="warn">error</mat-icon>
+			<span>{{ error() }}</span>
+			<button class="btn-ghost" (click)="connectionsStore.clearError()">
+				<mat-icon>close</mat-icon>
+			</button>
+		</div>
 	}
 
 	<!-- Summary Cards -->
 	<div class="summary-grid">
-		<mat-card class="summary-card total">
-			<mat-card-content>
+		<div class="stat-card total">
+			<div class="stat-icon-wrapper">
 				<mat-icon>storage</mat-icon>
-				<div class="summary-value">{{ connections().length }}</div>
-				<div class="summary-label">Total Connections</div>
-			</mat-card-content>
-		</mat-card>
+			</div>
+			<div class="stat-info">
+				<div class="stat-value">{{ connections().length }}</div>
+				<div class="stat-label">Total Connections</div>
+			</div>
+		</div>
 		
-		<mat-card class="summary-card healthy">
-			<mat-card-content>
+		<div class="stat-card healthy">
+			<div class="stat-icon-wrapper">
 				<mat-icon>check_circle</mat-icon>
-				<div class="summary-value">{{ healthySummary() }}</div>
-				<div class="summary-label">Healthy</div>
-			</mat-card-content>
-		</mat-card>
+			</div>
+			<div class="stat-info">
+				<div class="stat-value">{{ healthySummary() }}</div>
+				<div class="stat-label">Healthy</div>
+			</div>
+		</div>
 		
-		<mat-card class="summary-card degraded">
-			<mat-card-content>
+		<div class="stat-card degraded">
+			<div class="stat-icon-wrapper">
 				<mat-icon>warning</mat-icon>
-				<div class="summary-value">{{ degradedSummary() }}</div>
-				<div class="summary-label">Degraded</div>
-			</mat-card-content>
-		</mat-card>
+			</div>
+			<div class="stat-info">
+				<div class="stat-value">{{ degradedSummary() }}</div>
+				<div class="stat-label">Degraded</div>
+			</div>
+		</div>
 		
-		<mat-card class="summary-card unhealthy">
-			<mat-card-content>
+		<div class="stat-card unhealthy">
+			<div class="stat-icon-wrapper">
 				<mat-icon>error</mat-icon>
-				<div class="summary-value">{{ unhealthySummary() }}</div>
-				<div class="summary-label">Unhealthy</div>
-			</mat-card-content>
-		</mat-card>
+			</div>
+			<div class="stat-info">
+				<div class="stat-value">{{ unhealthySummary() }}</div>
+				<div class="stat-label">Unhealthy</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- Loading State -->
@@ -94,9 +99,9 @@
 				<mat-icon>cloud_off</mat-icon>
 				<h3>No Connections Found</h3>
 				<p>Add a Redis connection from the Dashboard to start monitoring health.</p>
-				<a mat-raised-button color="primary" routerLink="/home">
+				<a class="btn-primary" routerLink="/home">
 					<mat-icon>arrow_back</mat-icon>
-					Go to Dashboard
+					<span>Go to Dashboard</span>
 				</a>
 			</mat-card-content>
 		</mat-card>

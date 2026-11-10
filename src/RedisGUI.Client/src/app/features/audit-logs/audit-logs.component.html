@@ -9,22 +9,21 @@
 			</mat-card-content>
 		</mat-card>
 	} @else {
-		<!-- Header -->
-		<div class="page-header">
-			<div class="header-content">
-				<mat-icon class="header-icon">history</mat-icon>
-				<div>
-					<h1>Audit Logs</h1>
-					<p class="subtitle">Track all system activity and changes</p>
-				</div>
-			</div>
-			<div class="header-actions">
-				<button mat-raised-button color="primary" (click)="loadAuditLogs()">
+		<!-- Unified Primary Header -->
+		<app-page-header
+			icon="history"
+			title="Audit Logs"
+			subtitle="Track all system activity and changes"
+			badge="Admin"
+			badgeColor="warn"
+		>
+			<div actions>
+				<button class="btn-primary" (click)="loadAuditLogs()">
 					<mat-icon>refresh</mat-icon>
-					Refresh
+					<span>Refresh</span>
 				</button>
 			</div>
-		</div>
+		</app-page-header>
 
 		<!-- Error Display -->
 		@if (error()) {
@@ -48,63 +47,59 @@
 			<mat-card-content>
 				<div class="filters-grid">
 					<!-- Entity Type Filter -->
-					<mat-form-field appearance="outline">
-						<mat-label>Entity Type</mat-label>
-						<mat-select [value]="filters().entityType" (selectionChange)="updateFilter('entityType', $event.value)">
-							<mat-option [value]="undefined">All Types</mat-option>
-							@for (type of entityTypes; track type) {
-								<mat-option [value]="type">{{ type }}</mat-option>
-							}
-						</mat-select>
-					</mat-form-field>
+					<ui-select
+						[value]="filters().entityType"
+						(valueChange)="updateFilter('entityType', $event)"
+						[options]="entityTypeOptions"
+						label="Entity Type"
+						icon="category"
+					/>
 
 					<!-- Entity ID Filter -->
-					<mat-form-field appearance="outline">
-						<mat-label>Entity ID</mat-label>
-						<input matInput [value]="filters().entityId || ''" 
-							(input)="updateFilter('entityId', $any($event.target).value)" 
-							placeholder="Enter entity ID">
-						<mat-icon matSuffix>fingerprint</mat-icon>
-					</mat-form-field>
+					<ui-input
+						[value]="filters().entityId || ''"
+						(valueChange)="updateFilter('entityId', $any($event))"
+						label="Entity ID"
+						placeholder="Enter entity ID..."
+						icon="fingerprint"
+					/>
 
 					<!-- User ID Filter -->
-					<mat-form-field appearance="outline">
-						<mat-label>User ID</mat-label>
-						<input matInput [value]="filters().userId || ''" 
-							(input)="updateFilter('userId', $any($event.target).value)" 
-							placeholder="Enter user ID">
-						<mat-icon matSuffix>person</mat-icon>
-					</mat-form-field>
+					<ui-input
+						[value]="filters().userId || ''"
+						(valueChange)="updateFilter('userId', $any($event))"
+						label="User ID"
+						placeholder="Enter user ID..."
+						icon="person"
+					/>
 
 					<!-- From Date -->
-					<mat-form-field appearance="outline">
-						<mat-label>From Date</mat-label>
-						<input matInput [matDatepicker]="fromPicker" 
-							[value]="filters().fromDate" 
-							(dateChange)="updateFilter('fromDate', $event.value?.toISOString())">
-						<mat-datepicker-toggle matIconSuffix [for]="fromPicker"></mat-datepicker-toggle>
-						<mat-datepicker #fromPicker></mat-datepicker>
-					</mat-form-field>
+					<ui-input
+						type="date"
+						[value]="formatDateForInput(filters().fromDate)"
+						(valueChange)="updateFilter('fromDate', $event ? $event + 'T00:00:00Z' : undefined)"
+						label="From Date"
+						icon="calendar_today"
+					/>
 
 					<!-- To Date -->
-					<mat-form-field appearance="outline">
-						<mat-label>To Date</mat-label>
-						<input matInput [matDatepicker]="toPicker" 
-							[value]="filters().toDate" 
-							(dateChange)="updateFilter('toDate', $event.value?.toISOString())">
-						<mat-datepicker-toggle matIconSuffix [for]="toPicker"></mat-datepicker-toggle>
-						<mat-datepicker #toPicker></mat-datepicker>
-					</mat-form-field>
+					<ui-input
+						type="date"
+						[value]="formatDateForInput(filters().toDate)"
+						(valueChange)="updateFilter('toDate', $event ? $event + 'T23:59:59Z' : undefined)"
+						label="To Date"
+						icon="event"
+					/>
 				</div>
 
 				<div class="filter-actions">
-					<button mat-button (click)="resetFilters()">
+					<button class="btn-ghost" (click)="resetFilters()">
 						<mat-icon>clear</mat-icon>
-						Clear Filters
+						<span>Clear Filters</span>
 					</button>
-					<button mat-raised-button color="primary" (click)="applyFilters()">
+					<button class="btn-primary" (click)="applyFilters()">
 						<mat-icon>search</mat-icon>
-						Apply Filters
+						<span>Apply Filters</span>
 					</button>
 				</div>
 			</mat-card-content>
@@ -112,46 +107,42 @@
 
 		<!-- Stats Summary -->
 		<div class="stats-row">
-			<mat-card class="stat-card">
-				<mat-card-content>
-					<mat-icon>list_alt</mat-icon>
-					<div class="stat-value">{{ totalCount() | number }}</div>
-					<div class="stat-label">Total Records</div>
-				</mat-card-content>
-			</mat-card>
-			<mat-card class="stat-card">
-				<mat-card-content>
-					<mat-icon>pages</mat-icon>
-					<div class="stat-value">{{ currentPage() }}</div>
-					<div class="stat-label">Current Page</div>
-				</mat-card-content>
-			</mat-card>
-			<mat-card class="stat-card">
-				<mat-card-content>
-					<mat-icon>library_books</mat-icon>
-					<div class="stat-value">{{ totalPages() }}</div>
-					<div class="stat-label">Total Pages</div>
-				</mat-card-content>
-			</mat-card>
-		</div>
-
-		<!-- Loading State -->
-		@if (isLoading()) {
-			<div class="loading-overlay">
-				<mat-spinner diameter="48"></mat-spinner>
-				<p>Loading audit logs...</p>
+			<div class="stat-card">
+				<mat-icon>list_alt</mat-icon>
+				<div class="stat-value">{{ totalCount() | number }}</div>
+				<div class="stat-label">Total Records</div>
 			</div>
-		}
+			<div class="stat-card">
+				<mat-icon>pages</mat-icon>
+				<div class="stat-value">{{ currentPage() }}</div>
+				<div class="stat-label">Current Page</div>
+			</div>
+			<div class="stat-card">
+				<mat-icon>library_books</mat-icon>
+				<div class="stat-value">{{ totalPages() }}</div>
+				<div class="stat-label">Total Pages</div>
+			</div>
+		</div>
 
 		<!-- Audit Logs Table -->
 		<mat-card class="table-card">
+			@if (isLoading()) {
+				<mat-progress-bar mode="indeterminate" class="audit-table-progress-bar"></mat-progress-bar>
+			}
 			<mat-card-content>
-				@if (items().length === 0 && !isLoading()) {
-					<div class="empty-state">
-						<mat-icon>inbox</mat-icon>
-						<h3>No Audit Logs Found</h3>
-						<p>No records match your current filters.</p>
-					</div>
+				@if (items().length === 0) {
+					@if (isLoading()) {
+						<div class="table-loading-inline">
+							<mat-spinner diameter="40"></mat-spinner>
+							<span>Loading audit logs...</span>
+						</div>
+					} @else {
+						<div class="empty-state">
+							<mat-icon>inbox</mat-icon>
+							<h3>No Audit Logs Found</h3>
+							<p>No records match your current filters.</p>
+						</div>
+					}
 				} @else {
 					<div class="table-container">
 						<table mat-table [dataSource]="items()" class="audit-table" multiTemplateDataRows>
@@ -274,15 +265,61 @@
 					</div>
 				}
 
-				<!-- Paginator -->
-				<mat-paginator
-					[length]="totalCount()"
-					[pageSize]="pageSize()"
-					[pageSizeOptions]="[25, 50, 100, 200]"
-					[pageIndex]="currentPage() - 1"
-					(page)="onPageChange($event)"
-					showFirstLastButtons>
-				</mat-paginator>
+				<!-- Custom Modern Pagination Bar with ui-select and navigation controls -->
+				<div class="custom-paginator-bar">
+					<div class="paginator-size-selector">
+						<span class="size-label">Items per page:</span>
+						<ui-select
+							[value]="pageSize()"
+							(valueChange)="onPageSizeChange($event)"
+							[options]="pageSizeOptions"
+							size="sm"
+							[fullWidth]="false"
+						/>
+					</div>
+
+					<div class="paginator-info">
+						Showing <strong>{{ pageStart() }}–{{ pageEnd() }}</strong> of <strong>{{ totalCount() | number }}</strong> records
+					</div>
+
+					<div class="paginator-nav">
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="currentPage() <= 1" 
+							(click)="goToPage(1)"
+							matTooltip="First page">
+							<mat-icon>first_page</mat-icon>
+						</button>
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="!hasPreviousPage()" 
+							(click)="goToPage(currentPage() - 1)"
+							matTooltip="Previous page">
+							<mat-icon>chevron_left</mat-icon>
+						</button>
+						
+						<span class="page-indicator">Page {{ currentPage() }} of {{ totalPages() || 1 }}</span>
+
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="!hasNextPage()" 
+							(click)="goToPage(currentPage() + 1)"
+							matTooltip="Next page">
+							<mat-icon>chevron_right</mat-icon>
+						</button>
+						<button 
+							type="button"
+							class="nav-icon-btn" 
+							[disabled]="currentPage() >= totalPages()" 
+							(click)="goToPage(totalPages())"
+							matTooltip="Last page">
+							<mat-icon>last_page</mat-icon>
+						</button>
+					</div>
+				</div>
 			</mat-card-content>
 		</mat-card>
 	}

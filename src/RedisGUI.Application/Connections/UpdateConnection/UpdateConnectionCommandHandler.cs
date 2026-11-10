@@ -20,13 +20,6 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 	private readonly IUnitOfWork unitOfWork;
 	private readonly IRedisConnectionService connectionService;
 
-	/// <summary>
-	/// Initializes a new instance of the UpdateConnectionCommandHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="passwordEncryptor">Service for password encryption</param>
-	/// <param name="unitOfWork">Unit of work for transaction management</param>
-	/// <param name="connectionService">Service for testing Redis connections</param>
 	public UpdateConnectionCommandHandler(
 		IRedisConnectionRepository connectionRepository,
 		IPasswordEncryptor passwordEncryptor,
@@ -39,15 +32,8 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 		this.connectionService = connectionService;
 	}
 
-	/// <summary>
-	/// Handles the update of an existing Redis connection, validates it, and persists changes.
-	/// </summary>
-	/// <param name="request">The connection update command</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>Result indicating success or failure of the update operation</returns>
 	public async Task<Result> Handle(UpdateConnectionCommand request, CancellationToken cancellationToken)
 	{
-		// Retrieve existing connection
 		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
 		
 		if (connectionResult.IsFailure)
@@ -57,7 +43,6 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 
 		var existingConnection = connectionResult.Value;
 
-		// Update connection details
 		var updateResult = existingConnection.UpdateConnectionDetails(
 			new ConnectionName(request.Name),
 			new ConnectionHost(request.Host),
@@ -69,7 +54,8 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 			return updateResult;
 		}
 
-		// Update credentials if provided
+		existingConnection.SetReadOnly(request.IsReadOnly);
+
 		if (existingConnection is RedisConnectionWithCredentials connectionWithCredentials)
 		{
 			var credentialsResult = ConnectionCredentials.Create(
@@ -83,14 +69,18 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 			}
 		}
 
-		// Test connection and update availability
 		var testResult = await connectionService.CheckConnectionAsync(existingConnection, cancellationToken);
 		existingConnection.UpdateAvailability(testResult.IsSuccess);
 
-		// Save changes
 		connectionRepository.Update(existingConnection);
-		await unitOfWork.SaveChangesAsync(cancellationToken);
-
-		return Result.Success();
+		try
+		{
+			await unitOfWork.SaveChangesAsync(cancellationToken);
+			return Result.Success();
+		}
+		catch (RedisGUI.Domain.Exceptions.ErrorException ex)
+		{
+			return Result.Failure(ex.Error);
+		}
 	}
 }

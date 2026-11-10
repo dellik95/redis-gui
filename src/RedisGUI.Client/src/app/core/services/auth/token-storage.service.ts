@@ -84,8 +84,13 @@ export class TokenStorageService {
    */
   private getUserFromStorage(): User | null {
     try {
-      const user = localStorage.getItem(this.USER_KEY);
-      return user ? JSON.parse(user) : null;
+      const userStr = localStorage.getItem(this.USER_KEY);
+      if (!userStr) return null;
+      const user = JSON.parse(userStr);
+      if (user && (user.role === 1 || user.role === '1')) {
+        user.role = 'Admin';
+      }
+      return user;
     } catch {
       return null;
     }
@@ -111,6 +116,9 @@ export class TokenStorageService {
    * Saves user data to localStorage and updates signal
    */
   saveUser(user: User): void {
+    if (user && ((user.role as any) === 1 || (user.role as any) === '1')) {
+      user.role = 'Admin';
+    }
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this._user.set(user);
   }

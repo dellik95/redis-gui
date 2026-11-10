@@ -1,9 +1,7 @@
 import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogTitle, MatDialogContent, MatDialogActions } from '@angular/material/dialog';
-import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
-import { MatButtonModule } from '@angular/material/button';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
+import { form, FormField, required, validate } from '@angular/forms/signals';
+import { UiInputComponent, UiButtonComponent } from '../../ui';
 
 export interface PromptDialogData {
 	title?: string;
@@ -18,36 +16,18 @@ export interface PromptDialogData {
 
 /**
  * Prompt Dialog Component
- * Reusable dialog for text input prompts
- * 
- * @example
- * ```typescript
- * this.dialog.open(PromptDialogComponent, {
- *   data: {
- *     title: 'Edit Parameter',
- *     message: 'Enter new value:',
- *     placeholder: 'Value',
- *     defaultValue: 'current value',
- *     required: true
- *   }
- * }).afterClosed().subscribe(result => {
- *   if (result) {
- *     // Use result
- *   }
- * });
- * ```
+ * Reusable dialog for text input prompts using Signal Forms
  */
 @Component({
 	selector: 'app-prompt-dialog',
 	standalone: true,
 	imports: [
-		ReactiveFormsModule,
-		MatButtonModule,
-		MatFormFieldModule,
-		MatInputModule,
+		FormField,
 		MatDialogTitle,
 		MatDialogContent,
-		MatDialogActions
+		MatDialogActions,
+		UiInputComponent,
+		UiButtonComponent
 	],
 	templateUrl: './prompt-dialog.component.html',
 	styleUrl: './prompt-dialog.component.scss',
@@ -63,30 +43,28 @@ export class PromptDialogComponent {
 	readonly confirmText = signal(this.data.confirmText || 'OK');
 	readonly cancelText = signal(this.data.cancelText || 'Cancel');
 
-	readonly inputCtrl = new FormControl(this.data.defaultValue || '', {
-		nonNullable: true,
-		validators: this.data.required ? [Validators.required] : []
+	readonly promptModel = signal({ value: this.data.defaultValue || '' });
+
+	readonly promptForm = form(this.promptModel, (s) => {
+		if (this.data.required) {
+			required(s.value, { message: 'This field is required' });
+		}
+		if (this.data.validator) {
+			validate(s.value, (ctx) => {
+				const err = this.data.validator!(ctx.value() ?? '');
+				return err ? { kind: 'custom', message: err } : null;
+			});
+		}
 	});
 
 	readonly canConfirm = computed(() => {
-		if (this.data.required && !this.inputCtrl.value.trim()) return false;
-		if (this.data.validator) {
-			return this.data.validator(this.inputCtrl.value) === null;
-		}
-		return true;
+		return this.promptForm().valid();
 	});
 
-	readonly errorMessage = computed(() => {
-		if (this.inputCtrl.hasError('required')) return 'This field is required';
-		if (this.data.validator) {
-			return this.data.validator(this.inputCtrl.value) || null;
-		}
-		return null;
-	});
-
-	onConfirm(): void {
+	onConfirm(event?: Event): void {
+		if (event) event.preventDefault();
 		if (this.canConfirm()) {
-			this.dialogRef.close(this.inputCtrl.value.trim());
+			this.dialogRef.close((this.promptModel().value ?? '').trim());
 		}
 	}
 
@@ -94,4 +72,3 @@ export class PromptDialogComponent {
 		this.dialogRef.close(null);
 	}
 }
-
