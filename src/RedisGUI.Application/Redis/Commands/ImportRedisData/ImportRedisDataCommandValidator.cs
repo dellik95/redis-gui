@@ -5,12 +5,12 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <summary>
 /// Validator for ImportRedisDataCommand.
 /// </summary>
-public sealed class ImportRedisDataCommandValidation : AbstractValidator<ImportRedisDataCommand>
+public sealed class ImportRedisDataCommandValidator : AbstractValidator<ImportRedisDataCommand>
 {
 	/// <summary>
-	/// Initializes a new instance of the ImportRedisDataCommandValidation class.
+	/// Initializes a new instance of the ImportRedisDataCommandValidator class.
 	/// </summary>
-	public ImportRedisDataCommandValidation()
+	public ImportRedisDataCommandValidator()
 	{
 		RuleFor(x => x.ConnectionId)
 			.NotEmpty()

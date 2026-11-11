@@ -67,7 +67,7 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 	{
 		using var scope = serviceProvider.CreateScope();
 		var connectionRepository = scope.ServiceProvider.GetRequiredService<IRedisConnectionRepository>();
-		var connectionService = scope.ServiceProvider.GetRequiredService<IConnectionService>();
+		var connectionService = scope.ServiceProvider.GetRequiredService<IRedisConnectionService>();
 
 		var connectionsResult = await connectionRepository.GetAllConnectionsAsync(cancellationToken);
 
@@ -87,14 +87,14 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 
 	private async Task CheckConnectionHealth(
 		RedisConnection connection,
-		IConnectionService connectionService,
+		IRedisConnectionService connectionService,
 		CancellationToken cancellationToken)
 	{
 		var sw = Stopwatch.StartNew();
 
 		try
 		{
-			var result = await connectionService.CheckConnection(connection);
+			var result = await connectionService.CheckConnectionAsync(connection, cancellationToken);
 			sw.Stop();
 
 			var responseTimeMs = sw.Elapsed.TotalMilliseconds;

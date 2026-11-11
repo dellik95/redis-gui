@@ -6,12 +6,12 @@ namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 /// <summary>
 /// Validator for DeleteMultipleKeysCommand.
 /// </summary>
-public sealed class DeleteMultipleKeysCommandValidation : AbstractValidator<DeleteMultipleKeysCommand>
+public sealed class DeleteMultipleKeysCommandValidator : AbstractValidator<DeleteMultipleKeysCommand>
 {
     /// <summary>
-    /// Initializes a new instance of the DeleteMultipleKeysCommandValidation class.
+    /// Initializes a new instance of the DeleteMultipleKeysCommandValidator class.
     /// </summary>
-    public DeleteMultipleKeysCommandValidation()
+    public DeleteMultipleKeysCommandValidator()
     {
         RuleFor(x => x.ConnectionId)
             .NotEmpty()

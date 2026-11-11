@@ -8,12 +8,12 @@ namespace RedisGUI.Application.Connections.CreateConnection;
 /// <summary>
 /// Validates the parameters for creating a new Redis connection.
 /// </summary>
-internal sealed class CreateConnectionCommandValidation : AbstractValidator<CreateConnectionCommand>
+internal sealed class CreateConnectionCommandValidator : AbstractValidator<CreateConnectionCommand>
 {
 	/// <summary>
 	/// Initializes validation rules for connection creation.
 	/// </summary>
-	public CreateConnectionCommandValidation()
+	public CreateConnectionCommandValidator()
 	{
 		RuleFor(x => x.Name)
 			.NotEmpty()

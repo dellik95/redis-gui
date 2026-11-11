@@ -23,8 +23,6 @@ namespace RedisGUI.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "9.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
-            MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
-
             modelBuilder.Entity("RedisGUI.Domain.Connection.RedisConnection", b =>
                 {
                     b.Property<Guid>("Id")

@@ -72,9 +72,6 @@ public static class DependencyInjection
 		services.AddScoped<IRedisDiagnosticsService, RedisDiagnosticsService>();
 		services.AddScoped<IRedisValueService, RedisValueService>();
 
-		// Keep legacy IConnectionService for backward compatibility
-		services.AddScoped<IConnectionService, ConnectionService>();
-
 		AddAuthentication(services, configuration);
 
 		AddPersistence(services, configuration);

@@ -5,12 +5,12 @@ namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 /// <summary>
 /// Validator for ExportRedisDataQuery.
 /// </summary>
-public sealed class ExportRedisDataQueryValidation : AbstractValidator<ExportRedisDataQuery>
+public sealed class ExportRedisDataQueryValidator : AbstractValidator<ExportRedisDataQuery>
 {
 	/// <summary>
-	/// Initializes a new instance of the ExportRedisDataQueryValidation class.
+	/// Initializes a new instance of the ExportRedisDataQueryValidator class.
 	/// </summary>
-	public ExportRedisDataQueryValidation()
+	public ExportRedisDataQueryValidator()
 	{
 		RuleFor(x => x.ConnectionId)
 			.NotEmpty()

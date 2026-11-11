@@ -8,12 +8,12 @@ namespace RedisGUI.Application.Connections.UpdateConnection;
 /// <summary>
 /// Validates the parameters for updating an existing Redis connection.
 /// </summary>
-internal sealed class UpdateConnectionCommandValidation : AbstractValidator<UpdateConnectionCommand>
+internal sealed class UpdateConnectionCommandValidator : AbstractValidator<UpdateConnectionCommand>
 {
 	/// <summary>
 	/// Initializes validation rules for connection update.
 	/// </summary>
-	public UpdateConnectionCommandValidation()
+	public UpdateConnectionCommandValidator()
 	{
 		RuleFor(x => x.Id)
 			.NotEmpty()
