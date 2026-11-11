@@ -12,7 +12,7 @@ namespace RedisGUI.Infrastructure.RedisMetrics;
 /// </summary>
 public class RedisMetricsCollector : IMetricsCollector
 {
-	private readonly IConnectionPool connectionPool;
+	private readonly IRedisConnectionManager connectionManager;
 	private readonly ConcurrentDictionary<Guid, Domain.RedisMetrics.RedisMetrics> metricsMap = [];
 	private readonly IOptions<MetricsCollectorOptions> options;
 	private readonly ILogger<RedisMetricsCollector> logger;
@@ -20,12 +20,12 @@ public class RedisMetricsCollector : IMetricsCollector
 	/// <summary>
 	/// Initializes a new instance of the RedisMetricsCollector
 	/// </summary>
-	/// <param name="connectionPool">Pool of Redis connections</param>
+	/// <param name="connectionManager">Manager for Redis connections</param>
 	/// <param name="options">Configuration options for metrics collection</param>
 	/// <param name="logger">Logger for the metrics collector</param>
-	public RedisMetricsCollector(IConnectionPool connectionPool, IOptions<MetricsCollectorOptions> options, ILogger<RedisMetricsCollector> logger)
+	public RedisMetricsCollector(IRedisConnectionManager connectionManager, IOptions<MetricsCollectorOptions> options, ILogger<RedisMetricsCollector> logger)
 	{
-		this.connectionPool = connectionPool;
+		this.connectionManager = connectionManager;
 		this.options = options;
 		this.logger = logger;
 	}
@@ -40,7 +40,7 @@ public class RedisMetricsCollector : IMetricsCollector
 	{
 		try
 		{
-			var multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+			var multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 			if (multiplexerResult.IsFailure)
 			{
 				return Result.Failure<Domain.RedisMetrics.RedisMetrics>(multiplexerResult.Error);

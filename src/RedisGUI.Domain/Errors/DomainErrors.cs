@@ -52,6 +52,11 @@ public static class DomainErrors
 		/// </summary>
 		public static Error UpdateFailed => new("Connection.UpdateFailed", "Failed to update the connection.");
 
+		/// <summary>
+		/// Invalid connection configuration
+		/// </summary>
+		public static Error InvalidConfiguration => new("Connection.InvalidConfiguration", "The connection configuration is invalid.");
+
 		public static Error ReadOnlyMode => new("Connection.ReadOnlyMode", "Connection is in Safe Mode (Read-Only). Write operations are not allowed.");
 	}
 
@@ -381,19 +386,35 @@ public static class DomainErrors
 	}
 
 	/// <summary>
-	/// Connection pool errors
+	/// Connection manager errors
+	/// </summary>
+	public static class ConnectionManager
+	{
+		/// <summary>
+		/// Operation was cancelled
+		/// </summary>
+		public static Error Cancelled => new("ConnectionManager.Cancelled", "Operation was cancelled.");
+
+		/// <summary>
+		/// An unexpected error occurred
+		/// </summary>
+		public static Error UnexpectedError => new("ConnectionManager.UnexpectedError", "An unexpected error occurred.");
+	}
+
+	/// <summary>
+	/// Connection pool errors (legacy alias)
 	/// </summary>
 	public static class ConnectionPool
 	{
 		/// <summary>
 		/// Operation was cancelled
 		/// </summary>
-		public static Error Cancelled => new("ConnectionPool.Cancelled", "Operation was cancelled.");
+		public static Error Cancelled => ConnectionManager.Cancelled;
 
 		/// <summary>
 		/// An unexpected error occurred
 		/// </summary>
-		public static Error UnexpectedError => new("ConnectionPool.UnexpectedError", "An unexpected error occurred.");
+		public static Error UnexpectedError => ConnectionManager.UnexpectedError;
 	}
 
 	/// <summary>

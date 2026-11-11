@@ -10,7 +10,7 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// Uses Strategy and Factory patterns for key naming and payload generation.
 /// </summary>
 public class RedisSeedDataService(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	ILogger<RedisSeedDataService> logger) : IRedisSeedDataService
 {
 	/// <inheritdoc />
@@ -19,7 +19,7 @@ public class RedisSeedDataService(
 		SeedSampleDataOptions? options = null,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<SeedDataResult>(multiplexerResult.Error);

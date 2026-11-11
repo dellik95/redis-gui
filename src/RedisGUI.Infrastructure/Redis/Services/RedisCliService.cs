@@ -8,7 +8,7 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// Service responsible for executing raw Redis CLI commands, parsing command-line tokens, and formatting RESP output.
 /// </summary>
 public class RedisCliService(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	ILogger<RedisCliService> logger) : IRedisCliService
 {
 	/// <inheritdoc />
@@ -23,7 +23,7 @@ public class RedisCliService(
 			return Result.Failure<string>(new Error("Cli.EmptyCommand", "Command cannot be empty."));
 		}
 
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for CLI command: {Error}", multiplexerResult.Error.Message);

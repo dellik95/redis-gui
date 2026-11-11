@@ -9,14 +9,14 @@ namespace RedisGUI.Infrastructure.Redis;
 /// </summary>
 public class RedisKeyService : IRedisKeyService
 {
-	private readonly IConnectionPool connectionPool;
+	private readonly IRedisConnectionManager connectionManager;
 	private readonly ILogger<RedisKeyService> logger;
 
 	public RedisKeyService(
-		IConnectionPool connectionPool,
+		IRedisConnectionManager connectionManager,
 		ILogger<RedisKeyService> logger)
 	{
-		this.connectionPool = connectionPool;
+		this.connectionManager = connectionManager;
 		this.logger = logger;
 	}
 
@@ -25,7 +25,7 @@ public class RedisKeyService : IRedisKeyService
 	/// </summary>
 	public async ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for keys: {Error}", multiplexerResult.Error.Message);
@@ -48,7 +48,7 @@ public class RedisKeyService : IRedisKeyService
 	/// </summary>
 	public async Task<Result<bool>> DeleteKeyAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<bool>(multiplexerResult.Error);
@@ -66,7 +66,7 @@ public class RedisKeyService : IRedisKeyService
 	/// </summary>
 	public async Task<Result<long>> DeleteKeysAsync(RedisConnection connection, string[] keys, CancellationToken cancellationToken = default, int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for delete keys: {Error}", multiplexerResult.Error.Message);
@@ -90,7 +90,7 @@ public class RedisKeyService : IRedisKeyService
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<(int, IReadOnlyList<string>)>(multiplexerResult.Error);
@@ -130,7 +130,7 @@ public class RedisKeyService : IRedisKeyService
 	/// </summary>
 	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default, int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<int>(multiplexerResult.Error);
@@ -165,7 +165,7 @@ public class RedisKeyService : IRedisKeyService
 	/// </summary>
 	public async Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<string>(multiplexerResult.Error);

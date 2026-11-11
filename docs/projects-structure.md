@@ -101,8 +101,8 @@ Implements domain abstractions and manages external network connections.
 * **`Redis/Handlers/` (Strategy Pattern for Redis Types)**:
   * Handlers for each native Redis data type: `StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, and `StreamTypeHandler`.
   * Managed by `RedisTypeHandlerFactory`, with all handlers registered directly into the ASP.NET Core DI container.
-* **`Redis/ConnectionPool/`**:
-  * Thread-safe cache of `IConnectionMultiplexer` instances keyed by connection ID, preventing socket exhaustion.
+* **`Redis/ConnectionManager/`**:
+  * Thread-safe cache of `ConnectionMultiplexer` instances with single-flight initialization and bounded capacity, preventing socket exhaustion.
 * **`Redis/Telemetry/`**:
   * `RedisMetricsCollector`: Periodically collects telemetry via `server.InfoAsync()`, parsing numerical metrics using `CultureInfo.InvariantCulture` to prevent decimal formatting crashes.
 * **`Persistence/`**:

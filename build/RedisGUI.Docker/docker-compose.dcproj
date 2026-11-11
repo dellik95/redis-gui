@@ -5,15 +5,15 @@
 		<DockerTargetOS>Linux</DockerTargetOS>
 		<DockerPublishLocally>False</DockerPublishLocally>
 		<ProjectGuid>f55039b8-f395-45fe-8ea2-512a570ed73a</ProjectGuid>
+		<DockerComposeBaseFilePath>..\..\docker-compose</DockerComposeBaseFilePath>
+		<DockerDevelopmentMode>Regular</DockerDevelopmentMode>
+		<DependencyAwareStart>true</DependencyAwareStart>
 		<DockerLaunchAction>LaunchBrowser</DockerLaunchAction>
-		<DockerServiceUrl>{Scheme}://localhost:{ServicePort}/swagger</DockerServiceUrl>
-		<DockerServiceName>redisgui.server</DockerServiceName>
+		<DockerServiceUrl>{Scheme}://localhost:{ServicePort}</DockerServiceUrl>
+		<DockerServiceName>app</DockerServiceName>
 	</PropertyGroup>
 	<ItemGroup>
-		<None Include="docker-compose.override.yml">
-			<DependentUpon>docker-compose.yml</DependentUpon>
-		</None>
-		<None Include="docker-compose.yml" />
+		<None Include="..\..\docker-compose.yml" Link="docker-compose.yml" />
 		<None Include=".dockerignore" />
 	</ItemGroup>
 </Project>

@@ -13,7 +13,7 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// Utilizes type handler strategies for Redis data types and aggregates specialized services.
 /// </summary>
 public class RedisValueService(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	IRedisKeyService keyService,
 	IRedisTypeHandlerFactory typeHandlerFactory,
 	IRedisLoadTestService loadTestService,
@@ -120,7 +120,7 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for set value: {Error}", multiplexerResult.Error.Message);
@@ -143,7 +143,7 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<RedisValue>(multiplexerResult.Error);
@@ -237,7 +237,7 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			logger.LogError("Failed to get connection for update value: {Error}", multiplexerResult.Error.Message);
@@ -273,7 +273,7 @@ public class RedisValueService(
 		int? database = null,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure(multiplexerResult.Error);
 
 		var db = multiplexerResult.Value.GetDatabase(database ?? connection.DatabaseNumber.Value);
@@ -293,7 +293,7 @@ public class RedisValueService(
 		int? database = null,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure(multiplexerResult.Error);
 
 		var db = multiplexerResult.Value.GetDatabase(database ?? connection.DatabaseNumber.Value);
@@ -315,7 +315,7 @@ public class RedisValueService(
 		int? database = null,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<int>(multiplexerResult.Error);
 
 		var db = multiplexerResult.Value.GetDatabase(database ?? connection.DatabaseNumber.Value);

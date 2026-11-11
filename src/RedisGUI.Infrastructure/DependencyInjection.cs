@@ -50,10 +50,12 @@ public static class DependencyInjection
 		services.AddSingleton<IPasswordDecrypt, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 		services.AddSingleton<IPasswordEncryptor, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 
-		services.AddOptions<ConnectionPoolOptions>()
-			.Bind(configuration.GetSection(ConnectionPoolOptions.Key));
+		services.AddOptions<RedisConnectionManagerOptions>()
+			.Bind(configuration.GetSection(RedisConnectionManagerOptions.ManagerKey))
+			.Bind(configuration.GetSection(RedisConnectionManagerOptions.PoolKey));
 
-		services.AddSingleton<IConnectionPool, ConnectionPool>();
+		services.AddSingleton<IRedisConnectionFactory, DefaultRedisConnectionFactory>();
+		services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
 
 		// Register specialized Redis services
 		services.AddSingleton<IRedisTypeHandler, StringTypeHandler>();

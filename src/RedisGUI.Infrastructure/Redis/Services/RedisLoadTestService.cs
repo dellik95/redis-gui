@@ -12,7 +12,7 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// Uses Strategy pattern for operations and Builder pattern for result construction.
 /// </summary>
 public class RedisLoadTestService(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	ILogger<RedisLoadTestService> logger) : IRedisLoadTestService
 {
 	/// <inheritdoc />
@@ -34,7 +34,7 @@ public class RedisLoadTestService(
 			return Result.Failure<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<RedisLoadTestResult>(multiplexerResult.Error);

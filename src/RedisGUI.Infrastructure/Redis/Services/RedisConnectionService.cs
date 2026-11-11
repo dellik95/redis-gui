@@ -8,14 +8,14 @@ namespace RedisGUI.Infrastructure.Redis;
 /// </summary>
 public class RedisConnectionService : IRedisConnectionService
 {
-	private readonly IConnectionPool connectionPool;
+	private readonly IRedisConnectionManager connectionManager;
 	private readonly ILogger<RedisConnectionService> logger;
 
 	public RedisConnectionService(
-		IConnectionPool connectionPool,
+		IRedisConnectionManager connectionManager,
 		ILogger<RedisConnectionService> logger)
 	{
-		this.connectionPool = connectionPool;
+		this.connectionManager = connectionManager;
 		this.logger = logger;
 	}
 
@@ -24,7 +24,7 @@ public class RedisConnectionService : IRedisConnectionService
 	/// </summary>
 	public async Task<Result> CheckConnectionAsync(RedisConnection connection, CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 
 		if (multiplexerResult.IsFailure)
 		{

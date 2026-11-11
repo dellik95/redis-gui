@@ -32,11 +32,11 @@ flowchart TD
     subgraph DomainLayer ["Enterprise Domain Layer (Domain)"]
         Entities["Entities (RedisConnection, User, AuditLog)"]
         ValueObjects["Value Objects (ConnectionHost, KeyPath)"]
-        DomainContracts["Abstractions (IRedisValueService, IConnectionPool)"]
+        DomainContracts["Abstractions (IRedisValueService, IRedisConnectionManager)"]
     end
 
     subgraph InfraLayer ["Infrastructure & Adapters Layer"]
-        ConnPool["IConnectionPool (ConnectionMultiplexer Cache)"]
+        ConnPool["IRedisConnectionManager (ConnectionMultiplexer Cache)"]
         TypeFactory["IRedisTypeHandlerFactory (Strategy Pattern)"]
         BgServices["Background Jobs (RedisMetricsJob, HealthMonitor)"]
         EFCore["Entity Framework Core (InMemory / MySQL)"]
@@ -282,7 +282,7 @@ sequenceDiagram
     participant Endpoint as ExecuteCliEndpoint (POST /execute-cli)
     participant Handler as ExecuteCliCommandHandler
     participant SafeMode as Safe Mode Policy
-    participant Pool as IConnectionPool
+    participant Pool as IRedisConnectionManager
     participant Redis as Redis Server
 
     Dev->>Endpoint: Submit command ("INFO memory", active DB: 0)

@@ -43,7 +43,7 @@ flowchart TD
 
     subgraph Infra ["Infrastructure Layer"]
         TypeFactory["IRedisTypeHandlerFactory (Strategy)\nDI-Resolved Handlers"]
-        ConnPool["IConnectionPool\nConnectionMultiplexer Pool"]
+        ConnPool["IRedisConnectionManager\nConnectionMultiplexer Manager"]
         Seeder["RedisSeedDataService\n(KeyNaming & Seed Strategies)"]
         LoadTester["RedisLoadTestService\n(Concurrent Stress Testing)"]
         MetricsCollector["RedisMetricsCollector\n(InvariantCulture Parser)"]
@@ -77,7 +77,7 @@ The project is structured into clean layers according to Robert C. Martin's Clea
 | **`RedisGUI.Domain`** | Enterprise domain models (`RedisConnection`, `User`, `AuditLog`), enums (`RedisDataType`, `UserRole`), abstractions and domain exceptions. | None (pure .NET standard) |
 | **`RedisGUI.Shared`** | Cross-cutting primitives: `Result<T>`, `Error`, custom MediatR pipeline contracts (`ICommand`, `IQuery`, `ICommandHandler`), JSON options. | None |
 | **`RedisGUI.Application`** | CQRS command & query handlers, FluentValidation rules, pipeline behaviors (`AuditingBehavior`, `ValidationBehavior`, `LoggingBehavior`). | `RedisGUI.Domain`, `RedisGUI.Shared` |
-| **`RedisGUI.Infrastructure`** | StackExchange.Redis integration, `IConnectionPool`, type handler strategies, diagnostics, background telemetry jobs, EF Core persistence. | `RedisGUI.Application`, StackExchange.Redis, EF Core |
+| **`RedisGUI.Infrastructure`** | StackExchange.Redis integration, `IRedisConnectionManager`, type handler strategies, diagnostics, background telemetry jobs, EF Core persistence. | `RedisGUI.Application`, StackExchange.Redis, EF Core |
 | **`RedisGUI.Server`** | ASP.NET Core 10 Host, RESTful Minimal APIs, SignalR Hubs (`RedisMetricsHub`), JWT middleware, rate limiting, OpenAPI/Swagger. | `RedisGUI.Infrastructure` |
 | **`RedisGUI.Client`** | Modern Angular 22 application with signals, Angular Material 22, Tailwind CSS, Monaco editor, SignalR client. | Pure TypeScript / Web platform |
 
@@ -115,10 +115,10 @@ The frontend mirrors the backend strategy pattern:
 - Handlers (`StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, `StreamTypeHandler`) are decorated with `@Injectable({ providedIn: 'root' })`.
 - `RedisTypeHandlerRegistry` injects all handlers via Angular DI, providing validation, visual-to-JSON transformations, and JSON schema formatting without runtime string heuristics.
 
-### 4.3. Resilient Connection Pooling (`IConnectionPool`)
-- Manages cached, thread-safe instances of StackExchange.Redis `IConnectionMultiplexer`.
-- Performs lazy connection creation, connection multiplexing over single sockets, and automatic network reconnects with exponential backoff.
-- Features multi-environment fallback: gracefully falls back from Docker container hostnames (`redis:6379`) to host loopback (`127.0.0.1:6379`) when running in local development mode.
+### 4.3. Resilient Connection Management (`IRedisConnectionManager`)
+- Manages cached, thread-safe instances of StackExchange.Redis `ConnectionMultiplexer`.
+- Performs single-flight connection creation, connection multiplexing over single sockets, and automatic network reconnects.
+- Features configurable bounded cache capacity, idle eviction (LRU / time-based), and optional Docker fallback (`redis` to `127.0.0.1`).
 
 ### 4.4. Culture-Invariant Telemetry & Diagnostics
 Redis returns server info fields (e.g. `used_cpu_sys:0.01`, `instantaneous_input_kbps:0.00`) formatted with the dot (`.`) decimal separator regardless of host OS language.

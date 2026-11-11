@@ -5,10 +5,10 @@ using StackExchange.Redis;
 namespace RedisGUI.Infrastructure.HealthChecks;
 
 /// <summary>
-/// Health check that verifies Redis connectivity via the connection pool.
+/// Health check that verifies Redis connectivity via the connection manager.
 /// </summary>
 public class RedisHealthCheck(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	IOptions<RedisHealthCheckOptions> options)
 	: IHealthCheck
 {
@@ -23,7 +23,7 @@ public class RedisHealthCheck(
 
 		try
 		{
-			Result<ConnectionMultiplexer> connectionResult = await connectionPool.GetConnection(options.ConnectionString, cancellationToken);
+			Result<ConnectionMultiplexer> connectionResult = await connectionManager.GetConnection(options.ConnectionString, cancellationToken);
 
 			if (connectionResult.IsFailure)
 			{

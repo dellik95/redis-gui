@@ -9,7 +9,7 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// Service responsible for querying Redis server diagnostics, telemetries, slowlog, memory usage, and runtime configuration.
 /// </summary>
 public class RedisDiagnosticsService(
-	IConnectionPool connectionPool,
+	IRedisConnectionManager connectionManager,
 	ILogger<RedisDiagnosticsService> logger) : IRedisDiagnosticsService
 {
 	/// <inheritdoc />
@@ -18,7 +18,7 @@ public class RedisDiagnosticsService(
 		string key,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<long>(multiplexerResult.Error);
@@ -46,7 +46,7 @@ public class RedisDiagnosticsService(
 		RedisConnection connection,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
 			return Result.Failure<Dictionary<int, long>>(multiplexerResult.Error);
@@ -73,7 +73,7 @@ public class RedisDiagnosticsService(
 		int count = 25,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<List<SlowlogEntryInfo>>(multiplexerResult.Error);
 
 		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
@@ -95,7 +95,7 @@ public class RedisDiagnosticsService(
 		RedisConnection connection,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerInfoDto>(multiplexerResult.Error);
 
 		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
@@ -110,7 +110,7 @@ public class RedisDiagnosticsService(
 		string? pattern = null,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerConfigDto>(multiplexerResult.Error);
 
 		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
@@ -130,7 +130,7 @@ public class RedisDiagnosticsService(
 		string parameterValue,
 		CancellationToken cancellationToken = default)
 	{
-		Result<ConnectionMultiplexer> multiplexerResult = await connectionPool.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisSetConfigResponseDto>(multiplexerResult.Error);
 
 		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
