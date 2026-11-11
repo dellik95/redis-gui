@@ -159,7 +159,7 @@ public class RedisConnectionManagerTests
 	{
 		var factory = new TestRedisConnectionFactory
 		{
-			CustomConnect = _ => throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Simulated network failure")
+			CustomConnect = _ => throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "Simulated network failure")
 		};
 		using var manager = CreateManager(factory);
 
@@ -181,7 +181,7 @@ public class RedisConnectionManagerTests
 			{
 				if (Interlocked.Increment(ref attempts) == 1)
 				{
-					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "First attempt failed");
+					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "First attempt failed");
 				}
 
 				var testOpt = opt.Clone();
@@ -298,9 +298,9 @@ public class RedisConnectionManagerTests
 		// Since RedisConnectionManager exposes internal ConnectionEntry:
 		var internalEntryField = manager.GetType().GetField("connections", BindingFlags.Instance | BindingFlags.NonPublic);
 		var internalDict = (System.Collections.IDictionary)internalEntryField!.GetValue(manager)!;
-		var internalEntry = internalDict["server-temp-loss"];
-		var onFailedMethod = internalEntry.GetType().GetMethod("OnConnectionFailed", BindingFlags.Instance | BindingFlags.NonPublic);
-		onFailedMethod!.Invoke(internalEntry, [null, failedArgs]);
+		var internalEntry = internalDict["server-temp-loss"]!;
+		var onFailedMethod = internalEntry.GetType().GetMethod("OnConnectionFailed", BindingFlags.Instance | BindingFlags.NonPublic)!;
+		onFailedMethod.Invoke(internalEntry, [null, failedArgs]);
 
 		// Verify state updated to Disconnected without removing connection from registry
 		manager.GetConnectionStates()["server-temp-loss"].State.Should().Be(RedisConnectionState.Disconnected);
@@ -324,12 +324,12 @@ public class RedisConnectionManagerTests
 
 		var internalEntryField = manager.GetType().GetField("connections", BindingFlags.Instance | BindingFlags.NonPublic);
 		var internalDict = (System.Collections.IDictionary)internalEntryField!.GetValue(manager)!;
-		var internalEntry = internalDict["server-restore"];
+		var internalEntry = internalDict["server-restore"]!;
 
 		// 1. Fire ConnectionFailed
 		var failedArgs = CreateConnectionFailedEventArgs(ConnectionFailureType.SocketFailure);
-		internalEntry.GetType().GetMethod("OnConnectionFailed", BindingFlags.Instance | BindingFlags.NonPublic)!
-			.Invoke(internalEntry, [null, failedArgs]);
+		var onFailedMethod = internalEntry.GetType().GetMethod("OnConnectionFailed", BindingFlags.Instance | BindingFlags.NonPublic)!;
+		onFailedMethod.Invoke(internalEntry, [null, failedArgs]);
 
 		manager.GetConnectionStates()["server-restore"].State.Should().Be(RedisConnectionState.Disconnected);
 
@@ -496,7 +496,7 @@ public class RedisConnectionManagerTests
 			{
 				if (opt.EndPoints[0].ToString()!.Contains("redis", StringComparison.OrdinalIgnoreCase))
 				{
-					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Host not found: redis");
+					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "Host not found: redis");
 				}
 				var testOpt = opt.Clone();
 				testOpt.AbortOnConnectFail = false;
@@ -518,7 +518,7 @@ public class RedisConnectionManagerTests
 				string ep = opt.EndPoints[0].ToString()!;
 				if (ep.Contains("redis", StringComparison.OrdinalIgnoreCase))
 				{
-					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, "Host not found: redis");
+					throw new RedisConnectionException(ConnectionFailureType.UnableToConnect, CommandFlags.None, "Host not found: redis");
 				}
 				// Fallback to 127.0.0.1 succeeds
 				var testOpt = opt.Clone();

@@ -51,8 +51,7 @@ public static class DependencyInjection
 		services.AddSingleton<IPasswordEncryptor, PasswordEncryptor>(sp => sp.GetRequiredService<PasswordEncryptor>());
 
 		services.AddOptions<RedisConnectionManagerOptions>()
-			.Bind(configuration.GetSection(RedisConnectionManagerOptions.ManagerKey))
-			.Bind(configuration.GetSection(RedisConnectionManagerOptions.PoolKey));
+			.Bind(configuration.GetSection(RedisConnectionManagerOptions.SectionKey));
 
 		services.AddSingleton<IRedisConnectionFactory, DefaultRedisConnectionFactory>();
 		services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();

@@ -6,14 +6,9 @@ namespace RedisGUI.Infrastructure.Redis;
 public class RedisConnectionManagerOptions
 {
 	/// <summary>
-	/// Configuration key for manager settings.
+	/// Configuration key for connection manager settings.
 	/// </summary>
-	public const string ManagerKey = "Redis:ConnectionManager";
-
-	/// <summary>
-	/// Legacy configuration key for connection pool settings.
-	/// </summary>
-	public const string PoolKey = "Redis:ConnectionPool";
+	public const string SectionKey = "Redis:ConnectionManager";
 
 	/// <summary>
 	/// Maximum number of concurrent active multiplexers allowed in the registry.

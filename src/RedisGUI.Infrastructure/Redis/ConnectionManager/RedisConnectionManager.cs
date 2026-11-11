@@ -179,30 +179,15 @@ public class RedisConnectionManager : IRedisConnectionManager
 		ConnectionEntry entry,
 		CancellationToken cancellationToken)
 	{
-		Task<ConnectionMultiplexer> initTaskToWait;
-
-		lock (entry.InitLock)
+		if (entry.Multiplexer != null && entry.State != RedisConnectionState.Faulted)
 		{
-			if (entry.Multiplexer != null && entry.State != RedisConnectionState.Faulted)
-			{
-				entry.LastUsedAt = DateTimeOffset.UtcNow;
-				return Result.Success(entry.Multiplexer);
-			}
-
-			if (entry.InitTask == null || entry.InitTask.IsFaulted || entry.InitTask.IsCanceled)
-			{
-				entry.State = RedisConnectionState.Connecting;
-				var initCts = CancellationTokenSource.CreateLinkedTokenSource(shutdownCts.Token);
-				initCts.CancelAfter(options.ConnectionTimeout);
-				entry.InitTask = InitializeMultiplexerAsync(entry, entry.Configuration, initCts);
-			}
-
-			initTaskToWait = entry.InitTask;
+			entry.LastUsedAt = DateTimeOffset.UtcNow;
+			return Result.Success(entry.Multiplexer);
 		}
 
 		try
 		{
-			ConnectionMultiplexer mux = await initTaskToWait.WaitAsync(cancellationToken);
+			ConnectionMultiplexer mux = await entry.MultiplexerTask.WaitAsync(cancellationToken);
 			entry.LastUsedAt = DateTimeOffset.UtcNow;
 			return Result.Success(mux);
 		}
@@ -232,12 +217,14 @@ public class RedisConnectionManager : IRedisConnectionManager
 	/// </summary>
 	private async Task<ConnectionMultiplexer> InitializeMultiplexerAsync(
 		ConnectionEntry entry,
-		string configuration,
-		CancellationTokenSource initCts)
+		string configuration)
 	{
 		var sw = Stopwatch.StartNew();
 		logger.LogInformation("Redis connection initialization started for server {ServerKey}", entry.SanitizedKey);
 		Interlocked.Increment(ref creationCount);
+
+		var initCts = CancellationTokenSource.CreateLinkedTokenSource(shutdownCts.Token);
+		initCts.CancelAfter(options.ConnectionTimeout);
 
 		Task<ConnectionMultiplexer>? connectTask = null;
 		ConnectionMultiplexer? multiplexer = null;
@@ -576,11 +563,11 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		public ConnectionMultiplexer? Multiplexer { get; set; }
 
-		internal readonly object InitLock = new();
-		internal Task<ConnectionMultiplexer>? InitTask;
-
+		private readonly Lazy<Task<ConnectionMultiplexer>> lazyMultiplexer;
 		private readonly RedisConnectionManager manager;
 		private int disposalState;
+
+		public Task<ConnectionMultiplexer> MultiplexerTask => lazyMultiplexer.Value;
 
 		public ConnectionEntry(
 			string key,
@@ -596,6 +583,10 @@ public class RedisConnectionManager : IRedisConnectionManager
 			this.manager = manager;
 			State = RedisConnectionState.Connecting;
 			LastUsedAt = DateTimeOffset.UtcNow;
+
+			lazyMultiplexer = new Lazy<Task<ConnectionMultiplexer>>(
+				() => manager.InitializeMultiplexerAsync(this, configuration),
+				LazyThreadSafetyMode.ExecutionAndPublication);
 		}
 
 		public IDisposable TrackOperation() => new OperationScope(this);

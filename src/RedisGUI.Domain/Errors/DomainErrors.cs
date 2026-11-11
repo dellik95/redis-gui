@@ -402,22 +402,6 @@ public static class DomainErrors
 	}
 
 	/// <summary>
-	/// Connection pool errors (legacy alias)
-	/// </summary>
-	public static class ConnectionPool
-	{
-		/// <summary>
-		/// Operation was cancelled
-		/// </summary>
-		public static Error Cancelled => ConnectionManager.Cancelled;
-
-		/// <summary>
-		/// An unexpected error occurred
-		/// </summary>
-		public static Error UnexpectedError => ConnectionManager.UnexpectedError;
-	}
-
-	/// <summary>
 	/// Metrics collection errors
 	/// </summary>
 	public static class MetricsCollection
