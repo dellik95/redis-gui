@@ -4,7 +4,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RedisGUI.Application.Core.Behavior;
+namespace RedisGUI.Application.Core.Behaviors;
 
 public class LoggingBehavior<TRequest, TResponse>
 	: IPipelineBehavior<TRequest, TResponse>

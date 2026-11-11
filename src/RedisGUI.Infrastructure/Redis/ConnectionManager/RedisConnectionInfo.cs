@@ -1,4 +1,4 @@
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Snapshot of runtime state and telemetry for a managed Redis connection.

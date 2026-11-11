@@ -1,5 +1,5 @@
 using FluentAssertions;
-using RedisGUI.Application.Core.Behaviors;
+using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Domain.Audit;
 
 namespace RedisGUI.Application.Tests.Core.Attributes;

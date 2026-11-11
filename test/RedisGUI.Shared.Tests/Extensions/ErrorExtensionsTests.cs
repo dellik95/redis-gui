@@ -1,6 +1,6 @@
 using FluentAssertions;
-using RedisGUI.Domain.Extensions;
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Extensions;
+using RedisGUI.Shared.Primitives;
 using System.Collections.Generic;
 
 namespace RedisGUI.Shared.Tests.Extensions;

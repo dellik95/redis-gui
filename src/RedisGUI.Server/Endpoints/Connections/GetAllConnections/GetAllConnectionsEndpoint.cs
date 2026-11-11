@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetAllConnections;
 using RedisGUI.Application.Connections.Shared;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;

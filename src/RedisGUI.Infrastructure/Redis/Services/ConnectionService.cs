@@ -1,7 +1,7 @@
 using RedisGUI.Domain.Redis;
 using RedisValue = RedisGUI.Domain.Redis.RedisValue;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>
 /// Aggregate facade service for Redis connection and key operations

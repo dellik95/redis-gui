@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetKeyMemoryUsage;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;

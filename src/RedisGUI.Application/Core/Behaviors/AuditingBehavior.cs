@@ -1,3 +1,4 @@
+using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;

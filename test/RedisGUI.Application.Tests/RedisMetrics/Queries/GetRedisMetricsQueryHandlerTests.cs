@@ -9,7 +9,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RedisGUI.Application.Tests.RedisMetrics;
+namespace RedisGUI.Application.Tests.RedisMetrics.Queries;
 
 [TestFixture]
 public class GetRedisMetricsQueryHandlerTests

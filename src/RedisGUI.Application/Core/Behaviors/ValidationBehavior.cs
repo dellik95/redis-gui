@@ -8,7 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using ValidationException = RedisGUI.Application.Exceptions.ValidationException;
 
-namespace RedisGUI.Application.Core.Behavior;
+namespace RedisGUI.Application.Core.Behaviors;
 
 /// <summary>
 /// MediatR pipeline behavior that performs validation on commands before they are handled

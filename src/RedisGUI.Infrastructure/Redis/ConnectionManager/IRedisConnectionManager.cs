@@ -1,6 +1,6 @@
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Manages cached, shared <see cref="ConnectionMultiplexer"/> instances across multiple Redis servers.

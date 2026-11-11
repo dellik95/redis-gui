@@ -1,4 +1,4 @@
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Represents the lifecycle state of a managed Redis connection.

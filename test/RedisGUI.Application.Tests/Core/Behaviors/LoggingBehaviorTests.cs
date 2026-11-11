@@ -1,13 +1,13 @@
 using FluentAssertions;
 using Microsoft.Extensions.Logging;
 using Moq;
-using RedisGUI.Application.Core.Behavior;
+using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Shared.Mediator;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace RedisGUI.Application.Tests.Core.Behavior;
+namespace RedisGUI.Application.Tests.Core.Behaviors;
 
 [TestFixture]
 public class LoggingBehaviorTests

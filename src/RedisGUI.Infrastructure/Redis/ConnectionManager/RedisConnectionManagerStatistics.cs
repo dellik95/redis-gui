@@ -1,4 +1,4 @@
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Aggregate statistics for the Redis connection manager.

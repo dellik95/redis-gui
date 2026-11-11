@@ -1,7 +1,7 @@
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>
 /// Service for managing Redis connection health and testing

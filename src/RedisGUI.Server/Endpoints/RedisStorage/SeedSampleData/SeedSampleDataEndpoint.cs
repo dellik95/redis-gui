@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.SeedSampleData;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;

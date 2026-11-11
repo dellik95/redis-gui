@@ -6,7 +6,7 @@ using Microsoft.Extensions.Options;
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Thread-safe manager for cached, shared <see cref="ConnectionMultiplexer"/> instances.

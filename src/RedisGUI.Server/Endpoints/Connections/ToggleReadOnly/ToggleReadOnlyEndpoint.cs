@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.ToggleReadOnly;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using System;

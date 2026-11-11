@@ -1,6 +1,6 @@
-using RedisGUI.Domain.Primitives;
+using RedisGUI.Shared.Primitives;
 
-namespace RedisGUI.Domain.Extensions;
+namespace RedisGUI.Shared.Extensions;
 
 /// <summary>
 /// Extension methods for working with Error objects

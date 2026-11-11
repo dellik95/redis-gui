@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.RedisMetrics.Queries;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 

@@ -1,5 +1,4 @@
 using FluentAssertions;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Shared.Tests.Primitives;

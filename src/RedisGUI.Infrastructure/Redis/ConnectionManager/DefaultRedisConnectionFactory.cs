@@ -1,7 +1,7 @@
 using System.IO;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Default implementation that delegates connection creation to StackExchange.Redis <see cref="ConnectionMultiplexer.ConnectAsync(ConfigurationOptions, TextWriter)"/>.

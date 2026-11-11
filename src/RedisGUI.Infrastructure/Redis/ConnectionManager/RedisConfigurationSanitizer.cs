@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Utility for sanitizing Redis connection strings and extracting stable identifiers without exposing secrets.

@@ -13,9 +13,10 @@ using Microsoft.Extensions.Options;
 using NUnit.Framework;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Infrastructure.Redis;
+using RedisGUI.Infrastructure.Redis.ConnectionManager;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Tests.Redis;
+namespace RedisGUI.Infrastructure.Tests.Redis.ConnectionManager;
 
 [TestFixture]
 public class RedisConnectionManagerTests

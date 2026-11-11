@@ -1,4 +1,4 @@
-using RedisGUI.Domain.Extensions;
+using RedisGUI.Shared.Extensions;
 
 namespace RedisGUI.Domain.Exceptions;
 

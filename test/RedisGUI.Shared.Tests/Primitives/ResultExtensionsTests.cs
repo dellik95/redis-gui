@@ -1,5 +1,4 @@
 using FluentAssertions;
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Shared.Primitives;
 using System.Threading.Tasks;
 
@@ -190,6 +189,51 @@ public class ResultExtensionsTests
 		// Assert
 		executed.Should().BeTrue();
 		tapped.Should().Be(result);
+	}
+
+	[Test]
+	public void Ensure_PredicateSatisfied_ReturnsOriginalResult()
+	{
+		// Arrange
+		Result<int> result = Result.Success(42);
+
+		// Act
+		Result<int> ensured = result.Ensure(x => x > 0, new Error("Invalid", "Must be positive"));
+
+		// Assert
+		ensured.IsSuccess.Should().BeTrue();
+		ensured.Value.Should().Be(42);
+	}
+
+	[Test]
+	public void Ensure_PredicateNotSatisfied_ReturnsFailure()
+	{
+		// Arrange
+		Result<int> result = Result.Success(-1);
+		Error error = new("Invalid", "Must be positive");
+
+		// Act
+		Result<int> ensured = result.Ensure(x => x > 0, error);
+
+		// Assert
+		ensured.IsFailure.Should().BeTrue();
+		ensured.Error.Should().Be(error);
+	}
+
+	[Test]
+	public async Task Match_TaskResult_ExecutesAppropriateBranch()
+	{
+		// Arrange
+		Task<Result> successTask = Task.FromResult(Result.Success());
+		Task<Result> failureTask = Task.FromResult(Result.Failure(new Error("Err", "Fail")));
+
+		// Act
+		string successResult = await successTask.Match(() => "ok", err => "failed");
+		string failureResult = await failureTask.Match(() => "ok", err => "failed");
+
+		// Assert
+		successResult.Should().Be("ok");
+		failureResult.Should().Be("failed");
 	}
 }
 

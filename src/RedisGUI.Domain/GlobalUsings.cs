@@ -1,5 +1,6 @@
 global using RedisGUI.Domain.Primitives;
 global using RedisGUI.Shared.Primitives;
+global using RedisGUI.Shared.Extensions;
 global using System;
 global using System.Collections.Generic;
 global using System.Linq;

@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Endpoints.RedisStorage.UpdateRedisValue;
 using RedisGUI.Shared.Mediator;

@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetConnectionById;
 using RedisGUI.Application.Connections.Shared;
 using RedisGUI.Shared.Mediator;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetConnection

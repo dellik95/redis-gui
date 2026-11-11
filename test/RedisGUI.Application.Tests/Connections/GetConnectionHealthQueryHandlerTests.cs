@@ -47,6 +47,29 @@ public class GetConnectionHealthQueryHandlerTests
 	}
 
 	[Test]
+	public async Task Handle_UnhealthyConnection_ReturnsErrorStatus()
+	{
+		// Arrange
+		Guid connectionId = Guid.NewGuid();
+		GetConnectionHealthQuery query = new(connectionId);
+
+		ConnectionHealth health = ConnectionHealth.Unhealthy(connectionId, "Connection timeout", 3);
+
+		_healthMonitorMock
+			.Setup(x => x.GetHealth(connectionId))
+			.Returns(health);
+
+		// Act
+		Result<GetConnectionHealthResponse> result = await _handler.Handle(query, CancellationToken.None);
+
+		// Assert
+		result.IsSuccess.Should().BeTrue();
+		result.Value.Status.Should().Be("Unhealthy");
+		result.Value.ErrorMessage.Should().Be("Connection timeout");
+		result.Value.ConsecutiveFailures.Should().Be(3);
+	}
+
+	[Test]
 	public async Task Handle_HealthNotFound_ReturnsFailure()
 	{
 		// Arrange

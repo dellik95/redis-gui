@@ -1,7 +1,7 @@
 using RedisGUI.Domain.Audit;
 using System;
 
-namespace RedisGUI.Application.Core.Behaviors;
+namespace RedisGUI.Application.Core.Attributes;
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 public sealed class AuditableAttribute : Attribute
 {

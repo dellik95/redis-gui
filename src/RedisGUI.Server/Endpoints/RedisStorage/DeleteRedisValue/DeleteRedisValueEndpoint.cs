@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using System;

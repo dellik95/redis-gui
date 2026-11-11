@@ -1,7 +1,7 @@
 using System.IO;
 using StackExchange.Redis;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.ConnectionManager;
 
 /// <summary>
 /// Abstraction for creating <see cref="ConnectionMultiplexer"/> instances.

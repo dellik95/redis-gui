@@ -1,7 +1,7 @@
 using FluentAssertions;
 using FluentAssertions.Specialized;
 using FluentValidation;
-using RedisGUI.Application.Core.Behavior;
+using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Shared.Mediator;
 using System;
 using System.Collections.Generic;
@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AppValidationException = RedisGUI.Application.Exceptions.ValidationException;
 
-namespace RedisGUI.Application.Tests.Core.Behavior;
+namespace RedisGUI.Application.Tests.Core.Behaviors;
 
 [TestFixture]
 public class ValidationBehaviorTests

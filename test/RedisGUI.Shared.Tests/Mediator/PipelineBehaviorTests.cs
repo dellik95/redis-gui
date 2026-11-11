@@ -1,4 +1,3 @@
-using RedisGUI.Domain.Primitives;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;

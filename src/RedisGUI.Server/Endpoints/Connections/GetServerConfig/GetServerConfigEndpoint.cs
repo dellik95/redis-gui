@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetServerConfig;
-using RedisGUI.Domain.Extensions;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;

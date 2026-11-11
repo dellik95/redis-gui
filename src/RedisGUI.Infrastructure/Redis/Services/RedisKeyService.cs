@@ -2,7 +2,7 @@ using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 using System.Linq;
 
-namespace RedisGUI.Infrastructure.Redis;
+namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>
 /// Service for managing Redis key operations

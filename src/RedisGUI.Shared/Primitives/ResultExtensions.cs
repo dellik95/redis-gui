@@ -1,4 +1,4 @@
-using RedisGUI.Domain.Primitives;
+using System;
 using System.Threading.Tasks;
 
 namespace RedisGUI.Shared.Primitives;
@@ -164,6 +164,62 @@ public static class ResultExtensions
 		}
 
 		return result;
+	}
+
+	/// <summary>
+	/// Ensures that the result value satisfies a given predicate
+	/// </summary>
+	/// <typeparam name="TValue">The type of the result value</typeparam>
+	/// <param name="result">The result to check</param>
+	/// <param name="predicate">The predicate that the value must satisfy</param>
+	/// <param name="error">The error to return if the predicate is not satisfied</param>
+	/// <returns>The original result if successful and predicate is satisfied, otherwise a failure result</returns>
+	public static Result<TValue> Ensure<TValue>(
+		this Result<TValue> result,
+		Func<TValue, bool> predicate,
+		Error error)
+	{
+		if (result.IsFailure)
+		{
+			return result;
+		}
+
+		return predicate(result.Value) ? result : Result.Failure<TValue>(error);
+	}
+
+	/// <summary>
+	/// Matches on an asynchronous result task, executing the appropriate function
+	/// </summary>
+	/// <typeparam name="T">Return type</typeparam>
+	/// <param name="resultTask">The task returning a result</param>
+	/// <param name="onSuccess">Function to execute on success</param>
+	/// <param name="onFailure">Function to execute on failure</param>
+	/// <returns>The result of the executed function</returns>
+	public static async Task<T> Match<T>(
+		this Task<Result> resultTask,
+		Func<T> onSuccess,
+		Func<Error, T> onFailure)
+	{
+		Result result = await resultTask;
+		return result.IsSuccess ? onSuccess() : onFailure(result.Error);
+	}
+
+	/// <summary>
+	/// Matches on an asynchronous result with value task, executing the appropriate function
+	/// </summary>
+	/// <typeparam name="TValue">Value type</typeparam>
+	/// <typeparam name="T">Return type</typeparam>
+	/// <param name="resultTask">The task returning a result</param>
+	/// <param name="onSuccess">Function to execute on success with the value</param>
+	/// <param name="onFailure">Function to execute on failure</param>
+	/// <returns>The result of the executed function</returns>
+	public static async Task<T> Match<TValue, T>(
+		this Task<Result<TValue>> resultTask,
+		Func<TValue, T> onSuccess,
+		Func<Error, T> onFailure)
+	{
+		Result<TValue> result = await resultTask;
+		return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Error);
 	}
 }
 
