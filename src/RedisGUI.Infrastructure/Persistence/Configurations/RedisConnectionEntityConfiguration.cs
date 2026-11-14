@@ -35,9 +35,6 @@ namespace RedisGUI.Infrastructure.Persistence.Configurations
 				.IsRequired()
 				.HasConversion(x => x.Value, x => new DatabaseNumber(x));
 
-			builder.Property(x => x.OwnerId)
-				.HasConversion(x => x.HasValue ? x.Value : null, x => ConnectionOwnerId.FromNullable(x));
-
 			builder.Ignore(x => x.OwnerId);
 
 			// IsAvailable

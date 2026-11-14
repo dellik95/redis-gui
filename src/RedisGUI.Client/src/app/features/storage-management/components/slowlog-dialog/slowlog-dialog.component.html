@@ -20,7 +20,11 @@
 
 <mat-dialog-content class="dialog-content">
   @if (loading()) {
-    <app-empty-state type="loading" message="Fetching slow query log from Redis..." [spinnerDiameter]="36" />
+    <app-empty-state
+      type="loading"
+      message="Fetching slow query log from Redis..."
+      [spinnerDiameter]="36"
+    />
   } @else if (loadError()) {
     <app-empty-state type="empty" icon="error_outline" heading="Could not load the slow log">
       <button mat-stroked-button (click)="loadSlowlog()">Retry</button>

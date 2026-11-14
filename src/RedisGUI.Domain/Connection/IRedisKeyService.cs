@@ -42,7 +42,7 @@ public interface IRedisKeyService
 	/// <param name="database">Target database index</param>
 	/// <returns>Tuple with deleted count and list of failed keys</returns>
 	Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysAsync(
-		RedisConnection connection, 
+		RedisConnection connection,
 		IReadOnlyList<string> keys,
 		CancellationToken cancellationToken = default,
 		int? database = null);

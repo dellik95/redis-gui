@@ -54,7 +54,7 @@ public class RedisMetricsBackgroundJob : BackgroundService
 			{
 				using var scope = this.serviceProvider.CreateScope();
 				var sender = scope.ServiceProvider.GetRequiredService<IMediator>();
-				
+
 				foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 				{
 					var metrics = await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);

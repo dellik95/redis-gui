@@ -388,7 +388,7 @@ public class RedisConnectionManagerTests
 		var task2 = Task.Run(async () => await manager.DisposeAsync());
 		var task3 = Task.Run(() => manager.Dispose());
 
-		Assert.DoesNotThrowAsync(async () => await Task.WhenAll(task1, task2, task3));
+		await Assert.DoesNotThrowAsync(async () => await Task.WhenAll(task1, task2, task3));
 	}
 
 	// 12. Після початку disposal нові connections не створюються.

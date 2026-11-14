@@ -39,7 +39,7 @@ export interface SeedDataDialogData {
   standalone: true,
   imports: [
     SeedResult,
-        FormField,
+    FormField,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,

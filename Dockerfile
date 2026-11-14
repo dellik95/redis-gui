@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Build Angular 22 Client Application
 # ==========================================
-FROM node:22-alpine AS client-build
+FROM node:26-alpine AS client-build
 WORKDIR /app/client
 
 # Cache dependencies
@@ -15,13 +15,14 @@ RUN npm run build -- --configuration production
 # ==========================================
 # Stage 2: Build & Publish .NET 10 Backend
 # ==========================================
-FROM mcr.microsoft.com/dotnet/sdk:10.0-preview AS dotnet-build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS dotnet-build
 WORKDIR /src
 
 # Copy MSBuild properties and package definitions required for TargetFramework and CPM
 COPY Directory.Build.props ./
 COPY Directory.Packages.props ./
 COPY RedisGUI.slnx ./
+COPY ["build/Code Analysis/", "build/Code Analysis/"]
 COPY src/RedisGUI.Shared/RedisGUI.Shared.csproj src/RedisGUI.Shared/
 COPY src/RedisGUI.Domain/RedisGUI.Domain.csproj src/RedisGUI.Domain/
 COPY src/RedisGUI.Application/RedisGUI.Application.csproj src/RedisGUI.Application/
@@ -43,7 +44,7 @@ RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false /p:BuildingIns
 # ==========================================
 # Stage 3: Production Runtime
 # ==========================================
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-preview AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 WORKDIR /app
 
 EXPOSE 8080

@@ -35,7 +35,9 @@
     }
   }
 
-  mat-card-content { padding: 0; }
+  mat-card-content {
+    padding: 0;
+  }
 }
 
 .demo-banner {
@@ -65,8 +67,13 @@
     .demo-text {
       display: flex;
       flex-direction: column;
-      strong { color: #1976d2; font-weight: 600; }
-      span { color: var(--mat-sys-on-surface-variant); }
+      strong {
+        color: #1976d2;
+        font-weight: 600;
+      }
+      span {
+        color: var(--mat-sys-on-surface-variant);
+      }
     }
   }
 
@@ -77,7 +84,12 @@
     padding: 0 8px;
     color: #1976d2;
 
-    mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      margin-right: 4px;
+    }
   }
 }
 
@@ -86,8 +98,15 @@
   flex-direction: column;
   gap: 12px;
 
-  ui-input { display: block; width: 100%; }
-  ui-button { display: block; width: 100%; margin-top: 8px; }
+  ui-input {
+    display: block;
+    width: 100%;
+  }
+  ui-button {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+  }
 }
 
 .submit-button {
@@ -97,7 +116,10 @@
   font-weight: 500;
   width: 100%;
 
-  .inline-spinner { display: inline-block; margin-right: 8px; }
+  .inline-spinner {
+    display: inline-block;
+    margin-right: 8px;
+  }
 }
 
 .register-link {
@@ -115,8 +137,15 @@
       font-weight: 500;
       transition: opacity 150ms ease-in-out;
 
-      &:hover { opacity: 0.87; text-decoration: underline; }
-      &:focus { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; border-radius: 2px; }
+      &:hover {
+        opacity: 0.87;
+        text-decoration: underline;
+      }
+      &:focus {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: 2px;
+        border-radius: 2px;
+      }
     }
   }
 }

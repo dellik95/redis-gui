@@ -6,7 +6,7 @@ namespace RedisGUI.Infrastructure.SignalR
 	/// <summary>
 	/// Manages SignalR hub subscriber connections and their associated Redis connection IDs
 	/// </summary>
-	public class HubSubscribersManager: IHubSubscribersManager
+	public class HubSubscribersManager : IHubSubscribersManager
 	{
 		private readonly ConcurrentDictionary<string, Guid> subscribers = [];
 

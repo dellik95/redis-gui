@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,7 +42,7 @@ public class LoggingBehaviorTests
 			x => x.Log(
 				LogLevel.Information,
 				It.IsAny<EventId>(),
-				It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("Starting executing request")),
+				It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("Starting executing request")),
 				It.IsAny<Exception>(),
 				It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
 			Times.Once);
@@ -49,7 +50,7 @@ public class LoggingBehaviorTests
 			x => x.Log(
 				LogLevel.Information,
 				It.IsAny<EventId>(),
-				It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("processed successfully")),
+				It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("processed successfully")),
 				It.IsAny<Exception>(),
 				It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
 			Times.Once);
@@ -78,11 +79,31 @@ public class LoggingBehaviorTests
 			x => x.Log(
 				LogLevel.Error,
 				It.IsAny<EventId>(),
-				It.Is<It.IsAnyType>((v, t) => v.ToString()!.Contains("processing failed")),
+				It.Is<It.IsAnyType>((v, t) => v != null && v.ToString()!.Contains("processing failed")),
 				It.Is<Exception>(e => e == exception),
 				It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
 			Times.Once);
 	}
+
+	[Test]
+	public async Task Handle_FailureResult_ShouldLogWarningInsteadOfSuccess()
+	{
+		var logger = new Mock<ILogger<LoggingBehavior<FailedRequest, Result<string>>>>();
+		var behavior = new LoggingBehavior<FailedRequest, Result<string>>(logger.Object);
+		var failure = Result.Failure<string>(new Error("Metrics.Failed", "Metrics unavailable"));
+
+		var result = await behavior.Handle(new FailedRequest(), CancellationToken.None, () => Task.FromResult(failure));
+
+		result.Should().BeSameAs(failure);
+		logger.Verify(x => x.Log(LogLevel.Warning, It.IsAny<EventId>(),
+			It.Is<It.IsAnyType>((value, type) => value != null && value.ToString()!.Contains("Metrics.Failed")),
+			It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Once);
+		logger.Verify(x => x.Log(LogLevel.Information, It.IsAny<EventId>(),
+			It.Is<It.IsAnyType>((value, type) => value != null && value.ToString()!.Contains("processed successfully")),
+			It.IsAny<Exception>(), It.IsAny<Func<It.IsAnyType, Exception?, string>>()), Times.Never);
+	}
+
+	public class FailedRequest : IRequest<Result<string>> { }
 
 	public class TestRequest : IRequest<TestResponse>
 	{

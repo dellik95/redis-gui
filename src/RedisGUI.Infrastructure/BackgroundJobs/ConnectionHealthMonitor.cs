@@ -109,7 +109,7 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 						connection.Id,
 						responseTimeMs,
 						$"Slow response time: {responseTimeMs:F0}ms");
-					
+
 					logger.LogWarning(
 						"Connection {ConnectionId} is degraded (response time: {ResponseTime}ms)",
 						connection.Id,

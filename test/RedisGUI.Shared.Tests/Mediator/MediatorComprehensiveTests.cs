@@ -204,7 +204,7 @@ public class MediatorTests
 		var notification = new TestNotification("test");
 
 		// Act & Assert
-		Assert.DoesNotThrowAsync(async () => await mediator.Publish(notification));
+		await Assert.DoesNotThrowAsync(async () => await mediator.Publish(notification));
 	}
 
 	[Test]
@@ -267,7 +267,7 @@ public class MediatorTests
 
 		// Act & Assert
 		// Should not throw, even with failing handler
-		Assert.DoesNotThrowAsync(async () => await mediator.Publish(notification));
+		await Assert.DoesNotThrowAsync(async () => await mediator.Publish(notification));
 
 		// Other handlers should still execute
 		Assert.Multiple(() =>

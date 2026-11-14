@@ -12,8 +12,8 @@ namespace RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 /// <param name="PageNumber">Optional page number.</param>
 /// <param name="Database">Optional database index (DB 0-15).</param>
 public sealed record GetAllRedisKeysQuery(
-    Guid ConnectionId, 
-    string Pattern = "*", 
-    int? PageSize = null, 
-    int? PageNumber = null,
-    int? Database = null) : IQuery<GetAllRedisValuesResponse>; 
+	Guid ConnectionId,
+	string Pattern = "*",
+	int? PageSize = null,
+	int? PageNumber = null,
+	int? Database = null) : IQuery<GetAllRedisValuesResponse>;

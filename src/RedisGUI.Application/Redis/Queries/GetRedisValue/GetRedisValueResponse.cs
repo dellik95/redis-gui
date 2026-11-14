@@ -11,8 +11,8 @@ namespace RedisGUI.Application.Redis.Queries.GetRedisValue;
 /// <param name="TimeToLive">Time until the key expires (null if no expiration).</param>
 /// <param name="Ttl">TTL in seconds (-1 if no expiration).</param>
 public sealed record GetRedisValueResponse(
-    string Key,
-    object Value,
-    string Type,
-    TimeSpan? TimeToLive,
-    long? Ttl = null);
+	string Key,
+	object Value,
+	string Type,
+	TimeSpan? TimeToLive,
+	long? Ttl = null);

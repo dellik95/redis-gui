@@ -1,21 +1,26 @@
 <div class="edit-key-panel flex flex-col h-full overflow-y-auto overflow-x-hidden">
   @if (selectedKey()) {
     <!-- Sticky header -->
-    <div class="panel-header sticky top-0 z-10 flex justify-between items-center
-                px-5 py-4 bg-canvas-subtle border-b border-canvas-border shrink-0">
+    <div
+      class="panel-header sticky top-0 z-10 flex justify-between items-center px-5 py-4 bg-canvas-subtle border-b border-canvas-border shrink-0"
+    >
       <div class="flex items-center gap-3 min-w-0">
         <mat-icon class="!text-[24px] !w-6 !h-6 text-brand shrink-0">tune</mat-icon>
         <div class="flex flex-col gap-0.5 min-w-0">
           <h2 class="m-0 text-[16px] font-semibold text-canvas-text leading-tight">Edit Key</h2>
           <div class="flex items-center gap-1.5 min-w-0">
-            <span class="key-badge font-mono text-[12px] px-2 py-0.5 rounded
-                         bg-brand/10 text-brand border border-brand/25
-                         max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap"
-                  [matTooltip]="selectedKey()?.key || ''">
+            <span
+              class="key-badge font-mono text-[12px] px-2 py-0.5 rounded bg-brand/10 text-brand border border-brand/25 max-w-[280px] overflow-hidden text-ellipsis whitespace-nowrap"
+              [matTooltip]="selectedKey()?.key || ''"
+            >
               {{ selectedKey()?.key }}
             </span>
-            <button mat-icon-button class="!w-6 !h-6"
-                    (click)="copyKeyName()" matTooltip="Copy key name">
+            <button
+              mat-icon-button
+              class="!w-6 !h-6"
+              (click)="copyKeyName()"
+              matTooltip="Copy key name"
+            >
               <mat-icon>content_copy</mat-icon>
             </button>
           </div>
@@ -23,10 +28,13 @@
       </div>
 
       <div class="flex items-center gap-1 shrink-0">
-        <button mat-icon-button type="button"
-                (click)="refreshKey()"
-                [disabled]="isLoading() || isSaving()"
-                matTooltip="Refresh value from Redis">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="refreshKey()"
+          [disabled]="isLoading() || isSaving()"
+          matTooltip="Refresh value from Redis"
+        >
           <mat-icon [class.animate-spin]="isLoading()">refresh</mat-icon>
         </button>
         <button mat-icon-button type="button" (click)="onClose()" matTooltip="Close editor">

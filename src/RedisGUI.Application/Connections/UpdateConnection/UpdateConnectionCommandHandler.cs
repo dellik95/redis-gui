@@ -33,7 +33,7 @@ internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateCon
 	public async Task<Result> Handle(UpdateConnectionCommand request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
-		
+
 		if (connectionResult.IsFailure)
 		{
 			return connectionResult;

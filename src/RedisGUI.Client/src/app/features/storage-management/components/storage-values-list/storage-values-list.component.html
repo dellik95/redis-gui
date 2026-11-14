@@ -79,13 +79,19 @@
 
     @if (filteredData().length === 0) {
       @if (isLoading()) {
-        <app-empty-state type="loading" message="Loading keys from Redis..." [spinnerDiameter]="40" />
+        <app-empty-state
+          type="loading"
+          message="Loading keys from Redis..."
+          [spinnerDiameter]="40"
+        />
       } @else {
         <app-empty-state type="empty" icon="search_off" heading="No keys found">
           <p class="text-[14px] text-canvas-muted max-w-[420px] text-center m-0">
             @if (searchPattern() !== '*' || typeFilter() !== '') {
               No keys matched pattern <code>{{ searchPattern() }}</code>
-              @if (typeFilter()) { with type <strong>{{ typeFilter() }}</strong> }
+              @if (typeFilter()) {
+                with type <strong>{{ typeFilter() }}</strong>
+              }
             } @else {
               This Redis database currently contains no keys.
             }

@@ -35,7 +35,11 @@ import { SelectionModel } from '@angular/cdk/collections';
 import { BulkActionsToolbarComponent } from '../bulk-actions-toolbar/bulk-actions-toolbar.component';
 import { TreeViewListComponent } from '../../../../shared/components/tree-view-list/tree-view-list.component';
 import { ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
-import { ConfirmDialogComponent, PromptDialogComponent, EmptyStateComponent } from '../../../../shared/components';
+import {
+  ConfirmDialogComponent,
+  PromptDialogComponent,
+  EmptyStateComponent
+} from '../../../../shared/components';
 import type { RedisTypeCounts } from './key-type-filter';
 import { FormatBytesPipe } from '../../../../shared/pipes/format-bytes.pipe';
 import { filter } from 'rxjs/operators';

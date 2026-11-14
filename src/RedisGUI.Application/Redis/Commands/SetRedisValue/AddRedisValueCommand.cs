@@ -11,7 +11,7 @@ namespace RedisGUI.Application.Redis.Commands.SetRedisValue;
 /// <param name="Value">The value to set.</param>
 /// <param name="Ttl">Optional time-to-live for the key.</param>
 public sealed record AddRedisValueCommand(
-    Guid ConnectionId,
-    string Key,
-    string Value,
-    TimeSpan? Ttl = null) : ICommand; 
+	Guid ConnectionId,
+	string Key,
+	string Value,
+	TimeSpan? Ttl = null) : ICommand;

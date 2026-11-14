@@ -10,6 +10,6 @@ namespace RedisGUI.Application.Redis.Commands.ExecuteCli;
 /// <param name="Command">The raw command string</param>
 /// <param name="Database">Optional target database</param>
 public sealed record ExecuteCliCommand(
-    Guid ConnectionId,
-    string Command,
-    int? Database = null) : ICommand<ExecuteCliResponse>;
+	Guid ConnectionId,
+	string Command,
+	int? Database = null) : ICommand<ExecuteCliResponse>;

@@ -11,6 +11,6 @@ namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 /// <param name="Keys">List of keys to delete.</param>
 /// <param name="Database">Optional database index.</param>
 public sealed record DeleteMultipleKeysCommand(
-    Guid ConnectionId,
-    IReadOnlyList<string> Keys,
-    int? Database = null) : ICommand<DeleteMultipleKeysResponse>;
+	Guid ConnectionId,
+	IReadOnlyList<string> Keys,
+	int? Database = null) : ICommand<DeleteMultipleKeysResponse>;

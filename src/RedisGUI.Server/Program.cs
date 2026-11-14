@@ -96,10 +96,10 @@ public class Program
 		});
 
 		WebApplication app = builder.Build();
-		
+
 		// Enable response compression
 		app.UseResponseCompression();
-		
+
 		// A browser navigation opens the Angular health page. Probes keep the health-check endpoint.
 		app.Use(async (context, next) =>
 		{

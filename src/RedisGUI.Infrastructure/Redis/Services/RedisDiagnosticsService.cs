@@ -76,7 +76,7 @@ public class RedisDiagnosticsService(
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<List<SlowlogEntryInfo>>(multiplexerResult.Error);
 
-		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
+		var server = multiplexerResult.Value.GetConnectedServer(connection);
 		var entries = await server.SlowlogGetAsync(count);
 		var result = entries.Select(e => new SlowlogEntryInfo(
 			e.UniqueId,
@@ -98,7 +98,7 @@ public class RedisDiagnosticsService(
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerInfoDto>(multiplexerResult.Error);
 
-		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
+		var server = multiplexerResult.Value.GetConnectedServer(connection);
 		var infoGroups = await server.InfoAsync();
 
 		return Result.Success(RedisInfoParser.ParseServerInfo(infoGroups));
@@ -113,7 +113,7 @@ public class RedisDiagnosticsService(
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerConfigDto>(multiplexerResult.Error);
 
-		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
+		var server = multiplexerResult.Value.GetConnectedServer(connection);
 		var configs = await server.ConfigGetAsync(pattern ?? "*");
 		var paramList = configs
 			.Select(c => new RedisConfigParameterDto(c.Key, c.Value, true))
@@ -133,9 +133,9 @@ public class RedisDiagnosticsService(
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure) return Result.Failure<RedisSetConfigResponseDto>(multiplexerResult.Error);
 
-		var server = multiplexerResult.Value.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
 		try
 		{
+			var server = multiplexerResult.Value.GetConnectedServer(connection);
 			await server.ConfigSetAsync(parameterName, parameterValue);
 			return Result.Success(new RedisSetConfigResponseDto(true, "Configuration parameter updated successfully", parameterName, parameterValue));
 		}

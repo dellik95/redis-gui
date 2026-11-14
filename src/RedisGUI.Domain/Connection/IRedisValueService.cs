@@ -6,10 +6,10 @@ namespace RedisGUI.Domain.Connection;
 /// Service for managing Redis key and value operations.
 /// Also aggregates specialized Redis services for backward compatibility.
 /// </summary>
-public interface IRedisValueService : 
-	IRedisLoadTestService, 
-	IRedisSeedDataService, 
-	IRedisCliService, 
+public interface IRedisValueService :
+	IRedisLoadTestService,
+	IRedisSeedDataService,
+	IRedisCliService,
 	IRedisDiagnosticsService
 {
 	/// <summary>
@@ -21,9 +21,9 @@ public interface IRedisValueService :
 	/// <param name="database">Database index</param>
 	/// <returns>Retrieved Redis value</returns>
 	Task<Result<RedisValue>> GetValueAsync(
-		RedisConnection connection, 
-		string key, 
-		CancellationToken cancellationToken = default, 
+		RedisConnection connection,
+		string key,
+		CancellationToken cancellationToken = default,
 		int? database = null);
 
 	/// <summary>
@@ -37,11 +37,11 @@ public interface IRedisValueService :
 	/// <param name="database">Database index</param>
 	/// <returns>Result indicating success or failure</returns>
 	Task<Result> SetValueAsync(
-		RedisConnection connection, 
-		string key, 
-		string value, 
-		TimeSpan? ttl = null, 
-		CancellationToken cancellationToken = default, 
+		RedisConnection connection,
+		string key,
+		string value,
+		TimeSpan? ttl = null,
+		CancellationToken cancellationToken = default,
 		int? database = null);
 
 	/// <summary>
@@ -56,12 +56,12 @@ public interface IRedisValueService :
 	/// <param name="database">Database index</param>
 	/// <returns>Result indicating success or failure</returns>
 	Task<Result> UpdateValueAsync(
-		RedisConnection connection, 
-		string key, 
-		object value, 
-		string type, 
-		TimeSpan? ttl = null, 
-		CancellationToken cancellationToken = default, 
+		RedisConnection connection,
+		string key,
+		object value,
+		string type,
+		TimeSpan? ttl = null,
+		CancellationToken cancellationToken = default,
 		int? database = null);
 
 	/// <summary>

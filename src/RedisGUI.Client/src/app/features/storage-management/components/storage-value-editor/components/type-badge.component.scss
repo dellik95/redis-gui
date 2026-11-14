@@ -69,7 +69,8 @@
     border-color: rgba(245, 158, 11, 0.3);
   }
 
-  &.type-zset, &.type-sortedset {
+  &.type-zset,
+  &.type-sortedset {
     background-color: rgba(244, 63, 94, 0.12);
     color: #e11d48;
     border-color: rgba(244, 63, 94, 0.3);
@@ -88,7 +89,7 @@
   }
 }
 
-:host-context([data-theme="clean-light"]) .type-badge,
+:host-context([data-theme='clean-light']) .type-badge,
 :host-context(.light) .type-badge {
   font-weight: 700;
   &.type-string {
@@ -111,7 +112,8 @@
     color: #b45309;
     border-color: rgba(245, 158, 11, 0.45);
   }
-  &.type-zset, &.type-sortedset {
+  &.type-zset,
+  &.type-sortedset {
     background-color: rgba(244, 63, 94, 0.16);
     color: #be123c;
     border-color: rgba(244, 63, 94, 0.45);
@@ -122,4 +124,3 @@
     border-color: rgba(99, 102, 241, 0.45);
   }
 }
-  

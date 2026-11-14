@@ -6,5 +6,5 @@ namespace RedisGUI.Application.Redis.Queries.GetKeyMemoryUsage;
 /// <param name="Key">The Redis key name</param>
 /// <param name="MemoryBytes">Memory usage in bytes</param>
 public sealed record GetKeyMemoryUsageResponse(
-    string Key,
-    long MemoryBytes);
+	string Key,
+	long MemoryBytes);

@@ -5,11 +5,11 @@
 </p>
 
 <p align="center">
-  <strong>An enterprise-grade, high-performance Redis management studio and diagnostics platform built on .NET 10, ASP.NET Core Minimal APIs, and Angular 22 Signals.</strong>
+  <strong>An enterprise-grade, high-performance Redis management studio and diagnostics platform built on .NET 11, ASP.NET Core Minimal APIs, and Angular 22 Signals.</strong>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/.NET-10.0-512BD4?logo=dotnet" alt=".NET 10">
+  <img src="https://img.shields.io/badge/.NET-11.0-512BD4?logo=dotnet" alt=".NET 11">
   <img src="https://img.shields.io/badge/Angular-22.2.5-DD0031?logo=angular" alt="Angular 22">
   <img src="https://img.shields.io/badge/Redis-7.x%20%7C%208.x-DC382D?logo=redis" alt="Redis">
   <img src="https://img.shields.io/badge/Docker-Ready-2496ED?logo=docker" alt="Docker">
@@ -116,7 +116,7 @@ flowchart LR
     Infra <--> Redis[("Redis 7.x / 8.x")]
 ```
 
-- **Backend**: .NET 10, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
+- **Backend**: .NET 11, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
 - **Frontend**: Angular 22 (Standalone Components, Signals, Signal Forms), Angular Material 22, Tailwind CSS, Monaco Editor.
 - **Architecture Highlights**:
   - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`) synced between client and server.
@@ -148,7 +148,7 @@ Navigate to:
 ### Option 2: Local Development
 
 #### Prerequisites
-- [.NET 10 SDK](https://dotnet.microsoft.com/)
+- [.NET 11 SDK](https://dotnet.microsoft.com/)
 - [Node.js & npm](https://nodejs.org/) (Node 22.22.3+, 24.15+, or 26.x)
 - Running Redis instance on `127.0.0.1:6379` (e.g. via Docker or WSL)
 

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,14 @@ public class LoggingBehavior<TRequest, TResponse>
 			logger.LogInformation("Starting executing request {Request}", name);
 			var result = await next();
 
-			logger.LogInformation("Request {Request} processed successfully.", name);
+			if (result is Result { IsFailure: true } failure)
+			{
+				logger.LogWarning("Request {Request} failed with {ErrorCode}.", name, failure.Error.Code);
+			}
+			else
+			{
+				logger.LogInformation("Request {Request} processed successfully.", name);
+			}
 
 			return result;
 		}

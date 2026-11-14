@@ -39,7 +39,7 @@ public class RedisKeyService : IRedisKeyService
 		var result = servers
 			.Select(server => server.Keys(connection.DatabaseNumber.Value).Select(x => x.ToString()))
 			.Aggregate(keys, (current, serverKeys) => current.Union(serverKeys).ToList());
-		
+
 		return Result.Success<IEnumerable<string>>(result);
 	}
 
@@ -57,7 +57,7 @@ public class RedisKeyService : IRedisKeyService
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		bool deleted = await db.KeyDeleteAsync(key);
-		
+
 		return Result.Success(deleted);
 	}
 
@@ -77,7 +77,7 @@ public class RedisKeyService : IRedisKeyService
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		RedisKey[] redisKeys = keys.Select(x => new RedisKey(x)).ToArray();
 		long deletedCount = await db.KeyDeleteAsync(redisKeys);
-		
+
 		return Result.Success(deletedCount);
 	}
 
@@ -139,10 +139,9 @@ public class RedisKeyService : IRedisKeyService
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		IDatabase db = multiplexer.GetDatabase(targetDb);
-		IServer server = multiplexer.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
-
 		try
 		{
+			IServer server = multiplexer.GetConnectedServer(connection);
 			RedisKey[] keys = server.Keys(targetDb, pattern).ToArray();
 
 			if (keys.Length == 0)
@@ -174,7 +173,7 @@ public class RedisKeyService : IRedisKeyService
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		RedisType type = await db.KeyTypeAsync(key);
-		
+
 		return Result.Success(type.ToString());
 	}
 }

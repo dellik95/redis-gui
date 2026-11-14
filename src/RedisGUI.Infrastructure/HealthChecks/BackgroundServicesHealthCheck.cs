@@ -24,7 +24,7 @@ public class BackgroundServicesHealthCheck : IHealthCheck
 		{
 			// Check if the connection health monitor is accessible
 			var healthMonitor = serviceProvider.GetService<IConnectionHealthMonitor>();
-			
+
 			if (healthMonitor == null)
 			{
 				return Task.FromResult(

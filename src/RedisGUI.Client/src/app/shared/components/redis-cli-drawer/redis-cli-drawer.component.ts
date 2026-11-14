@@ -30,7 +30,7 @@ export interface CliLogEntry {
   selector: 'app-redis-cli-drawer',
   standalone: true,
   imports: [
-        FormsModule,
+    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,

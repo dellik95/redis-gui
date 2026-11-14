@@ -41,23 +41,23 @@ public static class OpenTelemetryConfigurationExtensions
 					})
 					.AddEntityFrameworkCoreInstrumentation(options =>
 					{
-					// Note: SetDbStatementForText and SetDbStatementForStoredProcedure are not available in current version
-					// options.SetDbStatementForText = true;
-					// options.SetDbStatementForStoredProcedure = true;
-					options.EnrichWithIDbCommand = (activity, command) =>
-					{
-						// Add custom tags to EF Core spans
-						activity.SetTag("db.command.timeout", command.CommandTimeout);
-					};
-				})
+						// Note: SetDbStatementForText and SetDbStatementForStoredProcedure are not available in current version
+						// options.SetDbStatementForText = true;
+						// options.SetDbStatementForStoredProcedure = true;
+						options.EnrichWithIDbCommand = (activity, command) =>
+						{
+							// Add custom tags to EF Core spans
+							activity.SetTag("db.command.timeout", command.CommandTimeout);
+						};
+					})
 				// Add source for custom instrumentation
 				.AddSource("RedisGUI.*")
 				.AddConsoleExporter();
-				
-			// TODO: Add production exporters when deploying
-			// .AddJaegerExporter(options => options.Endpoint = new Uri("http://jaeger:4317"))
-			// .AddOtlpExporter(options => options.Endpoint = new Uri("http://otel-collector:4317"))
-		})
+
+				// TODO: Add production exporters when deploying
+				// .AddJaegerExporter(options => options.Endpoint = new Uri("http://jaeger:4317"))
+				// .AddOtlpExporter(options => options.Endpoint = new Uri("http://otel-collector:4317"))
+			})
 			.WithMetrics(metrics =>
 			{
 				metrics
@@ -68,7 +68,7 @@ public static class OpenTelemetryConfigurationExtensions
 					// Add custom meters
 					.AddMeter("RedisGUI.*")
 					.AddConsoleExporter();
-					
+
 				// TODO: Add production exporters
 				// .AddPrometheusExporter()
 				// .AddOtlpExporter()
@@ -87,12 +87,12 @@ public static class OpenTelemetryConfigurationExtensions
 			options.IncludeScopes = true;
 			options.ParseStateValues = true;
 			options.IncludeFormattedMessage = true;
-			
+
 			// Add resource attributes
 			options.SetResourceBuilder(
 				ResourceBuilder.CreateDefault()
 					.AddService("RedisGUI.Server"));
-					
+
 			// TODO: Add production exporters
 			// options.AddOtlpExporter();
 		});

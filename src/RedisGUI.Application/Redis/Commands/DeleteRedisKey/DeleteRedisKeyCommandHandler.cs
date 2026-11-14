@@ -12,33 +12,33 @@ namespace RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 /// </summary>
 internal sealed class DeleteRedisKeyCommandHandler : ICommandHandler<DeleteRedisKeyCommand, bool>
 {
-    private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IRedisKeyService keyService;
+	private readonly IRedisConnectionRepository connectionRepository;
+	private readonly IRedisKeyService keyService;
 
-    public DeleteRedisKeyCommandHandler(
-        IRedisConnectionRepository connectionRepository,
-        IRedisKeyService keyService)
-    {
-        this.connectionRepository = connectionRepository;
-        this.keyService = keyService;
-    }
+	public DeleteRedisKeyCommandHandler(
+		IRedisConnectionRepository connectionRepository,
+		IRedisKeyService keyService)
+	{
+		this.connectionRepository = connectionRepository;
+		this.keyService = keyService;
+	}
 
-    public async Task<Result<bool>> Handle(DeleteRedisKeyCommand request, CancellationToken cancellationToken)
-    {
-        var connectionResult = await connectionRepository.GetConnectionByIdAsync(
-            request.ConnectionId, 
-            cancellationToken);
-        
-        if (connectionResult.IsFailure)
-        {
-            return Result.Failure<bool>(connectionResult.Error);
-        }
+	public async Task<Result<bool>> Handle(DeleteRedisKeyCommand request, CancellationToken cancellationToken)
+	{
+		var connectionResult = await connectionRepository.GetConnectionByIdAsync(
+			request.ConnectionId,
+			cancellationToken);
 
-        if (connectionResult.Value.IsReadOnly)
-        {
-            return Result.Failure<bool>(DomainErrors.Connection.ReadOnlyMode);
-        }
+		if (connectionResult.IsFailure)
+		{
+			return Result.Failure<bool>(connectionResult.Error);
+		}
 
-        return await keyService.DeleteKeyAsync(connectionResult.Value, request.Key, cancellationToken, request.Database);
-    }
+		if (connectionResult.Value.IsReadOnly)
+		{
+			return Result.Failure<bool>(DomainErrors.Connection.ReadOnlyMode);
+		}
+
+		return await keyService.DeleteKeyAsync(connectionResult.Value, request.Key, cancellationToken, request.Database);
+	}
 }

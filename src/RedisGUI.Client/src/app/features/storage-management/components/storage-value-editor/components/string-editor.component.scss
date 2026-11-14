@@ -74,7 +74,7 @@
 // Custom textarea wrapper — takes all remaining height
 .textarea-wrapper {
   flex: 1;
-  min-height: 120px;  // minimum so it's always usable
+  min-height: 120px; // minimum so it's always usable
   display: flex;
   flex-direction: column;
   border: 1px solid var(--color-border, #1e293b);
@@ -105,8 +105,13 @@
   // Custom scrollbar
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-light, #334155) transparent;
-  &::-webkit-scrollbar { width: 4px; }
-  &::-webkit-scrollbar-thumb { background: var(--color-border-light, #334155); border-radius: 4px; }
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border-light, #334155);
+    border-radius: 4px;
+  }
 
   &::placeholder {
     color: var(--color-text-muted, #64748b);
