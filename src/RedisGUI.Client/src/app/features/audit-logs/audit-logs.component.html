@@ -106,16 +106,8 @@
         [value]="(totalCount() | number) ?? '0'"
         label="Total Records"
       />
-      <app-stat-count-card
-        icon="pages"
-        [value]="currentPage()"
-        label="Current Page"
-      />
-      <app-stat-count-card
-        icon="library_books"
-        [value]="totalPages()"
-        label="Total Pages"
-      />
+      <app-stat-count-card icon="pages" [value]="currentPage()" label="Current Page" />
+      <app-stat-count-card icon="library_books" [value]="totalPages()" label="Total Pages" />
     </div>
 
     <!-- Audit Logs Table -->
@@ -129,10 +121,19 @@
       <mat-card-content>
         @if (items().length === 0) {
           @if (isLoading()) {
-            <app-empty-state type="loading" message="Loading audit logs..." [spinnerDiameter]="40" />
+            <app-empty-state
+              type="loading"
+              message="Loading audit logs..."
+              [spinnerDiameter]="40"
+            />
           } @else {
             <div class="empty-state p-12 text-center text-canvas-muted">
-              <app-empty-state type="empty" icon="inbox" heading="No Audit Logs Found" description="No records match your current filters." />
+              <app-empty-state
+                type="empty"
+                icon="inbox"
+                heading="No Audit Logs Found"
+                description="No records match your current filters."
+              />
             </div>
           }
         } @else {
@@ -308,8 +309,7 @@
           <div class="paginator-nav flex items-center gap-1.5">
             <button
               type="button"
-              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border
-                     transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
               [disabled]="currentPage() <= 1"
               (click)="goToPage(1)"
               matTooltip="First page"
@@ -318,8 +318,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border
-                     transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
               [disabled]="!hasPreviousPage()"
               (click)="goToPage(currentPage() - 1)"
               matTooltip="Previous page"
@@ -333,8 +332,7 @@
 
             <button
               type="button"
-              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border
-                     transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
               [disabled]="!hasNextPage()"
               (click)="goToPage(currentPage() + 1)"
               matTooltip="Next page"
@@ -343,8 +341,7 @@
             </button>
             <button
               type="button"
-              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border
-                     transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
+              class="inline-flex items-center justify-center w-8 h-8 rounded-md bg-canvas-card text-canvas-text p-0 border border-canvas-border transition-colors hover:bg-canvas-subtle disabled:opacity-40 disabled:cursor-not-allowed"
               [disabled]="currentPage() >= totalPages()"
               (click)="goToPage(totalPages())"
               matTooltip="Last page"

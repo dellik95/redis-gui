@@ -96,7 +96,7 @@ public class RedisSeedDataService(
 			var rnd = new Random();
 			return Enumerable.Range(0, 16).OrderBy(_ => rnd.Next()).Take(count).OrderBy(x => x).ToList();
 		}
-		
+
 		if (options.Databases != null && options.Databases.Count > 0)
 		{
 			var list = options.Databases.Distinct().Where(db => db >= 0 && db < 16).ToList();

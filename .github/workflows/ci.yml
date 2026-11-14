@@ -11,21 +11,20 @@ on:
 
 jobs:
   # ==========================================
-  # 1. Backend Validation (.NET 10)
+  # 1. Backend Validation (.NET 11)
   # ==========================================
   backend:
-    name: Backend Build & Test (.NET 10)
+    name: Backend Build & Test (.NET 11)
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup .NET 10
-        uses: actions/setup-dotnet@v4
+      - name: Setup .NET 11
+        uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
-          dotnet-quality: 'preview'
+          dotnet-version: '11.0.x'
 
       - name: Restore dependencies
         run: dotnet restore RedisGUI.slnx
@@ -40,7 +39,7 @@ jobs:
   # 2. Frontend Validation (Angular 22)
   # ==========================================
   frontend:
-    name: Frontend Lint & Build (Node 22 / Angular 22)
+    name: Frontend Lint & Build (Node 26 / Angular 22)
     runs-on: ubuntu-latest
 
     defaults:
@@ -49,12 +48,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
+      - name: Setup Node.js 26
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 26
           cache: 'npm'
           cache-dependency-path: src/RedisGUI.Client/package-lock.json
 
@@ -80,13 +79,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build Unified Docker Image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: Dockerfile

@@ -47,7 +47,7 @@ public class RedisMetricsCollector : IMetricsCollector
 			}
 
 			var multiplexer = multiplexerResult.Value;
-			var server = multiplexer.GetServer(connection.ServerHost.Value, connection.ServerPort.Value);
+			var server = multiplexer.GetConnectedServer(connection);
 
 			var info = await server.InfoAsync();
 			var infoSections = info.ToDictionary(x => x.Key, x => x.Select(pair => new Tuple<string, string>(pair.Key, pair.Value)));

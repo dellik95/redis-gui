@@ -12,52 +12,52 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// </summary>
 internal sealed class DeleteKeysByPatternCommandHandler : ICommandHandler<DeleteKeysByPatternCommand, DeleteKeysByPatternResponse>
 {
-    private readonly IRedisConnectionRepository connectionRepository;
-    private readonly IRedisKeyService keyService;
+	private readonly IRedisConnectionRepository connectionRepository;
+	private readonly IRedisKeyService keyService;
 
-    public DeleteKeysByPatternCommandHandler(
-        IRedisConnectionRepository connectionRepository,
-        IRedisKeyService keyService)
-    {
-        this.connectionRepository = connectionRepository;
-        this.keyService = keyService;
-    }
+	public DeleteKeysByPatternCommandHandler(
+		IRedisConnectionRepository connectionRepository,
+		IRedisKeyService keyService)
+	{
+		this.connectionRepository = connectionRepository;
+		this.keyService = keyService;
+	}
 
-    public async Task<Result<DeleteKeysByPatternResponse>> Handle(
-        DeleteKeysByPatternCommand request,
-        CancellationToken cancellationToken)
-    {
-        var connectionResult = await connectionRepository.GetConnectionByIdAsync(
-            request.ConnectionId,
-            cancellationToken);
+	public async Task<Result<DeleteKeysByPatternResponse>> Handle(
+		DeleteKeysByPatternCommand request,
+		CancellationToken cancellationToken)
+	{
+		var connectionResult = await connectionRepository.GetConnectionByIdAsync(
+			request.ConnectionId,
+			cancellationToken);
 
-        if (connectionResult.IsFailure)
-        {
-            return Result.Failure<DeleteKeysByPatternResponse>(connectionResult.Error);
-        }
+		if (connectionResult.IsFailure)
+		{
+			return Result.Failure<DeleteKeysByPatternResponse>(connectionResult.Error);
+		}
 
-        if (connectionResult.Value.IsReadOnly)
-        {
-            return Result.Failure<DeleteKeysByPatternResponse>(DomainErrors.Connection.ReadOnlyMode);
-        }
+		if (connectionResult.Value.IsReadOnly)
+		{
+			return Result.Failure<DeleteKeysByPatternResponse>(DomainErrors.Connection.ReadOnlyMode);
+		}
 
-        var deleteResult = await keyService.DeleteKeysByPatternAsync(
-            connectionResult.Value,
-            request.Pattern,
-            cancellationToken,
-            request.Database);
+		var deleteResult = await keyService.DeleteKeysByPatternAsync(
+			connectionResult.Value,
+			request.Pattern,
+			cancellationToken,
+			request.Database);
 
-        if (deleteResult.IsFailure)
-        {
-            return Result.Failure<DeleteKeysByPatternResponse>(deleteResult.Error);
-        }
+		if (deleteResult.IsFailure)
+		{
+			return Result.Failure<DeleteKeysByPatternResponse>(deleteResult.Error);
+		}
 
-        var deletedCount = deleteResult.Value;
-        
-        var response = new DeleteKeysByPatternResponse(
-            deletedCount,
-            request.Pattern);
+		var deletedCount = deleteResult.Value;
 
-        return Result.Success(response);
-    }
+		var response = new DeleteKeysByPatternResponse(
+			deletedCount,
+			request.Pattern);
+
+		return Result.Success(response);
+	}
 }

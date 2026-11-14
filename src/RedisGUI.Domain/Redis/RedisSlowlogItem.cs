@@ -9,8 +9,8 @@ namespace RedisGUI.Domain.Redis;
 /// <param name="Command">Executed command line</param>
 /// <param name="ClientAddress">Optional client address</param>
 public sealed record RedisSlowlogItem(
-    long Id,
-    DateTime Timestamp,
-    long DurationMicroseconds,
-    string Command,
-    string ClientAddress = "");
+	long Id,
+	DateTime Timestamp,
+	long DurationMicroseconds,
+	string Command,
+	string ClientAddress = "");

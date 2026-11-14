@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 using RedisGUI.Domain.Connection;

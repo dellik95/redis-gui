@@ -9,5 +9,5 @@ namespace RedisGUI.Application.Redis.Queries.GetKeyMemoryUsage;
 /// <param name="ConnectionId">The Redis connection identifier</param>
 /// <param name="Key">The Redis key name</param>
 public sealed record GetKeyMemoryUsageQuery(
-    Guid ConnectionId,
-    string Key) : IQuery<GetKeyMemoryUsageResponse>;
+	Guid ConnectionId,
+	string Key) : IQuery<GetKeyMemoryUsageResponse>;

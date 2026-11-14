@@ -14,7 +14,11 @@ import {
   ConnectionHealthUpdate
 } from './connection-health-card.component';
 import { UiSelectComponent, UiToggleComponent } from '../../shared/ui';
-import { PageHeaderComponent, StatSummaryCardComponent, EmptyStateComponent } from '../../shared/components';
+import {
+  PageHeaderComponent,
+  StatSummaryCardComponent,
+  EmptyStateComponent
+} from '../../shared/components';
 
 /**
  * Health Monitoring Dashboard Component

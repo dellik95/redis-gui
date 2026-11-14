@@ -23,7 +23,12 @@ export class KeyActionsService {
   private readonly destroyRef = inject(DestroyRef);
 
   /** Open add-key dialog and optionally seed with a folder prefix. */
-  async openAddKey(connectionId: string, database: number, folderPrefix = '', onSuccess?: () => void): Promise<void> {
+  async openAddKey(
+    connectionId: string,
+    database: number,
+    folderPrefix = '',
+    onSuccess?: () => void
+  ): Promise<void> {
     const { AddKeyComponent } = await import('../add-key/add-key.component');
     this.dialog
       .open(AddKeyComponent, {
@@ -47,7 +52,9 @@ export class KeyActionsService {
           onSuccess: () => {
             this.redisKeysStore.clearCache();
             onSuccess?.();
-            this.snackBar.open(`Key "${result.key}" created successfully`, 'Close', { duration: 3000 });
+            this.snackBar.open(`Key "${result.key}" created successfully`, 'Close', {
+              duration: 3000
+            });
           }
         });
       });
@@ -70,7 +77,9 @@ export class KeyActionsService {
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
         this.redisKeysStore.deleteKey({
-          connectionId, key, database,
+          connectionId,
+          key,
+          database,
           onSuccess: () => {
             this.redisKeysStore.clearCache();
             onSuccess?.();
@@ -81,7 +90,12 @@ export class KeyActionsService {
   }
 
   /** Delete selected keys with confirmation. */
-  deleteSelected(connectionId: string, keys: string[], database: number, onSuccess?: () => void): void {
+  deleteSelected(
+    connectionId: string,
+    keys: string[],
+    database: number,
+    onSuccess?: () => void
+  ): void {
     if (keys.length === 0) {
       this.snackBar.open('No keys selected', 'Close', { duration: 3000 });
       return;
@@ -101,7 +115,9 @@ export class KeyActionsService {
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
         this.redisOperationsStore.deleteMultipleKeys({
-          connectionId, keys, database,
+          connectionId,
+          keys,
+          database,
           onSuccess: () => {
             this.redisKeysStore.clearCache();
             onSuccess?.();
@@ -112,7 +128,12 @@ export class KeyActionsService {
   }
 
   /** Delete keys matching a pattern (prompts for pattern then confirms). */
-  deleteByPattern(connectionId: string, currentPattern: string, database: number, onSuccess?: () => void): void {
+  deleteByPattern(
+    connectionId: string,
+    currentPattern: string,
+    database: number,
+    onSuccess?: () => void
+  ): void {
     this.dialog
       .open(PromptDialogComponent, {
         data: {
@@ -141,11 +162,15 @@ export class KeyActionsService {
           .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
           .subscribe(() => {
             this.redisOperationsStore.deleteKeysByPattern({
-              connectionId, pattern, database,
+              connectionId,
+              pattern,
+              database,
               onSuccess: () => {
                 this.redisKeysStore.clearCache();
                 onSuccess?.();
-                this.snackBar.open(`Deleted keys matching "${pattern}"`, 'Close', { duration: 4000 });
+                this.snackBar.open(`Deleted keys matching "${pattern}"`, 'Close', {
+                  duration: 4000
+                });
               }
             });
           });
@@ -168,7 +193,10 @@ export class KeyActionsService {
       .pipe(filter((k): k is string => !!k?.trim() && k !== oldKey))
       .subscribe(newKey => {
         this.redisKeysStore.renameKey({
-          connectionId, oldKey, newKey: newKey.trim(), database,
+          connectionId,
+          oldKey,
+          newKey: newKey.trim(),
+          database,
           onSuccess: () => {
             onSuccess?.();
             this.snackBar.open(`Renamed "${oldKey}" → "${newKey}"`, 'Close', { duration: 3000 });
@@ -178,7 +206,12 @@ export class KeyActionsService {
   }
 
   /** Duplicate a key via prompt. */
-  duplicateKey(connectionId: string, sourceKey: string, database: number, onSuccess?: () => void): void {
+  duplicateKey(
+    connectionId: string,
+    sourceKey: string,
+    database: number,
+    onSuccess?: () => void
+  ): void {
     this.dialog
       .open(PromptDialogComponent, {
         data: {
@@ -193,10 +226,15 @@ export class KeyActionsService {
       .pipe(filter((k): k is string => !!k?.trim()))
       .subscribe(targetKey => {
         this.redisKeysStore.duplicateKey({
-          connectionId, sourceKey, targetKey: targetKey.trim(), database,
+          connectionId,
+          sourceKey,
+          targetKey: targetKey.trim(),
+          database,
           onSuccess: () => {
             onSuccess?.();
-            this.snackBar.open(`Cloned "${sourceKey}" as "${targetKey}"`, 'Close', { duration: 3000 });
+            this.snackBar.open(`Cloned "${sourceKey}" as "${targetKey}"`, 'Close', {
+              duration: 3000
+            });
           }
         });
       });
@@ -231,7 +269,8 @@ export class KeyActionsService {
               ttlSec <= 0
                 ? `${count} key(s) persisted indefinitely`
                 : `TTL set to ${ttlSec}s on ${count} key(s)`,
-              'Close', { duration: 3000 }
+              'Close',
+              { duration: 3000 }
             );
           }
         });
@@ -264,23 +303,34 @@ export class KeyActionsService {
       .afterClosed()
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
-        const action = event.keys.length > 0
-          ? this.redisOperationsStore.deleteMultipleKeys({
-              connectionId, keys: event.keys, database,
-              onSuccess: () => {
-                this.redisKeysStore.clearCache();
-                onSuccess?.();
-                this.snackBar.open(`Folder "${event.name}" and ${event.keys.length} key(s) deleted`, 'Close', { duration: 3500 });
-              }
-            })
-          : this.redisOperationsStore.deleteKeysByPattern({
-              connectionId, pattern, database,
-              onSuccess: () => {
-                this.redisKeysStore.clearCache();
-                onSuccess?.();
-                this.snackBar.open(`Folder "${event.name}" keys deleted`, 'Close', { duration: 3500 });
-              }
-            });
+        const action =
+          event.keys.length > 0
+            ? this.redisOperationsStore.deleteMultipleKeys({
+                connectionId,
+                keys: event.keys,
+                database,
+                onSuccess: () => {
+                  this.redisKeysStore.clearCache();
+                  onSuccess?.();
+                  this.snackBar.open(
+                    `Folder "${event.name}" and ${event.keys.length} key(s) deleted`,
+                    'Close',
+                    { duration: 3500 }
+                  );
+                }
+              })
+            : this.redisOperationsStore.deleteKeysByPattern({
+                connectionId,
+                pattern,
+                database,
+                onSuccess: () => {
+                  this.redisKeysStore.clearCache();
+                  onSuccess?.();
+                  this.snackBar.open(`Folder "${event.name}" keys deleted`, 'Close', {
+                    duration: 3500
+                  });
+                }
+              });
       });
   }
 
@@ -325,7 +375,8 @@ export class KeyActionsService {
 
   /** Open seed data dialog. */
   async openSeedData(connectionId: string): Promise<void> {
-    const { SeedDataDialogComponent } = await import('../seed-data-dialog/seed-data-dialog.component');
+    const { SeedDataDialogComponent } =
+      await import('../seed-data-dialog/seed-data-dialog.component');
     this.dialog.open(SeedDataDialogComponent, {
       width: '680px',
       maxWidth: '92vw',
@@ -345,7 +396,8 @@ export class KeyActionsService {
 
   /** Open load test dialog. */
   async openLoadTest(connectionId: string): Promise<void> {
-    const { LoadTestDialogComponent } = await import('../load-test-dialog/load-test-dialog.component');
+    const { LoadTestDialogComponent } =
+      await import('../load-test-dialog/load-test-dialog.component');
     this.dialog.open(LoadTestDialogComponent, {
       width: '720px',
       maxWidth: '94vw',
@@ -354,7 +406,11 @@ export class KeyActionsService {
   }
 
   /** Open export dialog. */
-  async openExport(connectionId: string, format: 'json' | 'csv', onSuccess?: () => void): Promise<void> {
+  async openExport(
+    connectionId: string,
+    format: 'json' | 'csv',
+    onSuccess?: () => void
+  ): Promise<void> {
     const { ExportDialogComponent } = await import('../export/export-dialog.component');
     this.dialog
       .open(ExportDialogComponent, { data: { connectionId, format } })

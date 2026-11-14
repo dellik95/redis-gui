@@ -132,14 +132,14 @@ public class RedisValueService(
 		bool success = expiry.HasValue && expiry.Value.TotalSeconds > 0
 			? await db.StringSetAsync(key, value, (Expiration)expiry.Value)
 			: await db.StringSetAsync(key, value);
-		
+
 		return success ? Result.Success() : Result.Failure(DomainErrors.Redis.UpdateFailed);
 	}
 
 	/// <inheritdoc />
 	public async Task<Result<RedisValue>> GetValueAsync(
-		RedisConnection connection, 
-		string key, 
+		RedisConnection connection,
+		string key,
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
@@ -151,7 +151,7 @@ public class RedisValueService(
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		IDatabase databaseInstance = multiplexerResult.Value.GetDatabase(targetDb);
-		
+
 		try
 		{
 			RedisType type = await databaseInstance.KeyTypeAsync(key);
@@ -246,7 +246,7 @@ public class RedisValueService(
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
-		
+
 		try
 		{
 			var handler = typeHandlerFactory.GetHandler(type);

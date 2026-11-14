@@ -15,7 +15,8 @@
     display: flex;
     gap: 8px;
 
-    .count-badge, .filtered-badge {
+    .count-badge,
+    .filtered-badge {
       font-size: 12px;
       padding: 3px 8px;
       border-radius: 4px;
@@ -170,4 +171,3 @@
     font-size: 13px;
   }
 }
-  

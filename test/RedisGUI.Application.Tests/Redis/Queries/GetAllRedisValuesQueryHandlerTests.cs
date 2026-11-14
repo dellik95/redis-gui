@@ -1,4 +1,4 @@
-﻿using FluentAssertions;
+using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 using RedisGUI.Domain.Connection;

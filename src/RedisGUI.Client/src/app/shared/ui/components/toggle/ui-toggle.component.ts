@@ -1,11 +1,4 @@
-import {
-  Component,
-  input,
-  model,
-  output,
-  computed,
-  ChangeDetectionStrategy
-} from '@angular/core';
+import { Component, input, model, output, computed, ChangeDetectionStrategy } from '@angular/core';
 
 /**
  * Custom toggle/switch component that matches the application design system.

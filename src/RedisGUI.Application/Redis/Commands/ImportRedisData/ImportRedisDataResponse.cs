@@ -10,7 +10,7 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <param name="FailedCount">Number of keys that failed to import.</param>
 /// <param name="FailedKeys">List of keys that failed to import.</param>
 public sealed record ImportRedisDataResponse(
-    int ImportedCount,
-    int SkippedCount,
-    int FailedCount,
-    IReadOnlyList<string> FailedKeys);
+	int ImportedCount,
+	int SkippedCount,
+	int FailedCount,
+	IReadOnlyList<string> FailedKeys);

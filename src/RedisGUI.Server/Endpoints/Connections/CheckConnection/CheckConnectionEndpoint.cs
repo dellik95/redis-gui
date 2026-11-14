@@ -11,7 +11,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CheckConnection
 	/// Endpoint for validating Redis connection parameters.
 	/// Tests if a connection can be established with the provided configuration.
 	/// </summary>
-	internal sealed class CheckConnectionEndpoint: IEndpoint
+	internal sealed class CheckConnectionEndpoint : IEndpoint
 	{
 		/// <summary>
 		/// Maps the POST endpoint for connection validation.

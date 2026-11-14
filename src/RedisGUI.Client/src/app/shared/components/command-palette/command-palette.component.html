@@ -25,8 +25,7 @@
     >
     <button
       type="button"
-      class="close-btn inline-flex items-center justify-center w-7 h-7 rounded-lg text-canvas-muted cursor-pointer shrink-0
-             transition-colors hover:text-canvas-text hover:bg-canvas-card"
+      class="close-btn inline-flex items-center justify-center w-7 h-7 rounded-lg text-canvas-muted cursor-pointer shrink-0 transition-colors hover:text-canvas-text hover:bg-canvas-card"
       (click)="close()"
       aria-label="Close command palette"
     >
@@ -43,7 +42,12 @@
       >
         <mat-icon>search_off</mat-icon>
         @if (searchQuery().trim()) {
-          <span>No commands or keys found for "<strong class="text-canvas-text">{{ searchQuery() }}</strong>"</span>
+          <span
+            >No commands or keys found for "<strong class="text-canvas-text">{{
+              searchQuery()
+            }}</strong
+            >"</span
+          >
         } @else {
           <span>No commands available for the current context</span>
         }

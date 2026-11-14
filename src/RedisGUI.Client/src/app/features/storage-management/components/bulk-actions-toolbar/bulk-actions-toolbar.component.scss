@@ -1,6 +1,12 @@
 // All layout and styles expressed with Tailwind utilities in the template.
 // Keep only the keyframe animation that Tailwind can't express inline.
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

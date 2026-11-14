@@ -24,7 +24,7 @@ import { MetricSparklineCardComponent } from '../../../../shared/components';
   selector: 'app-dashboard-metrics',
   standalone: true,
   imports: [
-        MatIconModule,
+    MatIconModule,
     MatSelectModule,
     MatFormFieldModule,
     MatTooltipModule,

@@ -29,7 +29,12 @@
   font-size: 0.8rem;
   height: 36px;
   line-height: 36px;
-  mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+  }
 }
 
 .count-badge {
@@ -66,7 +71,11 @@
     width: 24px;
     height: 24px;
     line-height: 24px;
-    mat-icon { font-size: 16px; width: 16px; height: 16px; }
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   }
 }
 
@@ -187,4 +196,3 @@
     opacity: 0.4;
   }
 }
-  

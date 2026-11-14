@@ -13,20 +13,20 @@ namespace RedisGUI.Server.Endpoints.Redis;
 /// </summary>
 public class DeleteKeysByPatternEndpoint : IEndpoint
 {
-    /// <summary>
-    /// Maps the delete keys by pattern endpoint.
-    /// </summary>
-    /// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
-    public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
-    {
-        routerBuilder.MapDelete("storage/{connectionId:guid}/keys/pattern/{pattern}",
-            async (IMediator sender, Guid connectionId, string pattern, int? database) =>
-            {
-                var command = new DeleteKeysByPatternCommand(connectionId, pattern, database);
-                return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
-            })
-            .WithName("DeleteKeysByPattern")
-            .WithTags("Redis")
-            .WithOpenApi();
-    }
+	/// <summary>
+	/// Maps the delete keys by pattern endpoint.
+	/// </summary>
+	/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
+	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
+	{
+		routerBuilder.MapDelete("storage/{connectionId:guid}/keys/pattern/{pattern}",
+			async (IMediator sender, Guid connectionId, string pattern, int? database) =>
+			{
+				var command = new DeleteKeysByPatternCommand(connectionId, pattern, database);
+				return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
+			})
+			.WithName("DeleteKeysByPattern")
+			.WithTags("Redis")
+			.WithOpenApi();
+	}
 }

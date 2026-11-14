@@ -7,12 +7,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 @Component({
   selector: 'app-string-editor',
   standalone: true,
-  imports: [
-    FormsModule,
-    MatButtonModule,
-    MatIconModule,
-    MatTooltipModule
-  ],
+  imports: [FormsModule, MatButtonModule, MatIconModule, MatTooltipModule],
   templateUrl: './string-editor.component.html',
   styleUrl: './string-editor.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush

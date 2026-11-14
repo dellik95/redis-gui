@@ -62,7 +62,7 @@ export interface LoadTestDialogData {
   imports: [
     LoadTestProgressView,
     LoadTestResults,
-        MatDialogModule,
+    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,

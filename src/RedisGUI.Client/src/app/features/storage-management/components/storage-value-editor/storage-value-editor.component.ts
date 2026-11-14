@@ -43,7 +43,12 @@ import {
   ZsetEditorComponent,
   StreamEditorComponent
 } from './components';
-import { UiInputComponent, UiSelectComponent, UiButtonComponent, UiToggleComponent } from '../../../../shared/ui';
+import {
+  UiInputComponent,
+  UiSelectComponent,
+  UiButtonComponent,
+  UiToggleComponent
+} from '../../../../shared/ui';
 
 export interface ValueEditorInput {
   key?: string;

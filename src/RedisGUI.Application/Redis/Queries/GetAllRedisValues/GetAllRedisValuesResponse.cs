@@ -14,13 +14,13 @@ namespace RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 /// <param name="HasPreviousPage">Indicates if there is a previous page.</param>
 /// <param name="HasNextPage">Indicates if there is a next page.</param>
 public sealed record GetAllRedisValuesResponse(
-    IEnumerable<RedisKeyValuePair> Values,
-    int TotalCount,
-    int PageNumber,
-    int PageSize,
-    int TotalPages,
-    bool HasPreviousPage,
-    bool HasNextPage);
+	IEnumerable<RedisKeyValuePair> Values,
+	int TotalCount,
+	int PageNumber,
+	int PageSize,
+	int TotalPages,
+	bool HasPreviousPage,
+	bool HasNextPage);
 
 /// <summary>
 /// Represents a Redis key-value pair with its metadata.
@@ -30,7 +30,7 @@ public sealed record GetAllRedisValuesResponse(
 /// <param name="Type">The Redis data type.</param>
 /// <param name="TimeToLive">Time until the key expires (null if no expiration).</param>
 public sealed record RedisKeyValuePair(
-    string Key,
-    string Value,
-    string Type,
-    TimeSpan? TimeToLive); 
+	string Key,
+	string Value,
+	string Type,
+	TimeSpan? TimeToLive);
