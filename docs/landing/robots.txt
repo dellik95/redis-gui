@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dellik95.github.io/redis-gui/sitemap.xml
