@@ -1,0 +1,2803 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RedisGUI (RedisStudio V2.2) — Enterprise Redis Observability &amp; Management Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #050814;
+      --bg-elevated: #0b1124;
+      --surface: rgba(15, 23, 46, 0.78);
+      --surface-solid: #0e162e;
+      --surface-2: rgba(23, 33, 66, 0.68);
+      --border: rgba(148, 163, 184, 0.16);
+      --border-strong: rgba(99, 102, 241, 0.42);
+      --ink: #f8fafc;
+      --ink-2: #cbd5e1;
+      --muted: #94a3b8;
+      --indigo: #6366f1;
+      --indigo-bright: #818cf8;
+      --violet: #a855f7;
+      --redis: #ef4444;
+      --emerald: #10b981;
+      --cyan: #06b6d4;
+      --amber: #f59e0b;
+      --shadow-xl: 0 32px 80px -16px rgba(0, 0, 0, 0.72);
+      --shadow-overlap: 0 28px 65px -12px rgba(3, 7, 18, 0.85), 0 0 0 1px rgba(129, 140, 248, 0.24);
+      --nav-bg: rgba(5, 8, 20, 0.76);
+      --grid-dot: rgba(148, 163, 184, 0.12);
+      --code-bg: #030611;
+    }
+
+    html[data-theme="light"] {
+      --bg: #f4f7fb;
+      --bg-elevated: #ffffff;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface-solid: #ffffff;
+      --surface-2: rgba(241, 245, 249, 0.92);
+      --border: rgba(15, 23, 42, 0.1);
+      --border-strong: rgba(79, 70, 229, 0.35);
+      --ink: #0f172a;
+      --ink-2: #334155;
+      --muted: #64748b;
+      --indigo: #4f46e5;
+      --indigo-bright: #4338ca;
+      --violet: #7c3aed;
+      --redis: #dc2626;
+      --emerald: #059669;
+      --cyan: #0891b2;
+      --amber: #d97706;
+      --shadow-xl: 0 24px 60px -15px rgba(15, 23, 42, 0.14);
+      --shadow-overlap: 0 24px 55px -12px rgba(15, 23, 42, 0.18), 0 0 0 1px rgba(79, 70, 229, 0.18);
+      --nav-bg: rgba(255, 255, 255, 0.86);
+      --grid-dot: rgba(15, 23, 42, 0.08);
+      --code-bg: #0f172a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      line-height: 1.62;
+      overflow-x: hidden;
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .display { font-family: 'Space Grotesk', 'Inter', sans-serif; }
+    a { color: inherit; text-decoration: none; }
+
+    /* SCROLL PROGRESS BAR */
+    #scroll-progress {
+      position: fixed;
+      top: 0; left: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, var(--redis), var(--indigo), var(--cyan), var(--emerald));
+      z-index: 9999;
+      transition: width 0.08s linear;
+    }
+
+    /* TOP NAVIGATION */
+    .rg-nav {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: var(--nav-bg);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+    .rg-nav-inner {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .rg-brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      font-weight: 800;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .rg-logo-mark {
+      width: 34px; height: 34px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 800;
+      box-shadow: 0 6px 20px rgba(239, 68, 68, 0.45);
+    }
+    .rg-ver-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.16);
+      color: var(--indigo-bright);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+    }
+    .rg-nav-links {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    .rg-nav-links a:hover { color: var(--ink); }
+    .rg-nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .nav-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 13px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .nav-btn:hover { border-color: var(--border-strong); transform: translateY(-1px); }
+    .nav-btn.primary {
+      background: linear-gradient(135deg, var(--indigo), var(--violet));
+      border-color: transparent;
+      color: #fff;
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.35);
+    }
+    .nav-seg {
+      display: inline-flex;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 2px;
+    }
+    .nav-seg button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 11.5px;
+      font-weight: 700;
+      padding: 5px 9px;
+      border-radius: 7px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .nav-seg button.active {
+      background: var(--indigo);
+      color: #fff;
+    }
+
+    /* AMBIENT PARALLAX BACKDROP */
+    .parallax-bg-layer {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(110px);
+      opacity: 0.42;
+      will-change: transform;
+    }
+    .orb-1 {
+      width: 620px; height: 620px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.48), transparent 70%);
+      top: -160px; left: -120px;
+    }
+    .orb-2 {
+      width: 540px; height: 540px;
+      background: radial-gradient(circle, rgba(239, 68, 68, 0.26), transparent 70%);
+      top: 120px; right: -140px;
+    }
+    .orb-3 {
+      width: 580px; height: 580px;
+      background: radial-gradient(circle, rgba(6, 182, 212, 0.28), transparent 70%);
+      top: 48%; left: 32%;
+    }
+    html[data-theme="light"] .orb { opacity: 0.22; }
+    .dot-grid {
+      position: absolute;
+      inset: -120px;
+      background-image: radial-gradient(var(--grid-dot) 1.3px, transparent 1.3px);
+      background-size: 32px 32px;
+      mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.18));
+      -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0.85), rgba(0,0,0,0.18));
+    }
+
+    main { position: relative; z-index: 2; }
+    .container { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+    /* HERO BANNER WITH MULTI-LAYER OVERLAP & 3D PARALLAX */
+    .hero-banner {
+      position: relative;
+      padding: 68px 0 132px;
+      border-bottom: 1px solid var(--border);
+      background:
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(99, 102, 241, 0.18), transparent 70%),
+        radial-gradient(ellipse 55% 45% at 85% 20%, rgba(239, 68, 68, 0.12), transparent 65%);
+      overflow: hidden;
+    }
+    html[data-theme="light"] .hero-banner {
+      background:
+        radial-gradient(ellipse 80% 55% at 50% 0%, rgba(79, 70, 229, 0.11), transparent 70%),
+        radial-gradient(ellipse 55% 45% at 85% 20%, rgba(220, 38, 38, 0.08), transparent 65%);
+    }
+    .hero-copy {
+      text-align: center;
+      max-width: 920px;
+      margin: 0 auto 54px;
+      position: relative;
+      z-index: 5;
+    }
+    .live-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 16px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--ink-2);
+      margin-bottom: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    }
+    .pulse-dot {
+      width: 9px; height: 9px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      animation: pulseRing 2s infinite;
+    }
+    @keyframes pulseRing {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    .hero-title {
+      font-family: 'Space Grotesk', 'Inter', sans-serif;
+      font-size: clamp(38px, 5.5vw, 72px);
+      font-weight: 800;
+      line-height: 1.04;
+      letter-spacing: -0.035em;
+      margin-bottom: 22px;
+      background: linear-gradient(135deg, var(--ink) 20%, var(--indigo-bright) 62%, var(--cyan) 95%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    html[data-theme="light"] .hero-title {
+      background: linear-gradient(135deg, #0f172a 20%, #4338ca 65%, #0891b2 95%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      font-size: clamp(16px, 1.8vw, 20px);
+      color: var(--ink-2);
+      max-width: 780px;
+      margin: 0 auto 32px;
+      line-height: 1.6;
+    }
+    .hero-cta-row {
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .btn-hero {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 26px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14.5px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.25s;
+    }
+    .btn-hero:hover { transform: translateY(-3px); }
+    .btn-hero.glow {
+      background: linear-gradient(135deg, #4f46e5, #6366f1, #06b6d4);
+      background-size: 200% auto;
+      color: #fff;
+      box-shadow: 0 14px 40px rgba(99, 102, 241, 0.45);
+      animation: gradientSlide 6s ease infinite;
+    }
+    @keyframes gradientSlide {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    .btn-hero.glass {
+      background: var(--surface);
+      border-color: var(--border-strong);
+      color: var(--ink);
+      backdrop-filter: blur(12px);
+    }
+
+    /* LAYERED PARALLAX MOCKUP COMPOSITE */
+    .hero-stage {
+      position: relative;
+      max-width: 1120px;
+      margin: 0 auto;
+      perspective: 1600px;
+      padding: 20px 0 36px;
+    }
+    .stage-main-frame {
+      position: relative;
+      z-index: 4;
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid rgba(129, 140, 248, 0.35);
+      background: #0a0f1f;
+      box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.85), 0 0 80px -20px rgba(99, 102, 241, 0.38);
+      transform-style: preserve-3d;
+      transition: transform 0.15s ease-out;
+    }
+    .stage-chrome {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      background: #0d1428;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      color: #94a3b8;
+    }
+    .chrome-dots { display: flex; gap: 7px; }
+    .chrome-dots span { width: 10px; height: 10px; border-radius: 50%; }
+    .stage-main-frame img {
+      width: 100%;
+      display: block;
+      cursor: zoom-in;
+    }
+
+    /* OVERLAPPING PARALLAX SATELLITE WIDGETS */
+    .float-card {
+      position: absolute;
+      z-index: 8;
+      border-radius: 14px;
+      background: rgba(11, 17, 36, 0.9);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(129, 140, 248, 0.42);
+      box-shadow: 0 28px 65px rgba(0, 0, 0, 0.72);
+      overflow: hidden;
+      will-change: transform;
+    }
+    html[data-theme="light"] .float-card {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(79, 70, 229, 0.3);
+      box-shadow: 0 24px 55px rgba(15, 23, 42, 0.22);
+    }
+    .float-telemetry {
+      top: 48px;
+      left: -34px;
+      width: 265px;
+      padding: 14px 16px;
+      animation: floatGentle 6s ease-in-out infinite;
+    }
+    .float-stream-mini {
+      top: 66px;
+      right: -36px;
+      width: 295px;
+      animation: floatGentle 7s ease-in-out infinite reverse;
+    }
+    .float-cli-peek {
+      bottom: -24px;
+      left: 38px;
+      width: 390px;
+      animation: floatGentle 6.5s ease-in-out infinite;
+    }
+    @keyframes floatGentle {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-9px); }
+    }
+    .float-img-cap {
+      padding: 8px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      color: var(--ink);
+    }
+    .float-card img { width: 100%; display: block; cursor: zoom-in; }
+
+    /* NEGATIVE-MARGIN OVERLAPPING STATS RIBBON */
+    .overlap-stats-section {
+      position: relative;
+      z-index: 25;
+      margin-top: -64px;
+      margin-bottom: 72px;
+    }
+    .stats-ribbon {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-overlap);
+    }
+    .stat-tile {
+      background: var(--surface-solid);
+      padding: 24px 20px;
+      text-align: center;
+      transition: background 0.25s;
+    }
+    .stat-tile:hover { background: var(--bg-elevated); }
+    .stat-val {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--indigo-bright);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+    .stat-lbl {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+    }
+
+    /* SECTION HEADERS */
+    .sec-head {
+      text-align: center;
+      max-width: 780px;
+      margin: 0 auto 56px;
+    }
+    .sec-kicker {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(6, 182, 212, 0.12);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      margin-bottom: 14px;
+    }
+    .sec-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(28px, 3.6vw, 44px);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      margin-bottom: 14px;
+    }
+    .sec-desc {
+      font-size: 16px;
+      color: var(--muted);
+    }
+
+    /* OVERLAPPING PARALLAX VISUAL TOUR BANDS */
+    .tour-band { padding: 84px 0; position: relative; }
+    .tour-band-intro { padding: 48px 0 84px; }
+    .tour-band-b {
+      background: linear-gradient(180deg, rgba(6, 182, 212, 0.055), rgba(99, 102, 241, 0.025) 70%, transparent);
+      border-top: 1px solid var(--border);
+    }
+    .tour-band-c {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.045), rgba(99, 102, 241, 0.02) 70%, transparent);
+      border-top: 1px solid var(--border);
+    }
+    .tour-band-a-sep {
+      border-top: 1px solid var(--border);
+    }
+    [data-theme="light"] .tour-band-b {
+      background: linear-gradient(180deg, rgba(14, 165, 233, 0.055), rgba(241, 245, 249, 0.7));
+    }
+    [data-theme="light"] .tour-band-c {
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.05), rgba(241, 245, 249, 0.65));
+    }
+    .tour-jump-pills {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .tour-jump-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 14px;
+      border-radius: 999px;
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      color: var(--ink-2);
+      font-size: 12.5px;
+      font-weight: 700;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    .tour-jump-pill:hover {
+      border-color: var(--cyan);
+      color: var(--ink);
+      transform: translateY(-2px);
+    }
+    .tour-jump-pill .mono {
+      color: var(--cyan);
+      font-size: 11px;
+    }
+    .tour-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.38fr 1fr;
+      align-items: center;
+      margin-bottom: 0;
+    }
+    .tour-row.reverse {
+      grid-template-columns: 1fr 1.38fr;
+    }
+    .tour-watermark {
+      position: absolute;
+      font-family: 'Space Grotesk', sans-serif;
+      font-weight: 900;
+      font-size: clamp(64px, 11vw, 150px);
+      letter-spacing: -0.05em;
+      color: var(--indigo);
+      opacity: 0.045;
+      top: -54px;
+      left: 0;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+      will-change: transform;
+    }
+    .tour-row.reverse .tour-watermark { left: auto; right: 0; }
+
+    .tour-visual {
+      position: relative;
+      z-index: 2;
+      border-radius: 18px;
+      padding: 10px;
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(6, 182, 212, 0.12));
+      border: 1px solid var(--border-strong);
+      box-shadow: var(--shadow-xl);
+      transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .tour-visual:hover { transform: scale(1.015); }
+    .tour-visual-inner {
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0a0e1a;
+      position: relative;
+    }
+    .tour-visual img {
+      width: 100%;
+      display: block;
+      cursor: zoom-in;
+    }
+    .zoom-hint {
+      position: absolute;
+      bottom: 14px;
+      left: 14px;
+      right: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 13px;
+      border-radius: 999px;
+      background: rgba(5, 8, 20, 0.88);
+      color: #f8fafc;
+      font-size: 11.5px;
+      font-weight: 700;
+      border: 1px solid rgba(129, 140, 248, 0.42);
+      cursor: zoom-in;
+      pointer-events: auto;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+      z-index: 4;
+    }
+    .zoom-hint:hover {
+      transform: translateY(-2px) scale(1.03);
+      background: rgba(79, 70, 229, 0.92);
+      border-color: rgba(255, 255, 255, 0.55);
+    }
+    .zoom-hint svg { width: 14px; height: 14px; flex-shrink: 0; }
+    .tour-row.reverse .zoom-hint { left: auto; right: 14px; }
+
+    /* THE SIGNATURE OVERLAP CARD */
+    .tour-card {
+      position: relative;
+      z-index: 6;
+      margin-left: -76px;
+      background: var(--surface);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1px solid var(--border-strong);
+      border-radius: 20px;
+      padding: 32px 30px;
+      box-shadow: var(--shadow-overlap);
+    }
+    .tour-row.reverse .tour-visual { order: 2; }
+    .tour-row.reverse .tour-card {
+      order: 1;
+      margin-left: 0;
+      margin-right: -76px;
+    }
+    .tour-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--emerald);
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 4px 11px;
+      border-radius: 999px;
+      margin-bottom: 14px;
+    }
+    .tour-card h3 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 25px;
+      font-weight: 800;
+      line-height: 1.22;
+      margin-bottom: 12px;
+      letter-spacing: -0.02em;
+    }
+    .tour-card p {
+      font-size: 14.5px;
+      color: var(--ink-2);
+      margin-bottom: 18px;
+    }
+    .tour-list {
+      list-style: none;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tour-list li {
+      display: flex;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--ink-2);
+      align-items: flex-start;
+    }
+    .tour-list li::before {
+      content: '';
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      margin-top: 3px;
+      border-radius: 50%;
+      background: rgba(99, 102, 241, 0.2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%23818cf8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3.8 8.2l2.6 2.6 5.8-5.8'/%3E%3C/svg%3E") center/13px 13px no-repeat;
+    }
+    .tech-mini-pills { display: flex; flex-wrap: wrap; gap: 7px; }
+    .tech-mini-pills span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 9px;
+      border-radius: 7px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--ink-2);
+    }
+
+    /* INTERACTIVE PLAYGROUND (DATA TYPES + MINI CLI SIMULATOR) */
+    .playground-section {
+      padding: 80px 0;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, rgba(99, 102, 241, 0.05), transparent 60%);
+    }
+    .playground-shell {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      background: var(--surface-solid);
+      border: 1px solid var(--border-strong);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow-xl);
+    }
+    .pg-tabs { display: flex; flex-direction: column; gap: 8px; }
+    .pg-tab {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 15px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--ink-2);
+      font-weight: 600;
+      font-size: 13.5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+    .pg-tab.active {
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(6, 182, 212, 0.14));
+      border-color: var(--indigo);
+      color: var(--ink);
+    }
+    .pg-screen {
+      background: var(--bg-soft);
+      color: var(--ink);
+      border-radius: 16px;
+      border: 1px solid var(--border-strong);
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .pg-mod-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .pg-mod-title {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      margin: 4px 0 6px;
+    }
+    .pg-mod-desc {
+      font-size: 13.5px;
+      color: var(--ink-2);
+      line-height: 1.55;
+      max-width: 720px;
+    }
+    .pg-mod-bullets {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      list-style: none;
+    }
+    .pg-mod-bullets li {
+      font-size: 12.2px;
+      line-height: 1.45;
+      color: var(--ink-2);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .pg-shot-frame {
+      position: relative;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 1px solid var(--border-strong);
+      background: #060914;
+      box-shadow: var(--shadow-xl);
+    }
+    .pg-shot-frame img {
+      width: 100%;
+      height: auto;
+      max-height: 490px;
+      object-fit: contain;
+      display: block;
+      cursor: zoom-in;
+      transition: transform 0.35s ease;
+    }
+    .pg-shot-frame:hover img {
+      transform: scale(1.015);
+    }
+    .pg-subswitch {
+      display: inline-flex;
+      gap: 6px;
+      padding: 3px;
+      border-radius: 9px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+    }
+    .pg-sub-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+    }
+    .pg-sub-btn.active {
+      background: var(--indigo);
+      color: #fff;
+    }
+    @media (max-width: 900px) {
+      .pg-mod-bullets { grid-template-columns: 1fr; }
+    }
+
+    /* 12 ENTERPRISE FEATURES BENTO GRID */
+    .features-section { padding: 88px 0; }
+    .bento-12 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .f-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 26px 24px;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.28s ease, border-color 0.28s ease, box-shadow 0.28s ease;
+    }
+    .f-card:hover {
+      transform: translateY(-5px);
+      border-color: var(--border-strong);
+      box-shadow: var(--shadow-xl);
+    }
+    .f-icon {
+      width: 48px; height: 48px;
+      border-radius: 13px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 16px;
+      background: var(--ic-bg, rgba(99, 102, 241, 0.14));
+      border: 1px solid var(--ic-bd, rgba(99, 102, 241, 0.34));
+      color: var(--ic-fg, var(--indigo-bright));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 8px 20px -8px var(--ic-bd, rgba(99, 102, 241, 0.45));
+      transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease;
+    }
+    .f-icon svg { width: 23px; height: 23px; }
+    .f-card:hover .f-icon {
+      transform: translateY(-2px) scale(1.07) rotate(-2deg);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 12px 26px -6px var(--ic-bd, rgba(99, 102, 241, 0.65));
+    }
+    .pg-tab-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .pg-tab-label svg { width: 17px; height: 17px; color: var(--indigo-bright); flex-shrink: 0; }
+    .pg-tab.active .pg-tab-label svg { color: var(--cyan); }
+    .f-card h4 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .f-card p { font-size: 13.5px; color: var(--muted); line-height: 1.58; }
+
+    /* OVERLAPPING ARCHITECTURE STACK + BENCHMARKS */
+    .arch-section {
+      padding: 84px 0;
+      border-top: 1px solid var(--border);
+    }
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 32px;
+      align-items: center;
+    }
+    .arch-stack { display: flex; flex-direction: column; }
+    .arch-layer {
+      position: relative;
+      background: var(--surface-solid);
+      border: 1px solid var(--border-strong);
+      border-radius: 16px;
+      padding: 20px 24px;
+      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      transition: transform 0.25s ease, z-index 0s;
+    }
+    .arch-layer + .arch-layer { margin-top: -10px; }
+    .arch-layer:hover { transform: translateX(10px) scale(1.01); z-index: 10; }
+    .arch-layer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .arch-layer-title { font-weight: 800; font-size: 15.5px; }
+    .arch-layer-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      background: rgba(99, 102, 241, 0.15);
+      color: var(--indigo-bright);
+    }
+    .arch-layer p { font-size: 13px; color: var(--muted); }
+
+    .bench-box {
+      background: var(--surface);
+      border: 1px solid var(--border-strong);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: var(--shadow-xl);
+    }
+    .bench-bar-row { margin-bottom: 18px; }
+    .bench-bar-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 7px;
+    }
+    .bench-track {
+      height: 11px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      overflow: hidden;
+    }
+    .bench-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--indigo), var(--cyan));
+      transform: scaleX(0);
+      transform-origin: left center;
+      transition: transform 1.15s cubic-bezier(0.22, 1, 0.36, 1);
+      position: relative;
+      overflow: hidden;
+      will-change: transform;
+    }
+    .bench-fill::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+      transform: translateX(-100%);
+    }
+    .bench-box.visible .bench-fill {
+      transform: scaleX(1);
+    }
+    .bench-box.visible .bench-fill::after {
+      animation: benchSheen 1.4s ease 0.9s forwards;
+    }
+    .bench-bar-row:nth-of-type(1) .bench-fill { transition-delay: 0.08s; }
+    .bench-bar-row:nth-of-type(2) .bench-fill { transition-delay: 0.2s; }
+    .bench-bar-row:nth-of-type(3) .bench-fill { transition-delay: 0.32s; }
+    .bench-bar-row:nth-of-type(4) .bench-fill { transition-delay: 0.44s; }
+    @keyframes benchSheen {
+      to { transform: translateX(100%); }
+    }
+    @media (prefers-reduced-motion: reduce), print {
+      .bench-fill {
+        transform: scaleX(1) !important;
+        transition: none !important;
+      }
+      .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+      }
+    }
+
+    /* DOCKER QUICKSTART & AUTHOR FOOTER */
+    .cta-banner {
+      margin: 40px 0 80px;
+      border-radius: 24px;
+      padding: 52px 40px;
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.24), rgba(6, 182, 212, 0.15), rgba(239, 68, 68, 0.12));
+      border: 1px solid var(--border-strong);
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 32px;
+      align-items: center;
+      box-shadow: var(--shadow-xl);
+    }
+    .docker-box {
+      background: var(--code-bg);
+      color: #e2e8f0;
+      border-radius: 14px;
+      padding: 18px 20px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+    }
+    .copy-cmd-btn {
+      margin-top: 12px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 9px;
+      border: 1px solid rgba(99, 102, 241, 0.45);
+      background: rgba(99, 102, 241, 0.2);
+      color: #fff;
+      font-weight: 700;
+      font-size: 12.5px;
+      cursor: pointer;
+    }
+    .copy-cmd-btn:hover { background: var(--indigo); }
+
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 36px 24px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 13.5px;
+    }
+
+    /* SCROLL REVEAL */
+    .reveal {
+      opacity: 0;
+      transform: translateY(34px);
+      transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    /* LIGHTBOX MODAL */
+    #rg-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      background: rgba(3, 6, 17, 0.92);
+      backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 28px;
+    }
+    #rg-lightbox.open { display: flex; }
+    .lb-wrap {
+      max-width: 1220px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .lb-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #fff;
+    }
+    .lb-wrap img {
+      width: 100%;
+      max-height: 82vh;
+      object-fit: contain;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+    }
+
+    /* TABLE VS FOLDER TREE INTERACTIVE STUDIO */
+    .tt-studio {
+      margin: 52px 0 0;
+      background: var(--surface-solid);
+      border: 1px solid var(--border-strong);
+      border-radius: 22px;
+      padding: 26px 28px;
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      z-index: 4;
+    }
+    .tt-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 18px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tt-title-block h4 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: clamp(20px, 2.2vw, 26px);
+      line-height: 1.2;
+      margin: 8px 0 6px;
+    }
+    .tt-title-block p {
+      color: var(--muted);
+      font-size: 13.5px;
+      max-width: 620px;
+    }
+    .tt-controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .tt-mode-switch {
+      display: inline-flex;
+      padding: 4px;
+      border-radius: 12px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      gap: 4px;
+    }
+    .tt-mode-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 14px;
+      border-radius: 9px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tt-mode-btn svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+    .tt-mode-btn.active {
+      background: linear-gradient(135deg, var(--indigo), #4f46e5);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+    }
+    .tt-delim-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 8px;
+      border-radius: 11px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .tt-delim-btn {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 800;
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--ink-2);
+      cursor: pointer;
+      transition: all 0.16s ease;
+    }
+    .tt-delim-btn.active {
+      background: rgba(6, 182, 212, 0.18);
+      border-color: rgba(6, 182, 212, 0.45);
+      color: var(--cyan);
+    }
+    .tt-subbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      padding: 14px 0;
+    }
+    .tt-stats-badges {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .tt-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--ink-2);
+    }
+    .tt-pill.live {
+      background: rgba(16, 185, 129, 0.12);
+      border-color: rgba(16, 185, 129, 0.34);
+      color: var(--emerald);
+    }
+    .tt-tree-actions {
+      display: inline-flex;
+      gap: 6px;
+    }
+    .tt-mini-btn {
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--ink-2);
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.16s;
+    }
+    .tt-mini-btn:hover {
+      border-color: var(--indigo);
+      color: var(--ink);
+    }
+    .tt-canvas {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg-soft);
+      overflow: hidden;
+      min-height: 295px;
+    }
+    @keyframes ttFadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .tt-view-anim {
+      animation: ttFadeSlide 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .tt-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .tt-table th {
+      text-align: left;
+      padding: 11px 16px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      user-select: none;
+    }
+    .tt-table th.sortable {
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+    .tt-table th.sortable:hover,
+    .tt-table th.sorted {
+      color: var(--cyan);
+    }
+    .tt-table td {
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--ink-2);
+      vertical-align: middle;
+    }
+    .tt-table tr:last-child td { border-bottom: none; }
+    .tt-table tbody tr {
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .tt-table tbody tr:hover { background: rgba(99, 102, 241, 0.08); }
+    .tt-table tbody tr.selected { background: rgba(6, 182, 212, 0.12); }
+    .tt-key-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.2px;
+      color: var(--ink);
+      font-weight: 500;
+      word-break: break-all;
+    }
+    .tt-delim-hl {
+      color: var(--cyan);
+      font-weight: 800;
+      padding: 0 1px;
+    }
+    .tt-type-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 6px;
+      letter-spacing: 0.04em;
+    }
+    .tt-type-HASH { background: rgba(168, 85, 247, 0.16); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+    .tt-type-STRING { background: rgba(6, 182, 212, 0.16); color: #22d3ee; border: 1px solid rgba(6, 182, 212, 0.35); }
+    .tt-type-STREAM { background: rgba(16, 185, 129, 0.16); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); }
+    .tt-type-ZSET { background: rgba(99, 102, 241, 0.18); color: #a5b4fc; border: 1px solid rgba(99, 102, 241, 0.38); }
+    .tt-type-LIST { background: rgba(245, 158, 11, 0.16); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); }
+    .tt-type-SET { background: rgba(56, 189, 248, 0.16); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.35); }
+    [data-theme="light"] .tt-type-HASH { color: #7e22ce; }
+    [data-theme="light"] .tt-type-STRING { color: #0e7490; }
+    [data-theme="light"] .tt-type-STREAM { color: #047857; }
+    [data-theme="light"] .tt-type-ZSET { color: #4338ca; }
+    [data-theme="light"] .tt-type-LIST { color: #b45309; }
+    [data-theme="light"] .tt-type-SET { color: #0369a1; }
+
+    .tt-tree-list {
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .tt-node-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 7px 11px;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+    }
+    .tt-node-row:hover { background: rgba(99, 102, 241, 0.09); }
+    .tt-node-row.selected { background: rgba(6, 182, 212, 0.14); outline: 1px solid rgba(6, 182, 212, 0.35); }
+    .tt-node-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .tt-chevron {
+      width: 14px;
+      height: 14px;
+      color: var(--muted);
+      transition: transform 0.18s ease;
+      flex-shrink: 0;
+    }
+    .tt-folder.tt-folder-open > .tt-node-row .tt-chevron { transform: rotate(90deg); }
+    .tt-folder-ico {
+      width: 16px;
+      height: 16px;
+      color: var(--amber);
+      flex-shrink: 0;
+    }
+    .tt-folder-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.6px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .tt-folder-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+    .tt-children {
+      margin-left: 18px;
+      padding-left: 14px;
+      border-left: 1px dashed var(--border-strong);
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .tt-leaf-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .tt-footer {
+      margin-top: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 12.2px;
+      color: var(--muted);
+    }
+    .tt-selected-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .tt-quick-flip {
+      background: none;
+      border: none;
+      color: var(--cyan);
+      font-weight: 700;
+      font-size: 12.2px;
+      cursor: pointer;
+      padding: 0;
+    }
+    .tt-quick-flip:hover { text-decoration: underline; }
+
+    @media (max-width: 1024px) {
+      .float-card { display: none; }
+      .stats-ribbon { grid-template-columns: repeat(2, 1fr); }
+      .tour-row, .tour-row.reverse { grid-template-columns: 1fr; gap: 22px; margin-bottom: 72px; }
+      .tour-card, .tour-row.reverse .tour-card { margin-left: 0; margin-right: 0; order: 2; }
+      .tour-row.reverse .tour-visual { order: 1; }
+      .playground-shell, .arch-grid, .cta-banner { grid-template-columns: 1fr; }
+      .bento-12 { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+      .hero-banner { padding: 48px 0 74px; }
+      .hero-copy { margin-bottom: 32px; }
+      .overlap-stats-section { margin-top: -36px; margin-bottom: 52px; }
+      .pg-tabs {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .playground-shell > *, .arch-grid > *, .cta-banner > *, .tour-row > * {
+        min-width: 0;
+      }
+      .tt-head, .tt-toolbar { gap: 10px; }
+    }
+    @media (max-width: 640px) {
+      .rg-nav-inner { padding: 10px 14px; gap: 10px; }
+      .rg-ver-pill { display: none; }
+      .rg-nav-links { display: none; }
+      .container { padding: 0 16px; }
+      .hero-banner { padding: 36px 0 56px; }
+      .hero-title { font-size: clamp(30px, 8.5vw, 42px); }
+      .btn-hero { width: 100%; justify-content: center; padding: 12px 18px; }
+      .bento-12, .stats-ribbon, .pg-tabs { grid-template-columns: 1fr; }
+      .tour-band { padding: 54px 0; }
+      .tour-row, .tour-row.reverse { margin-bottom: 44px; }
+      .tour-card { padding: 20px 18px; }
+      .pg-screen { padding: 14px; }
+      .cta-banner { padding: 28px 18px; margin: 28px 0 52px; }
+      .docker-box { padding: 14px; font-size: 11.5px; overflow-x: auto; }
+      .bench-card { padding: 20px 18px; }
+      .sec-head { margin-bottom: 36px; }
+      .stage-chrome { gap: 10px; font-size: 10.5px; }
+      .stage-chrome > span:last-child { display: none; }
+      .live-pill { font-size: 11px; padding: 6px 12px; text-align: left; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal { opacity: 1; transform: none; transition: none; }
+      .float-card, .btn-hero.glow, .pulse-dot { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="scroll-progress"></div>
+
+  <!-- Ambient Parallax Orbs & Grid -->
+  <div class="parallax-bg-layer" aria-hidden="true">
+    <div class="dot-grid" data-parallax="-0.06"></div>
+    <div class="orb orb-1" data-parallax="0.16"></div>
+    <div class="orb orb-2" data-parallax="-0.12"></div>
+    <div class="orb orb-3" data-parallax="0.09"></div>
+  </div>
+
+  <!-- Sticky Navigation -->
+  <header class="rg-nav">
+    <div class="rg-nav-inner">
+      <div class="rg-brand">
+        <span class="rg-logo-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2.5L21 7l-9 4.5L3 7l9-4.5z" fill="rgba(255,255,255,0.22)"/>
+            <path d="M3 12l9 4.5 9-4.5"/>
+            <path d="M3 17l9 4.5 9-4.5"/>
+          </svg>
+        </span>
+        <span>Redis<span style="color:var(--indigo-bright);">Studio</span></span>
+        <span class="rg-ver-pill">RELEASE V2.2</span>
+      </div>
+
+      <nav class="rg-nav-links">
+        <a href="#visual-tour" data-i18n="nav_tour">Product Tour</a>
+        <a href="#playground" data-i18n="nav_playground">Live Explorer</a>
+        <a href="#capabilities" data-i18n="nav_features">12 Capabilities</a>
+        <a href="#architecture" data-i18n="nav_arch">Business Value</a>
+      </nav>
+
+      <div class="rg-nav-actions">
+        <div class="nav-seg" title="Theme">
+          <button type="button" data-theme-btn="light" aria-label="Light theme">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+          </button>
+          <button type="button" data-theme-btn="dark" class="active" aria-label="Dark theme">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+          </button>
+        </div>
+        <div class="nav-seg" title="Language">
+          <button type="button" data-lang-btn="en" class="active">EN</button>
+          <button type="button" data-lang-btn="uk">UA</button>
+        </div>
+        <a href="https://github.com/dellik95/redis-gui" target="_blank" rel="noopener" class="nav-btn primary">GitHub ↗</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO BANNER WITH OVERLAPPING PARALLAX STAGE -->
+    <section class="hero-banner">
+      <div class="container">
+        <div class="hero-copy">
+          <div class="live-pill">
+            <span class="pulse-dot"></span>
+            <span data-i18n="hero_pill">REAL-TIME REDIS OPERATIONS • ZERO-DOWNTIME OBSERVABILITY</span>
+          </div>
+          <h1 class="hero-title" data-i18n="hero_title">Command Your Redis Clusters With Sub-Millisecond Clarity.</h1>
+          <p class="hero-sub" data-i18n="hero_sub">
+            Eliminate production blind spots, prevent costly cache outages, and ship faster. RedisStudio V2.2 unifies real-time cluster telemetry, visual data modeling, role-based access control, and safe load testing in one enterprise console.
+          </p>
+          <div class="hero-cta-row">
+            <a href="#visual-tour" class="btn-hero glow" data-i18n="hero_cta_tour">Explore All 4 Screens &amp; Features ↓</a>
+            <a href="#playground" class="btn-hero glass" data-i18n="hero_cta_try">Interactive Data &amp; CLI Simulator</a>
+            <a href="https://github.com/dellik95/redis-gui" target="_blank" rel="noopener" class="btn-hero glass">GitHub (redis-gui) ↗</a>
+          </div>
+        </div>
+
+        <!-- 3D Perspective Stage with Overlapping Parallax Cards -->
+        <div class="hero-stage" id="hero-stage">
+          <!-- Floating Card 1: Telemetry Widget -->
+          <div class="float-card float-telemetry" data-parallax="-0.15">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <span class="mono" style="font-size:10.5px;color:var(--emerald);font-weight:700;">● LIVE TELEMETRY STREAM</span>
+              <span class="mono" style="font-size:10px;color:var(--muted);">127.0.0.1:6379</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <div style="font-size:10px;color:var(--muted);">MEMORY RSS</div>
+                <div class="mono" style="font-size:18px;font-weight:800;color:var(--cyan);">1.66 MB</div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--muted);">CPU SYSTEM</div>
+                <div class="mono" style="font-size:18px;font-weight:800;color:var(--amber);">0.2 %</div>
+              </div>
+            </div>
+            <svg viewBox="0 0 220 34" style="width:100%;height:34px;margin-top:8px;">
+              <defs>
+                <linearGradient id="sparkGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#06b6d4" />
+                  <stop offset="100%" stop-color="#10b981" />
+                </linearGradient>
+              </defs>
+              <path d="M0,26 C30,10 55,28 85,15 C115,4 145,25 175,11 C195,4 208,16 220,12" fill="none" stroke="url(#sparkGrad)" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <!-- Central Browser Window Mockup -->
+          <div class="stage-main-frame" id="stage-tilt">
+            <div class="stage-chrome">
+              <div class="chrome-dots">
+                <span style="background:#ef4444"></span>
+                <span style="background:#f59e0b"></span>
+                <span style="background:#10b981"></span>
+              </div>
+              <span>localhost:4200/storage — RedisStudio V2.2 (Click screenshot to inspect full-res)</span>
+              <span>DB 0 • 39 KEYS</span>
+            </div>
+            <img src="assets/redis-gui/03_storage_table.png" alt="RedisStudio V2.2 Storage Manager" class="zoomable-shot" data-caption="Storage Manager — Virtualized Key Browser, Namespace Delimiter Tree, Type Pills & Bulk Actions" />
+          </div>
+
+          <!-- Floating Card 2: Stream Editor Overlap -->
+          <div class="float-card float-stream-mini" data-parallax="-0.22">
+            <div class="float-img-cap">
+              <span data-i18n="float_stream_title">03. Stream Visual Drawer</span>
+              <span style="color:var(--indigo-bright);">XADD *</span>
+            </div>
+            <img src="assets/redis-gui/05_stream_visual_editor.png" alt="Stream Editor" class="zoomable-shot" data-caption="Slide-Over Stream Editor — Inspect & Append Event Payloads Without Leaving Context" />
+          </div>
+
+          <!-- Floating Card 3: Interactive CLI Peek Overlap -->
+          <div class="float-card float-cli-peek" data-parallax="0.14">
+            <div class="float-img-cap">
+              <span data-i18n="float_cli_title">04. Interactive CLI Drawer</span>
+              <span class="mono" style="color:var(--emerald);">redis[db0]&gt; INFO</span>
+            </div>
+            <img src="assets/redis-gui/10_redis_cli_drawer.png" alt="CLI Drawer" class="zoomable-shot" data-caption="Docked Interactive Redis CLI Terminal with 1-Click Diagnostic Command Pills" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEGATIVE-MARGIN OVERLAPPING STATS RIBBON -->
+    <section class="overlap-stats-section">
+      <div class="container">
+        <div class="stats-ribbon reveal">
+          <div class="stat-tile">
+            <div class="stat-val" data-count-target="6">6</div>
+            <div class="stat-lbl" data-i18n="stat_editors">Visual Data Structure Editors</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">&lt; 1s</div>
+            <div class="stat-lbl" data-i18n="stat_signalr">Real-Time Telemetry Refresh</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">100%</div>
+            <div class="stat-lbl" data-i18n="stat_seeder">Non-Blocking Key Browsing</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">p50 / p99</div>
+            <div class="stat-lbl" data-i18n="stat_load">SLA Latency Validation</div>
+          </div>
+          <div class="stat-tile">
+            <div class="stat-val">&lt; 60s</div>
+            <div class="stat-lbl" data-i18n="stat_stack">Docker Team Onboarding</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISUAL TOUR BAND 1: OVERVIEW + SCREEN 01 (02_dashboard.png) -->
+    <section id="visual-tour" class="tour-band tour-band-intro">
+      <div class="container">
+        <div class="sec-head reveal">
+          <span class="sec-kicker" data-i18n="tour_kicker">PRODUCT WALKTHROUGH • 4 WORKFLOW SCREENS</span>
+          <h2 class="sec-title" data-i18n="tour_title">Every Line of Code Engineered for Reliability, Speed &amp; Control</h2>
+          <p class="sec-desc" data-i18n="tour_desc">Explore real production workflows inside RedisStudio V2.2 — click any screen to inspect it at full scale.</p>
+          <div class="tour-jump-pills">
+            <a href="#visual-tour" class="tour-jump-pill"><span class="mono">01</span><span data-i18n="tour_nav_1">Live Telemetry</span></a>
+            <a href="#tour-storage" class="tour-jump-pill"><span class="mono">02</span><span data-i18n="tour_nav_2">Storage &amp; Tree</span></a>
+            <a href="#tour-editors" class="tour-jump-pill"><span class="mono">03</span><span data-i18n="tour_nav_3">Visual Editors</span></a>
+            <a href="#tour-cli" class="tour-jump-pill"><span class="mono">04</span><span data-i18n="tour_nav_4">Ops CLI Drawer</span></a>
+          </div>
+        </div>
+
+        <!-- SCREEN 1: LIVE DASHBOARD (02_dashboard.png) -->
+        <article class="tour-row reveal">
+          <div class="tour-watermark" data-parallax="0.08">TELEMETRY</div>
+          <div class="tour-visual">
+            <div class="tour-visual-inner">
+              <img src="assets/redis-gui/02_dashboard.png" alt="Live Redis Telemetry Dashboard" class="zoomable-shot" data-caption="01. Executive Dashboard — 4-Channel Real-Time Health Charts, Environment Cards & Global Ctrl+K Search" />
+              <button type="button" class="zoom-hint" data-zoom-trigger><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg><span data-i18n="zoom_hint">Click to Zoom</span></button>
+            </div>
+          </div>
+          <div class="tour-card">
+            <span class="tour-badge" data-i18n="s1_badge">SCREEN 01 • LIVE TELEMETRY &amp; CONNECTIONS</span>
+            <h3 data-i18n="s1_title">Live Operations &amp; Health Cockpit</h3>
+            <p data-i18n="s1_desc">Catch memory spikes, throughput bottlenecks, and saturation early with sub-second live metrics — zero polling overhead on production.</p>
+            <ul class="tour-list">
+              <li data-i18n="s1_f1">4 real-time SLA pulse monitors: Memory Usage (RSS &amp; Peak), Throughput ops/sec, CPU %, and Connected Client Traffic.</li>
+              <li data-i18n="s1_f2">Unified environment cards showing host, active DB, TLS security state, and 1-click production connect controls.</li>
+              <li data-i18n="s1_f3">Built-in RBAC navigation (Dashboard, Health Monitoring, Audit Logs [ADMIN]) plus Ctrl+K global Command Palette.</li>
+            </ul>
+            <div class="tech-mini-pills">
+              <span>Real-Time Metrics</span><span>Zero-Polling Overhead</span><span>Multi-Environment Hub</span><span>Ctrl+K Search</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- VISUAL TOUR BAND 2: SCREEN 02 STORAGE MANAGER + INTERACTIVE TABLE/TREE -->
+    <section id="tour-storage" class="tour-band tour-band-b">
+      <div class="container">
+        <!-- SCREEN 2: STORAGE MANAGER (03_storage_table.png) -->
+        <article class="tour-row reverse reveal">
+          <div class="tour-watermark" data-parallax="-0.08">STORAGE</div>
+          <div class="tour-visual">
+            <div class="tour-visual-inner">
+              <img src="assets/redis-gui/03_storage_table.png" alt="Storage Manager Key Browser" class="zoomable-shot" data-caption="02. Storage Manager — Table & Tree Mode, Pattern Filtering, Type Counters, Export/Import & 10k Seeder" />
+              <button type="button" class="zoom-hint" data-zoom-trigger><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg><span data-i18n="zoom_hint">Click to Zoom</span></button>
+            </div>
+          </div>
+          <div class="tour-card">
+            <span class="tour-badge" data-i18n="s2_badge">SCREEN 02 • STORAGE MANAGER</span>
+            <h3 data-i18n="s2_title">100k+ Key Browser With Non-Blocking SCAN</h3>
+            <p data-i18n="s2_desc">Browse massive production keyspaces safely using cursor-based SCAN pagination, hierarchical colon-delimiter Trees, and instant data-type filter chips with live totals.</p>
+            <ul class="tour-list">
+              <li data-i18n="s2_f1">Switch effortlessly between flat Virtualized Table mode and Hierarchical Tree grouped by custom delimiters (:).</li>
+              <li data-i18n="s2_f2">Filter instantly across All, String, Hash, List, Set, Sorted Set, and Stream with real-time type counters and byte sizes.</li>
+              <li data-i18n="s2_f3">Full Enterprise Toolbar: JSON Export/Import, Safe Delete by Pattern, 1-click Seed Demo (10k keys), Slowlog &amp; Load Test.</li>
+            </ul>
+            <div class="tech-mini-pills">
+              <span>Cursor SCAN</span><span>Delimiter Tree</span><span>TTL &amp; Byte Profiler</span><span>Bulk Actions</span>
+            </div>
+          </div>
+        </article>
+
+        <!-- INTERACTIVE TABLE vs TREE STRUCTURE VISUALIZER -->
+        <div id="tree-table-visualizer" class="tt-studio reveal">
+          <div class="tt-head">
+            <div class="tt-title-block">
+              <span class="tour-badge" data-i18n="tt_kicker">INTERACTIVE STORAGE MODE • LIVE VISUALIZER</span>
+              <h4 data-i18n="tt_title">Switch Between Flat Sortable Tables &amp; Domain Folder Trees</h4>
+              <p data-i18n="tt_sub">Click between Table and Tree modes, switch namespace delimiters (: / .), sort columns, or expand production domains — identical to Storage Manager inside RedisStudio V2.2.</p>
+            </div>
+            <div class="tt-controls">
+              <div class="tt-mode-switch" role="tablist" aria-label="Storage View Mode">
+                <button type="button" class="tt-mode-btn active" data-tt-mode="table">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="9" y1="4" x2="9" y2="20"/></svg>
+                  <span data-i18n="tt_btn_table">Flat Table</span>
+                </button>
+                <button type="button" class="tt-mode-btn" data-tt-mode="tree">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 012-2h5l2 2h7a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/><path d="M8 12h8M8 16h5"/></svg>
+                  <span data-i18n="tt_btn_tree">Folder Tree</span>
+                </button>
+              </div>
+              <div class="tt-delim-group">
+                <span data-i18n="tt_delim">Delimiter:</span>
+                <button type="button" class="tt-delim-btn active" data-tt-delim=":">:</button>
+                <button type="button" class="tt-delim-btn" data-tt-delim="/">/</button>
+                <button type="button" class="tt-delim-btn" data-tt-delim=".">.</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="tt-subbar">
+            <div class="tt-stats-badges">
+              <span class="tt-pill live" id="tt-mode-pill">MODE: FLAT TABLE</span>
+              <span class="tt-pill" id="tt-count-pill">8 keys • 4 domains • 7.77 KB</span>
+            </div>
+            <div class="tt-tree-actions" id="tt-tree-actions" style="display:none;">
+              <button type="button" class="tt-mini-btn" id="tt-expand-all" data-i18n="tt_expand_all">Expand All</button>
+              <button type="button" class="tt-mini-btn" id="tt-collapse-all" data-i18n="tt_collapse_all">Collapse All</button>
+            </div>
+          </div>
+
+          <div class="tt-canvas" id="tt-canvas"></div>
+
+          <div class="tt-footer">
+            <div class="tt-selected-bar" id="tt-selected-bar"></div>
+            <button type="button" class="tt-quick-flip" id="tt-quick-flip"></button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISUAL TOUR BAND 3: SCREEN 03 VISUAL EDITORS -->
+    <section id="tour-editors" class="tour-band tour-band-a-sep">
+      <div class="container">
+        <!-- SCREEN 3: VISUAL EDITORS (05_stream_visual_editor.png) -->
+        <article class="tour-row reveal">
+          <div class="tour-watermark" data-parallax="0.08">EDITORS</div>
+          <div class="tour-visual">
+            <div class="tour-visual-inner">
+              <img src="assets/redis-gui/05_stream_visual_editor.png" alt="Redis Stream Visual Editor Drawer" class="zoomable-shot" data-caption="03. Slide-Over Visual Editor — Native Redis Streams XADD *, Dynamic Fields & In-Context Key Inspection" />
+              <button type="button" class="zoom-hint" data-zoom-trigger><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg><span data-i18n="zoom_hint">Click to Zoom</span></button>
+            </div>
+          </div>
+          <div class="tour-card">
+            <span class="tour-badge" data-i18n="s3_badge">SCREEN 03 • CONTEXTUAL VISUAL EDITORS</span>
+            <h3 data-i18n="s3_title">Intuitive Editors for Every Business Data Type</h3>
+            <p data-i18n="s3_desc">Inspect and update customer sessions, event streams, JSON payloads, and leaderboards in a clean drawer without losing your active view.</p>
+            <ul class="tour-list">
+              <li data-i18n="s3_f1">Visual Event Stream inspector supports automatic timeline IDs and structured field appending in seconds.</li>
+              <li data-i18n="s3_f2">Type-aware schema validation catches malformed JSON or invalid TTL values before changes hit live memory.</li>
+              <li data-i18n="s3_f3">One-click key copy, live refresh, TTL override, and safe confirmation guards prevent costly human mistakes.</li>
+            </ul>
+            <div class="tech-mini-pills">
+              <span>Human-Error Guards</span><span>Event Streams</span><span>JSON Validation</span><span>Live TTL Control</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- VISUAL TOUR BAND 4: SCREEN 04 INTERACTIVE CLI DRAWER -->
+    <section id="tour-cli" class="tour-band tour-band-c">
+      <div class="container">
+        <!-- SCREEN 4: INTERACTIVE REDIS CLI DRAWER (10_redis_cli_drawer.png) -->
+        <article class="tour-row reverse reveal">
+          <div class="tour-watermark" data-parallax="-0.08">TERMINAL</div>
+          <div class="tour-visual">
+            <div class="tour-visual-inner">
+              <img src="assets/redis-gui/10_redis_cli_drawer.png" alt="Interactive Redis CLI Drawer" class="zoomable-shot" data-caption="04. Interactive CLI Drawer — Persistent DB-Scoped Shell with 1-Click Diagnostic Command Chips" />
+              <button type="button" class="zoom-hint" data-zoom-trigger><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg><span data-i18n="zoom_hint">Click to Zoom</span></button>
+            </div>
+          </div>
+          <div class="tour-card">
+            <span class="tour-badge" data-i18n="s4_badge">SCREEN 04 • INTERACTIVE CLI DRAWER</span>
+            <h3 data-i18n="s4_title">DB-Aware Interactive CLI &amp; 1-Click Diagnostics</h3>
+            <p data-i18n="s4_desc">Drop directly into an embedded Redis shell scoped to your active database without leaving the Storage Manager — run raw commands or trigger health presets in a single click.</p>
+            <ul class="tour-list">
+              <li data-i18n="s4_f1">Instant preset command pills: PING, INFO, DBSIZE, CLIENT LIST, SLOWLOG, MEMORY STATS, and TIME.</li>
+              <li data-i18n="s4_f2">Expand to fullscreen console, copy raw output, clear buffer, and inspect exact server kernel/epoll build metrics.</li>
+              <li data-i18n="s4_f3">Seamless side-by-side workflow alongside key filters so you can test LUA/commands and verify mutated keys immediately.</li>
+            </ul>
+            <div class="tech-mini-pills">
+              <span>redis[db0]&gt; Shell</span><span>Quick Presets</span><span>Slowlog Diagnostics</span><span>Fullscreen Toggle</span>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- INSIDE THE APP: REAL MODULE EXPLORER -->
+    <section id="playground" class="playground-section">
+      <div class="container">
+        <div class="sec-head reveal">
+          <span class="sec-kicker" data-i18n="pg_kicker">INSIDE REDISSTUDIO V2.2 • REAL APP MODULES</span>
+          <h2 class="sec-title" data-i18n="pg_title">Explore Actual Tools &amp; Visual Editors Built Into the App</h2>
+          <p class="sec-desc" data-i18n="pg_desc">Every tab below opens a real dialog or visual screen from RedisStudio V2.2 — click any preview to inspect it in full resolution.</p>
+        </div>
+
+        <div class="playground-shell reveal">
+          <div class="pg-tabs" id="pg-tabs">
+            <button type="button" class="pg-tab active" data-pg="loadtest">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><circle cx="12" cy="14" r="1.5"/><path d="M4.6 17A8.5 8.5 0 1119.4 17"/></svg><span data-i18n="pg_t_load">Load Test Benchmark</span></span>
+              <span class="mono">RPS</span>
+            </button>
+            <button type="button" class="pg-tab" data-pg="seeder">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg><span data-i18n="pg_t_seed">Realistic Data Seeder</span></span>
+              <span class="mono">10k</span>
+            </button>
+            <button type="button" class="pg-tab" data-pg="slowlog">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.8 1.8M9 2.5h6"/></svg><span data-i18n="pg_t_slow">Slowlog Inspector</span></span>
+              <span class="mono">µs</span>
+            </button>
+            <button type="button" class="pg-tab" data-pg="tree">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6a2 2 0 012-2h5l2 2h7a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/></svg><span data-i18n="pg_t_tree">Namespace Folder Tree</span></span>
+              <span class="mono">: / .</span>
+            </button>
+            <button type="button" class="pg-tab" data-pg="editors">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span data-i18n="pg_t_edit">Hash &amp; JSON Editors</span></span>
+              <span class="mono">EDIT</span>
+            </button>
+            <button type="button" class="pg-tab" data-pg="palette">
+              <span class="pg-tab-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.5-4.5"/></svg><span data-i18n="pg_t_cmd">Command Palette</span></span>
+              <span class="mono">Ctrl+K</span>
+            </button>
+          </div>
+
+          <div class="pg-screen" id="pg-screen"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 ENTERPRISE CAPABILITIES -->
+    <section id="capabilities" class="features-section">
+      <div class="container">
+        <div class="sec-head reveal">
+          <span class="sec-kicker" data-i18n="cap_kicker">COMPLETE FEATURE SUITE</span>
+          <h2 class="sec-title" data-i18n="cap_title">Everything Required for Mission-Critical Redis Ops</h2>
+          <p class="sec-desc" data-i18n="cap_desc">12 engineered modules covering observability, data modeling, safety guards, and load testing.</p>
+        </div>
+        <div class="bento-12" id="bento-12-grid"></div>
+      </div>
+    </section>
+
+    <!-- BUSINESS IMPACT & ENTERPRISE READINESS -->
+    <section id="architecture" class="arch-section">
+      <div class="container">
+        <div class="sec-head reveal">
+          <span class="sec-kicker" data-i18n="arch_kicker">BUSINESS IMPACT &amp; ROI</span>
+          <h2 class="sec-title" data-i18n="arch_title">Cut Troubleshooting Time by 80% &amp; Protect Production Uptime</h2>
+          <p class="sec-desc" data-i18n="arch_desc">Built for high-stakes SaaS, FinTech, Healthcare, and e-commerce teams where every millisecond of downtime impacts revenue.</p>
+        </div>
+
+        <div class="arch-grid">
+          <div class="arch-stack reveal">
+            <div class="arch-layer">
+              <div class="arch-layer-head">
+                <span class="arch-layer-title" data-i18n="arch_t1">01. Eliminate Production Outages</span>
+                <span class="arch-layer-tag">99.99% Uptime Safe</span>
+              </div>
+              <p data-i18n="arch_l1">Interactive key browsing runs strictly via non-blocking cursor SCAN, keeping latency flat even during peak customer checkout traffic.</p>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-head">
+                <span class="arch-layer-title" data-i18n="arch_t2">02. Enterprise Security, RBAC &amp; Audit Compliance</span>
+                <span class="arch-layer-tag">SOC2 / Audit Ready</span>
+              </div>
+              <p data-i18n="arch_l2">Production Read-Only Safe Mode, dry-run pattern delete checks, Role-Based Access Control (Admin / Viewer), and full team audit trails.</p>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-head">
+                <span class="arch-layer-title" data-i18n="arch_t3">03. Validate Capacity Before Peak Launches</span>
+                <span class="arch-layer-tag">Predictable SLA</span>
+              </div>
+              <p data-i18n="arch_l3">Simulate 10,000+ realistic keys and inspect p50/p95/p99 throughput benchmarks before traffic spikes reach production.</p>
+            </div>
+            <div class="arch-layer">
+              <div class="arch-layer-head">
+                <span class="arch-layer-title" data-i18n="arch_t4">04. Accelerate Onboarding &amp; Save DevOps Hours</span>
+                <span class="arch-layer-tag">1-Click Workspace</span>
+              </div>
+              <p data-i18n="arch_l4">Replace fragile one-off shell scripts with intuitive visual data editors, portable JSON snapshots, and single-command Docker deployment.</p>
+            </div>
+          </div>
+
+          <div class="bench-box reveal">
+            <h3 style="font-size:20px;margin-bottom:8px;" data-i18n="bench_title">Built-In Load Tester Telemetry</h3>
+            <p style="font-size:13.5px;color:var(--muted);margin-bottom:22px;" data-i18n="bench_desc">Sample 10,000-key stress run comparing throughput &amp; percentile latencies via Pipeline batching.</p>
+
+            <div class="bench-bar-row">
+              <div class="bench-bar-top"><span>p50 Latency (GET/SET)</span><span class="mono" style="color:var(--emerald);">0.38 ms</span></div>
+              <div class="bench-track"><div class="bench-fill" style="width:94%;"></div></div>
+            </div>
+            <div class="bench-bar-row">
+              <div class="bench-bar-top"><span>p95 Latency (Pipeline)</span><span class="mono" style="color:var(--cyan);">1.12 ms</span></div>
+              <div class="bench-track"><div class="bench-fill" style="width:86%;"></div></div>
+            </div>
+            <div class="bench-bar-row">
+              <div class="bench-bar-top"><span>p99 Tail Latency</span><span class="mono" style="color:var(--indigo-bright);">2.40 ms</span></div>
+              <div class="bench-track"><div class="bench-fill" style="width:74%;"></div></div>
+            </div>
+            <div class="bench-bar-row">
+              <div class="bench-bar-top"><span>SCAN Throughput (10k Keys)</span><span class="mono" style="color:var(--amber);">~145 ms</span></div>
+              <div class="bench-track"><div class="bench-fill" style="width:91%;"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- DOCKER CTA & RETURN TO RESUME -->
+    <section class="container reveal">
+      <div class="cta-banner">
+        <div>
+          <span class="sec-kicker" style="margin-bottom:12px;">TEAM DEPLOYMENT &amp; OPEN SOURCE</span>
+          <h2 style="font-family:'Space Grotesk',sans-serif;font-size:clamp(24px,3vw,34px);margin-bottom:12px;" data-i18n="cta_title">Deploy RedisStudio Across Your Engineering Team</h2>
+          <p style="color:var(--ink-2);font-size:15px;margin-bottom:22px;" data-i18n="cta_desc">Launch in under 60 seconds with Docker Compose, standardize production observability, or inspect the open-source edition on GitHub.</p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <a href="https://github.com/dellik95/redis-gui" target="_blank" rel="noopener" class="btn-hero glow">GitHub (dellik95/redis-gui) ↗</a>
+          </div>
+        </div>
+        <div class="docker-box">
+          <div style="color:#94a3b8;margin-bottom:6px;"># Launch RedisGUI + Redis Stack locally</div>
+          <div id="docker-cmd-text">git clone https://github.com/dellik95/redis-gui.git<br>cd redis-gui &amp;&amp; docker compose up -d<br># UI -&gt; http://localhost:5000</div>
+          <button type="button" class="copy-cmd-btn" id="copy-docker-btn" data-i18n="copy_cmd">Copy Docker Quickstart</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div style="margin-bottom:10px;" data-i18n="footer_text">RedisGUI (RedisStudio V2.2) — Enterprise Redis Observability, Safe Governance &amp; Real-Time Diagnostics</div>
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:12.5px;font-weight:600;">
+      <a href="https://github.com/dellik95/redis-gui" target="_blank" rel="noopener" style="color:var(--indigo-bright);">GitHub (redis-gui) ↗</a>
+      <a href="https://www.youtube.com/@CrafterInCode" target="_blank" rel="noopener" style="color:var(--cyan);">YouTube (@CrafterInCode) ↗</a>
+      <a href="https://www.linkedin.com/in/oleksandr-lutskov-b78a57146/" target="_blank" rel="noopener" style="color:var(--muted);">LinkedIn ↗</a>
+      <a href="https://dellik95.github.io/portfolio/" target="_blank" rel="noopener" style="color:var(--muted);">Portfolio &amp; CV ↗</a>
+    </div>
+  </footer>
+
+  <!-- LIGHTBOX -->
+  <div id="rg-lightbox" role="dialog" aria-modal="true">
+    <div class="lb-wrap">
+      <div class="lb-top">
+        <span id="lb-caption" style="font-weight:700;font-size:15px;"></span>
+        <button type="button" id="lb-close" class="nav-btn" style="background:#ef4444;border:none;color:#fff;">✕ Close (Esc)</button>
+      </div>
+      <img id="lb-img" src="" alt="Full Resolution RedisGUI Screenshot" />
+    </div>
+  </div>
+
+  <script>
+    const I18N = {
+      en: {
+        nav_tour: 'Product Tour',
+        nav_playground: 'In-App Modules',
+        nav_features: '12 Capabilities',
+        nav_arch: 'Business Value',
+        hero_pill: 'REAL-TIME REDIS OPERATIONS • ZERO-DOWNTIME OBSERVABILITY',
+        hero_title: 'Command Your Redis Clusters With Sub-Millisecond Clarity.',
+        hero_sub: 'Eliminate production blind spots, prevent costly cache outages, and ship faster. RedisStudio V2.2 unifies real-time cluster telemetry, visual data modeling, role-based access control, and safe load testing in one enterprise console.',
+        hero_cta_tour: 'Explore Workflows & Features ↓',
+        hero_cta_try: 'Inside the App (Real Modules)',
+        float_stream_title: '03. Stream Visual Drawer',
+        float_cli_title: '04. Interactive CLI Drawer',
+        stat_editors: 'Visual Data Structure Editors',
+        stat_signalr: 'Real-Time Telemetry Refresh',
+        stat_seeder: 'Non-Blocking Key Browsing',
+        stat_load: 'SLA Latency Validation',
+        stat_stack: 'Docker Team Onboarding',
+        tour_kicker: 'PRODUCT WALKTHROUGH • 4 WORKFLOW SCREENS',
+        tour_title: 'Every Line of Code Engineered for Reliability, Speed & Control',
+        tour_desc: 'Explore real production workflows inside RedisStudio V2.2 — click any screen to inspect it at full scale.',
+        tour_nav_1: 'Live Telemetry',
+        tour_nav_2: 'Storage & Tree',
+        tour_nav_3: 'Visual Editors',
+        tour_nav_4: 'Ops CLI Drawer',
+        zoom_hint: 'Click to Zoom',
+        s1_badge: 'SCREEN 01 • LIVE TELEMETRY & CONNECTIONS',
+        s1_title: 'Spot Memory Spikes & Bottlenecks Before Users Notice',
+        s1_desc: 'Monitor memory peaks, realtime ops/sec throughput, CPU load, and connected client traffic continuously so teams catch anomalies early instead of reacting to incidents.',
+        s1_f1: '4 live health panels: Memory Usage (RSS & Peak), Operations/sec, CPU %, and Client Traffic (KB/s in & out).',
+        s1_f2: 'Centralized environment cards displaying host:port, active DB, security badges, and 1-click switch across Staging & Prod.',
+        s1_f3: 'Governance-ready navigation (Dashboard, Health Monitoring, Audit Logs [ADMIN]) plus instant Ctrl+K Quick Search.',
+        s2_badge: 'SCREEN 02 • STORAGE MANAGER',
+        s2_title: 'Browse Millions of Keys Safely Without Blocking Traffic',
+        s2_desc: 'Navigate high-volume production keyspaces safely with non-blocking pagination, structured namespace trees, and instant memory visibility per key.',
+        s2_f1: 'Switch seamlessly between flat sortable Tables and domain-grouped Folder Trees divided by namespace delimiter (:).',
+        s2_f2: 'Locate hot keys or memory hogs fast with live type counters (String, Hash, List, Set, ZSet, Stream) and byte footprint.',
+        s2_f3: 'Complete ops toolkit: JSON Backup/Import, Safe Delete by Pattern, Stress Seeder (10k keys), Slowlog & Load Tester.',
+        tt_kicker: 'INTERACTIVE STORAGE MODE • LIVE VISUALIZER',
+        tt_title: 'Switch Between Flat Sortable Tables & Domain Folder Trees',
+        tt_sub: 'Click between Table and Tree modes, switch namespace delimiters (: / .), sort columns, or expand production domains — identical to Storage Manager inside RedisStudio V2.2.',
+        tt_btn_table: 'Flat Table',
+        tt_btn_tree: 'Folder Tree',
+        tt_delim: 'Delimiter:',
+        tt_expand_all: 'Expand All',
+        tt_collapse_all: 'Collapse All',
+        tt_col_key: 'Key Name',
+        tt_col_type: 'Type',
+        tt_col_ttl: 'TTL',
+        tt_col_size: 'Memory',
+        tt_selected_prefix: 'Selected key:',
+        tt_hint_tree: 'Switch to Folder Tree to see domain hierarchy →',
+        tt_hint_table: 'Switch to Flat Table to sort & compare raw sizes →',
+        tt_keys_word: 'keys',
+        tt_domains_word: 'domains',
+        s3_badge: 'SCREEN 03 • CONTEXTUAL VISUAL EDITORS',
+        s3_title: 'Inspect & Edit Complex Payloads With Zero Syntax Errors',
+        s3_desc: 'Modify Redis Streams, JSON configs, Hashes, Lists, Sets, and Scored Leaderboards inside a slide-over drawer while keeping table search results visible.',
+        s3_f1: 'Visual Redis Stream builder supports auto-assigned event IDs (*) and dynamic field updates for event-driven troubleshooting.',
+        s3_f2: 'Built-in schema & JSON validation prevents malformed writes before they reach customer-facing microservices.',
+        s3_f3: 'One-click key copy, instant TTL tuning, and confirmation guards prevent accidental overwrites in production.',
+        s4_badge: 'SCREEN 04 • EMBEDDED OPS TERMINAL',
+        s4_title: 'Run Audits & Diagnostics Immediately in Context',
+        s4_desc: 'Execute ad-hoc Redis commands scoped to the active database right inside the workspace — verify state changes in real time without juggling terminal windows.',
+        s4_f1: '1-click diagnostic presets: PING, INFO, DBSIZE, CLIENT LIST, SLOWLOG, MEMORY STATS, and TIME.',
+        s4_f2: 'Expandable console with one-click output copy, buffer clear, and instant server health summary.',
+        s4_f3: 'Work side-by-side above live data tables to test commands and immediately confirm key updates or TTL changes.',
+        pg_kicker: 'INSIDE REDISSTUDIO V2.2 • REAL APP MODULES',
+        pg_title: 'Explore Actual Tools & Visual Editors Built Into the App',
+        pg_desc: 'Every tab below opens a real dialog or visual screen from RedisStudio V2.2 — click any preview to inspect it in full resolution.',
+        pg_t_load: 'Load Test Benchmark',
+        pg_t_seed: 'Realistic Data Seeder',
+        pg_t_slow: 'Slowlog Inspector',
+        pg_t_tree: 'Namespace Folder Tree',
+        pg_t_edit: 'Hash & JSON Editors',
+        pg_t_cmd: 'Command Palette',
+        cap_kicker: 'COMPLETE PRODUCT SUITE',
+        cap_title: 'Everything Your Team Needs for Mission-Critical Redis Ops',
+        cap_desc: '12 production capabilities built to eliminate downtime, enforce security governance, and accelerate debugging.',
+        arch_kicker: 'BUSINESS IMPACT & ROI',
+        arch_title: 'Cut Troubleshooting Time by 80% & Protect Production Uptime',
+        arch_desc: 'Built for high-stakes SaaS, FinTech, Healthcare, and e-commerce teams where every millisecond of downtime impacts revenue.',
+        arch_t1: '01. Eliminate Production Outages',
+        arch_l1: 'Interactive key browsing runs strictly via non-blocking cursor SCAN, keeping latency flat even during peak customer checkout traffic.',
+        arch_t2: '02. Enterprise Security, RBAC & Audit Compliance',
+        arch_l2: 'Production Read-Only Safe Mode, dry-run pattern delete checks, Role-Based Access Control (Admin / Viewer), and full team audit trails.',
+        arch_t3: '03. Validate Capacity Before Peak Launches',
+        arch_l3: 'Simulate 10,000+ realistic keys and inspect p50/p95/p99 throughput benchmarks before traffic spikes reach production.',
+        arch_t4: '04. Accelerate Onboarding & Save DevOps Hours',
+        arch_l4: 'Replace fragile one-off shell scripts with intuitive visual data editors, portable JSON snapshots, and single-command Docker deployment.',
+        bench_title: 'Predictable SLA Performance Under Load',
+        bench_desc: 'Built-in verification across 10,000+ keys confirms low p50/p95/p99 response times before customer releases.',
+        cta_title: 'Ready to Deploy for Your Engineering Team',
+        cta_desc: 'Self-host on your own infrastructure with zero vendor lock-in. Clone the repository and launch the full workspace with one Docker Compose command.',
+        copy_cmd: 'Copy Docker Quickstart',
+        copied_cmd: 'Copied to Clipboard ✓',
+        footer_text: 'RedisGUI (RedisStudio V2.2) — Enterprise Redis Observability & Data Management Platform'
+      },
+      uk: {
+        nav_tour: 'Огляд продукту',
+        nav_playground: 'Модулі програми',
+        nav_features: '12 Можливостей',
+        nav_arch: 'Бізнес-цінність',
+        hero_pill: 'КЕРУВАННЯ REDIS БЕЗ ДАУНТАЙМУ • LIVE-ДІАГНОСТИКА ТА МОНІТОРИНГ',
+        hero_title: 'Керуйте Redis-кластерами з точністю до мілісекунди.',
+        hero_sub: 'Приберіть «сліпі зони» в продакшені, уникайте дорогих збоїв кешу та прискорюйте роботу команди. RedisStudio V2.2 об’єднує live-телеметрію, візуальне управління даними, рольову безпеку (RBAC) та перевірку навантаження в одній консолі.',
+        hero_cta_tour: 'Огляд ключових можливостей ↓',
+        hero_cta_try: 'Реальні модулі програми',
+        float_stream_title: '03. Візуальний редактор Streams',
+        float_cli_title: '04. Інтерактивний CLI-термінал',
+        stat_editors: 'Візуальних редакторів даних',
+        stat_signalr: 'Оновлення метрик у реальному часі',
+        stat_seeder: 'Безпечний перегляд без блокувань',
+        stat_load: 'Контроль затримок SLA',
+        stat_stack: 'Онбординг команди через Docker',
+        tour_kicker: 'ОГЛЯД ПРОДУКТУ • 4 КЛЮЧОВІ ЕКРАНИ',
+        tour_title: 'Кожен рядок коду створений для стабільності, швидкості та контролю продакшну',
+        tour_desc: 'Реальні робочі сценарії всередині RedisStudio V2.2 — натисніть на будь-який екран, щоб роздивитися деталі.',
+        tour_nav_1: 'Live-телеметрія',
+        tour_nav_2: 'Сховище і Дерево',
+        tour_nav_3: 'Візуальні редактори',
+        tour_nav_4: 'Ops CLI-консоль',
+        zoom_hint: 'Збільшити екран',
+        s1_badge: 'ЕКРАН 01 • LIVE ТЕЛЕМЕТРІЯ ТА СЕРЕДОВИЩА',
+        s1_title: 'Виявляйте піки пам’яті та вузькі місця раніше за користувачів',
+        s1_desc: 'Безперервно відстежуйте пікове споживання пам’яті, ops/sec, навантаження CPU та мережевий трафік — реагуйте на відхилення до виникнення інциденту.',
+        s1_f1: '4 наочні панелі здоров’я кластера: Memory Usage (RSS і Peak), Operations/sec, CPU (%) та Client Traffic (KB/s).',
+        s1_f2: 'Централізовані картки середовищ із хостом, активною БД, TLS-статусом та перемиканням між Dev, Staging і Prod у 1 клік.',
+        s1_f3: 'Корпоративна навігація (Dashboard, Health Monitoring, Audit Logs [ADMIN]) та миттєвий глобальний пошук Ctrl+K.',
+        s2_badge: 'ЕКРАН 02 • STORAGE MANAGER',
+        s2_title: 'Працюйте з мільйонами ключів без ризику «покласти» прод',
+        s2_desc: 'Безпечно переглядайте великі бази даних: неблокуючий пошук, дерево за роздільником (:), фільтри типів та аудит розміру кожного ключа.',
+        s2_f1: 'Зручне перемикання між таблицею та ієрархічним деревом бізнес-доменів за роздільником (:).',
+        s2_f2: 'Миттєвий пошук проблемних ключів за типом (String, Hash, List, Set, Sorted Set, Stream), TTL та розміром у байтах.',
+        s2_f3: 'Повний інструментарій команди: JSON-експорт/імпорт бекапів, безпечне видалення за маскою, 10k Seeder, Slowlog та Load Test.',
+        tt_kicker: 'ІНТЕРАКТИВНИЙ РЕЖИМ ПЕРЕГЛЯДУ • STORAGE MANAGER',
+        tt_title: 'Миттєве перемикання між плоскою таблицею та деревом доменів',
+        tt_sub: 'Перемикайте Table / Tree, змінюйте роздільник простору імен (: / .), сортуйте колонки або розгортайте папки доменів — точно як у RedisStudio V2.2.',
+        tt_btn_table: 'Плоска таблиця',
+        tt_btn_tree: 'Дерево папок',
+        tt_delim: 'Роздільник:',
+        tt_expand_all: 'Розгорнути всі',
+        tt_collapse_all: 'Згорнути всі',
+        tt_col_key: 'Ключ',
+        tt_col_type: 'Тип',
+        tt_col_ttl: 'TTL',
+        tt_col_size: 'Пам’ять',
+        tt_selected_prefix: 'Обраний ключ:',
+        tt_hint_tree: 'Перемкніть на Дерево папок, щоб згрупувати за доменом →',
+        tt_hint_table: 'Перемкніть на Таблицю для сортування за розміром →',
+        tt_keys_word: 'ключів',
+        tt_domains_word: 'домени',
+        s3_badge: 'ЕКРАН 03 • ВІЗУАЛЬНІ РЕДАКТОРИ ДАНИХ',
+        s3_title: 'Редагуйте складні структури без синтаксичних помилок',
+        s3_desc: 'Змінюйте Redis Streams, JSON-конфіги, Hash-об’єкти, Черги та Рейтинги в боковій панелі, не втрачаючи загальної картини таблиці.',
+        s3_f1: 'Візуальний конструктор Redis Streams з автоприсвоєнням ID (*) та зручним додаванням полів подій.',
+        s3_f2: 'Вбудована перевірка структури й валідація JSON захищають мікросервіси від помилкових записів у продакшені.',
+        s3_f3: 'Швидке копіювання ключа, керування TTL та підтвердження змін виключають випадкову втрату даних.',
+        s4_badge: 'ЕКРАН 04 • ВБУДОВАНИЙ OPS-ТЕРМІНАЛ',
+        s4_title: 'Проводьте діагностику безпосередньо в контексті активної БД',
+        s4_desc: 'Виконуйте команди Redis прямо поверх робочого простору й одразу перевіряйте результат оновлення ключів без перемикання вікон.',
+        s4_f1: 'Кнопки швидкої діагностики в 1 клік: PING, INFO, DBSIZE, CLIENT LIST, SLOWLOG, MEMORY STATS та TIME.',
+        s4_f2: 'Розгортання консолі на весь екран, миттєве копіювання звіту та деталі стану сервера в одному вікні.',
+        s4_f3: 'Паралельна робота з таблицею ключів економить хвилини на кожному розслідуванні інциденту.',
+        pg_kicker: 'ВСЕРЕДИНІ REDISSTUDIO V2.2 • РЕАЛЬНІ ЕКРАНИ ПРОГРАМИ',
+        pg_title: 'Подивіться, які саме інструменти та редактори є у програмі',
+        pg_desc: 'Кожна вкладка показує реальне діалогове вікно чи екран із вашої програми RedisStudio V2.2 — натисніть на скриншот для збільшення.',
+        pg_t_load: 'Навантажувальний тест',
+        pg_t_seed: 'Генератор даних (Seeder)',
+        pg_t_slow: 'Інспектор Slowlog',
+        pg_t_tree: 'Дерево просторів імен',
+        pg_t_edit: 'Редактори Hash і JSON',
+        pg_t_cmd: 'Палітра команд Ctrl+K',
+        cap_kicker: 'ПОВНИЙ НАБІР МОЖЛИВОСТЕЙ',
+        cap_title: 'Усе необхідне для надійної роботи з Redis у продакшені',
+        cap_desc: '12 модулів продукту для запобігання простоям, контролю доступів команди та швидкого пошуку вузьких місць.',
+        arch_kicker: 'БІЗНЕС-ЦІННІСТЬ ТА ГОТОВНІСТЬ ДО ENTERPRISE',
+        arch_title: 'Скоротіть час діагностики інцидентів на 80% і захистіть продакшн',
+        arch_desc: 'Створено для SaaS-платформ, FinTech, Healthcare та e-commerce, де кожна хвилина простою безпосередньо впливає на прибуток.',
+        arch_t1: '01. Захист продакшну від зупинок (Zero Downtime)',
+        arch_l1: 'Усі операції перегляду працюють через неблокуючий SCAN — сервіси клієнтів не гальмують навіть під час пікового навантаження.',
+        arch_t2: '02. Корпоративна безпека, RBAC і журнал аудиту',
+        arch_l2: 'Режим Read-Only для продакшну, сухе підтвердження видалень, розмежування ролей (Admin / Viewer) та незмінний аудит усіх змін.',
+        arch_t3: '03. Прогнозованість SLA перед великими релізами',
+        arch_l3: 'Тестуйте сценарії на 10,000+ ключів та контролюйте реальні затримки p50/p95/p99 до виходу нової версії до користувачів.',
+        arch_t4: '04. Економія годин команди DevOps і розробників',
+        arch_l4: 'Замініть розрізнені консольні скрипти єдиною студією з бекапами JSON та розгортанням однією командою через Docker.',
+        bench_title: 'Передбачувана швидкодія під навантаженням (SLA)',
+        bench_desc: 'Вбудований нагрузочний контроль на 10,000+ ключів підтверджує стабільні затримки p50 / p95 / p99 перед релізом.',
+        cta_title: 'Готовий інструмент для вашої інженерної команди',
+        cta_desc: 'Розгортається на власній інфраструктурі за хвилину без прив’язки до зовнішніх хмарних платформ. Запустіть повний стенд однією командою Docker.',
+        copy_cmd: 'Скопіювати Docker Quickstart',
+        copied_cmd: 'Скопійовано ✓',
+        footer_text: 'RedisGUI (RedisStudio V2.2) — Платформа моніторингу, діагностики та керування Redis для команд розробки'
+      }
+    };
+
+    const FEATURES_12 = [
+      {
+        tone: ['rgba(6, 182, 212, 0.14)', 'rgba(6, 182, 212, 0.38)', '#22d3ee'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2.5-6 4 12 2.5-6h7" fill="none"/><circle cx="19" cy="12" r="2" fill="currentColor" opacity="0.35"/><path d="M5 19h14" opacity="0.45"/></svg>`,
+        en: ['Sub-Second Live Health Telemetry', 'Instant visibility into memory peaks, ops/sec, CPU pressure, and active client traffic without stressing production.'],
+        uk: ['Жива телеметрія здоров’я (< 1с)', 'Миттєвий контроль піків пам’яті, ops/sec, навантаження CPU та трафіку клієнтів без додаткового тиску на продакшн.']
+      },
+      {
+        tone: ['rgba(99, 102, 241, 0.16)', 'rgba(99, 102, 241, 0.4)', '#818cf8'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v5H4z" fill="currentColor" opacity="0.22"/><path d="M14 4h6v4h-6zM14 14h6v4h-6z"/><path d="M7 10v6h7M7 6v0M10 7.5h4" opacity="0.85"/></svg>`,
+        en: ['Table & Delimiter Tree Views', 'Group 100k+ flat keys by custom separator (:) into collapsible namespace trees or sort inside a virtualized grid.'],
+        uk: ['Таблиця та Дерево (Delimiter :)', 'Автоматичне групування 100k+ ключів за роздільником (:) у зручні папки або сортування у віртуалізованій таблиці.']
+      },
+      {
+        tone: ['rgba(168, 85, 247, 0.16)', 'rgba(168, 85, 247, 0.4)', '#c084fc'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 21 7.5 12 12 3 7.5 12 3" fill="currentColor" opacity="0.24"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg>`,
+        en: ['Visual Editors for Every Redis Type', 'Structured, human-friendly drawers for JSON/Strings, Hashes, Lists, Sets, ZSets, and Event Streams with safe validation.'],
+        uk: ['Візуальні редактори всіх типів', 'Зручні структуровані форми для JSON/Strings, Hashes, Lists, Sets, ZSets та Streams із валідацією змін перед записом.']
+      },
+      {
+        tone: ['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.38)', '#34d399'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="currentColor" opacity="0.14"/><polyline points="7 10 10.5 13 7 16"/><line x1="13" y1="16" x2="17" y2="16"/></svg>`,
+        en: ['Interactive DB-Scoped CLI Drawer', 'Persistent bottom console supporting raw Redis commands alongside 1-click PING, INFO, SLOWLOG & MEMORY STATS chips.'],
+        uk: ['Вбудований Redis CLI термінал', 'Нижня консоль із контекстом обраної БД, історією команд і швидкими пресетами PING, INFO, SLOWLOG, MEMORY STATS.']
+      },
+      {
+        tone: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.38)', '#fbbf24'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 11 14 10 22 20 10 13 10 13 2" fill="currentColor" opacity="0.22"/></svg>`,
+        en: ['Non-Blocking Cursor SCAN', 'Never runs dangerous KEYS * in production — streams batches via SCAN cursors keeping P99 latency flat.'],
+        uk: ['Безпечний курсорний SCAN', 'Ніколи не блокує продакшн через KEYS * — використовує батчовий курсорний SCAN зі стабільною затримкою.']
+      },
+      {
+        tone: ['rgba(56, 189, 248, 0.15)', 'rgba(56, 189, 248, 0.38)', '#38bdf8'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><circle cx="12" cy="14" r="1.5" fill="currentColor"/><path d="M4.6 17A8.5 8.5 0 1119.4 17"/><path d="M5 20h14" opacity="0.45"/></svg>`,
+        en: ['Synthetic Load Benchmark', 'Built-in traffic generator executing concurrent GET/SET workloads and charting real p50 / p95 / p99 latencies.'],
+        uk: ['Вбудований Load Benchmark', 'Синтетичний генератор навантаження з побудовою гістограми затримок p50, p95 та p99 у реальному часі.']
+      },
+      {
+        tone: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.38)', '#f87171'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3" fill="currentColor" opacity="0.24"/><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>`,
+        en: ['10,000-Key Stress Seeder', 'Populate realistic corporate, telemetry, session, and queue datasets in a single click via Seed Demo.'],
+        uk: ['Seeder на 10,000+ ключів', 'Миттєве наповнення БД реалістичними даними (фінанси, сенсори, сесії) в один клік для тестів та демо.']
+      },
+      {
+        tone: ['rgba(249, 115, 22, 0.15)', 'rgba(249, 115, 22, 0.38)', '#fb923c'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8" fill="currentColor" opacity="0.16"/><path d="M12 9v4l2.8 1.8M9 2.5h6M12 2.5v2.5"/></svg>`,
+        en: ['Slowlog & Memory Profiler', 'Spot heavy O(N) commands in Redis SLOWLOG and inspect per-key exact byte footprint + TTL state.'],
+        uk: ['Аналізатор Slowlog і пам’яті', 'Швидкий пошук важких команд у SLOWLOG та точний профайлер розміру кожного ключа в байтах і TTL.']
+      },
+      {
+        tone: ['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.38)', '#34d399'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 3.2v5.6c0 5-3 9.2-7 11-4-1.8-7-6-7-11V5.2L12 2z" fill="currentColor" opacity="0.18"/><path d="M9.2 12.2l2 2 4-4"/></svg>`,
+        en: ['Production Safe Mode (Read-Only)', 'Lock instances against accidental writes or Delete by Pattern mutations using dry-run confirmation dialogs.'],
+        uk: ['Безпечний режим для Production', 'Захист від випадкового запису чи масового видалення за патерном із обов’язковим dry-run підтвердженням.']
+      },
+      {
+        tone: ['rgba(99, 102, 241, 0.16)', 'rgba(99, 102, 241, 0.4)', '#818cf8'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5" fill="currentColor" opacity="0.18"/><path d="M8 10V7a4 4 0 118 0v3"/><circle cx="12" cy="15.5" r="1.4" fill="currentColor"/></svg>`,
+        en: ['Enterprise JWT Auth & RBAC', 'Role-based authorization (Admin / Viewer) paired with immutable Audit Logs tracking every critical operation.'],
+        uk: ['JWT авторизація, RBAC і Audit Logs', 'Розмежування прав доступу (Admin / Viewer) та незмінний журнал аудиту кожної дії користувачів.']
+      },
+      {
+        tone: ['rgba(6, 182, 212, 0.15)', 'rgba(6, 182, 212, 0.38)', '#22d3ee'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 00-2 2v16a2 2 0 002 2h10a2 2 0 002-2V7z" fill="currentColor" opacity="0.14"/><path d="M14 2v5h5"/><path d="M9.5 14l2.5 2.5 2.5-2.5M12 10.5v6"/></svg>`,
+        en: ['Snapshot Export & JSON Import', 'Serialize filtered keyspaces into clean portable JSON archives for backups, migrations, and local reproduction.'],
+        uk: ['Експорт та Імпорт снапшотів JSON', 'Збереження й відновлення вибраних ключів або структур у зручному JSON-форматі між середовищами.']
+      },
+      {
+        tone: ['rgba(168, 85, 247, 0.16)', 'rgba(168, 85, 247, 0.4)', '#c084fc'],
+        icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5" fill="currentColor" opacity="0.16"/><path d="M20 20l-4.5-4.5"/><path d="M8.5 10.5h4M10.5 8.5v4" opacity="0.8"/></svg>`,
+        en: ['Ctrl+K Global Command Palette', 'Keyboard-first workflow to jump across instances, databases (DB 0–15), Slowlog, Audit Logs, or Dark/Light themes.'],
+        uk: ['Глобальна палітра Ctrl+K', 'Швидка клавіатурна навігація між інстансами Redis, базами DB 0–15, Slowlog, аудитом і темами інтерфейсу.']
+      }
+    ];
+
+    const APP_MODULES = {
+      loadtest: {
+        img: 'assets/redis-gui/08_load_test_dialog.png',
+        badge: { en: 'IN-APP DIALOG • LOAD TEST BENCHMARK', uk: 'ВІКНО ПРОГРАМИ • LOAD TEST BENCHMARK' },
+        title: { en: 'Redis Load Testing & Benchmark', uk: 'Синтетичний тест навантаження та бенчмарк' },
+        desc: {
+          en: 'Stress-test your Redis cluster directly from the browser using isolated __bench_*: keys that auto-purge after completion.',
+          uk: 'Перевірте пропускну здатність і затримки прямо з браузера на ізольованих ключах __bench_*:, які автоматично видаляються після тесту.'
+        },
+        bullets: {
+          en: [
+            'By Duration (5s–5m) or Operations Count across 1–50 concurrent clients',
+            'Mixed (50% SET / 50% GET), Write-Only, or Read-Only traffic profiles',
+            'Instant p50 / p95 / p99 latency & RPS SLA report before releases'
+          ],
+          uk: [
+            'Режими за часом (5с–5хв) або кількістю операцій для 1–50 клієнтів',
+            'Профілі Mixed (50/50), Write-Intensive (SET) або Read-Intensive (GET)',
+            'Звіт за затримками p50 / p95 / p99 і RPS перед кожним релізом'
+          ]
+        }
+      },
+      seeder: {
+        img: 'assets/redis-gui/09_seed_data_dialog.png',
+        badge: { en: 'IN-APP DIALOG • SEED DEMO & SAMPLE DATA', uk: 'ВІКНО ПРОГРАМИ • ГЕНЕРАТОР ДАНИХ' },
+        title: { en: 'Seed Demo & Realistic Sample Data', uk: 'Генератор реалістичних даних у 1 клік' },
+        desc: {
+          en: 'Populate dev or staging instances with configurable namespaces, realistic JSON business payloads, and mixed TTL expiration rules.',
+          uk: 'Наповнюйте тестові БД за секунди реалістичними JSON-об’єктами, ієрархіями ключів і різними політиками TTL.'
+        },
+        bullets: {
+          en: [
+            'Target Current DB, Specific DBs, or Random Distribution (25–10k+ keys)',
+            '4 naming patterns: Flat, Hierarchical Folders, UUID, Cluster {HashTags}',
+            'Choose Strings, Hashes, Lists, Sets, ZSets, or Streams + Mixed TTL'
+          ],
+          uk: [
+            'Розподіл у поточну, обрані або всі БД (від 25 до 10,000+ ключів)',
+            '4 структури ключів: Flat, Hierarchical Folders, UUID, Cluster {HashTags}',
+            'Усі 6 типів даних + змішаний TTL (60% постійних / 40% тимчасових)'
+          ]
+        }
+      },
+      slowlog: {
+        img: 'assets/redis-gui/11_slowlog_dialog.png',
+        badge: { en: 'IN-APP DIALOG • SLOWLOG INSPECTOR', uk: 'ВІКНО ПРОГРАМИ • АНАЛІЗАТОР SLOWLOG' },
+        title: { en: 'Redis Slowlog Bottleneck Inspector', uk: 'Інспектор повільних запитів Redis Slowlog' },
+        desc: {
+          en: 'Continuously surface heavy O(N) commands and microsecond latency spikes before they degrade checkout or API responsiveness.',
+          uk: 'Миттєво виявляйте важкі O(N)-команди та затримки до того, як вони сповільнять роботу користувачів у продакшені.'
+        },
+        bullets: {
+          en: [
+            'Shows exact execution time in microseconds (µs) and slow command args',
+            'One-click live refresh right from Storage Manager toolbar',
+            'Immediate green health confirmation when instance operates in SLA'
+          ],
+          uk: [
+            'Точна тривалість кожної важкої операції в мікросекундах (µs)',
+            'Швидке оновлення безпосередньо з панелі Storage Manager',
+            'Наочне підтвердження зеленого статусу в межах SLA'
+          ]
+        }
+      },
+      tree: {
+        img: 'assets/redis-gui/04_storage_tree.png',
+        badge: { en: 'IN-APP SCREEN • NAMESPACE TREE VIEW', uk: 'ЕКРАН ПРОГРАМИ • ІЄРАРХІЯ ПРОСТОРІВ ІМЕН' },
+        title: { en: 'Hierarchical Delimiter Folder Tree (: / .)', uk: 'Деревовидний перегляд за роздільником (: / .)' },
+        desc: {
+          en: 'Organize thousands of flat keys into clean domain folders with key counts per branch and a "+" action to add keys inside any subfolder.',
+          uk: 'Групуйте тисячі плоских ключів у зрозумілі папки бізнес-доменів з лічильником у кожній гілці та кнопкою «+» для швидкого створення.'
+        },
+        bullets: {
+          en: [
+            'Real-time counter showing keys & namespaces (e.g. 39 keys in 57 namespaces)',
+            'Expand All / Collapse All buttons plus inline copy, edit, delete icons',
+            'Create new keys directly inside any folder path via "+" quick action'
+          ],
+          uk: [
+            'Живий підрахунок ключів та просторів імен по кожному домену',
+            'Кнопки Expand All / Collapse All та швидкі дії на кожному вузлі',
+            'Створення ключа одразу в потрібній підпапці кнопкою «+»'
+          ]
+        }
+      },
+      editors: {
+        img: 'assets/redis-gui/07_hash_editor.png',
+        altImg: 'assets/redis-gui/07b_string_editor.png',
+        badge: { en: 'IN-APP DRAWER • VISUAL FORM & JSON EDITORS', uk: 'БОКОВА ПАНЕЛЬ • РЕДАКТОРИ HASH ТА JSON' },
+        title: { en: 'Visual Hash Table & JSON String Editors', uk: 'Візуальний редактор Hash і JSON-документів' },
+        desc: {
+          en: 'Inspect and modify structured Hash fields or JSON Strings with built-in syntax checks, Format/Minify buttons, and 1-click TTL presets.',
+          uk: 'Редагуйте поля Hash або JSON-рядки у візуальній формі з автоматичною перевіркою валідності JSON, форматуванням і швидким TTL.'
+        },
+        bullets: {
+          en: [
+            '1-click TTL quick pills: No Expiry, 5m, 1h, 1d, 7d + byte counter badge',
+            'Search inside Hash fields or validate/Format/Minify JSON Strings live',
+            'Switch smoothly between Visual Form Mode and raw editor anytime'
+          ],
+          uk: [
+            'Швидкі пресети TTL (No Expiry, 5m, 1h, 1d, 7d) та точний розмір у байтах',
+            'Пошук по полях Hash або кнопка Format / Minify для валідного JSON',
+            'Перемикання між візуальною формою та текстовим редактором'
+          ]
+        }
+      },
+      palette: {
+        img: 'assets/redis-gui/16_command_palette.png',
+        badge: { en: 'GLOBAL SHORTCUT • CTRL+K COMMAND PALETTE', uk: 'ГАРЯЧА КЛАВІША • ПАЛІТРА CTRL+K' },
+        title: { en: 'Instant Search & Command Palette (Ctrl+K)', uk: 'Миттєвий пошук та палітра команд (Ctrl+K)' },
+        desc: {
+          en: 'Jump to any Redis key by type badge, switch active DB (DB 0–15), trigger JSON exports, or navigate views without touching the mouse.',
+          uk: 'Знаходьте будь-який ключ з бейджем типу даних, перемикайте БД (DB 0–15) чи відкривайте експорт за секунду з клавіатури.'
+        },
+        bullets: {
+          en: [
+            'Keyboard-first workflow: ↑↓ Navigate, ↵ Select, Esc Close',
+            'Displays exact Redis data type badges (STRING, HASH, LIST, SORTEDSET)',
+            'Quickly type commands like "DB 1", "export", or part of a key name'
+          ],
+          uk: [
+            'Повне керування з клавіатури: ↑↓ Навігація, ↵ Вибір, Esc Закрити',
+            'Одразу показує тип ключа та TTL у результатах пошуку',
+            'Підтримує швидкі команди на кшталт "DB 1", "export" або маску ключа'
+          ]
+        }
+      }
+    };
+
+    let activeModuleKey = 'loadtest';
+    let editorSubVariant = 'hash';
+
+    let currentLang = 'en';
+
+    const TT_KEYS = [
+      { parts: ['payments', 'gateway', 'autopay_tx_901'], type: 'HASH', ttl: 'Persistent', bytes: 184 },
+      { parts: ['payments', 'gateway', 'stripe_webhook_q'], type: 'LIST', ttl: '15m', bytes: 642 },
+      { parts: ['payments', 'ledger', 'settlement_batch_12'], type: 'STRING', ttl: '24h', bytes: 1270 },
+      { parts: ['telemetry', 'sensors', 'probe_6', 'events'], type: 'STREAM', ttl: 'Persistent', bytes: 3890 },
+      { parts: ['telemetry', 'sensors', 'probe_6', 'alerts'], type: 'ZSET', ttl: '4h', bytes: 512 },
+      { parts: ['auth', 'sessions', 'usr_48291_jwt'], type: 'STRING', ttl: '55m', bytes: 418 },
+      { parts: ['auth', 'sessions', 'rbac_roles_cache'], type: 'SET', ttl: '12h', bytes: 290 },
+      { parts: ['catalog', 'search', 'trending_tags'], type: 'ZSET', ttl: '30m', bytes: 920 }
+    ];
+
+    const ttState = {
+      mode: 'table',
+      delim: ':',
+      sortKey: 'key',
+      sortDir: 'asc',
+      selectedIdx: 0,
+      expanded: new Set(['payments', 'payments/gateway', 'telemetry', 'telemetry/sensors'])
+    };
+
+    function ttFormatBytes(b) {
+      return b >= 1024 ? (b / 1024).toFixed(2) + ' KB' : b + ' B';
+    }
+
+    function ttKeyName(item) {
+      return item.parts.join(ttState.delim);
+    }
+
+    function ttHighlightKey(str) {
+      return str.split(ttState.delim).join(`<span class="tt-delim-hl">${ttState.delim}</span>`);
+    }
+
+    function ttBuildTree() {
+      const root = { children: new Map(), leaves: [], count: 0, bytes: 0 };
+      TT_KEYS.forEach((item, idx) => {
+        let cur = root;
+        cur.count++;
+        cur.bytes += item.bytes;
+        const folderParts = item.parts.slice(0, -1);
+        const leafName = item.parts[item.parts.length - 1];
+        let pathAcc = '';
+        folderParts.forEach((seg) => {
+          pathAcc = pathAcc ? pathAcc + '/' + seg : seg;
+          if (!cur.children.has(seg)) {
+            cur.children.set(seg, { name: seg, path: pathAcc, children: new Map(), leaves: [], count: 0, bytes: 0 });
+          }
+          cur = cur.children.get(seg);
+          cur.count++;
+          cur.bytes += item.bytes;
+        });
+        cur.leaves.push({ leafName, item, idx });
+      });
+      return root;
+    }
+
+    function ttFormatKeyCount(n) {
+      if (currentLang === 'uk') {
+        const mod10 = n % 10, mod100 = n % 100;
+        if (mod10 === 1 && mod100 !== 11) return `${n} ключ`;
+        if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} ключі`;
+        return `${n} ключів`;
+      }
+      return n === 1 ? '1 key' : `${n} keys`;
+    }
+
+    function ttRenderTreeNodes(node) {
+      const dict = I18N[currentLang];
+      let html = '';
+      node.children.forEach((folder) => {
+        const isOpen = ttState.expanded.has(folder.path);
+        html += `
+          <div class="tt-folder ${isOpen ? 'tt-folder-open' : ''}">
+            <div class="tt-node-row" data-tt-folder="${folder.path}">
+              <div class="tt-node-left">
+                <svg class="tt-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"/></svg>
+                <svg class="tt-folder-ico" viewBox="0 0 24 24" fill="currentColor" opacity="${isOpen ? '0.95' : '0.68'}"><path d="M3 6a2 2 0 012-2h5l2 2h7a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V6z"/></svg>
+                <span class="tt-folder-name">${folder.name}${ttState.delim}</span>
+              </div>
+              <span class="tt-folder-meta">${ttFormatKeyCount(folder.count)} • ${ttFormatBytes(folder.bytes)}</span>
+            </div>
+            ${isOpen ? `<div class="tt-children">${ttRenderTreeNodes(folder)}</div>` : ''}
+          </div>
+        `;
+      });
+      node.leaves.forEach(({ leafName, item, idx }) => {
+        const isSel = idx === ttState.selectedIdx;
+        html += `
+          <div class="tt-node-row ${isSel ? 'selected' : ''}" data-tt-select="${idx}">
+            <div class="tt-node-left">
+              <span class="tt-type-badge tt-type-${item.type}">${item.type}</span>
+              <span class="tt-key-mono">${leafName}</span>
+            </div>
+            <div class="tt-leaf-meta">
+              <span>${item.ttl}</span>
+              <span>${ttFormatBytes(item.bytes)}</span>
+            </div>
+          </div>
+        `;
+      });
+      return html;
+    }
+
+    function renderTreeTableStudio() {
+      const canvas = document.getElementById('tt-canvas');
+      if (!canvas) return;
+      const dict = I18N[currentLang];
+      const totalBytes = TT_KEYS.reduce((s, k) => s + k.bytes, 0);
+      const rootDomains = new Set(TT_KEYS.map(k => k.parts[0])).size;
+
+      document.querySelectorAll('[data-tt-mode]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tt-mode') === ttState.mode);
+      });
+      document.querySelectorAll('[data-tt-delim]').forEach(btn => {
+        btn.classList.toggle('active', btn.getAttribute('data-tt-delim') === ttState.delim);
+      });
+
+      const modePill = document.getElementById('tt-mode-pill');
+      const countPill = document.getElementById('tt-count-pill');
+      const treeActions = document.getElementById('tt-tree-actions');
+      const quickFlip = document.getElementById('tt-quick-flip');
+
+      modePill.textContent = ttState.mode === 'table'
+        ? `MODE: ${dict.tt_btn_table.toUpperCase()}`
+        : `MODE: ${dict.tt_btn_tree.toUpperCase()} (${ttState.delim})`;
+      countPill.textContent = `${TT_KEYS.length} ${dict.tt_keys_word} • ${rootDomains} ${dict.tt_domains_word} • ${ttFormatBytes(totalBytes)}`;
+      treeActions.style.display = ttState.mode === 'tree' ? 'inline-flex' : 'none';
+      quickFlip.textContent = ttState.mode === 'table' ? dict.tt_hint_tree : dict.tt_hint_table;
+
+      if (ttState.mode === 'table') {
+        const rows = TT_KEYS.map((item, idx) => ({ item, idx })).sort((a, b) => {
+          const mul = ttState.sortDir === 'asc' ? 1 : -1;
+          if (ttState.sortKey === 'bytes') return (a.item.bytes - b.item.bytes) * mul;
+          return ttKeyName(a.item).localeCompare(ttKeyName(b.item)) * mul;
+        });
+        const arrow = (col) => ttState.sortKey === col ? (ttState.sortDir === 'asc' ? ' ↑' : ' ↓') : ' ↕';
+        canvas.innerHTML = `
+          <div class="tt-view-anim" style="overflow-x:auto;">
+            <table class="tt-table">
+              <thead>
+                <tr>
+                  <th class="sortable ${ttState.sortKey === 'key' ? 'sorted' : ''}" data-tt-sort="key">${dict.tt_col_key}${arrow('key')}</th>
+                  <th>${dict.tt_col_type}</th>
+                  <th>${dict.tt_col_ttl}</th>
+                  <th class="sortable ${ttState.sortKey === 'bytes' ? 'sorted' : ''}" data-tt-sort="bytes">${dict.tt_col_size}${arrow('bytes')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.map(({ item, idx }) => `
+                  <tr class="${idx === ttState.selectedIdx ? 'selected' : ''}" data-tt-select="${idx}">
+                    <td class="tt-key-mono">${ttHighlightKey(ttKeyName(item))}</td>
+                    <td><span class="tt-type-badge tt-type-${item.type}">${item.type}</span></td>
+                    <td class="mono" style="font-size:12px;">${item.ttl}</td>
+                    <td class="mono" style="font-size:12px;color:var(--ink);font-weight:700;">${ttFormatBytes(item.bytes)}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+        `;
+      } else {
+        const tree = ttBuildTree();
+        canvas.innerHTML = `<div class="tt-tree-list tt-view-anim">${ttRenderTreeNodes(tree)}</div>`;
+      }
+
+      const sel = TT_KEYS[ttState.selectedIdx] || TT_KEYS[0];
+      document.getElementById('tt-selected-bar').innerHTML = `
+        <span>${dict.tt_selected_prefix}</span>
+        <span class="tt-key-mono" style="font-size:12px;">${ttHighlightKey(ttKeyName(sel))}</span>
+        <span class="tt-type-badge tt-type-${sel.type}">${sel.type}</span>
+        <span class="mono" style="font-size:11.5px;">${ttFormatBytes(sel.bytes)}</span>
+      `;
+    }
+
+    (function wireTreeTableStudio() {
+      const studio = document.getElementById('tree-table-visualizer');
+      if (!studio) return;
+
+      studio.addEventListener('click', (e) => {
+        const modeBtn = e.target.closest('[data-tt-mode]');
+        if (modeBtn) {
+          ttState.mode = modeBtn.getAttribute('data-tt-mode');
+          renderTreeTableStudio();
+          return;
+        }
+        const delimBtn = e.target.closest('[data-tt-delim]');
+        if (delimBtn) {
+          ttState.delim = delimBtn.getAttribute('data-tt-delim');
+          renderTreeTableStudio();
+          return;
+        }
+        const sortCol = e.target.closest('[data-tt-sort]');
+        if (sortCol) {
+          const k = sortCol.getAttribute('data-tt-sort');
+          if (ttState.sortKey === k) ttState.sortDir = ttState.sortDir === 'asc' ? 'desc' : 'asc';
+          else { ttState.sortKey = k; ttState.sortDir = 'asc'; }
+          renderTreeTableStudio();
+          return;
+        }
+        const folderEl = e.target.closest('[data-tt-folder]');
+        if (folderEl) {
+          const p = folderEl.getAttribute('data-tt-folder');
+          if (ttState.expanded.has(p)) ttState.expanded.delete(p);
+          else ttState.expanded.add(p);
+          renderTreeTableStudio();
+          return;
+        }
+        const selEl = e.target.closest('[data-tt-select]');
+        if (selEl) {
+          ttState.selectedIdx = parseInt(selEl.getAttribute('data-tt-select'), 10) || 0;
+          renderTreeTableStudio();
+          return;
+        }
+      });
+
+      document.getElementById('tt-expand-all')?.addEventListener('click', () => {
+        TT_KEYS.forEach(item => {
+          let acc = '';
+          item.parts.slice(0, -1).forEach(seg => {
+            acc = acc ? acc + '/' + seg : seg;
+            ttState.expanded.add(acc);
+          });
+        });
+        renderTreeTableStudio();
+      });
+
+      document.getElementById('tt-collapse-all')?.addEventListener('click', () => {
+        ttState.expanded.clear();
+        renderTreeTableStudio();
+      });
+
+      document.getElementById('tt-quick-flip')?.addEventListener('click', () => {
+        ttState.mode = ttState.mode === 'table' ? 'tree' : 'table';
+        renderTreeTableStudio();
+      });
+    })();
+
+    function renderFeaturesGrid() {
+      const grid = document.getElementById('bento-12-grid');
+      grid.innerHTML = FEATURES_12.map(f => {
+        const [title, desc] = f[currentLang];
+        const [bg, bd, fg] = f.tone;
+        return `
+          <article class="f-card reveal visible">
+            <div class="f-icon" style="--ic-bg:${bg};--ic-bd:${bd};--ic-fg:${fg};">${f.icon}</div>
+            <h4>${title}</h4>
+            <p>${desc}</p>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function applyLanguage(lang) {
+      currentLang = lang === 'uk' ? 'uk' : 'en';
+      document.documentElement.lang = currentLang;
+      try { localStorage.setItem('ol_cv_lang', currentLang); } catch (e) {}
+      document.querySelectorAll('[data-lang-btn]').forEach(b => b.classList.toggle('active', b.getAttribute('data-lang-btn') === currentLang));
+      const dict = I18N[currentLang];
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict[key]) el.textContent = dict[key];
+      });
+      renderFeaturesGrid();
+      renderTreeTableStudio();
+      renderAppModuleExplorer();
+    }
+
+    function applyTheme(theme) {
+      const t = theme === 'light' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      try { localStorage.setItem('ol_cv_theme', t); } catch (e) {}
+      document.querySelectorAll('[data-theme-btn]').forEach(b => b.classList.toggle('active', b.getAttribute('data-theme-btn') === t));
+    }
+
+    // Wire Theme / Lang + Hub Sync
+    document.querySelectorAll('[data-lang-btn]').forEach(b => b.addEventListener('click', () => applyLanguage(b.getAttribute('data-lang-btn'))));
+
+    // Parallax & 3D stage tilt
+    let ticking = false;
+    function updateParallax() {
+      const y = window.scrollY;
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = docH > 0 ? Math.min(100, (y / docH) * 100) : 0;
+      document.getElementById('scroll-progress').style.width = pct + '%';
+
+      document.querySelectorAll('[data-parallax]').forEach(el => {
+        const speed = parseFloat(el.getAttribute('data-parallax')) || 0;
+        const rect = el.getBoundingClientRect();
+        const offset = (rect.top + y - window.innerHeight * 0.5) * speed;
+        el.style.transform = `translate3d(0, ${(-y * speed * 0.65).toFixed(1)}px, 0)`;
+      });
+      ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+      if (!ticking) {
+        requestAnimationFrame(updateParallax);
+        ticking = true;
+      }
+    }, { passive: true });
+
+    const heroStage = document.getElementById('hero-stage');
+    const stageTilt = document.getElementById('stage-tilt');
+    if (heroStage && stageTilt) {
+      heroStage.addEventListener('mousemove', (e) => {
+        const r = heroStage.getBoundingClientRect();
+        const x = ((e.clientX - r.left) / r.width - 0.5) * 6;
+        const y = ((e.clientY - r.top) / r.height - 0.5) * -5;
+        stageTilt.style.transform = `rotateY(${x.toFixed(2)}deg) rotateX(${y.toFixed(2)}deg)`;
+      });
+      heroStage.addEventListener('mouseleave', () => {
+        stageTilt.style.transform = 'rotateY(0deg) rotateX(0deg)';
+      });
+    }
+
+    // Scroll Reveal Observer
+    const revObs = new IntersectionObserver((entries) => {
+      entries.forEach(ent => {
+        if (ent.isIntersecting) {
+          ent.target.classList.add('visible');
+          revObs.unobserve(ent.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    document.querySelectorAll('.reveal').forEach(el => revObs.observe(el));
+
+    // Inside-the-App Module Explorer Logic
+    function renderAppModuleExplorer() {
+      const screen = document.getElementById('pg-screen');
+      if (!screen) return;
+      const mod = APP_MODULES[activeModuleKey] || APP_MODULES.loadtest;
+      const imgSrc = (activeModuleKey === 'editors' && editorSubVariant === 'string') ? mod.altImg : mod.img;
+      const zoomText = I18N[currentLang].zoom_hint || 'Click to Zoom';
+
+      document.querySelectorAll('#pg-tabs .pg-tab').forEach(t => {
+        t.classList.toggle('active', t.getAttribute('data-pg') === activeModuleKey);
+      });
+
+      const editorSwitchHtml = activeModuleKey === 'editors' ? `
+        <div class="pg-subswitch">
+          <button type="button" class="pg-sub-btn ${editorSubVariant === 'hash' ? 'active' : ''}" data-editor-variant="hash">Hash Editor</button>
+          <button type="button" class="pg-sub-btn ${editorSubVariant === 'string' ? 'active' : ''}" data-editor-variant="string">String / JSON Editor</button>
+        </div>
+      ` : '';
+
+      screen.innerHTML = `
+        <div class="pg-mod-head">
+          <div>
+            <span class="tour-badge" style="margin-bottom:8px;">${mod.badge[currentLang]}</span>
+            <h4 class="pg-mod-title">${mod.title[currentLang]}</h4>
+            <p class="pg-mod-desc">${mod.desc[currentLang]}</p>
+          </div>
+          ${editorSwitchHtml}
+        </div>
+        <ul class="pg-mod-bullets">
+          ${mod.bullets[currentLang].map(b => `<li>${b}</li>`).join('')}
+        </ul>
+        <div class="pg-shot-frame tt-view-anim">
+          <img src="${imgSrc}" alt="${mod.title[currentLang]}" class="zoomable-shot" data-caption="${mod.title[currentLang]} — RedisStudio V2.2" />
+          <button type="button" class="zoom-hint" data-zoom-trigger>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></svg>
+            <span>${zoomText}</span>
+          </button>
+        </div>
+      `;
+    }
+
+    document.querySelectorAll('#pg-tabs .pg-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        activeModuleKey = tab.getAttribute('data-pg') || 'loadtest';
+        renderAppModuleExplorer();
+      });
+    });
+
+    document.getElementById('pg-screen')?.addEventListener('click', (e) => {
+      const subBtn = e.target.closest('[data-editor-variant]');
+      if (subBtn) {
+        editorSubVariant = subBtn.getAttribute('data-editor-variant');
+        renderAppModuleExplorer();
+      }
+    });
+
+    // Lightbox Zoom (delegated so dynamic module previews zoom too)
+    const lb = document.getElementById('rg-lightbox');
+    const lbImg = document.getElementById('lb-img');
+    const lbCap = document.getElementById('lb-caption');
+    document.addEventListener('click', (e) => {
+      const zoomBtn = e.target.closest('[data-zoom-trigger]');
+      if (zoomBtn) {
+        const img = zoomBtn.closest('.tour-visual-inner, .stage-main-frame, .pg-shot-frame')?.querySelector('.zoomable-shot');
+        if (img) {
+          lbImg.src = img.src;
+          lbCap.textContent = img.getAttribute('data-caption') || img.alt;
+          lb.classList.add('open');
+        }
+        return;
+      }
+      const img = e.target.closest('img.zoomable-shot');
+      if (img) {
+        lbImg.src = img.src;
+        lbCap.textContent = img.getAttribute('data-caption') || img.alt;
+        lb.classList.add('open');
+      }
+    });
+    document.getElementById('lb-close').addEventListener('click', () => lb.classList.remove('open'));
+    lb.addEventListener('click', (e) => { if (e.target === lb) lb.classList.remove('open'); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lb.classList.remove('open'); });
+
+    // Docker Copy Button
+    document.getElementById('copy-docker-btn').addEventListener('click', (e) => {
+      const text = 'git clone https://github.com/dellik95/redis-gui.git && cd redis-gui && docker compose up -d';
+      navigator.clipboard?.writeText(text).catch(() => {});
+      e.target.textContent = I18N[currentLang].copied_cmd;
+      setTimeout(() => { e.target.textContent = I18N[currentLang].copy_cmd; }, 2200);
+    });
+
+    document.querySelectorAll('[data-theme-btn]').forEach(b => b.addEventListener('click', () => applyTheme(b.getAttribute('data-theme-btn'))));
+
+    window.addEventListener('message', (ev) => {
+      if (ev.data && ev.data.type === 'OL_SET_LANG') applyLanguage(ev.data.lang);
+      if (ev.data && ev.data.type === 'OL_SET_THEME') applyTheme(ev.data.theme);
+    });
+
+    // Init state from localStorage
+    let initLang = 'en', initTheme = 'dark';
+    try {
+      initLang = localStorage.getItem('ol_cv_lang') || 'en';
+      initTheme = localStorage.getItem('ol_cv_theme') || 'dark';
+    } catch (e) {}
+    applyTheme(initTheme);
+    applyLanguage(initLang);
+  </script>
+</body>
+</html>
