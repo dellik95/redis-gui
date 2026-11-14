@@ -1284,7 +1284,8 @@
       font-size: 12.2px;
       color: var(--ink);
       font-weight: 500;
-      word-break: break-all;
+      overflow-wrap: anywhere;
+      word-break: normal;
     }
     .tt-delim-hl {
       color: var(--cyan);
@@ -1454,6 +1455,59 @@
       .stage-chrome { gap: 10px; font-size: 10.5px; }
       .stage-chrome > span:last-child { display: none; }
       .live-pill { font-size: 11px; padding: 6px 12px; text-align: left; }
+
+      /* Interactive Table vs Folder Tree Mobile Hardening */
+      .tt-studio {
+        margin-top: 28px;
+        padding: 18px 14px;
+        border-radius: 16px;
+        scroll-margin-top: 80px;
+      }
+      .tt-head { gap: 14px; padding-bottom: 14px; }
+      .tt-title-block h4 { font-size: 19px; }
+      .tt-controls { width: 100%; }
+      .tt-mode-switch { width: 100%; display: grid; grid-template-columns: 1fr 1fr; }
+      .tt-mode-btn { justify-content: center; padding: 8px 10px; font-size: 12px; }
+      .tt-delim-group { width: 100%; justify-content: space-between; padding: 6px 10px; }
+      .tt-table thead { display: none; }
+      .tt-table, .tt-table tbody { display: block; width: 100%; }
+      .tt-table tbody tr {
+        display: grid;
+        grid-template-columns: auto auto 1fr;
+        align-items: center;
+        gap: 6px 10px;
+        padding: 11px 12px;
+        border-bottom: 1px solid var(--border);
+      }
+      .tt-table tbody tr:last-child { border-bottom: none; }
+      .tt-table td {
+        display: block;
+        padding: 0;
+        border-bottom: none;
+      }
+      .tt-table td:first-child {
+        grid-column: 1 / -1;
+        font-size: 12.5px;
+        margin-bottom: 2px;
+      }
+      .tt-table td:last-child {
+        text-align: right;
+      }
+      .tt-tree-list { padding: 10px 8px; }
+      .tt-children { margin-left: 8px; padding-left: 9px; }
+      .tt-node-row {
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+        padding: 8px 9px;
+      }
+      .tt-node-left { flex: 1 1 100%; min-width: 0; }
+      .tt-folder-meta { font-size: 10.5px; padding: 2px 7px; }
+      .tt-leaf-meta {
+        font-size: 11px;
+        padding-left: 2px;
+        gap: 10px;
+      }
     }
     @media (prefers-reduced-motion: reduce) {
       .reveal { opacity: 1; transform: none; transition: none; }
