@@ -1,4 +1,4 @@
 export enum ConnectionDialogMode {
-    AddMode,
-    EditMode
+  AddMode,
+  EditMode
 }

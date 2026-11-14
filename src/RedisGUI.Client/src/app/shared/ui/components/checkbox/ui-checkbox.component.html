@@ -1,0 +1,34 @@
+    <label class="ui-checkbox-wrapper" [class.is-disabled]="isDisabled()">
+      <div class="checkbox-box" [class.is-checked]="checked()">
+        <input
+          type="checkbox"
+          [checked]="checked()"
+          [disabled]="isDisabled()"
+          (change)="onToggle($event)"
+          class="hidden-input"
+        />
+        @if (checked()) {
+          <svg
+            class="check-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="3"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        }
+      </div>
+
+      <div class="label-block">
+        @if (label()) {
+          <span class="checkbox-label">{{ label() }}</span>
+        }
+        @if (description()) {
+          <span class="checkbox-desc">{{ description() }}</span>
+        }
+      </div>
+    </label>
+  

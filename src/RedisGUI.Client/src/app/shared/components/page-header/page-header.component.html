@@ -1,24 +1,36 @@
-<div class="page-header-card">
-  <div class="header-left">
+<div class="page-header-card flex items-center justify-between gap-4 px-5 py-4
+           rounded-xl bg-canvas-card border border-canvas-border shadow-sm
+           flex-wrap box-border mb-5">
+
+  <div class="flex items-center gap-3.5 min-w-0">
     @if (icon()) {
-      <div class="icon-wrapper">
-        <mat-icon class="header-icon">{{ icon() }}</mat-icon>
+      <div class="icon-wrapper flex items-center justify-center
+                  w-11 h-11 min-w-11 min-h-11 rounded-[10px] shrink-0
+                  bg-brand/15 border border-brand/30 text-brand">
+        <mat-icon class="!text-[24px] !w-6 !h-6">{{ icon() }}</mat-icon>
       </div>
     }
-    <div class="text-content">
-      <div class="title-row">
-        <h1 class="header-title">{{ title() }}</h1>
+
+    <div class="flex flex-col gap-[3px] min-w-0">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <h1 class="m-0 text-[20px] font-bold tracking-[-0.3px] text-canvas-text leading-tight">
+          {{ title() }}
+        </h1>
         @if (badge()) {
-          <span class="header-badge" [class]="'badge-' + (badgeColor() || 'primary')">{{ badge() }}</span>
+          <span class="header-badge inline-flex items-center px-2 py-0.5 rounded-md
+                       text-[11px] font-bold uppercase tracking-[0.5px]"
+                [class]="'badge-' + (badgeColor() || 'primary')">
+            {{ badge() }}
+          </span>
         }
       </div>
       @if (subtitle()) {
-        <p class="header-subtitle">{{ subtitle() }}</p>
+        <p class="m-0 text-[13px] text-canvas-muted leading-snug">{{ subtitle() }}</p>
       }
     </div>
   </div>
 
-  <div class="header-actions">
+  <div class="flex items-center gap-2.5 flex-wrap ml-auto">
     <ng-content select="[actions]" />
   </div>
 </div>

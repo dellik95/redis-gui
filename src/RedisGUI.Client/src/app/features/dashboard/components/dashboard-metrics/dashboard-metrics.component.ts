@@ -1,5 +1,12 @@
-import { Component, inject, computed, signal, effect, OnDestroy, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import {
+  Component,
+  inject,
+  computed,
+  signal,
+  effect,
+  OnDestroy,
+  ChangeDetectionStrategy
+} from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -7,6 +14,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MetricsHubService } from '../../../../core/services/signalr-hub-services/metrics-hub.service';
 import { ConnectionsStore } from '../../../../core/stores/connections.store';
 import { UiSelectComponent, UiSelectOption } from '../../../../shared/ui';
+import { MetricSparklineCardComponent } from '../../../../shared/components';
 
 /**
  * Real-time Redis Metrics Dashboard (Grafana / Datadog style)
@@ -16,12 +24,12 @@ import { UiSelectComponent, UiSelectOption } from '../../../../shared/ui';
   selector: 'app-dashboard-metrics',
   standalone: true,
   imports: [
-    CommonModule,
-    MatIconModule,
+        MatIconModule,
     MatSelectModule,
     MatFormFieldModule,
     MatTooltipModule,
-    UiSelectComponent
+    UiSelectComponent,
+    MetricSparklineCardComponent
   ],
   templateUrl: './dashboard-metrics.component.html',
   styleUrl: './dashboard-metrics.component.scss',
@@ -57,16 +65,30 @@ export class DashboardMetricsComponent implements OnDestroy {
   });
 
   readonly opsPerSec = computed(() => this.latestMetrics()?.opsPerSecond ?? 0);
-  readonly cpuPercent = computed(() => Math.round((this.latestMetrics()?.cpuUsageInPercent ?? 0) * 10) / 10);
+  readonly cpuPercent = computed(
+    () => Math.round((this.latestMetrics()?.cpuUsageInPercent ?? 0) * 10) / 10
+  );
   readonly connectedClients = computed(() => this.latestMetrics()?.connectedClients ?? 1);
-  readonly networkInKb = computed(() => Math.round((this.latestMetrics()?.networkSpeedIn ?? 0) * 10) / 10);
-  readonly networkOutKb = computed(() => Math.round((this.latestMetrics()?.networkSpeedOut ?? 0) * 10) / 10);
+  readonly networkInKb = computed(
+    () => Math.round((this.latestMetrics()?.networkSpeedIn ?? 0) * 10) / 10
+  );
+  readonly networkOutKb = computed(
+    () => Math.round((this.latestMetrics()?.networkSpeedOut ?? 0) * 10) / 10
+  );
 
   // SVG Area Chart Curves
-  readonly memoryCurve = computed(() => this.generateSmoothCurve(this.history().memoryMb, 200, 50, this.memoryMb()));
-  readonly opsCurve = computed(() => this.generateSmoothCurve(this.history().opsPerSec, 200, 50, this.opsPerSec()));
-  readonly cpuCurve = computed(() => this.generateSmoothCurve(this.history().cpuPercent, 200, 50, this.cpuPercent()));
-  readonly trafficCurve = computed(() => this.generateSmoothCurve([this.networkInKb(), this.networkOutKb()], 200, 50, 10));
+  readonly memoryCurve = computed(() =>
+    this.generateSmoothCurve(this.history().memoryMb, 200, 50, this.memoryMb())
+  );
+  readonly opsCurve = computed(() =>
+    this.generateSmoothCurve(this.history().opsPerSec, 200, 50, this.opsPerSec())
+  );
+  readonly cpuCurve = computed(() =>
+    this.generateSmoothCurve(this.history().cpuPercent, 200, 50, this.cpuPercent())
+  );
+  readonly trafficCurve = computed(() =>
+    this.generateSmoothCurve([this.networkInKb(), this.networkOutKb()], 200, 50, 10)
+  );
 
   constructor() {
     // Automatically select the first available connection

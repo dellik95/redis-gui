@@ -1,0 +1,11 @@
+    <span
+      class="type-badge"
+      [class]="badgeClass()"
+      [class.size-sm]="size() === 'sm'"
+      [class.size-lg]="size() === 'lg'">
+      @if (showIcon()) {
+        <mat-icon class="type-icon">{{ iconName() }}</mat-icon>
+      }
+      <span class="type-text">{{ displayLabel() }}</span>
+    </span>
+  

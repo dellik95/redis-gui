@@ -1,6 +1,6 @@
 import { computed } from '@angular/core';
 import { signalStore, withState, withMethods, withComputed, patchState } from '@ngrx/signals';
-import { User } from '../models/auth';
+import { User, UserRole } from '../models/auth';
 
 /**
  * Authentication state interface
@@ -27,50 +27,44 @@ const initialState: AuthState = {
  */
 export const AuthStore = signalStore(
   { providedIn: 'root' },
-  
+
   // Define state
   withState(initialState),
-  
+
   // Define computed signals
-  withComputed((store) => ({
+  withComputed(store => ({
     /**
      * Whether the current user has Admin role
      */
     isAdmin: computed(() => {
       const u = store.user();
-      if (!u) return true; // Default admin access for dev/testing
-      const role = u.role as any;
-      return role === 'Admin' || role === 'admin' || role === 1 || role === '1';
+      return u?.role === UserRole.Admin;
     }),
-    
+
     /**
      * Whether the current user can perform write operations
      */
     canWrite: computed(() => {
       const u = store.user();
-      if (!u) return true;
-      const role = u.role as any;
-      return role === 'Admin' || role === 'admin' || role === 'User' || role === 'user' || role === 1 || role === 0;
+      return u?.role === UserRole.Admin || u?.role === UserRole.User;
     }),
-    
+
     /**
      * Whether the current user has read-only access
      */
     isReadOnly: computed(() => {
       const u = store.user();
-      if (!u) return false;
-      const role = u.role as any;
-      return role === 'ReadOnly' || role === 'readonly' || role === 2 || role === '2';
+      return u?.role === UserRole.ReadOnly;
     }),
-    
+
     /**
      * User's full name (firstName + lastName)
      */
     userFullName: computed(() => {
       const user = store.user();
-      return user ? `${user.firstName} ${user.lastName}` : 'Administrator';
+      return user ? `${user.firstName} ${user.lastName}` : null;
     }),
-    
+
     /**
      * User's initials for avatar display
      */
@@ -79,12 +73,12 @@ export const AuthStore = signalStore(
       if (user && user.firstName && user.lastName) {
         return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
       }
-      return 'AD';
+      return '';
     })
   })),
-  
+
   // Define methods
-  withMethods((store) => ({
+  withMethods(store => ({
     setUser(user: User): void {
       patchState(store, {
         user,
@@ -92,39 +86,29 @@ export const AuthStore = signalStore(
         error: null
       });
     },
-    
+
     clearUser(): void {
       patchState(store, initialState);
     },
-    
+
     setLoading(isLoading: boolean): void {
       patchState(store, { isLoading });
     },
-    
+
     setError(error: string | null): void {
       patchState(store, { error, isLoading: false });
     },
-    
-    hasRole(role: 'Admin' | 'User' | 'ReadOnly'): boolean {
+
+    hasRole(role: UserRole): boolean {
       const currentRole = store.user()?.role;
-      if (!currentRole) return true;
-      if (role === 'Admin') {
-        return currentRole === 'Admin' || (currentRole as any) === 1 || (currentRole as any) === '1';
-      }
       return currentRole === role;
     },
-    
-    hasAnyRole(...roles: ('Admin' | 'User' | 'ReadOnly')[]): boolean {
+
+    hasAnyRole(...roles: UserRole[]): boolean {
       const currentRole = store.user()?.role;
-      if (!currentRole) return true;
-      return roles.some(r => {
-        if (r === 'Admin') {
-          return currentRole === 'Admin' || (currentRole as any) === 1 || (currentRole as any) === '1';
-        }
-        return currentRole === r;
-      });
+      return currentRole !== undefined && roles.includes(currentRole);
     },
-    
+
     getUserId(): string | null {
       return store.user()?.id ?? null;
     }

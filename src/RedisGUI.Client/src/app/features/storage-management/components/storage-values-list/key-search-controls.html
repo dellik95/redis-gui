@@ -1,0 +1,88 @@
+<div class="controls-left flex items-center gap-2.5 flex-1 min-w-0 flex-wrap">
+  <!-- Compact Database Picker -->
+  <div class="db-picker-wrap relative">
+    <button
+      type="button"
+      class="db-picker-btn inline-flex items-center gap-1.5 h-9 py-0 px-3 rounded-lg bg-canvas text-canvas-text text-[13px] font-semibold cursor-pointer"
+      [matMenuTriggerFor]="dbMenu"
+      matTooltip="Switch Redis Database (0-15)"
+    >
+      <mat-icon class="db-icon text-[17px] w-[17px] h-[17px] text-brand">dns</mat-icon>
+      <span class="db-title">DB {{ selectedDb() }}</span>
+      @if (availableDatabases()[selectedDb()]?.count; as c) {
+      <span class="db-count-badge text-[11px] font-medium text-canvas-muted">({{ c }})</span>
+      }
+      <mat-icon class="db-arrow text-[18px] w-[18px] h-[18px] text-canvas-muted mr-[-4px]"
+        >arrow_drop_down</mat-icon
+      >
+    </button>
+    <mat-menu #dbMenu="matMenu" class="db-dropdown-menu">
+      @for (db of availableDatabases(); track db.index) {
+      <button
+        mat-menu-item
+        (click)="databaseChange.emit(db.index)"
+        [class.active-db-item]="selectedDb() === db.index"
+      >
+        <mat-icon [class.active-icon]="selectedDb() === db.index">
+          {{ selectedDb() === db.index ? 'radio_button_checked' : 'radio_button_unchecked' }}
+        </mat-icon>
+        <span>Database {{ db.index }}</span>
+        @if (db.count > 0) {
+        <span class="menu-db-count">({{ db.count }} keys)</span>
+        }
+      </button>
+      }
+    </mat-menu>
+  </div>
+
+  <!-- Segmented View Toggler -->
+  <app-toggler
+    [config]="modesTogglerConfig"
+    (toggleChanged)="modeChange.emit($event)"
+  ></app-toggler>
+
+  <!-- Delimiter Button -->
+  <button
+    class="btn-secondary delimiter-btn inline-flex items-center gap-1.5 text-[12.5px] h-9 py-0 px-3 rounded-lg whitespace-nowrap"
+    (click)="cycleDelimiter.emit()"
+    matTooltip="Click to cycle delimiter character (: / . -)"
+  >
+    <mat-icon>alt_route</mat-icon>
+    <span>Delimiter: <strong>{{ keyDelimiter() }}</strong></span>
+  </button>
+
+  <!-- Integrated Developer Search Bar with Ctrl+K -->
+  <div
+    class="dev-search-bar flex items-center h-9 py-0 px-2.5 bg-canvas rounded-lg flex-1 min-w-[220px] max-w-[440px]"
+  >
+    <mat-icon class="search-icon text-[18px] w-[18px] h-[18px] text-canvas-muted mr-2 shrink-0"
+      >search</mat-icon
+    >
+    <input
+      type="text"
+      class="search-input flex-1 min-w-0 text-canvas-text text-[13px]"
+      [value]="searchPattern()"
+      #searchInput
+      (input)="searchChange.emit(searchInput.value)"
+      placeholder="Search keys (e.g. user:*, session:*)..."
+    />
+    @if (searchPattern() !== '*' && searchPattern() !== '') {
+    <button
+      type="button"
+      class="clear-btn text-canvas-muted cursor-pointer p-0.5 flex items-center justify-center rounded mr-1"
+      (click)="clear.emit()"
+      matTooltip="Clear search"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+    }
+    <button
+      type="button"
+      class="cmd-shortcut-btn p-0 cursor-pointer"
+      (click)="palette.emit()"
+      matTooltip="Command Palette (Ctrl+K)"
+    >
+      <kbd>Ctrl+K</kbd>
+    </button>
+  </div>
+</div>

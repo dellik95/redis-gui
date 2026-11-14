@@ -1,6 +1,7 @@
 import { inject } from '@angular/core';
 import { Router, CanActivateFn } from '@angular/router';
 import { AuthService } from '../services/auth/auth.service';
+import { UserRole } from '../models/auth';
 
 /**
  * Guard that checks if the user is authenticated
@@ -26,7 +27,7 @@ export const adminGuard: CanActivateFn = () => {
   const authService = inject(AuthService);
   const router = inject(Router);
 
-  if (authService.hasRole('Admin')) {
+  if (authService.hasRole(UserRole.Admin)) {
     return true;
   }
 

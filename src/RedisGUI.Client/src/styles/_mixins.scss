@@ -47,20 +47,20 @@
 @mixin custom-scrollbar($size: $scrollbar-size, $track-bg: transparent) {
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-light, #334155) $track-bg;
-  
+
   &::-webkit-scrollbar {
     width: $size;
     height: $size;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: $track-bg;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: var(--color-border-light, #334155);
     border-radius: $border-radius-sm;
-    
+
     &:hover {
       background: var(--color-text-muted, #64748b);
     }
@@ -70,7 +70,7 @@
 // Hide scrollbar but keep functionality
 @mixin scrollbar-hidden {
   scrollbar-width: none;
-  
+
   &::-webkit-scrollbar {
     display: none;
   }

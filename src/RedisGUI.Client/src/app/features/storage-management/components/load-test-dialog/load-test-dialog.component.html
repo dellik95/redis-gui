@@ -1,0 +1,258 @@
+<div class="dialog-header flex justify-between items-center py-4 px-6 bg-canvas-card">
+  <div class="title-row flex items-center gap-3.5">
+    <div
+      class="header-icon-box w-10 h-10 flex items-center justify-center"
+      [class.running]="isRunning()"
+    >
+      <mat-icon class="header-icon text-brand text-[22px] w-[22px] h-[22px]">speed</mat-icon>
+    </div>
+    <div class="title-text-group flex flex-col gap-0.5">
+      <span class="title-text font-bold text-canvas-text">Redis Load Testing & Benchmark</span>
+      <span class="title-subtext text-canvas-muted"
+        >Generate synthetic traffic, benchmark real-time latency, and auto-purge test keys</span
+      >
+    </div>
+  </div>
+  <div class="header-actions flex items-center gap-2">
+    @if (isRunning()) {
+      <button
+        mat-flat-button
+        color="warn"
+        class="header-stop-btn h-[34px] py-0 px-3"
+        (click)="stopLoadTest()"
+        [disabled]="isStopping()"
+      >
+        <mat-icon>stop</mat-icon>
+        <span>{{ isStopping() ? 'Stopping...' : 'Stop Benchmark' }}</span>
+      </button>
+    }
+    <button
+      mat-icon-button
+      mat-dialog-close
+      matTooltip="Close"
+      class="close-btn text-canvas-muted"
+      [disabled]="isRunning() && !isStopping()"
+    >
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<mat-dialog-content
+  class="dialog-content !py-5 !px-6 bg-canvas min-w-[560px] max-w-[700px] overflow-y-auto"
+>
+  <!-- Config Form (shown when not running and no results) -->
+  @if (!isRunning() && !result()) {
+    <div class="config-section">
+      <!-- Information notice -->
+      <div class="info-banner flex items-center gap-3 rounded-lg py-2.5 px-3.5 mb-4">
+        <mat-icon class="info-icon text-[20px] w-5 h-5 shrink-0">verified_user</mat-icon>
+        <div class="info-text">
+          <strong>Guaranteed Safe & Isolated:</strong> Benchmarks execute with dedicated keys
+          (<code>__bench_*:</code>). All test keys are automatically purged and verified after
+          completion or cancellation.
+        </div>
+      </div>
+
+      <!-- Benchmark Mode Switch: Duration vs Operations -->
+      <div class="form-group flex flex-col gap-2 mb-4">
+        <label class="form-label font-semibold text-canvas-muted uppercase">Benchmark Mode</label>
+        <div class="mode-switch-group grid gap-2.5">
+          <button
+            type="button"
+            class="mode-switch-btn flex items-center justify-center gap-2 bg-canvas-card rounded-lg py-2.5 px-3.5 cursor-pointer text-canvas-text font-semibold"
+            [class.active]="benchmarkMode() === 'duration'"
+            (click)="benchmarkMode.set('duration')"
+          >
+            <mat-icon>hourglass_top</mat-icon>
+            <span>By Duration (Continuous Stream)</span>
+          </button>
+          <button
+            type="button"
+            class="mode-switch-btn flex items-center justify-center gap-2 bg-canvas-card rounded-lg py-2.5 px-3.5 cursor-pointer text-canvas-text font-semibold"
+            [class.active]="benchmarkMode() === 'count'"
+            (click)="benchmarkMode.set('count')"
+          >
+            <mat-icon>tag</mat-icon>
+            <span>By Operations Count</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- If Duration Mode: Duration Pills -->
+      @if (benchmarkMode() === 'duration') {
+        <div class="form-group flex flex-col gap-2 mb-4">
+          <label class="form-label font-semibold text-canvas-muted uppercase"
+            >Test Duration (seconds)</label
+          >
+          <app-number-preset-picker
+            label="Test Duration"
+            [options]="durationPresets"
+            [value]="durationSeconds()"
+            (valueChange)="durationSeconds.set($event)"
+          />
+        </div>
+      }
+
+      <!-- If Count Mode: Operations Count Pills -->
+      @if (benchmarkMode() === 'count') {
+        <div class="form-group flex flex-col gap-2 mb-4">
+          <label class="form-label font-semibold text-canvas-muted uppercase"
+            >Total Operations</label
+          >
+          <app-number-preset-picker
+            label="Total Operations"
+            [options]="operationPresets"
+            [value]="operationsCount()"
+            (valueChange)="operationsCount.set($event)"
+          />
+        </div>
+      }
+
+      <!-- Concurrency Selector -->
+      <div class="form-group flex flex-col gap-2 mb-4">
+        <label class="form-label font-semibold text-canvas-muted uppercase"
+          >Concurrent Clients / Streams</label
+        >
+        <app-number-preset-picker
+          label="Concurrent Clients"
+          [options]="concurrencyPresets"
+          [value]="concurrency()"
+          (valueChange)="concurrency.set($event)"
+        />
+      </div>
+
+      <!-- Operation Type Selector -->
+      <div class="form-group flex flex-col gap-2 mb-4">
+        <label class="form-label font-semibold text-canvas-muted uppercase">Traffic Workload</label>
+        <div class="workload-grid flex flex-col gap-2">
+          <button
+            type="button"
+            class="workload-card flex items-center gap-3 bg-canvas-card rounded-lg py-2.5 px-3.5 text-left cursor-pointer text-canvas-text"
+            [class.active]="operationType() === 'mixed'"
+            (click)="operationType.set('mixed')"
+          >
+            <mat-icon>swap_horiz</mat-icon>
+            <div class="workload-info flex flex-col gap-0.5">
+              <span class="workload-title font-semibold text-canvas-text"
+                >Mixed (50% SET / 50% GET)</span
+              >
+              <span class="workload-desc text-canvas-muted"
+                >Balanced real-world read/write benchmark</span
+              >
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="workload-card flex items-center gap-3 bg-canvas-card rounded-lg py-2.5 px-3.5 text-left cursor-pointer text-canvas-text"
+            [class.active]="operationType() === 'write'"
+            (click)="operationType.set('write')"
+          >
+            <mat-icon>edit_note</mat-icon>
+            <div class="workload-info flex flex-col gap-0.5">
+              <span class="workload-title font-semibold text-canvas-text"
+                >Write-Intensive (SET only)</span
+              >
+              <span class="workload-desc text-canvas-muted"
+                >Measures memory allocation and write throughput</span
+              >
+            </div>
+          </button>
+
+          <button
+            type="button"
+            class="workload-card flex items-center gap-3 bg-canvas-card rounded-lg py-2.5 px-3.5 text-left cursor-pointer text-canvas-text"
+            [class.active]="operationType() === 'read'"
+            (click)="operationType.set('read')"
+          >
+            <mat-icon>visibility</mat-icon>
+            <div class="workload-info flex flex-col gap-0.5">
+              <span class="workload-title font-semibold text-canvas-text"
+                >Read-Intensive (GET only)</span
+              >
+              <span class="workload-desc text-canvas-muted"
+                >Measures query retrieval speed on warmed keys</span
+              >
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Payload Size Selector -->
+      <div class="form-group flex flex-col gap-2 mb-4">
+        <label class="form-label font-semibold text-canvas-muted uppercase"
+          >Payload Size per Key</label
+        >
+        <app-number-preset-picker
+          label="Payload Size"
+          [options]="payloadPresets"
+          [value]="payloadSize()"
+          (valueChange)="payloadSize.set($event)"
+        />
+      </div>
+
+      <div class="target-db-note text-canvas-muted flex items-center gap-1.5 mt-1">
+        Target Database:
+        <span class="db-chip text-brand py-0.5 px-2 rounded font-semibold"
+          >DB {{ data.database }}</span
+        >
+      </div>
+
+      @if (errorMessage()) {
+        <div class="error-banner flex items-center gap-2.5 py-2.5 px-3.5 rounded-lg mt-3.5">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Real-Time Live Streaming State -->
+  @if (isRunning()) {
+    <app-load-test-progress
+      [liveProgress]="liveProgress()"
+      [benchmarkMode]="benchmarkMode()"
+      [durationSeconds]="durationSeconds()"
+      [concurrency]="concurrency()"
+      [operationType]="operationType()"
+      [database]="data.database"
+      [progressPercent]="progressPercent()"
+    />
+  }
+
+  <!-- Test Results View -->
+  @if (!isRunning() && result(); as res) {
+    <app-load-test-results [database]="data.database" [result]="res" />
+  }
+</mat-dialog-content>
+
+<div class="dialog-actions flex justify-end items-center gap-3 py-3.5 px-6 bg-canvas-card">
+  @if (!isRunning() && !result()) {
+    <button mat-stroked-button mat-dialog-close>Cancel</button>
+    <button
+      mat-flat-button
+      color="primary"
+      class="start-btn bg-brand font-semibold"
+      (click)="startLoadTest()"
+    >
+      <mat-icon>play_arrow</mat-icon>
+      <span>Run Load Test</span>
+    </button>
+  }
+
+  @if (isRunning()) {
+    <button mat-flat-button color="warn" (click)="stopLoadTest()" [disabled]="isStopping()">
+      <mat-icon>stop</mat-icon>
+      <span>{{ isStopping() ? 'Stopping & Purging...' : 'Stop Benchmark' }}</span>
+    </button>
+  }
+
+  @if (!isRunning() && result()) {
+    <button mat-stroked-button (click)="reset()">
+      <mat-icon>tune</mat-icon>
+      <span>Configure & Run Again</span>
+    </button>
+    <button mat-flat-button color="primary" mat-dialog-close>Done</button>
+  }
+</div>

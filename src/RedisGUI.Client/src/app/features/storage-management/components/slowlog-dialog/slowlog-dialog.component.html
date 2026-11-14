@@ -1,0 +1,78 @@
+<div class="dialog-header">
+  <div class="title-row">
+    <mat-icon class="slowlog-icon">history_toggle_off</mat-icon>
+    <span class="title-text">Redis Slowlog Inspector</span>
+  </div>
+  <div class="header-actions">
+    <button
+      mat-icon-button
+      (click)="loadSlowlog()"
+      matTooltip="Refresh Slowlog"
+      [disabled]="loading()"
+    >
+      <mat-icon [class.animate-spin]="loading()">refresh</mat-icon>
+    </button>
+    <button mat-icon-button mat-dialog-close matTooltip="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+</div>
+
+<mat-dialog-content class="dialog-content">
+  @if (loading()) {
+    <app-empty-state type="loading" message="Fetching slow query log from Redis..." [spinnerDiameter]="36" />
+  } @else if (loadError()) {
+    <app-empty-state type="empty" icon="error_outline" heading="Could not load the slow log">
+      <button mat-stroked-button (click)="loadSlowlog()">Retry</button>
+    </app-empty-state>
+  } @else if (entries().length === 0) {
+    <app-empty-state
+      type="empty"
+      icon="check_circle"
+      heading="No Slow Queries Detected"
+      description="Your Redis instance is operating within optimal response time thresholds."
+    />
+  } @else {
+    <div class="table-scroll">
+      <table mat-table [dataSource]="entries()" class="slowlog-table">
+        <!-- ID Column -->
+        <ng-container matColumnDef="id">
+          <th mat-header-cell *matHeaderCellDef class="id-col">#ID</th>
+          <td mat-cell *matCellDef="let row" class="id-col">#{{ row.id }}</td>
+        </ng-container>
+
+        <!-- Timestamp Column -->
+        <ng-container matColumnDef="timestamp">
+          <th mat-header-cell *matHeaderCellDef class="time-col">Time</th>
+          <td mat-cell *matCellDef="let row" class="time-col">
+            {{ row.timestamp | date: 'HH:mm:ss.SSS' }}
+          </td>
+        </ng-container>
+
+        <!-- Duration Column -->
+        <ng-container matColumnDef="duration">
+          <th mat-header-cell *matHeaderCellDef class="duration-col">Execution Time</th>
+          <td mat-cell *matCellDef="let row" class="duration-col">
+            <span class="duration-badge">{{ row.duration }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Command Column -->
+        <ng-container matColumnDef="arguments">
+          <th mat-header-cell *matHeaderCellDef class="cmd-col">Command & Arguments</th>
+          <td mat-cell *matCellDef="let row" class="cmd-cell">
+            <code>{{ formatArgs(row.arguments) }}</code>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="columns; sticky: true"></tr>
+        <tr mat-row *matRowDef="let row; columns: columns"></tr>
+      </table>
+    </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="dialog-actions">
+  <span class="info-note">Showing top {{ entries().length }} slowest operations</span>
+  <button type="button" class="btn-secondary" mat-dialog-close>Close</button>
+</mat-dialog-actions>

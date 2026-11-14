@@ -1,0 +1,29 @@
+    <div class="ttl-selector-container">
+      <div class="ttl-input-row">
+        <div class="ttl-field-wrap">
+          <ui-input
+            [value]="ttl() ?? -1"
+            (valueChange)="onTtlChange($event)"
+            type="number"
+            label="TTL (seconds)"
+            placeholder="-1 (Persistent)"
+            icon="timer"
+            [hint]="expirationDescription()"
+          />
+        </div>
+
+        <div class="ttl-preset-pills">
+          @for (preset of presets; track preset.value) {
+            <button
+              type="button"
+              class="preset-pill"
+              [class.active]="ttl() === preset.value"
+              [matTooltip]="preset.tooltip"
+              (click)="applyPreset(preset.value)">
+              {{ preset.label }}
+            </button>
+          }
+        </div>
+      </div>
+    </div>
+  

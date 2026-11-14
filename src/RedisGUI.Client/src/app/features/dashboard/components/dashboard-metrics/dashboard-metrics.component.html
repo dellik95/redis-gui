@@ -24,107 +24,56 @@
 
     <div class="metrics-grid">
       <!-- 1. Memory Card -->
-      <div class="metric-card memory-card">
-        <div class="metric-top">
-          <span class="metric-label">Memory Usage</span>
-          <mat-icon class="metric-icon">memory</mat-icon>
-        </div>
-        <div class="metric-value-row">
-          <span class="primary-value">{{ memoryMb() }} <small>MB</small></span>
-          <span class="secondary-value">Peak: {{ peakMemoryMb() }} MB</span>
-        </div>
-        <div class="chart-wrapper">
-          <svg viewBox="0 0 200 50" class="sparkline sparkline-blue" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="memGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.38" />
-                <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.0" />
-              </linearGradient>
-            </defs>
-            <path [attr.d]="memoryCurve().area" fill="url(#memGradient)" />
-            <path [attr.d]="memoryCurve().line" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" />
-            <circle [attr.cx]="memoryCurve().lastPoint.x" [attr.cy]="memoryCurve().lastPoint.y" r="3.5" fill="#38bdf8" />
-          </svg>
-        </div>
-      </div>
+      <app-metric-sparkline-card
+        label="Memory Usage"
+        icon="memory"
+        [primaryValue]="memoryMb()"
+        unit=" MB"
+        [secondaryValue]="'Peak: ' + peakMemoryMb() + ' MB'"
+        color="#38bdf8"
+        gradientId="memGradient"
+        [curve]="memoryCurve()"
+      />
 
       <!-- 2. Operations / sec Card -->
-      <div class="metric-card ops-card">
-        <div class="metric-top">
-          <span class="metric-label">Operations / sec</span>
-          <mat-icon class="metric-icon">speed</mat-icon>
-        </div>
-        <div class="metric-value-row">
-          <span class="primary-value">{{ opsPerSec() }} <small>ops/s</small></span>
-          <span class="secondary-value">Realtime</span>
-        </div>
-        <div class="chart-wrapper">
-          <svg viewBox="0 0 200 50" class="sparkline sparkline-green" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="opsGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#10b981" stop-opacity="0.38" />
-                <stop offset="100%" stop-color="#10b981" stop-opacity="0.0" />
-              </linearGradient>
-            </defs>
-            <path [attr.d]="opsCurve().area" fill="url(#opsGradient)" />
-            <path [attr.d]="opsCurve().line" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" />
-            <circle [attr.cx]="opsCurve().lastPoint.x" [attr.cy]="opsCurve().lastPoint.y" r="3.5" fill="#10b981" />
-          </svg>
-        </div>
-      </div>
+      <app-metric-sparkline-card
+        label="Operations / sec"
+        icon="speed"
+        [primaryValue]="opsPerSec()"
+        unit=" ops/s"
+        secondaryValue="Realtime"
+        color="#10b981"
+        gradientId="opsGradient"
+        [curve]="opsCurve()"
+      />
 
-      <!-- 3. CPU Load Card -->
-      <div class="metric-card cpu-card">
-        <div class="metric-top">
-          <span class="metric-label">CPU Usage</span>
-          <mat-icon class="metric-icon">developer_board</mat-icon>
-        </div>
-        <div class="metric-value-row">
-          <span class="primary-value">{{ cpuPercent() }} <small>%</small></span>
-          <span class="secondary-value">System & User</span>
-        </div>
-        <div class="chart-wrapper">
-          <svg viewBox="0 0 200 50" class="sparkline sparkline-amber" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="cpuGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.38" />
-                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0.0" />
-              </linearGradient>
-            </defs>
-            <path [attr.d]="cpuCurve().area" fill="url(#cpuGradient)" />
-            <path [attr.d]="cpuCurve().line" fill="none" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round" />
-            <circle [attr.cx]="cpuCurve().lastPoint.x" [attr.cy]="cpuCurve().lastPoint.y" r="3.5" fill="#f59e0b" />
-          </svg>
-        </div>
-      </div>
+      <!-- 3. CPU Card -->
+      <app-metric-sparkline-card
+        label="CPU Usage"
+        icon="developer_board"
+        [primaryValue]="cpuPercent()"
+        unit="%"
+        secondaryValue="System &amp; User"
+        color="#f59e0b"
+        gradientId="cpuGradient"
+        [curve]="cpuCurve()"
+      />
 
-      <!-- 4. Network & Clients Card -->
-      <div class="metric-card net-card">
-        <div class="metric-top">
-          <span class="metric-label">Clients & Traffic</span>
-          <mat-icon class="metric-icon">hub</mat-icon>
+      <!-- 4. Network & Clients Card — custom secondary content via ng-content -->
+      <app-metric-sparkline-card
+        label="Clients &amp; Traffic"
+        icon="hub"
+        [primaryValue]="connectedClients()"
+        unit=" clients"
+        color="#a855f7"
+        gradientId="trafficGradient"
+        [curve]="trafficCurve()"
+      >
+        <div class="net-pills">
+          <span class="net-pill in">&darr; {{ networkInKb() }} KB/s</span>
+          <span class="net-pill out">&uarr; {{ networkOutKb() }} KB/s</span>
         </div>
-        <div class="metric-value-row">
-          <span class="primary-value">{{ connectedClients() }} <small>clients</small></span>
-          <div class="net-pills">
-            <span class="net-pill in">&darr; {{ networkInKb() }} KB/s</span>
-            <span class="net-pill out">&uarr; {{ networkOutKb() }} KB/s</span>
-          </div>
-        </div>
-        <div class="chart-wrapper">
-          <svg viewBox="0 0 200 50" class="sparkline sparkline-purple" preserveAspectRatio="none">
-            <defs>
-              <linearGradient id="trafficGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#a855f7" stop-opacity="0.38" />
-                <stop offset="100%" stop-color="#a855f7" stop-opacity="0.0" />
-              </linearGradient>
-            </defs>
-            <path [attr.d]="trafficCurve().area" fill="url(#trafficGradient)" />
-            <path [attr.d]="trafficCurve().line" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" />
-            <circle [attr.cx]="trafficCurve().lastPoint.x" [attr.cy]="trafficCurve().lastPoint.y" r="3.5" fill="#a855f7" />
-          </svg>
-        </div>
-      </div>
+      </app-metric-sparkline-card>
     </div>
   </div>
 }

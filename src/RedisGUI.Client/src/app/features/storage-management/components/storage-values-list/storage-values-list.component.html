@@ -1,61 +1,19 @@
-<div class="storage-values-header">
-  <div class="header-main-row">
-    <div class="controls-left">
-      <!-- Compact Database Picker -->
-      <div class="db-picker-wrap">
-        <button type="button" class="db-picker-btn" [matMenuTriggerFor]="dbMenu" matTooltip="Switch Redis Database (0-15)">
-          <mat-icon class="db-icon">dns</mat-icon>
-          <span class="db-title">DB {{ selectedDb() }}</span>
-          @if (availableDatabases()[selectedDb()]?.count; as c) {
-            <span class="db-count-badge">({{ c }})</span>
-          }
-          <mat-icon class="db-arrow">arrow_drop_down</mat-icon>
-        </button>
-        <mat-menu #dbMenu="matMenu" class="db-dropdown-menu">
-          @for (db of availableDatabases(); track db.index) {
-            <button mat-menu-item (click)="onDatabaseChange(db.index)" [class.active-db-item]="selectedDb() === db.index">
-              <mat-icon [class.active-icon]="selectedDb() === db.index">
-                {{ selectedDb() === db.index ? 'radio_button_checked' : 'radio_button_unchecked' }}
-              </mat-icon>
-              <span>Database {{ db.index }}</span>
-              @if (db.count > 0) {
-                <span class="menu-db-count">({{ db.count }} keys)</span>
-              }
-            </button>
-          }
-        </mat-menu>
-      </div>
+<div class="storage-values-header flex flex-col gap-2.5 py-3 px-4 bg-canvas-card mb-3 shrink-0">
+  <div class="header-main-row flex items-center justify-between gap-3 flex-wrap">
+    <app-key-search-controls
+      [selectedDb]="selectedDb()"
+      [availableDatabases]="availableDatabases()"
+      [keyDelimiter]="keyDelimiter()"
+      [searchPattern]="searchPattern()"
+      (databaseChange)="onDatabaseChange($event)"
+      (modeChange)="toggleViewMode($event)"
+      (cycleDelimiter)="changeKeyDelimiter()"
+      (searchChange)="onSearchPatternChange($event)"
+      (clear)="clearSearch()"
+      (palette)="openCommandPalette()"
+    />
 
-      <!-- Segmented View Toggler -->
-      <app-toggler [config]="modesTogglerConfig" (toggleChanged)="toggleViewMode($event)"></app-toggler>
-      
-      <!-- Delimiter Button -->
-      <button class="btn-secondary delimiter-btn" (click)="changeKeyDelimiter()" matTooltip="Click to cycle delimiter character (: / . -)">
-        <mat-icon>alt_route</mat-icon>
-        <span>Delimiter: <strong>{{ keyDelimiter() }}</strong></span>
-      </button>
-
-      <!-- Integrated Developer Search Bar with Ctrl+K -->
-      <div class="dev-search-bar">
-        <mat-icon class="search-icon">search</mat-icon>
-        <input 
-          type="text" 
-          class="search-input"
-          [value]="searchPattern()" 
-          (input)="onSearchPatternChange($any($event).target.value)"
-          placeholder="Search keys (e.g. user:*, session:*)..." />
-        @if (searchPattern() !== '*' && searchPattern() !== '') {
-          <button type="button" class="clear-btn" (click)="clearSearch()" matTooltip="Clear search">
-            <mat-icon>close</mat-icon>
-          </button>
-        }
-        <button type="button" class="cmd-shortcut-btn" (click)="openCommandPalette()" matTooltip="Command Palette (Ctrl+K)">
-          <kbd>Ctrl+K</kbd>
-        </button>
-      </div>
-    </div>
-
-    <div class="controls-right">
+    <div class="controls-right flex items-center gap-2.5 shrink-0">
       <app-bulk-actions-toolbar
         [selectedCount]="selection.selected.length"
         [pattern]="searchPattern()"
@@ -68,117 +26,71 @@
         (importData)="importData()"
         (clearSelection)="selection.clear()"
       ></app-bulk-actions-toolbar>
-      <button class="btn-secondary seed-btn" (click)="seedDemoData()" matTooltip="Seed Demo Data (DB 0, 1, 2) with all Redis data types">
+      <button
+        class="btn-secondary seed-btn"
+        (click)="seedDemoData()"
+        matTooltip="Seed Demo Data (DB 0, 1, 2) with all Redis data types"
+      >
         <mat-icon>auto_awesome</mat-icon>
         <span>Seed Demo</span>
       </button>
-      <button class="btn-secondary slowlog-btn" (click)="openSlowlog()" matTooltip="View Redis Slowlog entries">
+      <button
+        class="btn-secondary slowlog-btn"
+        (click)="openSlowlog()"
+        matTooltip="View Redis Slowlog entries"
+      >
         <mat-icon>history_toggle_off</mat-icon>
         <span>Slowlog</span>
       </button>
-      <button class="btn-secondary loadtest-btn" (click)="openLoadTest()" matTooltip="Run Redis Load Testing & Benchmark with auto-cleanup">
+      <button
+        class="btn-secondary loadtest-btn"
+        (click)="openLoadTest()"
+        matTooltip="Run Redis Load Testing & Benchmark with auto-cleanup"
+      >
         <mat-icon>speed</mat-icon>
         <span>Load Test</span>
       </button>
-      <button class="btn-primary add-key-btn" (click)="addNewKey()">
+      <button class="btn-primary" (click)="addNewKey()">
         <mat-icon>add</mat-icon>
         <span>Add Key</span>
       </button>
     </div>
   </div>
 
-  <div class="header-filter-row">
+  <div class="header-filter-row flex items-center justify-between gap-3 flex-wrap">
     <!-- Type Filter Chips -->
-    <div class="type-filter-chips">
-      <button type="button" 
-              class="type-chip chip-all" 
-              [class.active]="typeFilter() === ''"
-              (click)="setTypeFilter('')">
-        <span class="chip-label">All</span>
-        <span class="chip-count">{{ typeCounts().all }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-string" 
-              [class.active]="typeFilter() === 'string'"
-              (click)="setTypeFilter('string')">
-        <mat-icon class="chip-icon">text_fields</mat-icon>
-        <span class="chip-label">String</span>
-        <span class="chip-count">{{ typeCounts().string }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-hash" 
-              [class.active]="typeFilter() === 'hash'"
-              (click)="setTypeFilter('hash')">
-        <mat-icon class="chip-icon">tag</mat-icon>
-        <span class="chip-label">Hash</span>
-        <span class="chip-count">{{ typeCounts().hash }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-list" 
-              [class.active]="typeFilter() === 'list'"
-              (click)="setTypeFilter('list')">
-        <mat-icon class="chip-icon">list</mat-icon>
-        <span class="chip-label">List</span>
-        <span class="chip-count">{{ typeCounts().list }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-set" 
-              [class.active]="typeFilter() === 'set'"
-              (click)="setTypeFilter('set')">
-        <mat-icon class="chip-icon">group_work</mat-icon>
-        <span class="chip-label">Set</span>
-        <span class="chip-count">{{ typeCounts().set }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-sortedset" 
-              [class.active]="typeFilter() === 'sortedset' || typeFilter() === 'zset'"
-              (click)="setTypeFilter('sortedset')">
-        <mat-icon class="chip-icon">sort</mat-icon>
-        <span class="chip-label">Sorted Set</span>
-        <span class="chip-count">{{ typeCounts().sortedset }}</span>
-      </button>
-      <button type="button" 
-              class="type-chip chip-stream" 
-              [class.active]="typeFilter() === 'stream'"
-              (click)="setTypeFilter('stream')">
-        <mat-icon class="chip-icon">stream</mat-icon>
-        <span class="chip-label">Stream</span>
-        <span class="chip-count">{{ typeCounts().stream }}</span>
-      </button>
-    </div>
+    <app-key-type-filter
+      [typeFilter]="typeFilter()"
+      [typeCounts]="typeCounts()"
+      (filterChange)="setTypeFilter($event)"
+    />
   </div>
 </div>
 
 @if (viewMode() === 'table') {
-  <div class="table-wrapper">
+  <div class="table-wrapper flex flex-col flex-1 min-h-0 bg-canvas-card overflow-hidden">
     <!-- Non-blocking top progress bar -->
     @if (isLoading()) {
-      <mat-progress-bar mode="indeterminate" class="table-progress-bar"></mat-progress-bar>
+      <mat-progress-bar
+        mode="indeterminate"
+        class="table-progress-bar h-[3px] mb-[-3px] relative"
+      ></mat-progress-bar>
     }
 
     @if (filteredData().length === 0) {
       @if (isLoading()) {
-        <div class="loading-container">
-          <mat-spinner diameter="40"></mat-spinner>
-          <span class="loading-label">Loading keys from Redis...</span>
-        </div>
+        <app-empty-state type="loading" message="Loading keys from Redis..." [spinnerDiameter]="40" />
       } @else {
-        <div class="empty-state-card">
-          <div class="empty-icon-wrapper">
-            <mat-icon class="empty-icon">search_off</mat-icon>
-          </div>
-          <h3 class="empty-title">No keys found</h3>
-          <p class="empty-desc">
+        <app-empty-state type="empty" icon="search_off" heading="No keys found">
+          <p class="text-[14px] text-canvas-muted max-w-[420px] text-center m-0">
             @if (searchPattern() !== '*' || typeFilter() !== '') {
               No keys matched pattern <code>{{ searchPattern() }}</code>
-              @if (typeFilter()) {
-                with type <strong>{{ typeFilter() }}</strong>
-              }
+              @if (typeFilter()) { with type <strong>{{ typeFilter() }}</strong> }
             } @else {
               This Redis database currently contains no keys.
             }
           </p>
-          <div class="empty-actions">
+          <div class="flex items-center gap-3 mt-2">
             @if (searchPattern() !== '*' || typeFilter() !== '') {
               <button class="btn-secondary" (click)="clearSearch(); setTypeFilter('')">
                 <mat-icon>filter_alt_off</mat-icon>
@@ -190,63 +102,105 @@
               <span>Create First Key</span>
             </button>
           </div>
-        </div>
+        </app-empty-state>
       }
     } @else {
-      <div class="table-container">
+      <div class="table-container flex-1 min-h-0 overflow-hidden flex flex-col">
         <cdk-virtual-scroll-viewport
           itemSize="56"
-          class="virtual-table-viewport"
+          class="virtual-table-viewport flex-1 w-full h-full overflow-auto min-h-0"
           [minBufferPx]="280"
           [maxBufferPx]="560"
-          (scrolledIndexChange)="onScroll($event)">
-
-          <table mat-table [dataSource]="filteredData()" class="keys-table mat-elevation-z1">
+          (scrolledIndexChange)="onScroll($event)"
+        >
+          <table
+            mat-table
+            [dataSource]="filteredData()"
+            [trackBy]="trackByKey"
+            class="keys-table mat-elevation-z1 w-full min-w-[780px] bg-canvas-card text-canvas-text"
+          >
             <!-- select column -->
             <ng-container matColumnDef="select">
-              <th mat-header-cell *matHeaderCellDef class="select-col">
-                <mat-checkbox (change)="$event ? masterToggle() : null"
-                              [checked]="selection.hasValue() && isAllSelected()"
-                              [indeterminate]="selection.hasValue() && !isAllSelected()">
+              <th mat-header-cell *matHeaderCellDef class="select-col w-12 !pr-0">
+                <mat-checkbox
+                  (change)="$event ? masterToggle() : null"
+                  [checked]="selection.hasValue() && isAllSelected()"
+                  [indeterminate]="selection.hasValue() && !isAllSelected()"
+                >
                 </mat-checkbox>
               </th>
-              <td mat-cell *matCellDef="let element" class="select-col">
-                <mat-checkbox (click)="$event.stopPropagation()"
-                              (change)="$event ? selection.toggle(element.key) : null"
-                              [checked]="selection.isSelected(element.key)">
+              <td mat-cell *matCellDef="let element" class="select-col w-12 !pr-0">
+                <mat-checkbox
+                  (click)="$event.stopPropagation()"
+                  (change)="$event ? selection.toggle(element.key) : null"
+                  [checked]="selection.isSelected(element.key)"
+                >
                 </mat-checkbox>
               </td>
             </ng-container>
 
             <!-- type -->
             <ng-container matColumnDef="type">
-              <th mat-header-cell *matHeaderCellDef class="type-col sortable-col" (click)="toggleSort('type')" matTooltip="Click to sort by Type">
+              <th
+                mat-header-cell
+                *matHeaderCellDef
+                class="type-col sortable-col w-[120px]"
+                (click)="toggleSort('type')"
+                matTooltip="Click to sort by Type"
+              >
                 <div class="col-header-content">
                   <span class="header-label">Type</span>
                   <mat-icon class="sort-icon" [class.sort-icon-active]="sortField() === 'type'">
-                    {{ sortField() === 'type' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    {{
+                      sortField() === 'type'
+                        ? sortDir() === 'asc'
+                          ? 'arrow_upward'
+                          : 'arrow_downward'
+                        : 'unfold_more'
+                    }}
                   </mat-icon>
                 </div>
               </th>
-              <td mat-cell *matCellDef="let element" class="type-col">
+              <td mat-cell *matCellDef="let element" class="type-col w-[120px]">
                 <app-type-badge [type]="element.type" size="sm" />
               </td>
             </ng-container>
 
             <!-- key -->
             <ng-container matColumnDef="key">
-              <th mat-header-cell *matHeaderCellDef class="key-col sortable-col" (click)="toggleSort('key')" matTooltip="Click to sort by Key name">
+              <th
+                mat-header-cell
+                *matHeaderCellDef
+                class="key-col sortable-col min-w-[250px]"
+                (click)="toggleSort('key')"
+                matTooltip="Click to sort by Key name"
+              >
                 <div class="col-header-content">
                   <span class="header-label">Key</span>
                   <mat-icon class="sort-icon" [class.sort-icon-active]="sortField() === 'key'">
-                    {{ sortField() === 'key' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    {{
+                      sortField() === 'key'
+                        ? sortDir() === 'asc'
+                          ? 'arrow_upward'
+                          : 'arrow_downward'
+                        : 'unfold_more'
+                    }}
                   </mat-icon>
                 </div>
               </th>
               <td mat-cell *matCellDef="let element" class="key-cell">
-                <div class="key-content">
-                  <span class="key-text" [matTooltip]="element.key">{{ element.key }}</span>
-                  <button mat-icon-button class="copy-key-btn" (click)="copyKey(element.key, $event)" matTooltip="Copy key name">
+                <div class="key-content flex items-center gap-1.5">
+                  <span
+                    class="key-text text-[13px] font-semibold text-canvas-text max-w-[480px] overflow-hidden text-ellipsis whitespace-nowrap"
+                    [matTooltip]="element.key"
+                    >{{ element.key }}</span
+                  >
+                  <button
+                    mat-icon-button
+                    class="copy-key-btn w-6 h-6 leading-[24px]"
+                    (click)="copyKey(element.key, $event)"
+                    matTooltip="Copy key name"
+                  >
                     <mat-icon>content_copy</mat-icon>
                   </button>
                 </div>
@@ -255,29 +209,55 @@
 
             <!-- ttl -->
             <ng-container matColumnDef="ttl">
-              <th mat-header-cell *matHeaderCellDef class="ttl-col sortable-col" (click)="toggleSort('ttl')" matTooltip="Click to sort by TTL">
+              <th
+                mat-header-cell
+                *matHeaderCellDef
+                class="ttl-col sortable-col w-[140px]"
+                (click)="toggleSort('ttl')"
+                matTooltip="Click to sort by TTL"
+              >
                 <div class="col-header-content">
                   <span class="header-label">TTL</span>
                   <mat-icon class="sort-icon" [class.sort-icon-active]="sortField() === 'ttl'">
-                    {{ sortField() === 'ttl' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    {{
+                      sortField() === 'ttl'
+                        ? sortDir() === 'asc'
+                          ? 'arrow_upward'
+                          : 'arrow_downward'
+                        : 'unfold_more'
+                    }}
                   </mat-icon>
                 </div>
               </th>
-              <td mat-cell *matCellDef="let element" class="ttl-col">
+              <td mat-cell *matCellDef="let element" class="ttl-col w-[140px]">
                 @let liveTtl = getLiveTtl(element.ttl);
                 @if (liveTtl !== null && liveTtl > 0) {
-                  <span class="ttl-badge ttl-expiring" [class.ttl-urgent]="liveTtl <= 60" [matTooltip]="'Expires in ' + liveTtl + 's'">
-                    <mat-icon class="ttl-icon" [class.pulse-icon]="liveTtl <= 60">{{ liveTtl <= 60 ? 'hourglass_bottom' : 'timer' }}</mat-icon>
+                  <span
+                    class="ttl-badge ttl-expiring inline-flex items-center gap-[5px] py-[3px] px-2 rounded-md text-[12px] font-medium"
+                    [class.ttl-urgent]="liveTtl <= 60"
+                    [matTooltip]="'Expires in ' + liveTtl + 's'"
+                  >
+                    <mat-icon
+                      class="ttl-icon text-[14px] w-3.5 h-3.5"
+                      [class.pulse-icon]="liveTtl <= 60"
+                      >{{ liveTtl <= 60 ? 'hourglass_bottom' : 'timer' }}</mat-icon
+                    >
                     <span>{{ formatTtl(liveTtl) }}</span>
                   </span>
                 } @else if (liveTtl === 0) {
-                  <span class="ttl-badge ttl-expired" matTooltip="Key has reached expiration">
-                    <mat-icon class="ttl-icon">timer_off</mat-icon>
+                  <span
+                    class="ttl-badge ttl-expired inline-flex items-center gap-[5px] py-[3px] px-2 rounded-md text-[12px] font-medium"
+                    matTooltip="Key has reached expiration"
+                  >
+                    <mat-icon class="ttl-icon text-[14px] w-3.5 h-3.5">timer_off</mat-icon>
                     <span>Expired</span>
                   </span>
                 } @else {
-                  <span class="ttl-badge ttl-permanent" matTooltip="Key does not expire">
-                    <mat-icon class="ttl-icon">all_inclusive</mat-icon>
+                  <span
+                    class="ttl-badge ttl-permanent inline-flex items-center gap-[5px] py-[3px] px-2 rounded-md text-[12px] font-medium"
+                    matTooltip="Key does not expire"
+                  >
+                    <mat-icon class="ttl-icon text-[14px] w-3.5 h-3.5">all_inclusive</mat-icon>
                     <span>Persistent</span>
                   </span>
                 }
@@ -286,34 +266,70 @@
 
             <!-- size -->
             <ng-container matColumnDef="size">
-              <th mat-header-cell *matHeaderCellDef class="size-col sortable-col" (click)="toggleSort('size')" matTooltip="Click to sort by Size">
+              <th
+                mat-header-cell
+                *matHeaderCellDef
+                class="size-col sortable-col w-[110px]"
+                (click)="toggleSort('size')"
+                matTooltip="Click to sort by Size"
+              >
                 <div class="col-header-content">
                   <span class="header-label">Size</span>
                   <mat-icon class="sort-icon" [class.sort-icon-active]="sortField() === 'size'">
-                    {{ sortField() === 'size' ? (sortDir() === 'asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more' }}
+                    {{
+                      sortField() === 'size'
+                        ? sortDir() === 'asc'
+                          ? 'arrow_upward'
+                          : 'arrow_downward'
+                        : 'unfold_more'
+                    }}
                   </mat-icon>
                 </div>
               </th>
-              <td mat-cell *matCellDef="let element" class="size-col">
-                <span class="size-badge">{{ element.size | formatBytes }}</span>
+              <td mat-cell *matCellDef="let element" class="size-col w-[110px]">
+                <span class="size-badge text-[12px] font-semibold text-canvas-text">{{
+                  element.size | formatBytes
+                }}</span>
               </td>
             </ng-container>
 
             <!-- actions -->
             <ng-container matColumnDef="actions">
-              <th mat-header-cell *matHeaderCellDef class="actions-col"> Actions </th>
-              <td mat-cell *matCellDef="let element" class="actions-col">
-                <div class="row-actions">
-                  <button mat-icon-button (click)="$event.stopPropagation(); editKey(element.key)" matTooltip="View / Edit Key" class="action-btn edit-btn">
+              <th mat-header-cell *matHeaderCellDef class="actions-col w-40 min-w-40 text-right">
+                Actions
+              </th>
+              <td mat-cell *matCellDef="let element" class="actions-col w-40 min-w-40 text-right">
+                <div class="row-actions flex items-center justify-end gap-0.5 gap-1">
+                  <button
+                    mat-icon-button
+                    (click)="$event.stopPropagation(); editKey(element.key)"
+                    matTooltip="View / Edit Key"
+                    class="action-btn edit-btn w-8 h-8 leading-[32px] p-0 inline-flex items-center justify-center text-canvas-muted rounded-md"
+                  >
                     <mat-icon>edit_note</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="$event.stopPropagation(); renameKey(element.key)" matTooltip="Rename Key" class="action-btn rename-btn">
+                  <button
+                    mat-icon-button
+                    (click)="$event.stopPropagation(); renameKey(element.key)"
+                    matTooltip="Rename Key"
+                    class="action-btn rename-btn w-8 h-8 leading-[32px] p-0 inline-flex items-center justify-center text-canvas-muted rounded-md"
+                  >
                     <mat-icon>drive_file_rename_outline</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="$event.stopPropagation(); duplicateKey(element.key)" matTooltip="Duplicate Key" class="action-btn duplicate-btn">
+                  <button
+                    mat-icon-button
+                    (click)="$event.stopPropagation(); duplicateKey(element.key)"
+                    matTooltip="Duplicate Key"
+                    class="action-btn duplicate-btn w-8 h-8 leading-[32px] p-0 inline-flex items-center justify-center text-canvas-muted rounded-md"
+                  >
                     <mat-icon>content_copy</mat-icon>
                   </button>
-                  <button mat-icon-button (click)="$event.stopPropagation(); deleteKey(element.key)" matTooltip="Delete Key" class="action-btn delete-btn">
+                  <button
+                    mat-icon-button
+                    (click)="$event.stopPropagation(); deleteKey(element.key)"
+                    matTooltip="Delete Key"
+                    class="action-btn delete-btn w-8 h-8 leading-[32px] p-0 inline-flex items-center justify-center text-canvas-muted rounded-md"
+                  >
                     <mat-icon>delete_outline</mat-icon>
                   </button>
                 </div>
@@ -321,28 +337,37 @@
             </ng-container>
 
             <tr mat-header-row *matHeaderRowDef="displayedColumns; sticky: true"></tr>
-            <tr mat-row *matRowDef="let row; columns: displayedColumns;" class="data-row clickable-row" [class.row-active]="activeKey() === row.key" (click)="editKey(row.key)"></tr>
+            <tr
+              mat-row
+              *matRowDef="let row; columns: displayedColumns"
+              class="data-row clickable-row cursor-pointer"
+              [class.row-active]="activeKey() === row.key"
+              (click)="editKey(row.key)"
+            ></tr>
           </table>
 
           <!-- Chunk loading spinner -->
           @if (chunkLoading()) {
-            <div class="chunk-loading-spinner">
+            <div
+              class="chunk-loading-spinner flex items-center justify-center gap-2 p-3 text-[12px]"
+            >
               <mat-spinner diameter="24"></mat-spinner>
               <span>Loading more keys...</span>
             </div>
           }
-
         </cdk-virtual-scroll-viewport>
       </div>
 
       <!-- Paginator at the bottom -->
-      <div class="paginator-container">
-        <mat-paginator [length]="totalCount()"
-                       [pageSize]="pageSize()"
-                       [pageIndex]="pageNumber() - 1"
-                       [pageSizeOptions]="[25, 50, 100, 250]"
-                       (page)="onPageChange($event)"
-                       showFirstLastButtons>
+      <div class="paginator-container shrink-0">
+        <mat-paginator
+          [length]="totalCount()"
+          [pageSize]="pageSize()"
+          [pageIndex]="pageNumber() - 1"
+          [pageSizeOptions]="[25, 50, 100, 250]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons
+        >
         </mat-paginator>
       </div>
     }
@@ -350,9 +375,10 @@
 }
 
 @if (viewMode() === 'tree') {
-  <div class="tree-container">
-    <app-tree-view-list 
+  <div class="tree-container p-2 min-h-[460px] relative h-full overflow-y-auto bg-canvas-card">
+    <app-tree-view-list
       [connectionId]="connectionId()"
+      [suppliedKeys]="keys()"
       [activeKey]="activeKey()"
       [(pattern)]="searchPattern"
       [(delimiter)]="keyDelimiter"
@@ -365,4 +391,3 @@
     />
   </div>
 }
-

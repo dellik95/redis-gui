@@ -100,9 +100,18 @@ public class Program
 		// Enable response compression
 		app.UseResponseCompression();
 		
-		// Enable CORS
+		// A browser navigation opens the Angular health page. Probes keep the health-check endpoint.
+		app.Use(async (context, next) =>
+		{
+			if (HttpMethods.IsGet(context.Request.Method) && context.Request.Path == "/health"
+				&& context.Request.Headers["Sec-Fetch-Dest"] == "document")
+			{
+				context.Request.Path = "/index.html";
+			}
+			await next(context);
+		});
+		app.UseRouting();
 		app.UseCors("DefaultPolicy");
-		
 		app.UseDefaultFiles();
 		app.UseStaticFiles();
 

@@ -4,9 +4,9 @@ import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type
 
 /**
  * Handler for Redis Set data type
- * 
+ *
  * Sets are unordered collections of unique strings
- * 
+ *
  * Visual format: string[]
  * JSON format: { "members": ["member1", "member2", "member3"] }
  */
@@ -19,7 +19,7 @@ export class SetTypeHandler implements RedisTypeHandler {
   /**
    * Convert raw Redis value to visual editor format (string array)
    * Removes duplicates as Sets only contain unique values
-   * 
+   *
    * @param data Raw value from Redis (array or { members: [] })
    * @returns Array of unique strings
    */
@@ -39,7 +39,7 @@ export class SetTypeHandler implements RedisTypeHandler {
 
   /**
    * Convert value to JSON representation
-   * 
+   *
    * @param data Value in visual editor format (string array)
    * @returns JSON string representation
    */
@@ -50,7 +50,7 @@ export class SetTypeHandler implements RedisTypeHandler {
 
   /**
    * Parse JSON back to visual editor format
-   * 
+   *
    * @param json JSON string or parsed object
    * @returns Array of unique strings
    * @throws Error if JSON is invalid
@@ -58,7 +58,7 @@ export class SetTypeHandler implements RedisTypeHandler {
   fromJson(json: string | RedisValueJson): string[] {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-      
+
       if (!parsed.members || !Array.isArray(parsed.members)) {
         throw new Error('JSON must contain "members" array');
       }
@@ -71,7 +71,7 @@ export class SetTypeHandler implements RedisTypeHandler {
 
   /**
    * Validate value structure for Set type
-   * 
+   *
    * @param value Value to validate (must be string array)
    * @returns Validation result with errors if invalid
    */
@@ -90,7 +90,7 @@ export class SetTypeHandler implements RedisTypeHandler {
 
   /**
    * Get default empty value for Set type
-   * 
+   *
    * @returns Default empty string array
    */
   getDefaultValue(): string[] {

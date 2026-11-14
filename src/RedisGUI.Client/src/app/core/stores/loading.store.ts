@@ -7,23 +7,23 @@ import { concatMap, finalize } from 'rxjs/operators';
  * Loading state interface
  */
 interface LoadingState {
-	/**
-	 * Whether loading is active
-	 */
-	isLoading: boolean;
+  /**
+   * Whether loading is active
+   */
+  isLoading: boolean;
 
-	/**
-	 * Number of active loading requests (for concurrent operations)
-	 */
-	activeRequests: number;
+  /**
+   * Number of active loading requests (for concurrent operations)
+   */
+  activeRequests: number;
 }
 
 /**
  * Initial loading state
  */
 const initialState: LoadingState = {
-	isLoading: false,
-	activeRequests: 0
+  isLoading: false,
+  activeRequests: 0
 };
 
 /**
@@ -54,108 +54,101 @@ const initialState: LoadingState = {
  * ```
  */
 export const LoadingStore = signalStore(
-	{ providedIn: 'root' },
+  { providedIn: 'root' },
 
-	// Define state
-	withState(initialState),
+  // Define state
+  withState(initialState),
 
-	// Define computed signals
-	withComputed((store) => ({
-		/**
-		 * Whether any loading operation is active
-		 */
-		hasActiveLoading: computed(() => store.activeRequests() > 0),
+  // Define computed signals
+  withComputed(store => ({
+    /**
+     * Whether any loading operation is active
+     */
+    hasActiveLoading: computed(() => store.activeRequests() > 0),
 
-		/**
-		 * Loading progress indicator (0-100%)
-		 * Useful for progress bars
-		 */
-		loadingProgress: computed(() => {
-			const requests = store.activeRequests();
-			return requests > 0 ? Math.min(100, requests * 10) : 0;
-		})
-	})),
+    /**
+     * Loading progress indicator (0-100%)
+     * Useful for progress bars
+     */
+    loadingProgress: computed(() => {
+      const requests = store.activeRequests();
+      return requests > 0 ? Math.min(100, requests * 10) : 0;
+    })
+  })),
 
-	// Define methods
-	withMethods((store) => ({
-		/**
-		 * Activate loading state
-		 * Increments active request counter
-		 */
-		loadingOn(): void {
-			patchState(store, (state) => ({
-				isLoading: true,
-				activeRequests: state.activeRequests + 1
-			}));
-		},
+  // Define methods
+  withMethods(store => ({
+    /**
+     * Activate loading state
+     * Increments active request counter
+     */
+    loadingOn(): void {
+      patchState(store, state => ({
+        isLoading: true,
+        activeRequests: state.activeRequests + 1
+      }));
+    },
 
-		/**
-		 * Deactivate loading state
-		 * Decrements active request counter
-		 */
-		loadingOff(): void {
-			patchState(store, (state) => {
-				const newActiveRequests = Math.max(0, state.activeRequests - 1);
-				return {
-					isLoading: newActiveRequests > 0,
-					activeRequests: newActiveRequests
-				};
-			});
-		},
+    /**
+     * Deactivate loading state
+     * Decrements active request counter
+     */
+    loadingOff(): void {
+      patchState(store, state => {
+        const newActiveRequests = Math.max(0, state.activeRequests - 1);
+        return {
+          isLoading: newActiveRequests > 0,
+          activeRequests: newActiveRequests
+        };
+      });
+    },
 
-		/**
-		 * Force reset loading state
-		 * Clears all active requests
-		 */
-		reset(): void {
-			patchState(store, initialState);
-		},
+    /**
+     * Force reset loading state
+     * Clears all active requests
+     */
+    reset(): void {
+      patchState(store, initialState);
+    },
 
-		/**
-		 * Wraps an observable with loading indicators
-		 * Shows loading state while the observable is executing
-		 * Automatically manages request counting and error handling
-		 *
-		 * @param obs$ - The observable to wrap
-		 * @returns The same observable with loading side effects
-		 *
-		 * @example
-		 * ```typescript
-		 * this.loadingStore.showLoaderUntilCompleted(
-		 *   this.http.get('/api/data')
-		 * ).subscribe(data => {
-		 *   // Loading indicator automatically shown/hidden
-		 * });
-		 * ```
-		 */
-		showLoaderUntilCompleted<T>(obs$: Observable<T>): Observable<T> {
-			return of(null).pipe(
-				concatMap(() => {
-					// Increment loading counter
-					patchState(store, (state) => ({
-						isLoading: true,
-						activeRequests: state.activeRequests + 1
-					}));
-					return obs$;
-				}),
-				finalize(() => {
-					// Decrement loading counter
-					patchState(store, (state) => {
-						const newActiveRequests = Math.max(0, state.activeRequests - 1);
-						return {
-							isLoading: newActiveRequests > 0,
-							activeRequests: newActiveRequests
-						};
-					});
-				})
-			);
-		}
-	}))
+    /**
+     * Wraps an observable with loading indicators
+     * Shows loading state while the observable is executing
+     * Automatically manages request counting and error handling
+     *
+     * @param obs$ - The observable to wrap
+     * @returns The same observable with loading side effects
+     *
+     * @example
+     * ```typescript
+     * this.loadingStore.showLoaderUntilCompleted(
+     *   this.http.get('/api/data')
+     * ).subscribe(data => {
+     *   // Loading indicator automatically shown/hidden
+     * });
+     * ```
+     */
+    showLoaderUntilCompleted<T>(obs$: Observable<T>): Observable<T> {
+      return of(null).pipe(
+        concatMap(() => {
+          // Increment loading counter
+          patchState(store, state => ({
+            isLoading: true,
+            activeRequests: state.activeRequests + 1
+          }));
+          return obs$;
+        }),
+        finalize(() => {
+          // Decrement loading counter
+          patchState(store, state => {
+            const newActiveRequests = Math.max(0, state.activeRequests - 1);
+            return {
+              isLoading: newActiveRequests > 0,
+              activeRequests: newActiveRequests
+            };
+          });
+        })
+      );
+    }
+  }))
 );
-
-
-
-
-
-
-

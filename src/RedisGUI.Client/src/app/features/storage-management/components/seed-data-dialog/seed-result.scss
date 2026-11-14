@@ -1,0 +1,63 @@
+.result-summary-card {
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 10px;
+}
+
+.summary-top {
+  .success-icon {
+    color: #10b981;
+  }
+
+  .summary-headings {
+    h3 {
+      margin: 0 0 4px 0;
+      font-size: 1.1rem;
+      color: #34d399;
+    }
+    p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--color-text, #cbd5e1);
+    }
+  }
+}
+
+.stats-grid {
+  grid-template-columns: repeat(2, 1fr);
+  .stat-box {
+    border: 1px solid var(--color-border, #1e293b);
+    .stat-label {
+      font-size: 0.72rem;
+    }
+
+    .stat-val {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+.type-counts-list {
+  .type-counts-header {
+    font-size: 0.76rem;
+  }
+
+  .type-chips-row {
+    .type-result-chip {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      font-size: 0.78rem;
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+      }
+    }
+  }
+}
+
+:host-context(.light) {
+  .result-summary-card {
+    background: #ffffff;
+    border-color: #cbd5e1;
+  }
+}

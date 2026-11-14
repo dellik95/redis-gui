@@ -1,14 +1,22 @@
-import { ChangeDetectionStrategy, Component, inject, Injector, signal, computed, effect, input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  inject,
+  signal,
+  computed,
+  effect,
+  input
+} from '@angular/core';
 import { StorageResourcesInfoComponent } from './components/storage-resources-info/storage-resources-info.component';
 import { PageHeaderComponent } from '../../shared/components';
-import { StorageValuesListComponent } from "./components/storage-values-list/storage-values-list.component";
-import { EditKeyComponent } from "./components/edit-key/edit-key.component";
-import { RedisCliDrawerComponent } from "../../shared/components/redis-cli-drawer/redis-cli-drawer.component";
+import { StorageValuesListComponent } from './components/storage-values-list/storage-values-list.component';
+import { EditKeyComponent } from './components/edit-key/edit-key.component';
+import { RedisCliDrawerComponent } from '../../shared/components/redis-cli-drawer/redis-cli-drawer.component';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatIconModule } from '@angular/material/icon';
 import { SectionActionsStore } from '../../core/stores/section-actions.store';
 import { StorageManagementStore } from './stores/storage-management.store';
-import { RedisDataType, RedisValue } from '../../models/redis-keys.types';
+import { SelectedRedisKey } from '../../models/redis-keys.types';
 import { RedisKeysStore } from '../../core/stores/redis-keys.store';
 import { ConnectionsStore } from '../../core/stores/connections.store';
 
@@ -40,7 +48,7 @@ export class StorageManagementComponent {
 
   readonly id = input.required<string>();
 
-  readonly selectedKey = signal<{ key: string; type: RedisDataType; value: RedisValue; ttl: number } | null>(null);
+  readonly selectedKey = signal<SelectedRedisKey | null>(null);
   readonly activeDb = computed(() => this.redisKeysStore.activeDatabase());
 
   readonly currentConnection = computed(() =>
@@ -52,11 +60,11 @@ export class StorageManagementComponent {
   readonly hasValidConnection = computed(() => !!this.id());
 
   constructor() {
+    if (this.connectionsStore.needsRefresh()) this.connectionsStore.loadConnections();
     effect(() => {
       const connectionId = this.id();
       if (connectionId) {
         this.storageStore.initialize(connectionId);
-        this.redisKeysStore.loadKeyspace({ connectionId });
       }
     });
 
@@ -73,7 +81,7 @@ export class StorageManagementComponent {
     });
   }
 
-  onKeySelected(event: { key: string; type: RedisDataType; value: RedisValue; ttl: number }): void {
+  onKeySelected(event: SelectedRedisKey): void {
     this.selectedKey.set(event);
   }
 

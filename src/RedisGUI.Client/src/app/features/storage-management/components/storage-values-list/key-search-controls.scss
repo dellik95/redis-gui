@@ -1,0 +1,110 @@
+:host {
+  display: contents;
+}
+.db-picker-wrap {
+  .db-picker-btn {
+    border: 1px solid var(--color-border, #1e293b);
+    transition: all 0.15s ease;
+    &:hover {
+      background: var(--color-card-hover, #1e293b);
+      border-color: var(--color-border-light, #334155);
+    }
+  }
+}
+
+.delimiter-btn {
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.dev-search-bar {
+  border: 1px solid var(--color-border, #1e293b);
+  transition: all 0.15s ease;
+  &:focus-within {
+    border-color: var(--color-accent, #6366f1);
+    box-shadow: 0 0 0 2px var(--color-accent-glow, rgba(99, 102, 241, 0.2));
+  }
+
+  .search-input {
+    border: none;
+    outline: none;
+    background: transparent;
+    font-family: inherit;
+    &::placeholder {
+      color: var(--color-text-muted, #64748b);
+    }
+  }
+}
+
+.clear-btn {
+  border: none;
+  background: transparent;
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &:hover {
+    color: var(--color-text, #f8fafc);
+  }
+}
+
+.cmd-shortcut-btn {
+  border: none;
+  background: transparent;
+  kbd {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    background: var(--color-card-hover, #1e293b);
+    border: 1px solid var(--color-border-light, #334155);
+    border-radius: 4px;
+    color: var(--color-text-muted, #94a3b8);
+    letter-spacing: 0.5px;
+  }
+
+  &:hover kbd {
+    color: var(--color-accent, #6366f1);
+    border-color: var(--color-accent, #6366f1);
+  }
+}
+
+:host-context(.light) {
+  .db-picker-btn {
+    background: #f8fafc !important;
+    color: #0f172a !important;
+    border-color: #cbd5e1 !important;
+    .db-count-badge,
+    .db-arrow {
+      color: #475569 !important;
+    }
+    &:hover {
+      background: #f1f5f9 !important;
+      border-color: #94a3b8 !important;
+    }
+  }
+
+  .dev-search-bar {
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    .search-icon {
+      color: #4f46e5 !important;
+    }
+    .search-input {
+      color: #0f172a !important;
+      &::placeholder {
+        color: #64748b !important;
+      }
+    }
+    .cmd-shortcut-btn kbd {
+      background: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      color: #334155 !important;
+    }
+  }
+}

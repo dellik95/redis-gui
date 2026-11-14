@@ -8,90 +8,14 @@
 }
 
 .info-progress-bar {
-  height: 3px !important;
-  margin: -8px 0;
   border-radius: 2px;
 }
 
 .info-container {
-  display: flex;
-  flex-direction: column;
   padding: 0 0 32px 0;
-  gap: 16px;
-  height: 100%;
-  overflow-y: auto;
-  box-sizing: border-box;
-
-  .connection-picker {
-    min-width: 260px;
-  }
-
-  .spinning {
-    animation: spin 1s linear infinite;
-  }
-
-  .loading-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 64px 24px;
-    gap: 16px;
-    color: var(--color-text-muted, #94a3b8);
-  }
-
-  .empty-info-card {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 64px 24px;
-    background: var(--color-card, #0f172a);
-    border: 1px dashed var(--color-border, #1e293b);
-    border-radius: 12px;
-    text-align: center;
-    margin: 20px 0;
-
-    .empty-icon-wrap {
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      background: var(--color-card-hover, #1e293b);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 16px;
-
-      mat-icon {
-        font-size: 36px;
-        width: 36px;
-        height: 36px;
-        color: var(--color-text-muted, #94a3b8);
-        opacity: 0.7;
-      }
-    }
-
-    h3 {
-      margin: 0 0 8px 0;
-      font-size: 18px;
-      font-weight: 600;
-    }
-
-    p {
-      margin: 0 0 20px 0;
-      color: var(--color-text-muted, #94a3b8);
-      max-width: 480px;
-    }
-  }
-
-  .tab-content {
-    padding: 20px 0;
-  }
 
   .cards-grid {
-    display: grid;
     grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-    gap: 20px;
   }
 
   mat-card {
@@ -104,7 +28,6 @@
     mat-card-header {
       padding: 16px 20px 12px 20px;
       border-bottom: 1px solid var(--color-border, #1e293b);
-
       mat-card-title {
         font-size: 16px;
         font-weight: 600;
@@ -117,81 +40,16 @@
     }
   }
 
-  .info-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--color-border, #1e293b);
-
-    &:last-child {
-      border-bottom: none;
-    }
-
-    .label {
-      font-weight: 500;
-      color: var(--color-text-muted, #94a3b8);
-      font-size: 13px;
-    }
-
-    .value {
-      font-weight: 600;
-      color: var(--color-text, #f8fafc);
-      font-size: 13px;
-
-      &.highlight {
-        color: var(--color-accent, #6366f1);
-        font-size: 15px;
-      }
-
-      &.good {
-        color: #2e7d32;
-      }
-
-      &.warning {
-        color: #ed6c02;
-      }
-    }
-  }
-
   .memory-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-
     .memory-bar {
-      height: 8px;
-      background: var(--color-border, #1e293b);
-      border-radius: 4px;
-      overflow: hidden;
-      margin-bottom: 8px;
-
       .memory-used {
-        height: 100%;
         background: linear-gradient(90deg, var(--color-accent, #6366f1), #38bdf8);
-        border-radius: 4px;
         transition: width 0.3s ease;
       }
     }
   }
 
-  .search-bar {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-
-    mat-form-field {
-      flex: 1;
-    }
-  }
-
   .config-table {
-    width: 100%;
-    border-radius: 8px;
-    overflow: hidden;
-    background: var(--color-card, #0f172a) !important;
-
     th {
       font-weight: 600;
       text-transform: uppercase;
@@ -205,7 +63,6 @@
       font-size: 13px;
       color: var(--color-text, #f8fafc) !important;
       border-bottom: 1px solid var(--color-border, #1e293b) !important;
-
       code {
         font-family: monospace;
         font-size: 12px;
@@ -218,17 +75,9 @@
   }
 
   .section-card {
-    margin-bottom: 16px;
-
     .section-properties {
-      display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 8px 24px;
     }
   }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }

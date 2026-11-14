@@ -1,27 +1,15 @@
 import { computed, inject } from '@angular/core';
-import { signalStore, withState, withMethods, withComputed, patchState, withHooks } from '@ngrx/signals';
+import { signalStore, withState, withMethods, withComputed, patchState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { pipe, tap, catchError, of, switchMap } from 'rxjs';
+import { pipe, tap, catchError, of, switchMap, Subject, takeUntil } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import {
   CreateConnectionRequest,
   UpdateConnectionRequest,
   CheckConnectionRequest
 } from '../../models/connection-request.types';
-
-/**
- * Connection model (matches backend GetConnectionResponse)
- */
-export interface Connection {
-  id: string;
-  name: string;
-  host: string;
-  port: number;
-  username: string | null;
-  password: string | null;
-  database: number;
-  isReadOnly?: boolean;
-}
+import { Connection } from '../../models/connection.type';
+import { API_ROUTES } from '../constants/api-routes.constants';
 
 /**
  * Connections state interface
@@ -74,65 +62,54 @@ const initialState: ConnectionsState = {
 /**
  * Global connections store using NgRx SignalStore
  * Replaces manual caching with centralized state management
- * 
+ *
  * @example
  * ```typescript
  * // Inject the store
  * private connectionsStore = inject(ConnectionsStore);
- * 
+ *
  * // Load connections
  * this.connectionsStore.loadConnections();
- * 
+ *
  * // Read state
  * const connections = this.connectionsStore.connections();
  * const count = this.connectionsStore.connectionsCount();
- * 
+ *
  * // Create/update/delete
  * this.connectionsStore.createConnection(request);
  * ```
  */
 export const ConnectionsStore = signalStore(
   { providedIn: 'root' },
-  
+
   // Define state
   withState(initialState),
-  
+
   // Define computed signals
-  withComputed((store) => ({
+  withComputed(store => ({
     /**
      * Number of connections
      */
     connectionsCount: computed(() => store.connections().length),
-    
+
     /**
      * Whether connections list is empty
      */
-    isEmpty: computed(() => store.connections().length === 0),
-    
-    /**
-     * Whether data needs refresh (older than 30 seconds)
-     */
-    needsRefresh: computed(() => {
-      const lastFetched = store.lastFetched();
-      if (!lastFetched) return true;
-      return Date.now() - lastFetched > 30000; // 30 seconds
-    }),
-
-    /**
-     * Whether connections were updated recently (within last 100ms)
-     * Use this to react to connection changes
-     */
-    wasRecentlyUpdated: computed(() => {
-      const lastUpdate = store.lastUpdateTimestamp();
-      return lastUpdate > 0 && Date.now() - lastUpdate < 100;
-    })
+    isEmpty: computed(() => store.connections().length === 0)
   })),
-  
+
   // Define methods
   withMethods((store, httpClient = inject(HttpClient)) => {
-    const BASE_URL = '/api/v1/connections';
-    
+    const sessionEnded = new Subject<void>();
     return {
+      resetSession(): void {
+        sessionEnded.next();
+        patchState(store, initialState);
+      },
+      needsRefresh(): boolean {
+        const fetched = store.lastFetched();
+        return !fetched || Date.now() - fetched > 30_000;
+      },
       /**
        * Loads all connections from the API
        */
@@ -140,15 +117,16 @@ export const ConnectionsStore = signalStore(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
           switchMap(() =>
-            httpClient.get<Connection[]>(BASE_URL).pipe(
-              tap((connections) =>
+            httpClient.get<Connection[]>(API_ROUTES.CONNECTIONS.LIST).pipe(
+              takeUntil(sessionEnded),
+              tap(connections =>
                 patchState(store, {
                   connections,
                   isLoading: false,
                   lastFetched: Date.now()
                 })
               ),
-              catchError((error) => {
+              catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to load connections',
                   isLoading: false
@@ -159,16 +137,17 @@ export const ConnectionsStore = signalStore(
           )
         )
       ),
-      
+
       /**
        * Creates a new connection
        */
       createConnection: rxMethod<CreateConnectionRequest>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap((request) =>
-            httpClient.post<Connection>(BASE_URL, request).pipe(
-              tap((newConnection) => {
+          switchMap(request =>
+            httpClient.post<Connection>(API_ROUTES.CONNECTIONS.CREATE, request).pipe(
+              takeUntil(sessionEnded),
+              tap(newConnection => {
                 // Add new connection to state
                 patchState(store, {
                   connections: [...store.connections(), newConnection],
@@ -176,7 +155,7 @@ export const ConnectionsStore = signalStore(
                   lastFetched: Date.now()
                 });
               }),
-              catchError((error) => {
+              catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to create connection',
                   isLoading: false
@@ -187,27 +166,28 @@ export const ConnectionsStore = signalStore(
           )
         )
       ),
-      
+
       /**
        * Updates an existing connection
        */
       updateConnection: rxMethod<UpdateConnectionRequest>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap((request) =>
-            httpClient.put<void>(`${BASE_URL}/${request.id}`, request).pipe(
+          switchMap(request =>
+            httpClient.put<void>(API_ROUTES.CONNECTIONS.UPDATE(request.id), request).pipe(
+              takeUntil(sessionEnded),
               tap(() => {
                 // Update connection in state
-                const updatedConnections = store.connections().map((conn) =>
-                  conn.id === request.id ? { ...conn, ...request } : conn
-                );
+                const updatedConnections = store
+                  .connections()
+                  .map(conn => (conn.id === request.id ? { ...conn, ...request } : conn));
                 patchState(store, {
                   connections: updatedConnections,
                   isLoading: false,
                   lastFetched: Date.now()
                 });
               }),
-              catchError((error) => {
+              catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to update connection',
                   isLoading: false
@@ -218,31 +198,28 @@ export const ConnectionsStore = signalStore(
           )
         )
       ),
-      
+
       /**
        * Deletes a connection
        */
       deleteConnection: rxMethod<string>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap((id) =>
-            httpClient.delete<void>(`${BASE_URL}/${id}`).pipe(
+          switchMap(id =>
+            httpClient.delete<void>(API_ROUTES.CONNECTIONS.DELETE(id)).pipe(
+              takeUntil(sessionEnded),
               tap(() => {
                 // Remove connection from state
-                const updatedConnections = store.connections().filter(
-                  (conn) => conn.id !== id
-                );
+                const updatedConnections = store.connections().filter(conn => conn.id !== id);
                 patchState(store, {
                   connections: updatedConnections,
                   selectedConnection:
-                    store.selectedConnection()?.id === id
-                      ? null
-                      : store.selectedConnection(),
+                    store.selectedConnection()?.id === id ? null : store.selectedConnection(),
                   isLoading: false,
                   lastFetched: Date.now()
                 });
               }),
-              catchError((error) => {
+              catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to delete connection',
                   isLoading: false
@@ -253,15 +230,16 @@ export const ConnectionsStore = signalStore(
           )
         )
       ),
-      
+
       /**
        * Checks if a connection is valid
        */
       checkConnection: rxMethod<CheckConnectionRequest>(
         pipe(
-          switchMap((request) =>
-            httpClient.post<any>(`${BASE_URL}/check`, request).pipe(
-              catchError((error) => {
+          switchMap(request =>
+            httpClient.post<void>(API_ROUTES.CONNECTIONS.CHECK, request).pipe(
+              takeUntil(sessionEnded),
+              catchError(error => {
                 return of({ success: false, error: error.message });
               })
             )
@@ -275,12 +253,13 @@ export const ConnectionsStore = signalStore(
       loadConnectionById: rxMethod<string>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap((id) =>
-            httpClient.get<Connection>(`${BASE_URL}/${id}`).pipe(
-              tap((connection) => {
+          switchMap(id =>
+            httpClient.get<Connection>(API_ROUTES.CONNECTIONS.GET(id)).pipe(
+              takeUntil(sessionEnded),
+              tap(connection => {
                 // Update connection in state if it exists, otherwise add it
                 const existingConnections = store.connections();
-                const index = existingConnections.findIndex((c) => c.id === id);
+                const index = existingConnections.findIndex(c => c.id === id);
 
                 if (index >= 0) {
                   const updatedConnections = [...existingConnections];
@@ -296,7 +275,7 @@ export const ConnectionsStore = signalStore(
                   });
                 }
               }),
-              catchError((error) => {
+              catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to load connection',
                   isLoading: false
@@ -307,28 +286,28 @@ export const ConnectionsStore = signalStore(
           )
         )
       ),
-      
+
       /**
        * Selects a connection
        */
       selectConnection(connection: Connection | null): void {
         patchState(store, { selectedConnection: connection });
       },
-      
+
       /**
        * Gets connection by ID from local state (synchronous)
        */
       getConnectionById(id: string): Connection | undefined {
-        return store.connections().find((conn) => conn.id === id);
+        return store.connections().find(conn => conn.id === id);
       },
-      
+
       /**
        * Clears error state
        */
       clearError(): void {
         patchState(store, { error: null });
       },
-      
+
       /**
        * Forces a refresh of connections
        */
@@ -344,13 +323,5 @@ export const ConnectionsStore = signalStore(
         patchState(store, { lastUpdateTimestamp: Date.now() });
       }
     };
-  }),
-  
-  // Initialize on creation
-  withHooks({
-    onInit(store) {
-      // Auto-load connections on store initialization
-      store.loadConnections();
-    }
   })
 );

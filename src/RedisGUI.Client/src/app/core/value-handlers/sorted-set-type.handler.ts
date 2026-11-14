@@ -12,10 +12,10 @@ export interface SortedSetMember {
 
 /**
  * Handler for Redis Sorted Set data type
- * 
+ *
  * Sorted Sets are collections of unique members with associated scores
  * Members are ordered by their score
- * 
+ *
  * Visual format: Array<{ member: string, score: number }>
  * JSON format: { "membersWithScores": { "member1": 1.0, "member2": 2.0 } }
  */
@@ -27,7 +27,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
 
   /**
    * Convert raw Redis value to visual editor format (SortedSetMember array)
-   * 
+   *
    * @param data Raw value from Redis (array or object format or { membersWithScores: {} })
    * @returns Array of SortedSetMember objects
    */
@@ -36,9 +36,10 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
       return [];
     }
 
-    const source = typeof data === 'object' && 'membersWithScores' in (data as Record<string, unknown>)
-      ? (data as Record<string, unknown>)['membersWithScores']
-      : data;
+    const source =
+      typeof data === 'object' && 'membersWithScores' in (data as Record<string, unknown>)
+        ? (data as Record<string, unknown>)['membersWithScores']
+        : data;
 
     if (Array.isArray(source)) {
       return source.map((item: any) => ({
@@ -56,7 +57,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
 
   /**
    * Convert value to JSON representation
-   * 
+   *
    * @param data Value in visual editor format (SortedSetMember array) or object format
    * @returns JSON string representation
    */
@@ -76,7 +77,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
 
   /**
    * Parse JSON back to visual editor format
-   * 
+   *
    * @param json JSON string or parsed object
    * @returns Array of SortedSetMember objects
    * @throws Error if JSON is invalid
@@ -84,7 +85,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
   fromJson(json: string | RedisValueJson): SortedSetMember[] {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-      
+
       if (!parsed.membersWithScores || typeof parsed.membersWithScores !== 'object') {
         throw new Error('JSON must contain "membersWithScores" object');
       }
@@ -97,7 +98,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
 
   /**
    * Validate value structure for Sorted Set type
-   * 
+   *
    * @param value Value to validate (must be SortedSetMember array)
    * @returns Validation result with errors if invalid
    */
@@ -133,7 +134,7 @@ export class SortedSetTypeHandler implements RedisTypeHandler {
 
   /**
    * Get default empty value for Sorted Set type
-   * 
+   *
    * @returns Default empty SortedSetMember array
    */
   getDefaultValue(): SortedSetMember[] {

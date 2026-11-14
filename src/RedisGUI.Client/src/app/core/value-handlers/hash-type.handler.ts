@@ -12,7 +12,7 @@ export interface HashField {
 
 /**
  * Handler for Redis Hash data type
- * 
+ *
  * Supports both plain string values and nested JSON objects in fields!
  */
 @Injectable({
@@ -29,9 +29,10 @@ export class HashTypeHandler implements RedisTypeHandler {
       return [];
     }
 
-    const fields = 'fields' in (data as Record<string, unknown>)
-      ? (data as Record<string, unknown>)['fields']
-      : data;
+    const fields =
+      'fields' in (data as Record<string, unknown>)
+        ? (data as Record<string, unknown>)['fields']
+        : data;
 
     if (!fields || typeof fields !== 'object') {
       return [];
@@ -39,9 +40,10 @@ export class HashTypeHandler implements RedisTypeHandler {
 
     return Object.entries(fields as Record<string, unknown>).map(([key, value]) => ({
       key,
-      value: typeof value === 'object' && value !== null
-        ? JSON.stringify(value, null, 2)
-        : String(value ?? '')
+      value:
+        typeof value === 'object' && value !== null
+          ? JSON.stringify(value, null, 2)
+          : String(value ?? '')
     }));
   }
 
@@ -55,7 +57,10 @@ export class HashTypeHandler implements RedisTypeHandler {
       data.forEach((field: HashField) => {
         if (!field.key) return;
         const trimmed = (field.value || '').trim();
-        if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        if (
+          (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+          (trimmed.startsWith('[') && trimmed.endsWith(']'))
+        ) {
           try {
             fields[field.key] = JSON.parse(trimmed);
             return;
@@ -82,18 +87,22 @@ export class HashTypeHandler implements RedisTypeHandler {
         throw new Error('JSON must be an object');
       }
 
-      const fields = 'fields' in parsed && parsed.fields && typeof parsed.fields === 'object'
-        ? parsed.fields
-        : parsed;
+      const fields =
+        'fields' in parsed && parsed.fields && typeof parsed.fields === 'object'
+          ? parsed.fields
+          : parsed;
 
       return Object.entries(fields as Record<string, unknown>).map(([key, value]) => ({
         key,
-        value: typeof value === 'object' && value !== null
-          ? JSON.stringify(value, null, 2)
-          : String(value ?? '')
+        value:
+          typeof value === 'object' && value !== null
+            ? JSON.stringify(value, null, 2)
+            : String(value ?? '')
       }));
     } catch (error) {
-      throw new Error(`Invalid JSON for Hash type: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Invalid JSON for Hash type: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

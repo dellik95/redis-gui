@@ -1,0 +1,150 @@
+@let res = result();
+<div class="results-container flex flex-col gap-4">
+  <!-- Top KPI metrics grid -->
+  <div class="kpi-grid grid gap-3">
+    <div class="kpi-card highlight bg-canvas-card p-3 flex flex-col gap-2">
+      <div class="kpi-icon-wrap ops w-8 h-8 rounded-lg flex items-center justify-center">
+        <mat-icon>bolt</mat-icon>
+      </div>
+      <div class="kpi-body flex flex-col">
+        <span class="kpi-label text-canvas-muted uppercase font-bold">Throughput</span>
+        <span class="kpi-value font-extrabold text-canvas-text"
+          >{{ res.opsPerSecond | number:'1.0-0' }} <small>ops/s</small></span
+        >
+      </div>
+    </div>
+
+    <div class="kpi-card bg-canvas-card p-3 flex flex-col gap-2">
+      <div class="kpi-icon-wrap time w-8 h-8 rounded-lg flex items-center justify-center">
+        <mat-icon>timer</mat-icon>
+      </div>
+      <div class="kpi-body flex flex-col">
+        <span class="kpi-label text-canvas-muted uppercase font-bold">Total Duration</span>
+        <span class="kpi-value font-extrabold text-canvas-text"
+          >{{ (res.totalDurationMs / 1000) | number:'1.2-2' }} <small>s</small></span
+        >
+      </div>
+    </div>
+
+    <div class="kpi-card bg-canvas-card p-3 flex flex-col gap-2">
+      <div class="kpi-icon-wrap avg w-8 h-8 rounded-lg flex items-center justify-center">
+        <mat-icon>insights</mat-icon>
+      </div>
+      <div class="kpi-body flex flex-col">
+        <span class="kpi-label text-canvas-muted uppercase font-bold">Avg Latency</span>
+        <span class="kpi-value font-extrabold text-canvas-text"
+          >{{ res.avgLatencyMs | number:'1.2-3' }} <small>ms</small></span
+        >
+      </div>
+    </div>
+
+    <div class="kpi-card success bg-canvas-card p-3 flex flex-col gap-2">
+      <div class="kpi-icon-wrap success w-8 h-8 rounded-lg flex items-center justify-center">
+        <mat-icon>task_alt</mat-icon>
+      </div>
+      <div class="kpi-body flex flex-col">
+        <span class="kpi-label text-canvas-muted uppercase font-bold">Success Rate</span>
+        <span class="kpi-value font-extrabold text-canvas-text"
+          >{{ ((res.successfulOperations / (res.totalOperations || 1)) * 100) | number:'1.0-1'
+          }}%</span
+        >
+        <span class="kpi-sub text-canvas-muted"
+          >({{ res.successfulOperations }} / {{ res.totalOperations }})</span
+        >
+      </div>
+    </div>
+  </div>
+
+  <!-- Cleanup confirmation badge -->
+  <div class="cleanup-success-card flex items-center gap-3 rounded-lg py-2.5 px-3.5">
+    <mat-icon class="cleanup-icon text-[22px] w-[22px] h-[22px] shrink-0">check_circle</mat-icon>
+    <div class="cleanup-text flex flex-col">
+      <strong>Test Data Purged:</strong>
+      <span
+        >{{ res.cleanedKeysCount }} test keys were successfully flushed and cleaned up from DB {{
+        database() }}. No orphan data remains.</span
+      >
+    </div>
+  </div>
+
+  <!-- Latency Distribution Percentiles -->
+  <div class="percentiles-section bg-canvas-card p-4">
+    <h4 class="section-title font-bold text-canvas-text uppercase">Latency Percentiles (ms)</h4>
+    <div class="percentile-bars-grid flex flex-col gap-2">
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">Min</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div
+            class="pct-bar-fill min h-full rounded-full"
+            [style.width.%]="calcBarWidth(res.minLatencyMs, res.maxLatencyMs)"
+          ></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.minLatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">P50 (Median)</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div
+            class="pct-bar-fill p50 h-full rounded-full"
+            [style.width.%]="calcBarWidth(res.p50LatencyMs, res.maxLatencyMs)"
+          ></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.p50LatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">P90</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div
+            class="pct-bar-fill p90 h-full rounded-full"
+            [style.width.%]="calcBarWidth(res.p90LatencyMs, res.maxLatencyMs)"
+          ></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.p90LatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">P95</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div
+            class="pct-bar-fill p95 h-full rounded-full"
+            [style.width.%]="calcBarWidth(res.p95LatencyMs, res.maxLatencyMs)"
+          ></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.p95LatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">P99</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div
+            class="pct-bar-fill p99 h-full rounded-full"
+            [style.width.%]="calcBarWidth(res.p99LatencyMs, res.maxLatencyMs)"
+          ></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.p99LatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+
+      <div class="percentile-row grid items-center gap-3">
+        <span class="pct-name text-canvas-muted font-semibold">Max</span>
+        <div class="pct-bar-track h-2 rounded-full overflow-hidden">
+          <div class="pct-bar-fill max h-full rounded-full" [style.width.%]="100"></div>
+        </div>
+        <span class="pct-val text-right font-bold text-canvas-text"
+          >{{ res.maxLatencyMs | number:'1.2-3' }} ms</span
+        >
+      </div>
+    </div>
+  </div>
+</div>

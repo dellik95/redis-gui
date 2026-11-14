@@ -24,7 +24,7 @@ export interface RedisLiveMetrics {
 export class MetricsHubService {
   private hubConnection: signalR.HubConnection | undefined = undefined;
   private readonly metricsSubject = new Subject<RedisLiveMetrics>();
-  
+
   readonly connected = signal(false);
   readonly latestMetrics = signal<RedisLiveMetrics | null>(null);
 

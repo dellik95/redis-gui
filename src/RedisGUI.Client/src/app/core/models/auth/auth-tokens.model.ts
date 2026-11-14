@@ -1,4 +1,4 @@
-import { User } from './user.model';
+import { UserRole } from './user.model';
 
 /**
  * Response from the login endpoint
@@ -28,7 +28,7 @@ export interface LoginResponse {
   /**
    * User's role (maps from backend Role)
    */
-  role: 'Admin' | 'User' | 'ReadOnly';
+  role: UserRole;
 
   /**
    * JWT token for authentication (maps from backend Token)
@@ -42,12 +42,7 @@ export interface LoginResponse {
 }
 
 /**
- * Response from the register endpoint
+ * Response from the register endpoint.
+ * The backend serializes the newly-created Guid as a JSON string.
  */
-export interface RegisterResponse {
-  /**
-   * ID of the newly created user
-   */
-  userId: string;
-}
-
+export type RegisterResponse = string;

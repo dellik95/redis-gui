@@ -6,194 +6,27 @@
 }
 
 .edit-key-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
   background: var(--color-card, #0f172a);
   color: var(--color-text, #f8fafc);
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 120px;
-  scroll-behavior: smooth;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px 20px;
-  background: var(--color-canvas-subtle, #0d1322);
-  border-bottom: 1px solid var(--color-border, #1e293b);
-  position: sticky;
-  top: 0;
-  z-index: 5;
-
-  .panel-title-area {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-width: 0;
-
-    .header-icon {
-      color: var(--color-accent, #6366f1);
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
-    }
-
-    .header-titles {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
-
-      h2 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        line-height: 1.2;
-        color: var(--color-text, #f8fafc);
-      }
-
-      .key-badge-container {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        min-width: 0;
-
-        .key-badge {
-          font-family: 'JetBrains Mono', 'Roboto Mono', Consolas, monospace;
-          font-size: 12px;
-          padding: 2px 8px;
-          background: rgba(99, 102, 241, 0.12);
-          color: var(--color-accent, #6366f1);
-          border: 1px solid rgba(99, 102, 241, 0.25);
-          border-radius: 4px;
-          max-width: 280px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-weight: 500;
-        }
-
-        .copy-btn {
-          width: 24px;
-          height: 24px;
-          line-height: 24px;
-          padding: 0;
-
-          mat-icon {
-            font-size: 14px;
-            width: 14px;
-            height: 14px;
-            opacity: 0.7;
-          }
-
-          &:hover mat-icon {
-            opacity: 1;
-          }
-        }
-      }
-    }
-  }
-
-  .panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
-
-    .spinning {
-      animation: spin 1s linear infinite;
-    }
-  }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 64px 32px;
-  gap: 16px;
-
-  p {
-    margin: 0;
-    color: var(--mat-sys-on-surface-variant);
-    font-size: 14px;
-  }
-}
-
-.error-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-  gap: 12px;
-  text-align: center;
-
-  mat-icon {
-    font-size: 40px;
-    width: 40px;
-    height: 40px;
-  }
-
-  .error-message {
-    color: var(--mat-sys-error);
-    margin: 0;
-  }
-}
-
-.editor-content {
-  flex: 1;
-  padding: 16px;
-  overflow-x: hidden;
+  overflow: hidden;
   box-sizing: border-box;
 }
 
-.empty-state {
+.editor-body {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 80px 32px;
-  text-align: center;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
 
-  .empty-icon-circle {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: var(--mat-sys-surface-container, rgba(0, 0, 0, 0.04));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 16px;
+// Monospace key badge — not expressible purely via Tailwind JIT
+.key-badge {
+  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+}
 
-    mat-icon {
-      font-size: 32px;
-      width: 32px;
-      height: 32px;
-      opacity: 0.5;
-    }
-  }
-
-  h3 {
-    margin: 0 0 8px 0;
-    font-size: 16px;
-    font-weight: 600;
-  }
-
-  p {
-    margin: 0;
-    font-size: 13px;
-    color: var(--mat-sys-on-surface-variant);
-    max-width: 280px;
-    line-height: 1.4;
-  }
+// Copy btn styling
+.copy-btn mat-icon {
+  font-size: 14px;
+  width: 14px;
+  height: 14px;
 }

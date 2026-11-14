@@ -1,7 +1,9 @@
 .docs-theme-picker-trigger {
   color: var(--color-text, #ffffff);
   opacity: 0.85;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 
   &:hover {
     opacity: 1;

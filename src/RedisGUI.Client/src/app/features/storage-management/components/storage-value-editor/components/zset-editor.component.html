@@ -1,0 +1,105 @@
+    <div class="zset-editor-container">
+      <div class="zset-toolbar">
+        <div class="zset-info">
+          <span class="count-badge">{{ members().length }} members</span>
+          @if (searchTerm().trim()) {
+            <span class="filtered-badge">{{ filteredMembers().length }} matching</span>
+          }
+        </div>
+
+        <div class="toolbar-actions">
+          <button
+            mat-stroked-button
+            type="button"
+            class="sort-btn"
+            (click)="toggleSort()"
+            matTooltip="Sort members by score">
+            <mat-icon>{{ sortOrder() === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</mat-icon>
+            Sort {{ sortOrder() === 'asc' ? 'Ascending' : 'Descending' }}
+          </button>
+
+          <div class="search-wrap">
+            <ui-input
+              [value]="searchTerm()"
+              (valueChange)="searchTerm.set(String($event))"
+              icon="search"
+              [clearable]="true"
+              (cleared)="searchTerm.set('')"
+              placeholder="Search member..."
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Member & Score Bar -->
+      <div class="add-member-bar">
+        <div class="new-member-field">
+          <ui-input
+            [value]="newMember()"
+            (valueChange)="newMember.set(String($event))"
+            label="Member Name"
+            placeholder="e.g. player_1"
+          />
+        </div>
+
+        <div class="new-score-field">
+          <ui-input
+            type="number"
+            [value]="newScore()"
+            (valueChange)="newScore.set($any($event))"
+            label="Score (numeric)"
+            placeholder="0"
+            (enter)="addMember()"
+          />
+        </div>
+
+        <ui-button
+          variant="primary"
+          icon="add"
+          (clicked)="addMember()"
+          [disabled]="!newMember().trim()">
+          Add Member
+        </ui-button>
+      </div>
+
+      <!-- Members Table -->
+      <div class="members-table-container">
+        @for (item of filteredMembers(); track item.index) {
+          <div class="zset-row">
+            <div class="row-member">
+              <span class="field-label">MEMBER</span>
+              <span class="member-name">{{ item.member }}</span>
+            </div>
+
+            <div class="row-score">
+              <span class="field-label">SCORE</span>
+              <input
+                type="number"
+                class="score-input"
+                [value]="item.score"
+                (change)="updateScore(item.index, +$any($event.target).value)" />
+            </div>
+
+            <button
+              mat-icon-button
+              type="button"
+              color="warn"
+              (click)="removeMember(item.index)"
+              matTooltip="Remove member">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        }
+        @if (members().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">stacked_bar_chart</mat-icon>
+            <p>Sorted Set is currently empty. Add members with numeric scores above.</p>
+          </div>
+        } @else if (filteredMembers().length === 0) {
+          <div class="empty-state">
+            <p>No members match "{{ searchTerm() }}"</p>
+          </div>
+        }
+      </div>
+    </div>
+  

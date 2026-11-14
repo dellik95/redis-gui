@@ -1,0 +1,120 @@
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px 14px 24px;
+  margin: 0;
+  border-bottom: 1px solid var(--color-border, #1e293b);
+  color: var(--color-text, #f8fafc);
+  .title-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 18px;
+    font-weight: 600;
+    .slowlog-icon {
+      color: #f59e0b;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+}
+
+.dialog-content {
+  padding: 24px !important;
+  min-height: 260px;
+  max-height: 520px;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: var(--color-card, #0f172a);
+  color: var(--color-text, #f8fafc);
+}
+
+// Loading and empty states handled by shared EmptyStateComponent
+
+.table-scroll {
+  max-height: 440px;
+  overflow: auto;
+  border: 1px solid var(--color-border, #1e293b);
+  border-radius: 8px;
+  background: var(--color-card, #0f172a);
+}
+
+.slowlog-table {
+  width: 100%;
+  background: transparent;
+  th {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--color-card-hover, #1e293b);
+    color: var(--color-text-muted, #94a3b8);
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border, #1e293b);
+  }
+
+  td {
+    padding: 8px 14px;
+    font-size: 13px;
+    color: var(--color-text, #f8fafc);
+    border-bottom: 1px solid var(--color-border, #1e293b);
+  }
+}
+
+.id-col {
+  width: 60px;
+  font-weight: 600;
+  color: var(--color-accent, #6366f1);
+}
+
+.time-col {
+  width: 110px;
+  font-family: monospace;
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.duration-col {
+  width: 120px;
+}
+
+.duration-badge {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 12px;
+}
+
+.cmd-cell code {
+  font-family: 'JetBrains Mono', 'Roboto Mono', monospace;
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text, #f8fafc);
+  padding: 3px 6px;
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px 18px 24px !important;
+  margin: 0;
+  border-top: 1px solid var(--color-border, #1e293b);
+  background: var(--color-card, #0f172a);
+  .info-note {
+    font-size: 12px;
+    color: var(--color-text-muted, #94a3b8);
+  }
+}

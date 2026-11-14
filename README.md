@@ -149,23 +149,21 @@ Navigate to:
 
 #### Prerequisites
 - [.NET 10 SDK](https://dotnet.microsoft.com/)
-- [Node.js 20+ & npm](https://nodejs.org/)
+- [Node.js & npm](https://nodejs.org/) (Node 22.22.3+, 24.15+, or 26.x)
 - Running Redis instance on `127.0.0.1:6379` (e.g. via Docker or WSL)
 
-#### 1. Build and Run Backend
+#### Start Angular and ASP.NET Core together
+
+Run these commands from the repository root.
+
 ```bash
-dotnet restore
-dotnet build RedisGUI.slnx -c Debug
-dotnet run --project src/RedisGUI.Server/RedisGUI.Server.csproj
+npm ci --prefix src/RedisGUI.Client
+dotnet run --project src/RedisGUI.Server --launch-profile https
 ```
 
-#### 2. Run Angular Client
-```bash
-cd src/RedisGUI.Client
-npm install
-npm start
-```
-Open [http://localhost:4200](http://localhost:4200) in your browser.
+Open [the backend root](https://localhost:61034/) to activate the ASP.NET Core SPA proxy. It starts the Angular dev server and redirects to [the client](https://localhost:4200/). Angular forwards API and SignalR requests to the backend.
+
+In Visual Studio, open `RedisGUI.slnx`, select the shared **RedisGUI (Angular + API)** launch profile, and press **F5**. The profile starts both projects and opens Angular in the browser. If your browser prompts about the local development certificate, use `dotnet dev-certs https --trust`.
 
 ---
 

@@ -1,5 +1,5 @@
-import { Injectable, signal, computed } from '@angular/core';
-import { User } from '../../models/auth';
+import { Injectable, signal } from '@angular/core';
+import { User, UserRole } from '../../models/auth';
 
 /**
  * Service for managing JWT tokens and user data in localStorage with signal-based reactivity
@@ -34,18 +34,14 @@ export class TokenStorageService {
 
   // 2. Signal-based state
   /** Current JWT token (reactive) */
-  private readonly _token = signal<string | null>(
-    localStorage.getItem(this.TOKEN_KEY)
-  );
+  private readonly _token = signal<string | null>(localStorage.getItem(this.TOKEN_KEY));
 
   /** Current user data (reactive) */
-  private readonly _user = signal<User | null>(
-    this.getUserFromStorage()
-  );
+  private readonly _user = signal<User | null>(this.getUserFromStorage());
 
   // 3. Computed signals for token validation
   /** Whether token is expired (reactive) */
-  readonly isTokenExpired = computed(() => {
+  isTokenExpired(): boolean {
     const token = this._token();
     if (!token) return true;
 
@@ -54,23 +50,23 @@ export class TokenStorageService {
       const parts = token.split('.');
       if (parts.length !== 3) return true;
 
-      const payload = JSON.parse(atob(parts[1]!));
+      const payload = JSON.parse(atob(parts[1]!.replace(/-/g, '+').replace(/_/g, '/')));
 
       // Check if expiration claim exists and if token is expired
       if (!payload.exp) return true;
 
       // JWT exp is in seconds, Date.now() is in milliseconds
-      return payload.exp * 1000 < Date.now();
+      return payload.exp * 1000 <= Date.now();
     } catch {
       // If token is malformed or cannot be decoded, consider it expired
       return true;
     }
-  });
+  }
 
   /** Whether a valid token exists (reactive) */
-  readonly hasValidToken = computed(() =>
-    !!this._token() && !this.isTokenExpired()
-  );
+  hasValidToken(): boolean {
+    return !!this._token() && !this.isTokenExpired();
+  }
 
   /** Current token value (readonly signal) */
   readonly token = this._token.asReadonly();
@@ -86,11 +82,8 @@ export class TokenStorageService {
     try {
       const userStr = localStorage.getItem(this.USER_KEY);
       if (!userStr) return null;
-      const user = JSON.parse(userStr);
-      if (user && (user.role === 1 || user.role === '1')) {
-        user.role = 'Admin';
-      }
-      return user;
+      const parsed: unknown = JSON.parse(userStr);
+      return isStoredUser(parsed) ? parsed : null;
     } catch {
       return null;
     }
@@ -116,9 +109,6 @@ export class TokenStorageService {
    * Saves user data to localStorage and updates signal
    */
   saveUser(user: User): void {
-    if (user && ((user.role as any) === 1 || (user.role as any) === '1')) {
-      user.role = 'Admin';
-    }
     localStorage.setItem(this.USER_KEY, JSON.stringify(user));
     this._user.set(user);
   }
@@ -139,4 +129,17 @@ export class TokenStorageService {
     this._token.set(null);
     this._user.set(null);
   }
+}
+
+function isStoredUser(value: unknown): value is User {
+  if (typeof value !== 'object' || value === null) return false;
+
+  const user = value as Record<string, unknown>;
+  return (
+    typeof user['id'] === 'string' &&
+    typeof user['email'] === 'string' &&
+    typeof user['firstName'] === 'string' &&
+    typeof user['lastName'] === 'string' &&
+    Object.values(UserRole).includes(user['role'] as UserRole)
+  );
 }

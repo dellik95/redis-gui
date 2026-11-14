@@ -1,11 +1,11 @@
-import { 
-  Component, 
-  viewChild, 
-  ElementRef, 
-  ChangeDetectionStrategy, 
-  inject, 
+import {
+  Component,
+  viewChild,
+  ElementRef,
+  ChangeDetectionStrategy,
+  inject,
   DestroyRef,
-  effect 
+  effect
 } from '@angular/core';
 
 interface Particle {
@@ -19,7 +19,7 @@ interface Particle {
 
 /**
  * Fractal Animation Component
- * 
+ *
  * Displays an animated particle network effect for the auth page.
  * Features:
  * - Responsive particle count based on screen size
@@ -105,7 +105,7 @@ export class FractalAnimationComponent {
 
         // Reset transform matrix before scaling
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        
+
         // Scale the drawing context to match device pixel ratio
         ctx.scale(dpr, dpr);
 
@@ -118,7 +118,7 @@ export class FractalAnimationComponent {
       };
 
       resizeCanvas();
-      
+
       // Throttle resize events for better performance
       let resizeTimeout: number | null = null;
       this.resizeHandler = () => {
@@ -129,7 +129,7 @@ export class FractalAnimationComponent {
           resizeCanvas();
         });
       };
-      
+
       window.addEventListener('resize', this.resizeHandler);
 
       // Start animation loop
@@ -148,7 +148,7 @@ export class FractalAnimationComponent {
       Math.max(baseParticleCount, Math.floor(screenArea / 10000)), // More particles per area
       maxParticleCount
     );
-    
+
     for (let i = 0; i < particleCount; i++) {
       this.particles.push({
         x: Math.random() * width,
@@ -175,7 +175,7 @@ export class FractalAnimationComponent {
 
     // Clear canvas completely (no trail effect)
     ctx.clearRect(0, 0, displayWidth, displayHeight);
-    
+
     // Fill with dark background
     ctx.fillStyle = 'rgba(17, 24, 39, 1)';
     ctx.fillRect(0, 0, displayWidth, displayHeight);
@@ -198,7 +198,7 @@ export class FractalAnimationComponent {
       ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
       ctx.fillStyle = `hsla(${particle.hue}, 70%, 60%, 0.8)`;
       ctx.fill();
-      
+
       // Reset shadow after drawing particle
       ctx.shadowBlur = 0;
       ctx.shadowColor = 'transparent';
@@ -206,7 +206,7 @@ export class FractalAnimationComponent {
       // Draw connections (optimized: only check nearby particles)
       // For large screens, limit connection distance checks to improve performance
       const maxConnectionDistance = Math.min(120, Math.max(displayWidth, displayHeight) * 0.1);
-      
+
       this.particles.slice(i + 1).forEach(otherParticle => {
         const dx = particle.x - otherParticle.x;
         const dy = particle.y - otherParticle.y;
@@ -229,4 +229,3 @@ export class FractalAnimationComponent {
     this.animationId = requestAnimationFrame(() => this.animate(ctx, canvas));
   }
 }
-

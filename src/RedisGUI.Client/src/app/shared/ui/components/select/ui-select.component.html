@@ -1,0 +1,61 @@
+
+    <div class="ui-select-wrapper" [class.full-width]="fullWidth()">
+      @if (label()) {
+        <label class="ui-select-label">
+          {{ label() }}
+          @if (required()) {
+            <span class="required-asterisk">*</span>
+          }
+        </label>
+      }
+
+      <button
+        type="button"
+        [matMenuTriggerFor]="selectMenu"
+        [disabled]="disabled()"
+        class="select-trigger"
+        [class.size-sm]="size() === 'sm'"
+        [class.has-error]="!!computedError()"
+        [class.is-disabled]="disabled()"
+      >
+        @if (selectedOption()?.icon || icon()) {
+          <mat-icon class="prefix-icon">{{ selectedOption()?.icon || icon() }}</mat-icon>
+        }
+
+        <span class="trigger-label" [class.placeholder]="!hasSelection()">
+          {{ selectedOption() ? selectedOption()!.label : (placeholder() || 'Select...') }}
+        </span>
+
+        <mat-icon class="chevron-icon">expand_more</mat-icon>
+      </button>
+
+      <mat-menu #selectMenu="matMenu" class="ui-select-dropdown-menu">
+        @for (opt of options(); track opt.value) {
+          <button
+            mat-menu-item
+            (click)="selectOption(opt.value)"
+            [disabled]="opt.disabled"
+            class="ui-select-item"
+            [class.is-selected]="value() === opt.value"
+          >
+            @if (opt.icon) {
+              <mat-icon class="item-icon">{{ opt.icon }}</mat-icon>
+            }
+            <span class="item-label">{{ opt.label }}</span>
+            @if (opt.badge !== undefined && opt.badge !== null) {
+              <span class="item-badge">{{ opt.badge }}</span>
+            }
+            @if (value() === opt.value) {
+              <mat-icon class="check-icon">check</mat-icon>
+            }
+          </button>
+        }
+      </mat-menu>
+
+      @if (computedError()) {
+        <div class="select-error">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <span>{{ computedError() }}</span>
+        </div>
+      }
+    </div>

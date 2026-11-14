@@ -1,6 +1,13 @@
 import { Component, input, inject, effect, ChangeDetectionStrategy } from '@angular/core';
-import { NavigationCancel, NavigationEnd, NavigationError, NavigationStart, RouteConfigLoadEnd, RouteConfigLoadStart, Router } from "@angular/router";
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  NavigationCancel,
+  NavigationEnd,
+  NavigationError,
+  NavigationStart,
+  RouteConfigLoadEnd,
+  RouteConfigLoadStart,
+  Router
+} from '@angular/router';
 import { filter } from 'rxjs/operators';
 
 import { LoadingStore } from '../../../core/stores/loading.store';
@@ -49,9 +56,10 @@ export class LoadingComponent {
   // 3. Constructor with effects
   constructor() {
     // Watch for detectRoutingOngoing changes and setup router tracking
-    effect(() => {
+    effect(onCleanup => {
       if (this.detectRoutingOngoing()) {
-        this.setupRouterTracking();
+        const subscription = this.setupRouterTracking();
+        onCleanup(() => subscription.unsubscribe());
       }
     });
   }
@@ -60,18 +68,18 @@ export class LoadingComponent {
    * Sets up router event tracking for loading indicators
    * Uses takeUntilDestroyed() for automatic cleanup
    */
-  private setupRouterTracking(): void {
-    this.router.events
+  private setupRouterTracking() {
+    return this.router.events
       .pipe(
-        filter(event =>
-          event instanceof NavigationStart ||
-          event instanceof RouteConfigLoadStart ||
-          event instanceof NavigationEnd ||
-          event instanceof NavigationError ||
-          event instanceof NavigationCancel ||
-          event instanceof RouteConfigLoadEnd
-        ),
-        takeUntilDestroyed()
+        filter(
+          event =>
+            event instanceof NavigationStart ||
+            event instanceof RouteConfigLoadStart ||
+            event instanceof NavigationEnd ||
+            event instanceof NavigationError ||
+            event instanceof NavigationCancel ||
+            event instanceof RouteConfigLoadEnd
+        )
       )
       .subscribe(event => {
         if (event instanceof NavigationStart || event instanceof RouteConfigLoadStart) {

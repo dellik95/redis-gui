@@ -1,5 +1,18 @@
-import { Component, inject, signal, computed, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogTitle, MatDialogContent, MatDialogActions } from '@angular/material/dialog';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  DestroyRef,
+  ChangeDetectionStrategy
+} from '@angular/core';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions
+} from '@angular/material/dialog';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -85,7 +98,8 @@ export class ImportDialogComponent {
     this.error.set(null);
     this.isLoading.set(true);
 
-    this.importService.importData(this.data.connectionId, fileValue)
+    this.importService
+      .importData(this.data.connectionId, fileValue)
       .pipe(
         finalize(() => this.isLoading.set(false)),
         takeUntilDestroyed(this.destroyRef)
@@ -100,4 +114,3 @@ export class ImportDialogComponent {
       });
   }
 }
-

@@ -1,0 +1,82 @@
+    <div class="list-editor-container">
+      <div class="list-toolbar">
+        <div class="list-info">
+          <span class="count-badge">{{ items().length }} items</span>
+          @if (searchTerm().trim()) {
+            <span class="filtered-badge">{{ filteredIndices().length }} matching</span>
+          }
+        </div>
+
+        <div class="search-wrap">
+          <ui-input
+            [value]="searchTerm()"
+            (valueChange)="searchTerm.set(String($event))"
+            icon="search"
+            [clearable]="true"
+            (cleared)="searchTerm.set('')"
+            placeholder="Filter items..."
+          />
+        </div>
+      </div>
+
+      <!-- Add New Item Section -->
+      <div class="add-item-bar">
+        <div class="new-item-field">
+          <ui-input
+            [value]="newItemText()"
+            (valueChange)="newItemText.set(String($event))"
+            label="New element value"
+            placeholder="Enter item value..."
+            (enter)="appendItem()"
+          />
+        </div>
+        <ui-button
+          variant="secondary"
+          icon="vertical_align_top"
+          (clicked)="prependItem()"
+          [disabled]="!newItemText().trim()"
+          matTooltip="Add to beginning (LPUSH)">
+          Prepend
+        </ui-button>
+        <ui-button
+          variant="primary"
+          icon="add"
+          (clicked)="appendItem()"
+          [disabled]="!newItemText().trim()"
+          matTooltip="Add to end (RPUSH)">
+          Append
+        </ui-button>
+      </div>
+
+      <!-- Items List -->
+      <div class="items-list-container">
+        @for (idx of filteredIndices(); track idx) {
+          <div class="list-item-row">
+            <span class="item-index-badge">#{{ idx }}</span>
+            <input
+              class="item-inline-input"
+              [value]="items()[idx]"
+              (change)="updateItem(idx, $any($event.target).value)" />
+            <button
+              mat-icon-button
+              type="button"
+              color="warn"
+              (click)="removeItem(idx)"
+              matTooltip="Remove this element">
+              <mat-icon>delete_outline</mat-icon>
+            </button>
+          </div>
+        }
+        @if (items().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">format_list_bulleted</mat-icon>
+            <p>List is currently empty. Use the input above to add items.</p>
+          </div>
+        } @else if (filteredIndices().length === 0) {
+          <div class="empty-state">
+            <p>No elements match "{{ searchTerm() }}"</p>
+          </div>
+        }
+      </div>
+    </div>
+  

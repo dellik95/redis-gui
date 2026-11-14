@@ -1,0 +1,194 @@
+:host {
+  display: block;
+  color: var(--color-text, #f8fafc);
+}
+
+.dialog-header {
+  border-bottom: 1px solid var(--color-border, #1e293b);
+}
+
+.dialog-content {
+  max-height: 75vh;
+}
+
+.info-banner {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  font-size: 0.82rem;
+  color: #34d399;
+  code {
+    background: rgba(0, 0, 0, 0.3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+}
+
+.form-group {
+  .form-label {
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+  }
+}
+
+.mode-switch-group {
+  grid-template-columns: 1fr 1fr;
+  .mode-switch-btn {
+    border: 1px solid var(--color-border, #1e293b);
+    font-size: 0.84rem;
+    transition: all 0.15s ease;
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    &.active {
+      background: rgba(99, 102, 241, 0.2);
+      border-color: var(--color-accent, #6366f1);
+      color: var(--color-accent, #a5b4fc);
+    }
+  }
+}
+
+.target-db-note {
+  font-size: 0.82rem;
+}
+
+.error-banner {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+  font-size: 0.85rem;
+}
+
+// Live Streaming State
+
+// Results state
+
+.dialog-actions {
+  border-top: 1px solid var(--color-border, #1e293b);
+}
+
+.header-icon-box {
+  border-radius: 10px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  &.running {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.35);
+    .header-icon {
+      color: #f87171;
+    }
+  }
+}
+
+.title-text-group {
+  .title-text {
+    font-size: 1.1rem;
+  }
+
+  .title-subtext {
+    font-size: 0.8rem;
+  }
+}
+
+.header-stop-btn {
+  font-size: 0.8rem;
+}
+
+.workload-card {
+  border: 1px solid var(--color-border, #1e293b);
+  transition: all 0.15s ease;
+  mat-icon {
+    color: var(--color-text-muted, #94a3b8);
+    font-size: 22px;
+    width: 22px;
+    height: 22px;
+  }
+
+  .workload-info {
+    .workload-title {
+      font-size: 0.88rem;
+    }
+
+    .workload-desc {
+      font-size: 0.76rem;
+    }
+  }
+
+  &.active {
+    background: rgba(99, 102, 241, 0.18);
+    border-color: var(--color-accent, #6366f1);
+    mat-icon {
+      color: var(--color-accent, #818cf8);
+    }
+    .workload-title {
+      color: var(--color-accent, #e0e7ff);
+    }
+  }
+}
+
+.db-chip {
+  background: rgba(99, 102, 241, 0.15);
+  font-family: monospace;
+}
+
+.start-btn {
+  color: #ffffff;
+  &:hover {
+    background: var(--color-accent-hover, #4f46e5);
+  }
+}
+:host-context(.light) {
+  color: #0f172a;
+  .dialog-header {
+    background: #ffffff;
+    border-bottom-color: #e2e8f0;
+    .title-text {
+      color: #0f172a;
+    }
+    .title-subtext {
+      color: #475569;
+    }
+    .close-btn {
+      color: #64748b;
+    }
+  }
+
+  .dialog-content {
+    background: #f8fafc;
+  }
+
+  .config-section {
+    .form-label {
+      color: #334155;
+    }
+    .form-hint {
+      color: #64748b;
+    }
+  }
+
+  .mode-switch-group {
+    background: #e2e8f0;
+    .mode-switch-btn {
+      color: #475569;
+      &.active {
+        background: #ffffff;
+        color: #4f46e5;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+    }
+  }
+
+  .custom-number-input {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #0f172a;
+  }
+
+  .dialog-actions {
+    background: #ffffff;
+    border-top-color: #e2e8f0;
+  }
+}

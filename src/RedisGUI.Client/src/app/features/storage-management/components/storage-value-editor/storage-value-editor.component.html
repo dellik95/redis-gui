@@ -10,11 +10,7 @@
           icon="vpn_key"
         />
 
-        <ui-select
-          [formField]="editorForm.type"
-          label="Data Type"
-          [options]="redisTypes"
-        />
+        <ui-select [formField]="editorForm.type" label="Data Type" [options]="redisTypes" />
       </div>
 
       <!-- TTL Selector Component -->
@@ -40,12 +36,11 @@
       </div>
 
       <div class="toggle-actions">
-        <mat-slide-toggle [checked]="useJsonEditor()" (change)="toggleJsonEditor()">
-          <span class="toggle-label">
-            <mat-icon class="toggle-icon">{{ useJsonEditor() ? 'code' : 'edit' }}</mat-icon>
-            {{ useJsonEditor() ? 'JSON' : 'Visual' }}
-          </span>
-        </mat-slide-toggle>
+        <ui-toggle
+          [checked]="useJsonEditor()"
+          (checkedChange)="toggleJsonEditor()"
+          [label]="useJsonEditor() ? 'JSON Editor' : 'Visual Editor'"
+        />
 
         @if (useJsonEditor()) {
           <button
@@ -53,7 +48,8 @@
             type="button"
             class="format-btn"
             (click)="formatJson()"
-            matTooltip="Format JSON">
+            matTooltip="Format JSON"
+          >
             <mat-icon>auto_fix_high</mat-icon>
             Format
           </button>
@@ -80,7 +76,8 @@
           #jsonEditor
           [value]="jsonEditorValue()"
           [readOnly]="false"
-          (valueChange)="onJsonChange($event)">
+          (valueChange)="onJsonChange($event)"
+        >
         </app-json-editor>
       </div>
     }
@@ -113,11 +110,7 @@
 
     <!-- Action Buttons -->
     <div class="editor-actions">
-      <ui-button
-        variant="ghost"
-        type="button"
-        (clicked)="onCancel()"
-        [disabled]="loading()">
+      <ui-button variant="ghost" type="button" (clicked)="onCancel()" [disabled]="loading()">
         Cancel
       </ui-button>
 
@@ -127,7 +120,8 @@
         icon="save"
         (clicked)="onSave($event)"
         [disabled]="!isValid() || loading()"
-        [loading]="loading()">
+        [loading]="loading()"
+      >
         {{ isNewKey() ? 'Create Key' : 'Save Changes' }}
       </ui-button>
     </div>

@@ -7,11 +7,11 @@ import { EditConnectionDialogService } from '../../services/edit-connection-dial
 /**
  * Dashboard Section Actions Component
  * Action buttons displayed in the section actions portal on the dashboard
- * 
+ *
  * Features:
  * - Create new connection button
  * - Other dashboard-specific actions
- * 
+ *
  * This component is dynamically loaded into the section actions portal
  * via SectionActionsStore
  */
@@ -19,11 +19,7 @@ import { EditConnectionDialogService } from '../../services/edit-connection-dial
   selector: 'app-dashboard-section-actions',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    MatButtonModule,
-    MatDividerModule,
-    MatIconModule
-  ],
+  imports: [MatButtonModule, MatDividerModule, MatIconModule],
   templateUrl: './dashboard-section-actions.component.html',
   styleUrl: './dashboard-section-actions.component.scss'
 })

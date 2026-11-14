@@ -4,26 +4,26 @@
 export interface ApiErrorResponse {
   /** Error code for programmatic handling */
   code: string;
-  
+
   /** Human-readable error message */
   message: string;
-  
+
   /** HTTP status code */
   statusCode: number;
-  
+
   /** Timestamp when the error occurred (ISO string) */
   timestamp: string;
-  
+
   /** Request path where the error occurred */
   path?: string;
-  
+
   /** Additional error details (for development/debugging) */
   details?: Record<string, unknown>;
 }
 
 /**
  * Type guard to check if an error response is an ApiErrorResponse
- * 
+ *
  * @param error - The error object to check
  * @returns True if the error is an ApiErrorResponse
  */

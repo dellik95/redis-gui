@@ -1,15 +1,30 @@
 @use '@angular/material' as mat;
 @use '@angular/cdk';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* ==========================================================================
+   Global mat-icon alignment fix
+   Material icons default to display:inline which breaks vertical centering
+   inside any flex/inline-flex container (badges, pills, tags, chips, etc.).
+   This global rule makes every mat-icon participate in flex layout properly.
+   ========================================================================== */
+mat-icon,
+.mat-icon {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  vertical-align: middle !important;
+  flex-shrink: 0;
+}
+/* ==========================================================================
    Design System Themes (5 Themes: Slate Dark, Obsidian, Emerald, Cyan, Light)
    ========================================================================== */
 
-:root, [data-theme="slate-dark"] {
+:root,
+[data-theme='slate-dark'] {
   --color-canvas: #090d16;
   --color-canvas-subtle: #0d1322;
   --color-card: #0f172a;
@@ -24,7 +39,7 @@
   color-scheme: dark;
 }
 
-[data-theme="obsidian-purple"] {
+[data-theme='obsidian-purple'] {
   --color-canvas: #0a0612;
   --color-canvas-subtle: #110b1e;
   --color-card: #150f24;
@@ -39,7 +54,7 @@
   color-scheme: dark;
 }
 
-[data-theme="midnight-emerald"] {
+[data-theme='midnight-emerald'] {
   --color-canvas: #04120b;
   --color-canvas-subtle: #071c12;
   --color-card: #0a2417;
@@ -54,7 +69,7 @@
   color-scheme: dark;
 }
 
-[data-theme="nordic-cyan"] {
+[data-theme='nordic-cyan'] {
   --color-canvas: #07111a;
   --color-canvas-subtle: #0b1a26;
   --color-card: #0f2232;
@@ -69,10 +84,7 @@
   color-scheme: dark;
 }
 
-[data-theme="clean-light"],
-html.light,
-body.light,
-.light {
+:is([data-theme='clean-light'], .light, html.light, body.light) {
   --color-canvas: #f8fafc;
   --color-canvas-subtle: #f1f5f9;
   --color-card: #ffffff;
@@ -85,7 +97,6 @@ body.light,
   --color-accent-hover: #4338ca;
   --color-accent-glow: rgba(79, 70, 229, 0.15);
   color-scheme: light;
-
   /* Material System Light Tokens */
   --mat-sys-surface: #ffffff;
   --mat-sys-on-surface: #0f172a;
@@ -101,7 +112,6 @@ body.light,
   --mat-table-header-headline-color: #1e293b;
   --mat-sys-background: #f8fafc;
   --mat-sys-on-background: #0f172a;
-
   /* Global light mode text & icon contrast across all tables */
   .keys-table,
   .audit-table,
@@ -110,7 +120,6 @@ body.light,
   table.mat-mdc-table {
     background: #ffffff !important;
     color: #0f172a !important;
-
     th.mat-header-cell,
     th.mat-mdc-header-cell {
       color: #1e293b !important;
@@ -141,7 +150,6 @@ body.light,
       color: #1e293b !important;
       border: 1px solid #cbd5e1 !important;
       font-weight: 600 !important;
-
       .ttl-icon {
         color: #475569 !important;
       }
@@ -163,12 +171,16 @@ body.light,
       &.edit-btn:hover {
         color: #4f46e5 !important;
         background: #eef2ff !important;
-        mat-icon { color: #4f46e5 !important; }
+        mat-icon {
+          color: #4f46e5 !important;
+        }
       }
       &.delete-btn:hover {
         color: #dc2626 !important;
         background: #fee2e2 !important;
-        mat-icon { color: #dc2626 !important; }
+        mat-icon {
+          color: #dc2626 !important;
+        }
       }
     }
 
@@ -198,8 +210,8 @@ body.light,
     background: #f8fafc !important;
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
-
-    .db-count-badge, .db-arrow {
+    .db-count-badge,
+    .db-arrow {
       color: #475569 !important;
     }
     &:hover {
@@ -211,7 +223,6 @@ body.light,
   .dev-search-bar {
     background: #f8fafc !important;
     border-color: #cbd5e1 !important;
-
     .search-icon {
       color: #4f46e5 !important;
     }
@@ -232,7 +243,6 @@ body.light,
     background: #ffffff !important;
     color: #334155 !important;
     border-color: #cbd5e1 !important;
-
     .chip-count {
       background: #f1f5f9 !important;
       color: #0f172a !important;
@@ -249,7 +259,6 @@ body.light,
       background: #4f46e5 !important;
       color: #ffffff !important;
       border-color: #4f46e5 !important;
-
       .chip-count {
         background: rgba(255, 255, 255, 0.25) !important;
         color: #ffffff !important;
@@ -258,12 +267,14 @@ body.light,
     }
   }
 
-
   .delimiter-btn {
     background: #ffffff !important;
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
-    &:hover { background: #f1f5f9 !important; border-color: #94a3b8 !important; }
+    &:hover {
+      background: #f1f5f9 !important;
+      border-color: #94a3b8 !important;
+    }
   }
 
   .cli-floating-trigger {
@@ -271,19 +282,31 @@ body.light,
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
     box-shadow: 0 -4px 18px rgba(0, 0, 0, 0.08) !important;
-
-    .trigger-title { color: #0f172a !important; }
-    .trigger-right { color: #475569 !important; }
-    .db-pill { background: #eef2ff !important; color: #4f46e5 !important; border-color: #c7d2fe !important; }
+    .trigger-title {
+      color: #0f172a !important;
+    }
+    .trigger-right {
+      color: #475569 !important;
+    }
+    .db-pill {
+      background: #eef2ff !important;
+      color: #4f46e5 !important;
+      border-color: #c7d2fe !important;
+    }
   }
 
   .metrics-pill-container {
     background: #ffffff !important;
     border-color: #cbd5e1 !important;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06) !important;
-
-    .metric-pill .metric-label { color: #475569 !important; font-weight: 600 !important; }
-    .metric-pill .metric-val { color: #0f172a !important; font-weight: 700 !important; }
+    .metric-pill .metric-label {
+      color: #475569 !important;
+      font-weight: 600 !important;
+    }
+    .metric-pill .metric-val {
+      color: #0f172a !important;
+      font-weight: 700 !important;
+    }
   }
 
   .tree-container {
@@ -292,15 +315,32 @@ body.light,
   }
   .tree-group-node {
     color: #0f172a !important;
-    &:hover { background-color: #f1f5f9 !important; }
-    .group-name { color: #0f172a !important; }
-    .group-count { background: #f1f5f9 !important; border-color: #cbd5e1 !important; color: #475569 !important; }
+    &:hover {
+      background-color: #f1f5f9 !important;
+    }
+    .group-name {
+      color: #0f172a !important;
+    }
+    .group-count {
+      background: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+      color: #475569 !important;
+    }
   }
   .tree-leaf-node {
     color: #0f172a !important;
-    &:hover { background-color: #f1f5f9 !important; border-color: #cbd5e1 !important; }
-    &.active-node { background-color: #eef2ff !important; border-color: #4f46e5 !important; }
-    .node-name { color: #0f172a !important; font-weight: 600 !important; }
+    &:hover {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+    }
+    &.active-node {
+      background-color: #eef2ff !important;
+      border-color: #4f46e5 !important;
+    }
+    .node-name {
+      color: #0f172a !important;
+      font-weight: 600 !important;
+    }
   }
 
   .command-palette-container {
@@ -311,10 +351,14 @@ body.light,
     .search-header {
       background: #f8fafc !important;
       border-color: #cbd5e1 !important;
-      .search-icon { color: #4f46e5 !important; }
+      .search-icon {
+        color: #4f46e5 !important;
+      }
       .palette-input {
         color: #0f172a !important;
-        &::placeholder { color: #64748b !important; }
+        &::placeholder {
+          color: #64748b !important;
+        }
       }
       .esc-badge {
         background: #f1f5f9 !important;
@@ -324,15 +368,23 @@ body.light,
     }
     .results-list {
       .result-item {
-        &:hover:not(.selected) { background: #f1f5f9 !important; }
+        &:hover:not(.selected) {
+          background: #f1f5f9 !important;
+        }
         &.selected {
           background: #eef2ff !important;
           border-color: #c7d2fe !important;
-          .item-title { color: #4f46e5 !important; }
+          .item-title {
+            color: #4f46e5 !important;
+          }
         }
         .item-content {
-          .item-title { color: #0f172a !important; }
-          .item-subtitle { color: #475569 !important; }
+          .item-title {
+            color: #0f172a !important;
+          }
+          .item-subtitle {
+            color: #475569 !important;
+          }
         }
       }
     }
@@ -351,13 +403,19 @@ body.light,
   .custom-paginator-bar {
     background: #f8fafc !important;
     border-color: #cbd5e1 !important;
-    .paginator-size-selector .size-label { color: #475569 !important; }
+    .paginator-size-selector .size-label {
+      color: #475569 !important;
+    }
     .paginator-info {
       color: #475569 !important;
-      strong { color: #0f172a !important; }
+      strong {
+        color: #0f172a !important;
+      }
     }
     .paginator-nav {
-      .page-indicator { color: #0f172a !important; }
+      .page-indicator {
+        color: #0f172a !important;
+      }
       .nav-icon-btn {
         background: #ffffff !important;
         border-color: #cbd5e1 !important;
@@ -387,7 +445,6 @@ body.light,
   .mat-drawer {
     background: #ffffff !important;
     border-right: 1px solid #cbd5e1 !important;
-
     .sidenav-menu__title {
       color: #0f172a !important;
       font-weight: 600 !important;
@@ -411,7 +468,6 @@ body.light,
     background: #ffffff !important;
     color: #0f172a !important;
     border-bottom: 1px solid #cbd5e1 !important;
-
     button mat-icon {
       color: #334155 !important;
     }
@@ -439,11 +495,11 @@ body.light,
     }
   }
 
-  .select-trigger, .input-container {
+  .select-trigger,
+  .input-container {
     background: #ffffff !important;
     color: #0f172a !important;
     border-color: #cbd5e1 !important;
-
     .prefix-icon {
       color: #4f46e5 !important;
     }
@@ -465,7 +521,8 @@ body.light,
     }
   }
 
-  .ui-select-label, .ui-input-label {
+  .ui-select-label,
+  .ui-input-label {
     color: #334155 !important;
     font-weight: 700 !important;
   }
@@ -475,12 +532,20 @@ body.light,
    Base Elements
    ========================================================================== */
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   background-color: var(--color-canvas);
   color: var(--color-text);
-  font-family: 'Inter', Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-family:
+    'Inter',
+    Roboto,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Arial,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -488,17 +553,17 @@ html, body {
 html {
   background-color: var(--color-canvas);
   color: var(--color-text);
-
-  @include mat.theme((
-    color: (
-      theme-type: dark,
-      primary: mat.$azure-palette,
-      tertiary: mat.$blue-palette,
-    ),
-    typography: Roboto,
-    density: 0,
-  ));
-
+  @include mat.theme(
+    (
+      color: (
+        theme-type: dark,
+        primary: mat.$azure-palette,
+        tertiary: mat.$blue-palette
+      ),
+      typography: Roboto,
+      density: 0
+    )
+  );
   @include cdk.a11y-visually-hidden();
 }
 
@@ -520,9 +585,10 @@ html {
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 14px var(--color-accent-glow);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 14px var(--color-accent-glow);
   line-height: 1.4;
-
   mat-icon {
     font-size: 18px;
     width: 18px;
@@ -532,7 +598,9 @@ html {
 
   &:hover {
     background: var(--color-accent-hover, #4f46e5);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 20px var(--color-accent-glow);
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 0 20px var(--color-accent-glow);
     transform: translateY(-1px);
   }
 
@@ -563,7 +631,6 @@ html {
   cursor: pointer;
   transition: all 0.15s ease-in-out;
   line-height: 1.4;
-
   mat-icon {
     font-size: 18px;
     width: 18px;
@@ -575,7 +642,6 @@ html {
     background: var(--color-card-hover, #1e293b);
     border-color: var(--color-border-light, #334155);
     color: var(--color-text, #ffffff) !important;
-
     mat-icon {
       color: var(--color-text, #ffffff);
     }
@@ -605,7 +671,6 @@ html {
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-
   mat-icon {
     font-size: 18px;
     width: 18px;
@@ -637,7 +702,6 @@ html {
   border: 1px solid rgba(239, 68, 68, 0.35);
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-
   mat-icon {
     font-size: 18px;
     width: 18px;
@@ -679,7 +743,6 @@ html {
   border-bottom: 1px solid var(--color-border, #1e293b) !important;
   color: var(--color-text, #f8fafc) !important;
   transition: background-color 0.15s ease;
-
   &:hover {
     background: var(--color-card-hover, #1e293b) !important;
   }
@@ -703,7 +766,6 @@ html {
   background: var(--color-card, #0f172a) !important;
   color: var(--color-text, #f8fafc) !important;
   border-top: 1px solid var(--color-border, #1e293b) !important;
-
   .mat-mdc-paginator-container {
     min-height: 48px !important;
     padding: 0 16px !important;
@@ -712,7 +774,6 @@ html {
   .mat-mdc-paginator-page-size {
     display: flex;
     align-items: center;
-
     .mat-mdc-paginator-page-size-label {
       color: var(--color-text-muted, #94a3b8) !important;
       font-size: 12px !important;
@@ -735,7 +796,6 @@ html {
       outline: none !important;
       cursor: pointer !important;
       transition: all 0.15s ease !important;
-
       &:hover {
         background: var(--color-card-hover, #1e293b) !important;
         border-color: var(--color-border-light, #334155) !important;
@@ -754,7 +814,6 @@ html {
 
     .mat-mdc-form-field {
       margin: 0 4px !important;
-
       .mat-mdc-text-field-wrapper {
         background: var(--color-canvas-subtle, #0d1322) !important;
         border: 1px solid var(--color-border, #1e293b) !important;
@@ -793,7 +852,6 @@ html {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-
     .mat-mdc-button-touch-target {
       display: none !important;
     }
@@ -821,7 +879,6 @@ html {
   line-height: 1 !important;
   vertical-align: middle !important;
   padding: 0 !important;
-
   .mat-mdc-button-touch-target {
     display: none !important;
   }
@@ -835,7 +892,8 @@ html {
     line-height: 1 !important;
   }
 
-  mat-icon, .mat-icon {
+  mat-icon,
+  .mat-icon {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -874,12 +932,10 @@ html {
 
 .db-dropdown-menu {
   max-height: 380px !important;
-
   .active-db-item {
     background: rgba(99, 102, 241, 0.15) !important;
     color: var(--color-accent, #6366f1) !important;
     font-weight: 600;
-
     .active-icon {
       color: var(--color-accent, #6366f1) !important;
     }
@@ -904,7 +960,6 @@ html {
   border: 1px solid var(--color-border, #1e293b) !important;
   border-radius: 8px !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6) !important;
-
   .ui-select-item {
     display: flex !important;
     align-items: center !important;
@@ -916,7 +971,6 @@ html {
     font-size: 13px !important;
     font-family: inherit !important;
     transition: all 0.12s ease !important;
-
     .item-icon {
       font-family: 'Material Icons', sans-serif !important;
       font-size: 18px !important;
@@ -954,7 +1008,6 @@ html {
     &:hover:not([disabled]) {
       background: var(--color-card-hover, #1e293b) !important;
       color: #ffffff !important;
-
       .item-icon {
         color: var(--color-accent, #6366f1) !important;
       }
@@ -964,7 +1017,6 @@ html {
       background: rgba(99, 102, 241, 0.15) !important;
       color: var(--color-accent, #6366f1) !important;
       font-weight: 600 !important;
-
       .item-label {
         font-weight: 600 !important;
       }
@@ -978,7 +1030,6 @@ html {
 
 .mat-mdc-option {
   color: var(--color-text, #f8fafc) !important;
-
   &:hover:not(.mdc-list-item--disabled) {
     background: var(--color-card-hover, #1e293b) !important;
   }
@@ -1002,7 +1053,6 @@ html {
   border-color: var(--color-border, #1e293b) !important;
   color: var(--color-text, #f8fafc) !important;
   border-radius: 8px !important;
-
   &:hover {
     background-color: var(--color-card-hover, #1e293b) !important;
   }
@@ -1013,7 +1063,6 @@ html {
    ========================================================================== */
 .mat-mdc-dialog-container {
   --mdc-dialog-container-shape: 16px;
-
   .mat-mdc-dialog-surface {
     border-radius: 16px !important;
     background: var(--color-card, #0f172a) !important;
@@ -1043,7 +1092,6 @@ html {
   max-height: 75vh;
   box-sizing: border-box;
   color: var(--color-text, #f8fafc) !important;
-
   p {
     color: var(--color-text-muted, #94a3b8) !important;
   }
@@ -1060,7 +1108,6 @@ html {
 
 .command-palette-dialog-panel {
   overflow: hidden !important;
-
   .mat-mdc-dialog-container {
     --mdc-dialog-container-shape: 16px;
     padding: 0 !important;
@@ -1096,7 +1143,6 @@ button.mat-mdc-icon-button,
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
-
   .mat-mdc-button-touch-target {
     display: none !important;
   }
@@ -1136,9 +1182,7 @@ button.mat-mdc-icon-button,
 }
 
 /* Global dialog contrast refinement for light theme */
-html.light,
-body.light,
-[data-theme="clean-light"] {
+:is(html.light, body.light, [data-theme='clean-light']) {
   .cdk-overlay-pane {
     .mat-mdc-dialog-surface {
       background: #ffffff !important;
@@ -1151,13 +1195,18 @@ body.light,
   app-load-test-dialog,
   app-seed-data-dialog {
     color: #0f172a !important;
-
     .dialog-header {
       background: #ffffff !important;
       border-bottom: 1px solid #e2e8f0 !important;
-      .title-text { color: #0f172a !important; }
-      .title-subtext { color: #475569 !important; }
-      .close-btn { color: #64748b !important; }
+      .title-text {
+        color: #0f172a !important;
+      }
+      .title-subtext {
+        color: #475569 !important;
+      }
+      .close-btn {
+        color: #64748b !important;
+      }
     }
 
     .dialog-content {
@@ -1171,32 +1220,52 @@ body.light,
         background: #eef2ff !important;
         border-color: #a5b4fc !important;
       }
-      .kpi-label { color: #475569 !important; }
+      .kpi-label {
+        color: #475569 !important;
+      }
       .kpi-value {
         color: #0f172a !important;
-        small { color: #64748b !important; }
+        small {
+          color: #64748b !important;
+        }
       }
-      .kpi-sub { color: #475569 !important; }
+      .kpi-sub {
+        color: #475569 !important;
+      }
     }
 
     .cleanup-success-card {
       background: #ecfdf5 !important;
       border: 1px solid #86efac !important;
-      .cleanup-icon { color: #059669 !important; }
+      .cleanup-icon {
+        color: #059669 !important;
+      }
       .cleanup-text {
         color: #14532d !important;
-        strong { color: #15803d !important; }
-        span { color: #166534 !important; }
+        strong {
+          color: #15803d !important;
+        }
+        span {
+          color: #166534 !important;
+        }
       }
     }
 
     .percentiles-section {
       background: #ffffff !important;
       border: 1px solid #cbd5e1 !important;
-      .section-title { color: #0f172a !important; }
-      .pct-name { color: #334155 !important; }
-      .pct-bar-track { background: #e2e8f0 !important; }
-      .pct-val { color: #0f172a !important; }
+      .section-title {
+        color: #0f172a !important;
+      }
+      .pct-name {
+        color: #334155 !important;
+      }
+      .pct-bar-track {
+        background: #e2e8f0 !important;
+      }
+      .pct-val {
+        color: #0f172a !important;
+      }
     }
 
     .dialog-actions {
@@ -1232,7 +1301,6 @@ th.mat-header-cell.sortable-col,
 .keys-table th.sortable-col {
   cursor: pointer !important;
   user-select: none !important;
-
   .col-header-content {
     display: inline-flex !important;
     align-items: center !important;
@@ -1240,7 +1308,6 @@ th.mat-header-cell.sortable-col,
     gap: 4px !important;
     line-height: 1 !important;
     vertical-align: middle !important;
-
     .header-label {
       line-height: 1 !important;
       display: inline-block !important;

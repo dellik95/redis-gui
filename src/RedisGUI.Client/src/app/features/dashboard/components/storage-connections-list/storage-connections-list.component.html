@@ -1,28 +1,26 @@
-<div class="connections-wrapper">
+<div class="connections-wrapper flex flex-col w-full box-border">
   @if (connectionsStore.isLoading()) {
-    <div class="loading-state">
-      <mat-spinner diameter="44"></mat-spinner>
-      <span class="loading-label">Loading connections...</span>
-    </div>
+    <app-empty-state type="loading" message="Loading connections..." [spinnerDiameter]="44" />
   } @else if (connectionsStore.connections().length === 0) {
-    <div class="welcome-card">
-      <div class="welcome-icon-wrap">
-        <mat-icon class="welcome-icon">storage</mat-icon>
-      </div>
-      <h2 class="welcome-title">Welcome to Redis Studio</h2>
-      <p class="welcome-text">
-        Connect to your local or remote Redis instances to browse keys, inspect memory, monitor metrics, and manage your data with ease.
-      </p>
+    <app-empty-state
+      type="empty"
+      icon="storage"
+      heading="Welcome to Redis Studio"
+      description="Connect to your local or remote Redis instances to browse keys, inspect memory, monitor metrics, and manage your data with ease."
+    >
       <button class="btn-primary" (click)="addConnection()">
         <mat-icon>add</mat-icon>
         <span>Add Your First Connection</span>
       </button>
-    </div>
+    </app-empty-state>
   } @else {
-    <div class="connections-header">
-      <div class="header-info">
-        <h2 class="section-title">Redis Connections</h2>
-        <span class="count-badge">{{ connectionsStore.connections().length }} active</span>
+    <div class="connections-header flex items-center justify-between mb-6">
+      <div class="header-info flex items-center gap-3">
+        <h2 class="section-title text-[20px] font-bold text-canvas-text m-0">Redis Connections</h2>
+        <span
+          class="count-badge text-[12px] font-semibold py-[3px] px-2.5 rounded-xl bg-canvas-card text-brand"
+          >{{ connectionsStore.connections().length }} active</span
+        >
       </div>
       <button class="btn-primary" (click)="addConnection()">
         <mat-icon>add</mat-icon>
@@ -30,43 +28,75 @@
       </button>
     </div>
 
-    <div class="connections-grid">
+    <div class="connections-grid grid gap-5">
       @for (conn of connectionsStore.connections(); track conn.id) {
-        <div class="connection-card" (click)="rowClick(conn)">
-          <div class="card-header">
-            <div class="card-title-row">
-              <div class="conn-icon-box">
+        <div
+          class="connection-card flex flex-col bg-canvas-card rounded-xl cursor-pointer relative overflow-hidden"
+          (click)="rowClick(conn)"
+        >
+          <div class="card-header flex items-start justify-between gap-3 mb-3.5">
+            <div class="card-title-row flex items-center gap-3 min-w-0">
+              <div class="conn-icon-box w-10 h-10 flex items-center justify-center shrink-0">
                 <mat-icon>dns</mat-icon>
               </div>
-              <div class="conn-name-block">
-                <h3 class="conn-name" [matTooltip]="conn.name">{{ conn.name }}</h3>
-                <span class="conn-endpoint">{{ conn.host }}:{{ conn.port }}</span>
+              <div class="conn-name-block min-w-0">
+                <h3
+                  class="conn-name text-[15px] font-semibold text-canvas-text overflow-hidden text-ellipsis whitespace-nowrap"
+                  [matTooltip]="conn.name"
+                >
+                  {{ conn.name }}
+                </h3>
+                <span class="conn-endpoint text-[12px] text-canvas-muted"
+                  >{{ conn.host }}:{{ conn.port }}</span
+                >
               </div>
             </div>
-            
-            <div class="card-actions-menu" (click)="$event.stopPropagation()">
-              <button mat-icon-button (click)="editRecord(conn, $event)" matTooltip="Edit Connection" class="action-btn">
+
+            <div
+              class="card-actions-menu flex items-center gap-0.5 shrink-0"
+              (click)="$event.stopPropagation()"
+            >
+              <button
+                mat-icon-button
+                (click)="editRecord(conn, $event)"
+                matTooltip="Edit Connection"
+                class="action-btn w-8 h-8 leading-[32px] text-canvas-muted"
+              >
                 <mat-icon>edit_note</mat-icon>
               </button>
-              <button mat-icon-button (click)="deleteRecord(conn.id, $event)" matTooltip="Delete Connection" color="warn" class="action-btn">
+              <button
+                mat-icon-button
+                (click)="deleteRecord(conn.id, $event)"
+                matTooltip="Delete Connection"
+                color="warn"
+                class="action-btn w-8 h-8 leading-[32px] text-canvas-muted"
+              >
                 <mat-icon>delete_outline</mat-icon>
               </button>
             </div>
           </div>
 
-          <div class="card-body">
-            <div class="meta-tags">
-              <span class="meta-tag tag-db">
+          <div class="card-body mb-4">
+            <div class="meta-tags flex items-center gap-2 flex-wrap">
+              <span
+                class="meta-tag tag-db inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"
+              >
                 <mat-icon>dataset</mat-icon>
                 <span>DB {{ conn.database }}</span>
               </span>
               @if (conn.password) {
-                <span class="meta-tag tag-auth" matTooltip="Authentication protected">
+                <span
+                  class="meta-tag tag-auth inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"
+                  matTooltip="Authentication protected"
+                >
                   <mat-icon>lock</mat-icon>
                   <span>Protected</span>
                 </span>
               } @else {
-                <span class="meta-tag tag-no-auth" matTooltip="No password set">
+                <span
+                  class="meta-tag tag-no-auth inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"
+                  matTooltip="No password set"
+                >
                   <mat-icon>lock_open</mat-icon>
                   <span>Public</span>
                 </span>
@@ -74,9 +104,15 @@
             </div>
           </div>
 
-          <div class="card-footer">
-            <span class="click-hint">Click card to open database</span>
-            <button mat-button class="connect-action-btn" color="primary">
+          <div class="card-footer flex items-center justify-between pt-3 mt-auto">
+            <span class="click-hint text-[11.5px] text-canvas-muted"
+              >Click card to open database</span
+            >
+            <button
+              mat-button
+              class="connect-action-btn text-[12.5px] font-semibold text-brand py-0 px-2 h-7 leading-[28px]"
+              color="primary"
+            >
               <span>Connect</span>
               <mat-icon>arrow_forward</mat-icon>
             </button>

@@ -1,4 +1,4 @@
-import { Signal, signal } from '@angular/core';
+import { DestroyRef, inject, Signal, signal } from '@angular/core';
 
 /**
  * Custom Angular Signal Hooks
@@ -18,14 +18,14 @@ import { Signal, signal } from '@angular/core';
  * ```
  */
 export function useMediaQuery(query: string): Signal<boolean> {
-  const matches = signal(window.matchMedia(query).matches);
-
   const mediaQuery = window.matchMedia(query);
+  const matches = signal(mediaQuery.matches);
   const updateMatches = (e: MediaQueryListEvent | MediaQueryList) => {
     matches.set(e.matches);
   };
 
   mediaQuery.addEventListener('change', updateMatches);
 
+  inject(DestroyRef).onDestroy(() => mediaQuery.removeEventListener('change', updateMatches));
   return matches.asReadonly();
 }

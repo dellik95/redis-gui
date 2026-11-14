@@ -1,58 +1,104 @@
-<div class="command-palette-container" (keydown)="onKeyDown($event)">
-	<div class="search-header">
-		<mat-icon class="search-icon">search</mat-icon>
-		<input
-			#searchInput
-			type="text"
-			class="palette-input"
-			[ngModel]="searchQuery()"
-			(ngModelChange)="searchQuery.set($event); selectedIndex.set(0)"
-			[ngModelOptions]="{standalone: true}"
-			placeholder="Type a command, search keys, switch DB... (e.g. 'DB 1', 'export', 'user')"
-			autocomplete="off"
-			spellcheck="false"
-		/>
-		<span class="esc-badge" (click)="close()">ESC</span>
-	</div>
+<div
+  class="command-palette-container flex flex-col w-full max-w-full bg-canvas-card text-canvas-text rounded-2xl overflow-hidden box-border"
+  (keydown)="onKeyDown($event)"
+>
+  <div class="search-header flex items-center py-3.5 px-[18px] bg-canvas gap-3 shrink-0 box-border">
+    <mat-icon
+      class="search-icon text-brand text-[22px] w-[22px] h-[22px] min-w-[22px] min-h-[22px] inline-flex items-center justify-center shrink-0 leading-none select-none"
+      >search</mat-icon
+    >
+    <input
+      #searchInput
+      type="text"
+      class="palette-input flex-1 min-w-0 text-canvas-text text-[14.5px]"
+      [ngModel]="searchQuery()"
+      (ngModelChange)="searchQuery.set($event); selectedIndex.set(0)"
+      [ngModelOptions]="{ standalone: true }"
+      placeholder="Type a command, search keys, switch DB... (e.g. 'DB 1', 'export', 'user')"
+      autocomplete="off"
+      spellcheck="false"
+    />
+    <span
+      class="esc-badge inline-flex items-center justify-center rounded py-0.5 px-[7px] text-[10.5px] font-semibold text-canvas-muted cursor-pointer shrink-0"
+      (click)="close()"
+      >ESC</span
+    >
+    <button
+      type="button"
+      class="close-btn inline-flex items-center justify-center w-7 h-7 rounded-lg text-canvas-muted cursor-pointer shrink-0
+             transition-colors hover:text-canvas-text hover:bg-canvas-card"
+      (click)="close()"
+      aria-label="Close command palette"
+    >
+      <mat-icon class="!text-[18px] !w-[18px] !h-[18px]">close</mat-icon>
+    </button>
+  </div>
 
-	<div class="results-list">
-		@if (filteredCommands().length === 0) {
-			<div class="no-results">
-				<mat-icon>search_off</mat-icon>
-				<span>No commands or keys found for "{{ searchQuery() }}"</span>
-			</div>
-		}
+  <div
+    class="results-list flex-1 overflow-y-auto overflow-x-hidden py-2 px-3 flex flex-col gap-1 box-border"
+  >
+    @if (filteredCommands().length === 0) {
+      <div
+        class="no-results flex flex-col items-center justify-center py-12 px-4 gap-2.5 text-canvas-muted text-[14px]"
+      >
+        <mat-icon>search_off</mat-icon>
+        @if (searchQuery().trim()) {
+          <span>No commands or keys found for "<strong class="text-canvas-text">{{ searchQuery() }}</strong>"</span>
+        } @else {
+          <span>No commands available for the current context</span>
+        }
+      </div>
+    }
 
-		@for (item of filteredCommands(); track item.id; let i = $index) {
-			<div
-				class="result-item"
-				[class.selected]="i === selectedIndex()"
-				(click)="executeItem(item)"
-				(mouseenter)="selectedIndex.set(i)"
-			>
-				<div class="item-icon-wrapper" [class]="'cat-' + item.category">
-					<mat-icon>{{ item.icon }}</mat-icon>
-				</div>
+    @for (item of filteredCommands(); track item.id; let i = $index) {
+      <div
+        class="result-item flex items-center py-2.5 px-3 gap-3 cursor-pointer box-border w-auto min-w-0"
+        [class.selected]="i === selectedIndex()"
+        (click)="executeItem(item)"
+        (mouseenter)="selectedIndex.set(i)"
+      >
+        <div
+          class="item-icon-wrapper flex items-center justify-center w-9 h-9 min-w-9 min-h-9 rounded-lg shrink-0"
+          [class]="'cat-' + item.category"
+        >
+          <mat-icon>{{ item.icon }}</mat-icon>
+        </div>
 
-				<div class="item-content">
-					<div class="item-title">{{ item.title }}</div>
-					@if (item.subtitle) {
-						<div class="item-subtitle">{{ item.subtitle }}</div>
-					}
-				</div>
+        <div class="item-content flex-1 min-w-0 flex flex-col gap-0.5 overflow-hidden">
+          <div
+            class="item-title text-[13.5px] font-medium text-canvas-text whitespace-nowrap overflow-hidden text-ellipsis"
+          >
+            {{ item.title }}
+          </div>
+          @if (item.subtitle) {
+            <div
+              class="item-subtitle text-[12px] text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+            >
+              {{ item.subtitle }}
+            </div>
+          }
+        </div>
 
-				@if (item.badge) {
-					<span class="item-badge" [class]="'cat-' + item.category">{{ item.badge }}</span>
-				}
-			</div>
-		}
-	</div>
+        @if (item.badge) {
+          <span
+            class="item-badge text-[10px] font-bold py-0.5 px-2 rounded uppercase text-canvas-muted shrink-0 whitespace-nowrap ml-2"
+            [class]="'cat-' + item.category"
+            >{{ item.badge }}</span
+          >
+        }
+      </div>
+    }
+  </div>
 
-	<div class="palette-footer">
-		<div class="footer-hints">
-			<span class="footer-hint"><kbd>&uarr;&darr;</kbd> Navigate</span>
-			<span class="footer-hint"><kbd>&crarr;</kbd> Select</span>
-			<span class="footer-hint"><kbd>ESC</kbd> Close</span>
-		</div>
-	</div>
+  <div
+    class="palette-footer flex items-center justify-between py-2.5 px-[18px] bg-canvas text-[12px] text-canvas-muted shrink-0 box-border"
+  >
+    <div class="footer-hints flex items-center gap-4 flex-wrap">
+      <span class="footer-hint inline-flex items-center gap-1.5"
+        ><kbd>&uarr;&darr;</kbd> Navigate</span
+      >
+      <span class="footer-hint inline-flex items-center gap-1.5"><kbd>&crarr;</kbd> Select</span>
+      <span class="footer-hint inline-flex items-center gap-1.5"><kbd>ESC</kbd> Close</span>
+    </div>
+  </div>
 </div>

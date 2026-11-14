@@ -15,13 +15,7 @@ import { MatDividerModule } from '@angular/material/divider';
   templateUrl: './bulk-actions-toolbar.component.html',
   styleUrl: './bulk-actions-toolbar.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [
-    MatButtonModule,
-    MatIconModule,
-    MatMenuModule,
-    MatTooltipModule,
-    MatDividerModule
-  ]
+  imports: [MatButtonModule, MatIconModule, MatMenuModule, MatTooltipModule, MatDividerModule]
 })
 export class BulkActionsToolbarComponent {
   readonly selectedCount = input<number>(0);

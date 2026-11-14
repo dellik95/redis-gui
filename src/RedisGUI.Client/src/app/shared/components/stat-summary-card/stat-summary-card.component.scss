@@ -1,0 +1,21 @@
+// Variant icon colors — only the icon-wrapper bg & color vary
+.variant-healthy .icon-wrapper {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.variant-degraded .icon-wrapper {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+}
+
+.variant-unhealthy .icon-wrapper {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.variant-total .icon-wrapper,
+.variant-unknown .icon-wrapper {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}

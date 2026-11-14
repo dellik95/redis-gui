@@ -31,7 +31,7 @@ export class TogglerComponent {
   // 1. Inputs & Models
   readonly config = input.required<TogglerConfig>();
   readonly value = model<string>();
-  
+
   // 2. Outputs (backward compatibility)
   readonly toggleChanged = output<string>();
 

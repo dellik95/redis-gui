@@ -1,0 +1,15 @@
+    <div class="stat-card-box">
+      @if (icon()) {
+        <div [class]="iconWrapperClasses()">
+          <mat-icon class="stat-icon">{{ icon() }}</mat-icon>
+        </div>
+      }
+      <div class="stat-details">
+        <div class="stat-value">{{ value() }}</div>
+        <div class="stat-label">{{ label() }}</div>
+        @if (subtext()) {
+          <div class="stat-subtext">{{ subtext() }}</div>
+        }
+      </div>
+    </div>
+  

@@ -1,0 +1,17 @@
+<div class="type-filter-chips flex items-center gap-1.5 overflow-x-auto pb-0.5">
+  @for (filter of typeFilters; track filter.key) {
+  <button
+    type="button"
+    class="type-chip chip-{{ filter.key }} inline-flex items-center gap-1.5 py-1 px-2.5 rounded-2xl bg-canvas-subtle text-canvas-text text-[12px] font-medium cursor-pointer whitespace-nowrap"
+    [class.active]="typeFilter() === filter.value || (filter.key === 'sortedset' && typeFilter() === 'zset')"
+    (click)="filterChange.emit(filter.value)"
+  >
+    @if (filter.icon) {
+    <mat-icon class="chip-icon text-[15px] w-[15px] h-[15px]">{{ filter.icon }}</mat-icon> }
+    <span class="chip-label">{{ filter.label }}</span>
+    <span class="chip-count py-[1px] px-1.5 text-[11px] font-semibold"
+      >{{ typeCounts()[filter.key] }}</span
+    >
+  </button>
+  }
+</div>

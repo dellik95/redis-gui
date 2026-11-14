@@ -2,132 +2,144 @@
 
 <!-- Authenticated Layout: Navbar + Sidebar -->
 @if (authStore.isAuthenticated()) {
-<div class="layout-container" [class.is-mobile]="isMobile()">
+  <div class="layout-container h-[100vh] w-[100vw] overflow-hidden" [class.is-mobile]="isMobile()">
+    <mat-toolbar class="loyout-toolbar !bg-canvas !text-canvas-text shrink-0" color="primary">
+      <mat-toolbar-row>
+        <button mat-icon-button (click)="snav.toggle()">
+          <mat-icon>menu</mat-icon>
+        </button>
 
-    <mat-toolbar class="loyout-toolbar" color="primary">
+        <app-connection-brand [connection]="connectionsStore.selectedConnection()" />
 
-        <mat-toolbar-row>
-            <button mat-icon-button (click)="snav.toggle()">
-                <mat-icon>menu</mat-icon>
-            </button>
+        <button
+          mat-stroked-button
+          class="nav-cmd-palette-btn opacity-90 hover:opacity-100 transition-opacity duration-150 ml-3 h-8 leading-[32px] text-[12px] inline-flex items-center gap-1.5 rounded-md"
+          (click)="openCommandPalette()"
+          matTooltip="Command Palette (Ctrl+K)"
+        >
+          <mat-icon class="!size-4 !text-[16px]">search</mat-icon>
+          <span class="cmd-text">Search & Actions</span>
+          <kbd class="cmd-kbd py-[1px] px-[5px] text-[10px] ml-1">Ctrl+K</kbd>
+        </button>
 
-            <div class="brand-container">
-                <div class="brand-icon-wrap">
-                    <mat-icon class="brand-icon">storage</mat-icon>
-                </div>
-                <div class="brand-text">
-                    <span class="brand-name">Redis<span class="brand-accent">Studio</span></span>
-                    <span class="brand-version">v2.2</span>
-                </div>
+        <span class="spacer flex-auto"></span>
+
+        <a
+          mat-button
+          target="_blank"
+          href="https://github.com/dellik95/redis-gui"
+          aria-label="GitHub Repository"
+        >
+          <span matButtonIcon [ngTemplateOutlet]="githubIcon"></span>
+          GitHub
+        </a>
+        <theme-picker></theme-picker>
+        <button mat-icon-button>
+          <mat-icon>info</mat-icon>
+        </button>
+
+        <!-- User Profile Menu -->
+        <button mat-icon-button [matMenuTriggerFor]="userMenu" class="ml-2 user-menu-trigger">
+          <mat-icon>account_circle</mat-icon>
+        </button>
+        <mat-menu #userMenu="matMenu" class="user-profile-menu">
+          <div class="user-profile-header items-center" mat-menu-item disabled>
+            <div class="user-avatar">
+              {{ authStore.userInitials() }}
             </div>
-
-            @if (connectionsStore.selectedConnection(); as conn) {
-                <div class="active-connection-chip" [matTooltip]="conn.host + ':' + conn.port + ' (DB ' + conn.database + ')'">
-                    <span class="pulse-indicator"></span>
-                    <span class="conn-name">{{ conn.name }}</span>
-                    <span class="conn-details">{{ conn.host }}:{{ conn.port }}</span>
-                </div>
-            }
-
-            <button mat-stroked-button class="nav-cmd-palette-btn" (click)="openCommandPalette()" matTooltip="Command Palette (Ctrl+K)">
-                <mat-icon>search</mat-icon>
-                <span class="cmd-text">Search & Actions</span>
-                <kbd class="cmd-kbd">Ctrl+K</kbd>
-            </button>
-
-            <span class="spacer"></span>
-
-            <a mat-button target="_blank" href="https://github.com/dellik95/redis-gui" aria-label="GitHub Repository">
-                <span matButtonIcon [ngTemplateOutlet]="githubIcon"></span>
-                GitHub
-            </a>
-			<theme-picker></theme-picker>
-            <button mat-icon-button>
-                <mat-icon>info</mat-icon>
-            </button>
-
-            <!-- User Profile Menu -->
-            <button mat-icon-button [matMenuTriggerFor]="userMenu" class="user-menu-trigger">
-                <mat-icon>account_circle</mat-icon>
-            </button>
-            <mat-menu #userMenu="matMenu" class="user-profile-menu">
-                <div class="user-profile-header" mat-menu-item disabled>
-                    <div class="user-avatar">
-                        {{ authStore.userInitials() }}
-                    </div>
-                    <div class="user-info">
-                        <div class="user-name">{{ authStore.userFullName() }}</div>
-                        <div class="user-email">{{ authStore.user()?.email }}</div>
-                        <div class="user-role">{{ authStore.user()?.role }}</div>
-                    </div>
-                </div>
-                <mat-divider></mat-divider>
-                <button mat-menu-item (click)="logout()">
-                    <mat-icon>logout</mat-icon>
-                    <span>Logout</span>
-                </button>
-            </mat-menu>
-
-        </mat-toolbar-row>
-
+            <div class="user-info gap-0.5">
+              <div class="user-name text-canvas-text">{{ authStore.userFullName() }}</div>
+              <div class="user-email text-canvas-muted">{{ authStore.user()?.email }}</div>
+              <div class="user-role text-[11px] text-brand uppercase">
+                {{ authStore.user()?.role }}
+              </div>
+            </div>
+          </div>
+          <mat-divider></mat-divider>
+          <button mat-menu-item (click)="logout()">
+            <mat-icon>logout</mat-icon>
+            <span>Logout</span>
+          </button>
+        </mat-menu>
+      </mat-toolbar-row>
     </mat-toolbar>
 
-    <mat-sidenav-container class="sidenav-container" [style.marginTop.px]="isMobile() ? 56 : 0">
-        <mat-sidenav class="sidenav-menu" #snav opened="true" [mode]="isMobile() ? 'over' : 'side'"
-            [fixedInViewport]="isMobile()" fixedTopGap="56">
-            <mat-nav-list class="sidenav-menu_items">
-
-                @for (link of sideNavStore.sideNavLinks(); track link.href) {
-                <mat-list-item class="sidenav-menu__item"
-                    [routerLink]="[link.href]" routerLinkActive="active-nav-item mdc-list-item--activated"
-                    [routerLinkActiveOptions]="{exact: true}">
-
-                    <div class="sidenav-menu__content">
-                        @if (link.icon) {
-                        <mat-icon class="sidenav-menu_icon" aria-hidden="false"
-                            [fontIcon]="link.icon"></mat-icon>
-                        }
-                        <div class="sidenav-menu__text">
-                            <div class="sidenav-menu__title">
-                                {{ link.title }}
-                                @if (link.badge) {
-                                <span class="sidenav-menu__badge">{{ link.badge }}</span>
-                                }
-                            </div>
-                            @if (link.description) {
-                            <div class="sidenav-menu__description">
-                                {{ link.description }}
-                            </div>
-                            }
-                        </div>
-                    </div>
-
-                </mat-list-item>
+    <mat-sidenav-container
+      class="sidenav-container flex-1 min-h-0 min-w-0 overflow-hidden"
+      [style.marginTop.px]="isMobile() ? 56 : 0"
+    >
+      <mat-sidenav
+        class="sidenav-menu py-3 px-2 !bg-canvas text-canvas-text overflow-y-auto overflow-x-hidden box-border"
+        #snav
+        opened="true"
+        [mode]="isMobile() ? 'over' : 'side'"
+        [fixedInViewport]="isMobile()"
+        fixedTopGap="56"
+      >
+        <mat-nav-list class="sidenav-menu_items !p-0 flex flex-col gap-1.5">
+          @for (link of sideNavStore.sideNavLinks(); track link.href) {
+            <mat-list-item
+              class="sidenav-menu__item !m-0 !rounded-lg !h-auto !min-h-12 !py-2 !px-3 box-border cursor-pointer !text-canvas-text"
+              [routerLink]="[link.href]"
+              routerLinkActive="active-nav-item mdc-list-item--activated"
+              [routerLinkActiveOptions]="{ exact: true }"
+            >
+              <div class="sidenav-menu__content flex items-center gap-3 w-full">
+                @if (link.icon) {
+                  <mat-icon
+                    class="sidenav-menu_icon shrink-0 text-[20px] w-5 h-5 !text-canvas-muted"
+                    aria-hidden="false"
+                    [fontIcon]="link.icon"
+                  ></mat-icon>
                 }
-            </mat-nav-list>
-        </mat-sidenav>
+                <div class="sidenav-menu__text flex flex-col gap-0.5 flex-1 min-w-0">
+                  <div
+                    class="sidenav-menu__title text-[13.5px] font-medium flex items-center justify-between gap-2 !text-canvas-text"
+                  >
+                    {{ link.title }}
+                    @if (link.badge) {
+                      <span
+                        class="sidenav-menu__badge text-brand py-[1px] px-1.5 rounded-lg text-[10px] font-semibold uppercase"
+                        >{{ link.badge }}</span
+                      >
+                    }
+                  </div>
+                  @if (link.description) {
+                    <div
+                      class="sidenav-menu__description text-[11px] !text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+                    >
+                      {{ link.description }}
+                    </div>
+                  }
+                </div>
+              </div>
+            </mat-list-item>
+          }
+        </mat-nav-list>
+      </mat-sidenav>
 
-        <mat-sidenav-content>
-            <div class="main-content">
-                <router-outlet></router-outlet>
-            </div>
-        </mat-sidenav-content>
+      <mat-sidenav-content class="!flex flex-col h-full overflow-hidden">
+        <div class="main-content overflow-hidden bg-canvas text-canvas-text">
+          <router-outlet class="hidden"></router-outlet>
+        </div>
+      </mat-sidenav-content>
     </mat-sidenav-container>
-
-</div>
+  </div>
 }
 
 <!-- Unauthenticated Layout: Clean auth pages only -->
 @else {
-<div class="auth-layout">
-    <router-outlet></router-outlet>
-</div>
+  <div class="auth-layout">
+    <router-outlet class="hidden"></router-outlet>
+  </div>
 }
 
 <ng-template #githubIcon>
-    <svg viewBox="0 0 20 20" class="github-logo" aria-hidden="true">
-        <path
-            d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V19c0 .27.16.59.67.5C17.14 18.16 20 14.42 20 10A10 10 0 0 0 10 0z"
-            fill="currentColor" fill-rule="evenodd" />
-    </svg>
+  <svg viewBox="0 0 20 20" class="github-logo w-6 h-6" aria-hidden="true">
+    <path
+      d="M10 0C4.477 0 0 4.477 0 10c0 4.42 2.87 8.17 6.84 9.5.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34-.46-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.87 1.52 2.34 1.07 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.92 0-1.11.38-2 1.03-2.71-.1-.25-.45-1.29.1-2.64 0 0 .84-.27 2.75 1.02.79-.22 1.65-.33 2.5-.33.85 0 1.71.11 2.5.33 1.91-1.29 2.75-1.02 2.75-1.02.55 1.35.2 2.39.1 2.64.65.71 1.03 1.6 1.03 2.71 0 3.82-2.34 4.66-4.57 4.91.36.31.69.92.69 1.85V19c0 .27.16.59.67.5C17.14 18.16 20 14.42 20 10A10 10 0 0 0 10 0z"
+      fill="currentColor"
+      fill-rule="evenodd"
+    />
+  </svg>
 </ng-template>

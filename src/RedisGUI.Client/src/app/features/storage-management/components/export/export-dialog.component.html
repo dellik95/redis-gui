@@ -1,7 +1,7 @@
 <h2 mat-dialog-title>Export Redis Data</h2>
 <mat-dialog-content>
   <p class="export-hint">Select the export format for your Redis keys and values:</p>
-  
+
   <ui-radio-group [formField]="exportForm.format" [options]="formatOptions" />
 
   @if (isLoading()) {
@@ -16,10 +16,5 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end" class="dialog-actions">
   <ui-button variant="ghost" (click)="dialogRef.close()">Cancel</ui-button>
-  <ui-button 
-    variant="primary" 
-    [loading]="isLoading()" 
-    (click)="onExport()">
-    Export
-  </ui-button>
+  <ui-button variant="primary" [loading]="isLoading()" (click)="onExport()"> Export </ui-button>
 </mat-dialog-actions>

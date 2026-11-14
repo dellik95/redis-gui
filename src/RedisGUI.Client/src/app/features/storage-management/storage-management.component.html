@@ -1,47 +1,49 @@
 <div class="storage-container">
-    <app-page-header
-        icon="storage"
-        title="Storage Manager"
-        subtitle="Manage Redis database keys, data structures, and memory"
-        [badge]="currentConnection()?.name"
-        badgeColor="primary"
-    >
-        <div actions>
-            <app-storage-resources-info [connectionId]="id()"></app-storage-resources-info>
-        </div>
-    </app-page-header>
+  <app-page-header
+    icon="storage"
+    title="Storage Manager"
+    subtitle="Manage Redis database keys, data structures, and memory"
+    [badge]="currentConnection()?.name"
+    badgeColor="primary"
+  >
+    <div actions>
+      <app-storage-resources-info [connectionId]="id()"></app-storage-resources-info>
+    </div>
+  </app-page-header>
 
-    @if (isReadOnly()) {
-        <div class="safe-mode-banner">
-            <mat-icon>shield</mat-icon>
-            <span><strong>Safe Mode Active:</strong> This Redis connection is in read-only mode to prevent accidental data modifications or deletes.</span>
-        </div>
-    }
+  @if (isReadOnly()) {
+    <div class="safe-mode-banner">
+      <mat-icon>shield</mat-icon>
+      <span
+        ><strong>Safe Mode Active:</strong> This Redis connection is in read-only mode to prevent
+        accidental data modifications or deletes.</span
+      >
+    </div>
+  }
 
-    <div class="split-view">
-        <div class="list-panel" [class.has-editor]="!!selectedKey()">
-            <app-storage-values-list 
-                [connectionId]="id()"
-                [activeKey]="selectedKey()?.key ?? null"
-                (keySelected)="onKeySelected($event)">
-            </app-storage-values-list>
-        </div>
-        
-        @if (selectedKey()) {
-            <div class="edit-panel">
-                <app-edit-key
-                    [connectionId]="id()"
-                    [selectedKey]="selectedKey()!"
-                    (saved)="onEditSaved()"
-                    (closed)="onEditClosed()">
-                </app-edit-key>
-            </div>
-        }
+  <div class="split-view">
+    <div class="list-panel" [class.has-editor]="!!selectedKey()">
+      <app-storage-values-list
+        [connectionId]="id()"
+        [activeKey]="selectedKey()?.key ?? null"
+        (keySelected)="onKeySelected($event)"
+      >
+      </app-storage-values-list>
     </div>
 
-    <!-- Collapsible Interactive Redis CLI Drawer -->
-    <app-redis-cli-drawer
-        [connectionId]="id()"
-        [activeDatabase]="activeDb()">
-    </app-redis-cli-drawer>
+    @if (selectedKey()) {
+      <div class="edit-panel">
+        <app-edit-key
+          [connectionId]="id()"
+          [selectedKey]="selectedKey()!"
+          (saved)="onEditSaved()"
+          (closed)="onEditClosed()"
+        >
+        </app-edit-key>
+      </div>
+    }
+  </div>
+
+  <!-- Collapsible Interactive Redis CLI Drawer -->
+  <app-redis-cli-drawer [connectionId]="id()" [activeDatabase]="activeDb()"> </app-redis-cli-drawer>
 </div>

@@ -1,0 +1,19 @@
+    <div class="ui-button-group" [class.size-sm]="size() === 'sm'">
+      @for (opt of options(); track opt.value) {
+        <button
+          type="button"
+          class="group-button"
+          [class.is-active]="value() === opt.value"
+          (click)="select(opt.value)"
+        >
+          @if (opt.icon) {
+            <mat-icon class="opt-icon">{{ opt.icon }}</mat-icon>
+          }
+          <span class="opt-label">{{ opt.label }}</span>
+          @if (opt.badge !== undefined && opt.badge !== null) {
+            <span class="opt-badge">{{ opt.badge }}</span>
+          }
+        </button>
+      }
+    </div>
+  

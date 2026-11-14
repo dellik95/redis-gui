@@ -1,0 +1,75 @@
+<div class="running-dashboard flex flex-col gap-4 py-3 px-0">
+  <div
+    class="running-header flex justify-between items-center bg-canvas-card rounded-lg py-2.5 px-4"
+  >
+    <div class="live-pill flex items-center gap-2 font-bold">
+      <span class="live-dot w-2.5 h-2.5 rounded-full"></span>
+      <span>LIVE BENCHMARK IN PROGRESS</span>
+    </div>
+    <div class="live-meta text-canvas-muted">
+      <span>DB {{ database() }}</span> &bull; <span>{{ concurrency() }} clients</span> &bull;
+      <span>{{ operationType() | uppercase }}</span>
+    </div>
+  </div>
+
+  <!-- Live Progress Metric Grid -->
+  <div class="live-kpi-grid grid gap-3">
+    <div class="live-kpi-card ops bg-canvas-card p-3 flex flex-col gap-1">
+      <span class="live-kpi-label text-canvas-muted uppercase font-bold">Current Throughput</span>
+      <span class="live-kpi-val font-extrabold text-canvas-text"
+        >{{ (liveProgress()?.currentOpsPerSecond ?? 0) | number:'1.0-0' }}
+        <small>ops/s</small></span
+      >
+      <span class="live-kpi-sub text-canvas-muted"
+        >Overall: {{ (liveProgress()?.overallOpsPerSecond ?? 0) | number:'1.0-0' }} ops/s</span
+      >
+    </div>
+
+    <div class="live-kpi-card time bg-canvas-card p-3 flex flex-col gap-1">
+      <span class="live-kpi-label text-canvas-muted uppercase font-bold">Elapsed Time</span>
+      <span class="live-kpi-val font-extrabold text-canvas-text"
+        >{{ formatSeconds(liveProgress()?.elapsedSeconds ?? 0) }}</span
+      >
+      <span class="live-kpi-sub text-canvas-muted">
+        @if (benchmarkMode() === 'duration') { Target: {{ durationSeconds() }}s } @else { Completed:
+        {{ liveProgress()?.completedOperations | number }} ops }
+      </span>
+    </div>
+
+    <div class="live-kpi-card lat bg-canvas-card p-3 flex flex-col gap-1">
+      <span class="live-kpi-label text-canvas-muted uppercase font-bold">Live Avg Latency</span>
+      <span class="live-kpi-val font-extrabold text-canvas-text"
+        >{{ (liveProgress()?.avgLatencyMs ?? 0) | number:'1.2-3' }} <small>ms</small></span
+      >
+      <span class="live-kpi-sub text-canvas-muted">Sub-millisecond</span>
+    </div>
+
+    <div class="live-kpi-card succ bg-canvas-card p-3 flex flex-col gap-1">
+      <span class="live-kpi-label text-canvas-muted uppercase font-bold">Success Rate</span>
+      <span class="live-kpi-val font-extrabold text-canvas-text"
+        >{{ (liveProgress()?.successRatePercent ?? 100) | number:'1.0-1' }}%</span
+      >
+      <span class="live-kpi-sub text-canvas-muted"
+        >{{ liveProgress()?.completedOperations | number }} ops completed</span
+      >
+    </div>
+  </div>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar-container flex flex-col gap-1.5">
+    <div class="progress-header flex justify-between font-semibold text-canvas-muted">
+      <span>Progress</span>
+      <span>{{ progressPercent() | number:'1.0-1' }}%</span>
+    </div>
+    <mat-progress-bar
+      [mode]="benchmarkMode() === 'duration' || (liveProgress()?.totalOperations ?? 0) > 0 ? 'determinate' : 'indeterminate'"
+      [value]="progressPercent()"
+    >
+    </mat-progress-bar>
+  </div>
+
+  <div class="cleanup-live-notice flex items-center gap-2 py-1.5 px-3 rounded-md">
+    <mat-icon>security</mat-icon>
+    <span>Auto-cleanup active: benchmark keys will be wiped immediately upon finish or stop.</span>
+  </div>
+</div>

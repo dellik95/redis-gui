@@ -1,5 +1,11 @@
 import { Component, inject, signal, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogTitle, MatDialogContent, MatDialogActions } from '@angular/material/dialog';
+import {
+  MAT_DIALOG_DATA,
+  MatDialogRef,
+  MatDialogTitle,
+  MatDialogContent,
+  MatDialogActions
+} from '@angular/material/dialog';
 import { form, FormField, submit } from '@angular/forms/signals';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -31,10 +37,12 @@ export class ExportDialogComponent {
   private readonly exportService = inject(ExportService);
   private readonly destroyRef = inject(DestroyRef);
   readonly dialogRef = inject(MatDialogRef<ExportDialogComponent>);
-  private readonly data = inject<{ connectionId: string }>(MAT_DIALOG_DATA);
+  private readonly data = inject<{ connectionId: string; format?: 'json' | 'csv' }>(
+    MAT_DIALOG_DATA
+  );
 
   /** Signal form model */
-  readonly exportModel = signal({ format: 'json' as 'json' | 'csv' });
+  readonly exportModel = signal({ format: this.data.format ?? 'json' });
   readonly exportForm = form(this.exportModel);
 
   readonly formatOptions: readonly UiRadioOption<'json' | 'csv'>[] = [
@@ -59,8 +67,9 @@ export class ExportDialogComponent {
 
     submit(this.exportForm, async () => {
       const format = this.exportModel().format;
-      
-      this.exportService.downloadExport(this.data.connectionId, format)
+
+      this.exportService
+        .downloadExport(this.data.connectionId, format)
         .pipe(
           finalize(() => this.isLoading.set(false)),
           takeUntilDestroyed(this.destroyRef)

@@ -2,7 +2,7 @@ import { Observable } from 'rxjs';
 
 /**
  * SignalR Hub Connection Interface
- * 
+ *
  * Provides abstraction for SignalR hub connections to improve testability
  * and allow for different implementations (real, mock, test).
  */
@@ -44,7 +44,7 @@ export interface ISignalRHubConnection {
 
 /**
  * SignalR Hub Service Factory Interface
- * 
+ *
  * Factory interface for creating SignalR hub connections.
  * Allows for dependency injection and testing.
  */
@@ -55,9 +55,5 @@ export interface ISignalRHubServiceFactory {
    * @param eventName Name of the event to listen for
    * @returns A new hub service instance
    */
-  create<TMessage = unknown>(
-    hubUrl: string,
-    eventName: string
-  ): ISignalRHubConnection;
+  create(hubUrl: string, eventName: string): ISignalRHubConnection;
 }
-

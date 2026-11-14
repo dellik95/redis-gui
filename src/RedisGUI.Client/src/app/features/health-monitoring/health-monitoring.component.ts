@@ -1,21 +1,20 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, effect } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { RouterModule } from '@angular/router';
 
 import { MatCardModule } from '@angular/material/card';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 import { ConnectionsStore } from '../../core/stores/connections.store';
-import { RedisOperationsStore } from '../../core/stores/redis-operations.store';
-import { ConnectionHealthCardComponent } from './connection-health-card.component';
-import { UiSelectComponent } from '../../shared/ui';
-import { PageHeaderComponent } from '../../shared/components';
+import {
+  ConnectionHealthCardComponent,
+  ConnectionHealthStatus,
+  ConnectionHealthUpdate
+} from './connection-health-card.component';
+import { UiSelectComponent, UiToggleComponent } from '../../shared/ui';
+import { PageHeaderComponent, StatSummaryCardComponent, EmptyStateComponent } from '../../shared/components';
 
 /**
  * Health Monitoring Dashboard Component
@@ -31,94 +30,94 @@ import { PageHeaderComponent } from '../../shared/components';
  * - Zoneless compatible
  */
 @Component({
-	selector: 'app-health-monitoring',
-	standalone: true,
-	imports: [
-		FormsModule,
-		RouterModule,
-		MatCardModule,
-		MatProgressSpinnerModule,
-		MatIconModule,
-		MatButtonModule,
-		MatSelectModule,
-		MatTooltipModule,
-		MatChipsModule,
-		MatSlideToggleModule,
-		ConnectionHealthCardComponent,
-		UiSelectComponent,
-		PageHeaderComponent
-	],
-	templateUrl: './health-monitoring.component.html',
-	styleUrl: './health-monitoring.component.scss',
-	changeDetection: ChangeDetectionStrategy.OnPush
+  selector: 'app-health-monitoring',
+  standalone: true,
+  imports: [
+    RouterModule,
+    MatCardModule,
+    MatIconModule,
+    MatButtonModule,
+    MatTooltipModule,
+    MatChipsModule,
+    ConnectionHealthCardComponent,
+    UiSelectComponent,
+    UiToggleComponent,
+    PageHeaderComponent,
+    StatSummaryCardComponent,
+    EmptyStateComponent
+  ],
+  templateUrl: './health-monitoring.component.html',
+  styleUrl: './health-monitoring.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HealthMonitoringComponent {
-	// 1. Injected dependencies
-	readonly connectionsStore = inject(ConnectionsStore);
-	private readonly redisOperationsStore = inject(RedisOperationsStore);
+  // 1. Injected dependencies
+  readonly connectionsStore = inject(ConnectionsStore);
 
-	// 2. Store signals
-	readonly connections = this.connectionsStore.connections;
-	readonly isLoading = this.connectionsStore.isLoading;
-	readonly error = this.connectionsStore.error;
+  // 2. Store signals
+  readonly connections = this.connectionsStore.connections;
+  readonly isLoading = this.connectionsStore.isLoading;
+  readonly error = this.connectionsStore.error;
 
-	// 3. State signals
-	readonly autoRefreshEnabled = signal(true);
-	readonly refreshIntervalMs = signal(5000);
-	readonly healthySummary = signal(0);
-	readonly degradedSummary = signal(0);
-	readonly unhealthySummary = signal(0);
-	readonly unknownSummary = signal(0);
+  // 3. State signals
+  readonly autoRefreshEnabled = signal(true);
+  readonly refreshIntervalMs = signal(5000);
+  readonly refreshToken = signal(0);
+  readonly healthStatusByConnection = signal<Record<string, ConnectionHealthStatus>>({});
 
-	// 4. Configuration
-	readonly refreshIntervals = [
-		{ label: '3 seconds', value: 3000 },
-		{ label: '5 seconds', value: 5000 },
-		{ label: '10 seconds', value: 10000 },
-		{ label: '30 seconds', value: 30000 },
-		{ label: '1 minute', value: 60000 }
-	] as const;
+  // 4. Configuration
+  readonly refreshIntervals = [
+    { label: '3 seconds', value: 3000 },
+    { label: '5 seconds', value: 5000 },
+    { label: '10 seconds', value: 10000 },
+    { label: '30 seconds', value: 30000 },
+    { label: '1 minute', value: 60000 }
+  ] as const;
 
-	// 5. Computed signals
-	readonly overallStatusIcon = computed(() => {
-		if (this.unhealthySummary() > 0) return 'error';
-		if (this.degradedSummary() > 0) return 'warning';
-		if (this.healthySummary() > 0) return 'check_circle';
-		return 'help';
-	});
+  // 5. Computed signals
+  readonly healthSummary = computed(() => {
+    const statuses = this.healthStatusByConnection();
+    return this.connections().reduce<Record<ConnectionHealthStatus, number>>(
+      (summary, connection) => {
+        summary[statuses[connection.id] ?? 'unknown'] += 1;
+        return summary;
+      },
+      { healthy: 0, degraded: 0, unhealthy: 0, unknown: 0 }
+    );
+  });
 
-	readonly overallStatusClass = computed(() => {
-		if (this.unhealthySummary() > 0) return 'unhealthy';
-		if (this.degradedSummary() > 0) return 'degraded';
-		if (this.healthySummary() > 0) return 'healthy';
-		return 'unknown';
-	});
+  readonly overallStatusIcon = computed(() => {
+    if (this.healthSummary().unhealthy > 0) return 'error';
+    if (this.healthSummary().degraded > 0) return 'warning';
+    if (this.healthSummary().healthy > 0) return 'check_circle';
+    return 'help';
+  });
 
-	constructor() {
-		// Load connections if not already loaded
-		if (this.connectionsStore.needsRefresh()) {
-			this.connectionsStore.loadConnections();
-		}
+  readonly overallStatusClass = computed(() => {
+    if (this.healthSummary().unhealthy > 0) return 'unhealthy';
+    if (this.healthSummary().degraded > 0) return 'degraded';
+    if (this.healthSummary().healthy > 0) return 'healthy';
+    return 'unknown';
+  });
 
-		// Initialize summary stats based on connections count
-		effect(() => {
-			const conns = this.connections();
-			// Initially all are unknown until health check completes
-			this.unknownSummary.set(conns.length);
-		}, { allowSignalWrites: true });
-	}
+  constructor() {
+    // Load connections if not already loaded
+    if (this.connectionsStore.needsRefresh()) {
+      this.connectionsStore.loadConnections();
+    }
+  }
+  /**
+   * Refresh all connections
+   */
+  refreshAll(): void {
+    this.connectionsStore.loadConnections();
+    this.refreshToken.update(token => token + 1);
+  }
 
-	/**
-	 * Refresh all connections
-	 */
-	refreshAll(): void {
-		this.connectionsStore.loadConnections();
-	}
-
-	/**
-	 * Toggle auto-refresh
-	 */
-	toggleAutoRefresh(): void {
-		this.autoRefreshEnabled.update(v => !v);
-	}
+  onHealthUpdated(update: ConnectionHealthUpdate): void {
+    this.healthStatusByConnection.update(statuses => ({
+      ...statuses,
+      [update.connectionId]: update.status
+    }));
+  }
 }

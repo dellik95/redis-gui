@@ -1,0 +1,9 @@
+    <span class="ui-tag" [class]="variantClass()" [class.size-sm]="size() === 'sm'">
+      <span class="tag-label">{{ label() }}</span>
+      @if (removable()) {
+        <button type="button" class="tag-remove-btn" (click)="onRemove($event)" matTooltip="Remove">
+          <mat-icon>close</mat-icon>
+        </button>
+      }
+    </span>
+  

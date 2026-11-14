@@ -6,7 +6,7 @@
     "ng": "ng",
     "start": "run-script-os",
     "build": "ng build",
-    "prestart": "node aspnetcore-https",
+    "prestart": "node aspnetcore-https.js",
     "start:windows": "ng serve --ssl --ssl-cert \"%APPDATA%\\ASP.NET\\https\\%npm_package_name%.pem\" --ssl-key \"%APPDATA%\\ASP.NET\\https\\%npm_package_name%.key\" --host=localhost --open",
     "start:default": "ng serve --ssl --ssl-cert \"$HOME/.aspnet/https/${npm_package_name}.pem\" --ssl-key \"$HOME/.aspnet/https/${npm_package_name}.key\" --host=localhost --open",
     "watch": "ng build --watch --configuration development",

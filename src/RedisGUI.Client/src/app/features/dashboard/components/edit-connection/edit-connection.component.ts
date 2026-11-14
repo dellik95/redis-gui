@@ -1,10 +1,18 @@
-import { ChangeDetectionStrategy, Component, computed, inject, model, signal, DestroyRef } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  model,
+  signal,
+  DestroyRef
+} from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialogTitle,
   MatDialogContent,
   MatDialogActions,
-  MatDialogRef,
+  MatDialogRef
 } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatExpansionModule } from '@angular/material/expansion';
@@ -15,7 +23,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 import { HttpClient } from '@angular/common/http';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CreateConnectionRequest, UpdateConnectionRequest, CheckConnectionRequest } from '../../../../models/connection-request.types';
+import {
+  CreateConnectionRequest,
+  UpdateConnectionRequest,
+  CheckConnectionRequest
+} from '../../../../models/connection-request.types';
 import { ConnectionDialogData } from '../../models/connection-dialog-data.type';
 import { Connection as ConnectionType } from '../../../../models/connection.type';
 import { ConnectionDialogMode } from '../../models/connection-dialog-mode.enum';
@@ -57,10 +69,10 @@ export class EditConnectionComponent {
 
   /** Whether all databases are selected */
   readonly allDatabasesSelected = model(true);
-  
+
   /** Password visibility toggle state */
   readonly hidePasswordMode = signal(true);
-  
+
   /** Whether a connection test is in progress */
   readonly isTesting = signal(false);
 
@@ -68,22 +80,29 @@ export class EditConnectionComponent {
   readonly isEditMode = computed(() => this.data.mode === ConnectionDialogMode.EditMode);
 
   /** Dialog title based on mode */
-  readonly dialogTitle = computed(() => 
+  readonly dialogTitle = computed(() =>
     this.isEditMode() ? 'Edit Connection' : 'New Redis Connection'
   );
 
   /** Signal form model */
   readonly connectionModel = signal({
-    name: this.data.mode === ConnectionDialogMode.EditMode ? (this.data.connection?.name ?? '') : 'Local Redis',
-    host: this.data.mode === ConnectionDialogMode.EditMode ? (this.getHost(this.data.connection) ?? '') : 'localhost',
-    port: this.data.mode === ConnectionDialogMode.EditMode ? this.getPort(this.data.connection) : 6379,
+    name:
+      this.data.mode === ConnectionDialogMode.EditMode
+        ? (this.data.connection?.name ?? '')
+        : 'Local Redis',
+    host:
+      this.data.mode === ConnectionDialogMode.EditMode
+        ? (this.getHost(this.data.connection) ?? '')
+        : 'localhost',
+    port:
+      this.data.mode === ConnectionDialogMode.EditMode ? this.getPort(this.data.connection) : 6379,
     database: this.data.connection?.database ?? 0,
     userName: this.data.connection?.username ?? '',
     password: this.data.connection?.password ?? ''
   });
 
   /** Signal Form with declarative schema rules */
-  readonly connectionForm = form(this.connectionModel, (s) => {
+  readonly connectionForm = form(this.connectionModel, s => {
     required(s.name, { message: 'Connection name is required' });
     required(s.host, { message: 'Host is required' });
     required(s.port, { message: 'Port is required' });
@@ -94,7 +113,13 @@ export class EditConnectionComponent {
   /** Whether the form can be saved - evaluated reactively */
   readonly canSave = computed(() => {
     const m = this.connectionModel();
-    return !!m.name.trim() && !!m.host.trim() && m.port >= 1 && m.port <= 65535 && this.connectionForm().valid();
+    return (
+      !!m.name.trim() &&
+      !!m.host.trim() &&
+      m.port >= 1 &&
+      m.port <= 65535 &&
+      this.connectionForm().valid()
+    );
   });
 
   /** Whether connection can be tested */
@@ -149,7 +174,8 @@ export class EditConnectionComponent {
       password: m.password ? m.password : null
     };
 
-    this.http.post<{ success: boolean }>('/api/v1/connections/check', checkRequest)
+    this.http
+      .post<{ success: boolean }>('/api/v1/connections/check', checkRequest)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {

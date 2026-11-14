@@ -24,14 +24,17 @@ export const retryInterceptor: HttpInterceptorFn = (req, next) => {
         // Don't retry client errors (4xx except 408 Request Timeout and 429 Too Many Requests)
         if (
           NON_RETRYABLE_STATUS_CODES.includes(error.status) ||
-          (error.status >= 400 && error.status < 500 && error.status !== 408 && error.status !== 429)
+          (error.status >= 400 &&
+            error.status < 500 &&
+            error.status !== 408 &&
+            error.status !== 429)
         ) {
           return throwError(() => error);
         }
 
         // Exponential backoff: 1s, 2s, 4s...
         const delayMs = RETRY_DELAY_MS * Math.pow(2, retryCount - 1);
-        
+
         // TODO: Integrate with a structured logger or telemetry system for diagnostics purposes in production environments.
 
         return timer(delayMs);
@@ -39,4 +42,3 @@ export const retryInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
-

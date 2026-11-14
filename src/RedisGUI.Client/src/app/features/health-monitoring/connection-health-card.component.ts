@@ -1,16 +1,30 @@
-import { Component, inject, input, signal, effect, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import {
+  Component,
+  input,
+  output,
+  signal,
+  effect,
+  computed,
+  ChangeDetectionStrategy
+} from '@angular/core';
 import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { httpResource } from '@angular/common/http';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
-import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
-import { RedisOperationsStore } from '../../core/stores/redis-operations.store';
 import { GetConnectionHealthResponse } from '../../models/redis-advanced.types';
-import { UiSelectComponent, UiSelectOption } from '../../shared/ui';
+import { API_ROUTES } from '../../core/constants/api-routes.constants';
+import { MetricItemComponent } from '../../shared/components';
+
+export type ConnectionHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'unknown';
+
+export interface ConnectionHealthUpdate {
+  connectionId: string;
+  status: ConnectionHealthStatus;
+}
 
 @Component({
   selector: 'app-connection-health-card',
@@ -24,51 +38,61 @@ import { UiSelectComponent, UiSelectOption } from '../../shared/ui';
     NgClass,
     MatCardModule,
     MatButtonModule,
-    MatSelectModule,
     MatIconModule,
     MatTooltipModule,
-    FormsModule,
-    UiSelectComponent
+    MetricItemComponent
   ]
 })
 export class ConnectionHealthCardComponent {
-  // 1. Injected dependencies
-  private readonly api = inject(RedisOperationsStore);
-  private readonly destroyRef = inject(DestroyRef);
-
-  // 2. Inputs
+  // 1. Inputs
   readonly connectionId = input.required<string>();
+  readonly pollingActive = input(true);
+  readonly refreshIntervalMs = input(5000);
+  readonly refreshToken = input(0);
+  readonly healthUpdated = output<ConnectionHealthUpdate>();
 
-  // 3. State signals
-  readonly health = signal<GetConnectionHealthResponse | null>(null);
-  readonly loading = signal<boolean>(false);
-  readonly lastError = signal<string | null>(null);
-  readonly autoRefreshMs = signal<number>(5000);
+  // 2. State signals
   readonly latencyHistory = signal<number[]>([]);
   readonly active = signal<boolean>(true);
 
-  // 4. Configuration
-  private readonly maxHistoryPoints = 50;
-  private refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  readonly intervalOptions: UiSelectOption[] = [
-    { label: '3s', value: 3000 },
-    { label: '5s', value: 5000 },
-    { label: '10s', value: 10000 },
-    { label: '30s', value: 30000 }
-  ];
+  /** Per-card request state. It cannot be overwritten by another connection card. */
+  readonly healthResource = httpResource<GetConnectionHealthResponse>(() => {
+    const connectionId = this.connectionId();
+    return connectionId ? API_ROUTES.CONNECTIONS.HEALTH(connectionId) : undefined;
+  });
 
-  // 5. Computed signals
+  readonly health = computed(() =>
+    this.healthResource.hasValue() ? this.healthResource.value() : null
+  );
+  readonly loading = this.healthResource.isLoading;
+  readonly lastError = computed(() => {
+    const error = this.healthResource.error();
+    return error instanceof Error
+      ? error.message
+      : error
+        ? 'Unable to load connection health.'
+        : null;
+  });
+
+  // 3. Configuration
+  private readonly maxHistoryPoints = 50;
+
+  // 4. Computed signals
   readonly statusClass = computed(() => {
     const h = this.health();
     if (!h) return 'unknown';
     const status = (h.status || '').toLowerCase();
-    if (status.includes('healthy')) return 'healthy';
-    if (status.includes('degraded')) return 'degraded';
     if (status.includes('unhealthy')) return 'unhealthy';
+    if (status.includes('degraded')) return 'degraded';
+    if (status.includes('healthy')) return 'healthy';
     return 'unknown';
   });
 
-  readonly gradientId = computed(() => 'latencyGlow_' + (this.connectionId() ? this.connectionId().replace(/[^a-zA-Z0-9]/g, '') : 'default'));
+  readonly gradientId = computed(
+    () =>
+      'latencyGlow_' +
+      (this.connectionId() ? this.connectionId().replace(/[^a-zA-Z0-9]/g, '') : 'default')
+  );
 
   readonly svgPath = computed(() => {
     let points = this.latencyHistory();
@@ -82,7 +106,7 @@ export class ConnectionHealthCardComponent {
     const w = 240;
     const h = 42;
     const step = w / (points.length - 1);
-    
+
     const coords = points.map((val, i) => ({
       x: i * step,
       y: h - ((val - min) / range) * (h - 12) - 6
@@ -116,14 +140,11 @@ export class ConnectionHealthCardComponent {
     return `${linePath} L 240 42 L 0 42 Z`;
   });
 
-  // 6. Constructor with effects
+  // 5. Resource effects
   constructor() {
-    // Watch store state for health updates and update local state
     effect(() => {
-      const h = this.api.connectionHealth();
+      const h = this.health();
       if (h) {
-        this.health.set(h);
-        this.lastError.set(null);
         if (h.responseTimeMs >= 0) {
           this.latencyHistory.update(list => {
             const updated = [...list, h.responseTimeMs];
@@ -133,38 +154,38 @@ export class ConnectionHealthCardComponent {
             return updated;
           });
         }
-        this.loading.set(false);
-      }
-      
-      const err = this.api.error();
-      if (err) {
-        this.lastError.set(err);
-        this.loading.set(false);
-      }
-    }, { allowSignalWrites: true });
-
-    // Start polling when active
-    effect(() => {
-      if (this.active()) {
-        this.startPolling();
-      } else {
-        this.stopPolling();
+        this.healthUpdated.emit({
+          connectionId: this.connectionId(),
+          status: this.statusClass()
+        });
       }
     });
 
-    // Cleanup on destroy
-    this.destroyRef.onDestroy(() => {
-      this.stopPolling();
+    let previousRefresh = 0;
+    effect(() => {
+      const token = this.refreshToken();
+      if (token !== previousRefresh) this.refresh();
+      previousRefresh = token;
+    });
+
+    effect(onCleanup => {
+      if (!this.active() || !this.pollingActive() || !this.connectionId()) return;
+
+      const intervalId = window.setInterval(
+        () => this.healthResource.reload(),
+        this.refreshIntervalMs()
+      );
+
+      onCleanup(() => window.clearInterval(intervalId));
     });
   }
 
-  // 7. Public methods
+  // 6. Public methods
   /**
    * Refresh health data
    */
   refresh(): void {
-    this.loading.set(true);
-    this.api.loadConnectionHealth({ connectionId: this.connectionId() });
+    this.healthResource.reload();
   }
 
   /**
@@ -189,35 +210,5 @@ export class ConnectionHealthCardComponent {
    */
   clearHistory(): void {
     this.latencyHistory.set([]);
-  }
-
-  // 8. Private methods
-  /**
-   * Start polling for health updates
-   */
-  private startPolling(): void {
-    this.stopPolling(); // Clear any existing polling
-    
-    const tick = () => {
-      if (!this.active()) {
-        this.stopPolling();
-        return;
-      }
-      this.refresh();
-      this.refreshTimeoutId = setTimeout(tick, this.autoRefreshMs());
-    };
-    
-    // Initial delay before first refresh
-    this.refreshTimeoutId = setTimeout(tick, 200);
-  }
-
-  /**
-   * Stop polling for health updates
-   */
-  private stopPolling(): void {
-    if (this.refreshTimeoutId) {
-      clearTimeout(this.refreshTimeoutId);
-      this.refreshTimeoutId = null;
-    }
   }
 }

@@ -1,0 +1,28 @@
+    <button
+      [type]="type()"
+      [disabled]="isDisabled()"
+      [class]="buttonClasses()"
+      (click)="onClick($event)"
+    >
+      @if (loading()) {
+        <mat-icon
+          class="animate-spin text-current !text-[18px] !w-[18px] !h-[18px] flex items-center justify-center !m-0 !p-0"
+          >autorenew</mat-icon
+        >
+      } @else if (icon() && iconPosition() === 'left') {
+        <mat-icon
+          class="text-current !text-[18px] !w-[18px] !h-[18px] flex items-center justify-center !m-0 !p-0"
+          >{{ icon() }}</mat-icon
+        >
+      }
+
+      <ng-content></ng-content>
+
+      @if (!loading() && icon() && iconPosition() === 'right') {
+        <mat-icon
+          class="text-current !text-[18px] !w-[18px] !h-[18px] flex items-center justify-center !m-0 !p-0"
+          >{{ icon() }}</mat-icon
+        >
+      }
+    </button>
+  

@@ -1,0 +1,76 @@
+<div class="string-editor-container">
+
+  <!-- Toolbar: stats + actions -->
+  <div class="editor-toolbar flex items-center justify-between flex-wrap gap-2 px-2.5 py-2
+              bg-canvas-card border border-canvas-border rounded-lg">
+    <div class="toolbar-group">
+      <span class="stat-pill">
+        <mat-icon class="stat-icon">notes</mat-icon>
+        {{ lineCount() }} lines
+      </span>
+      <span class="stat-pill">
+        <mat-icon class="stat-icon">text_format</mat-icon>
+        {{ charCount() }} chars
+      </span>
+      @if (isJson()) {
+        <span class="stat-pill json-pill">
+          <mat-icon class="stat-icon">code</mat-icon>
+          Valid JSON
+        </span>
+      }
+    </div>
+
+    <div class="toolbar-group">
+      <button
+        mat-stroked-button
+        type="button"
+        class="action-btn"
+        (click)="formatJson()"
+        [disabled]="!isJson()"
+        matTooltip="Format JSON (indent)">
+        <mat-icon>format_align_left</mat-icon>
+        Format
+      </button>
+      <button
+        mat-stroked-button
+        type="button"
+        class="action-btn"
+        (click)="minifyJson()"
+        [disabled]="!isJson()"
+        matTooltip="Minify JSON to single line">
+        <mat-icon>compress</mat-icon>
+        Minify
+      </button>
+      <button
+        mat-icon-button
+        type="button"
+        (click)="copyToClipboard()"
+        [disabled]="!value().trim()"
+        [matTooltip]="copied() ? 'Copied!' : 'Copy to clipboard'">
+        <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+      </button>
+      <button
+        mat-icon-button
+        type="button"
+        (click)="clear()"
+        [disabled]="!value().trim()"
+        matTooltip="Clear content">
+        <mat-icon>clear</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Custom textarea — replaces mat-form-field for full control -->
+  <div class="textarea-wrapper">
+    <textarea
+      class="native-textarea monospace-textarea"
+      aria-label="String value"
+      [ngModel]="value()"
+      (ngModelChange)="value.set($event)"
+      placeholder="Enter string value (plain text, JSON, or XML)..."
+      spellcheck="false"
+      autocomplete="off"
+    ></textarea>
+  </div>
+
+</div>

@@ -20,10 +20,10 @@ export interface StreamVisualEntry {
 
 /**
  * Handler for Redis Stream data type
- * 
+ *
  * Streams are append-only log data structures consisting of entries with unique IDs
  * and associated key-value field pairs.
- * 
+ *
  * Visual format: Array<{ id: string, fields: Array<{ key: string, value: string }> }>
  * JSON format: { "entries": [{ "id": "1618000000000-0", "values": { "field1": "val1" } }] }
  *               OR direct array: [{ "id": "1618000000000-0", "values": { "field1": "val1" } }]
@@ -77,7 +77,8 @@ export class StreamTypeHandler implements RedisTypeHandler {
       entries = parsedData;
     } else if (typeof parsedData === 'object' && parsedData !== null) {
       const rec = parsedData as Record<string, unknown>;
-      const rawEntries = rec['entries'] ?? rec['Entries'] ?? rec['items'] ?? rec['values'] ?? rec['Values'];
+      const rawEntries =
+        rec['entries'] ?? rec['Entries'] ?? rec['items'] ?? rec['values'] ?? rec['Values'];
       if (Array.isArray(rawEntries)) {
         entries = rawEntries;
       }
@@ -172,7 +173,8 @@ export class StreamTypeHandler implements RedisTypeHandler {
 
       if (typeof parsed === 'object') {
         const rec = parsed as Record<string, unknown>;
-        const rawEntries = rec['entries'] ?? rec['Entries'] ?? rec['items'] ?? rec['values'] ?? rec['Values'];
+        const rawEntries =
+          rec['entries'] ?? rec['Entries'] ?? rec['items'] ?? rec['values'] ?? rec['Values'];
         if (Array.isArray(rawEntries)) {
           return this.toVisual(rawEntries);
         }
@@ -180,7 +182,9 @@ export class StreamTypeHandler implements RedisTypeHandler {
 
       throw new Error('JSON must contain an "entries" array or be an array of stream entries');
     } catch (error) {
-      throw new Error(`Invalid JSON for Stream type: ${error instanceof Error ? error.message : error}`);
+      throw new Error(
+        `Invalid JSON for Stream type: ${error instanceof Error ? error.message : error}`
+      );
     }
   }
 

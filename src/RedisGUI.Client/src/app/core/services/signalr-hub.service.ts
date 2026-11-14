@@ -68,7 +68,7 @@ export abstract class SignalRHubService<TMessage = unknown> implements ISignalRH
     return new signalR.HubConnectionBuilder()
       .withUrl(url)
       .withAutomaticReconnect({
-        nextRetryDelayInMilliseconds: (retryContext) => {
+        nextRetryDelayInMilliseconds: retryContext => {
           // Exponential backoff: 0s, 2s, 10s, 30s, then every 30s
           if (retryContext.previousRetryCount === 0) return 0;
           if (retryContext.previousRetryCount < 3) return retryContext.previousRetryCount * 2000;
@@ -186,7 +186,7 @@ export abstract class SignalRHubService<TMessage = unknown> implements ISignalRH
    * Register custom event handlers
    * Override this to register multiple event handlers
    */
-  protected registerEventHandlers(connection: signalR.HubConnection): void {
+  protected registerEventHandlers(_connection: signalR.HubConnection): void {
     // Base implementation - override in derived classes if needed
   }
 
@@ -205,7 +205,8 @@ export abstract class SignalRHubService<TMessage = unknown> implements ISignalRH
         return;
       }
 
-      this.connection.invoke<T>(methodName, ...args)
+      this.connection
+        .invoke<T>(methodName, ...args)
         .then(result => {
           observer.next(result);
           observer.complete();
@@ -263,7 +264,7 @@ export abstract class SignalRHubService<TMessage = unknown> implements ISignalRH
    *
    * @param error - The connection error
    */
-  protected onConnectionError(error: unknown): void {
+  protected onConnectionError(_error: unknown): void {
     // Silent error handling - override in derived classes if logging is needed
     // Error is already propagated to Observable subscribers
   }

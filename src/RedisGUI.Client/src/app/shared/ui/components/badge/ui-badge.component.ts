@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 export type BadgeVariant =
   | 'string'
@@ -17,20 +16,9 @@ export type BadgeVariant =
 @Component({
   selector: 'ui-badge',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <span [class]="badgeClasses()">
-      @if (dot()) {
-        <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-      }
-      <ng-content></ng-content>
-    </span>
-  `,
-  styles: [`
-    :host {
-      display: inline-flex;
-    }
-  `],
+  imports: [],
+  templateUrl: './ui-badge.component.html',
+  styleUrl: './ui-badge.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UiBadgeComponent {
@@ -39,7 +27,8 @@ export class UiBadgeComponent {
   readonly dot = input(false);
 
   readonly badgeClasses = computed(() => {
-    const base = 'inline-flex items-center gap-1.5 font-semibold rounded-md uppercase tracking-wider select-none';
+    const base =
+      'inline-flex items-center gap-1.5 font-semibold rounded-md uppercase tracking-wider select-none';
     const sizes = this.size() === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2 py-0.5 text-[11px]';
 
     const v = this.variant().toLowerCase();
@@ -66,7 +55,8 @@ export class UiBadgeComponent {
         variantClass = 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30';
         break;
       case 'healthy':
-        variantClass = 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
+        variantClass =
+          'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]';
         break;
       case 'degraded':
         variantClass = 'bg-amber-500/15 text-amber-400 border border-amber-500/30';
@@ -75,7 +65,8 @@ export class UiBadgeComponent {
         variantClass = 'bg-rose-500/15 text-rose-400 border border-rose-500/30';
         break;
       case 'accent':
-        variantClass = 'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border border-[var(--color-accent)]/30';
+        variantClass =
+          'bg-[var(--color-accent)]/15 text-[var(--color-accent)] border border-[var(--color-accent)]/30';
         break;
     }
 

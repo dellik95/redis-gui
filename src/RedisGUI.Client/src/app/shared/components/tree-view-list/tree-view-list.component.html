@@ -1,4 +1,4 @@
-<div class="tree-wrapper">
+<div class="tree-wrapper py-3 px-4 overflow-y-auto overflow-x-hidden h-full box-border">
   @if (isLoading() && dataSource().length === 0) {
     <div class="tree-loading">
       <mat-spinner diameter="32"></mat-spinner>
@@ -11,66 +11,126 @@
     </div>
   } @else {
     <!-- Tree Header Toolbar -->
-    <div class="tree-toolbar">
-      <div class="tree-stats">
-        <mat-icon class="stats-icon">account_tree</mat-icon>
+    <div class="tree-toolbar flex items-center justify-between py-2 px-3.5 mb-2.5 rounded-lg">
+      <div class="tree-stats inline-flex items-center gap-2 text-[12.5px] text-canvas-muted">
+        <mat-icon class="stats-icon text-[18px] w-[18px] h-[18px] text-brand"
+          >account_tree</mat-icon
+        >
         <span class="stats-text">
-          <strong>{{ totalKeysCount() }}</strong> keys in <strong>{{ totalFoldersCount() }}</strong> namespaces
+          <strong>{{ totalKeysCount() }}</strong> keys in
+          <strong>{{ totalFoldersCount() }}</strong> namespaces
         </span>
       </div>
-      <div class="tree-toolbar-actions">
-        <button mat-button type="button" class="tree-tool-btn" (click)="expandAll()" matTooltip="Expand all namespaces">
+      <div class="tree-toolbar-actions inline-flex items-center gap-1.5">
+        <button
+          mat-button
+          type="button"
+          class="tree-tool-btn text-[11.5px] h-7 leading-[28px] py-0 px-2.5 inline-flex items-center gap-1 rounded-md text-canvas-muted"
+          (click)="expandAll()"
+          matTooltip="Expand all namespaces"
+        >
           <mat-icon>unfold_more</mat-icon>
           <span>Expand All</span>
         </button>
-        <button mat-button type="button" class="tree-tool-btn" (click)="collapseAll()" matTooltip="Collapse all namespaces">
+        <button
+          mat-button
+          type="button"
+          class="tree-tool-btn text-[11.5px] h-7 leading-[28px] py-0 px-2.5 inline-flex items-center gap-1 rounded-md text-canvas-muted"
+          (click)="collapseAll()"
+          matTooltip="Collapse all namespaces"
+        >
           <mat-icon>unfold_less</mat-icon>
           <span>Collapse All</span>
         </button>
       </div>
     </div>
 
-    <mat-tree #tree 
-              [dataSource]="dataSource()" 
-              [childrenAccessor]="childrenAccessor"
-              [trackBy]="trackByPath"
-              [expansionKey]="getExpansionKey"
-              class="tree-root">
+    <mat-tree
+      #tree
+      [dataSource]="dataSource()"
+      [childrenAccessor]="childrenAccessor"
+      [trackBy]="trackByPath"
+      [expansionKey]="getExpansionKey"
+      class="tree-root w-full"
+    >
       <!-- Leaf node template (clickable key) -->
       <mat-tree-node
         *matTreeNodeDef="let node"
         matTreeNodePadding
-        class="tree-leaf-node"
+        class="tree-leaf-node cursor-pointer rounded-lg py-1.5 px-3 min-h-[38px] text-canvas-text flex items-center gap-2.5 my-0.5 mx-0"
         [class.active-node]="node.path === activeKey()"
         (click)="onKeyClick(node)"
-        [matTooltip]="getNodeTooltip(node)">
-        
-        <span class="node-icon-wrapper type-{{ node.keyInfo?.type?.toLowerCase() }}">
-          <mat-icon class="tree-node-icon">{{ getNodeIcon(node) }}</mat-icon>
+        [matTooltip]="getNodeTooltip(node)"
+      >
+        <span
+          class="node-icon-wrapper type-{{
+            node.keyInfo?.type?.toLowerCase()
+          }} inline-flex items-center justify-center w-6 h-6 rounded-md shrink-0"
+        >
+          <mat-icon class="tree-node-icon text-[16px] w-4 h-4 flex items-center justify-center">{{
+            getNodeIcon(node)
+          }}</mat-icon>
         </span>
-        <span class="node-name">{{ node.name }}</span>
-        
+        <span class="node-name text-[13px] font-medium text-canvas-text">{{ node.name }}</span>
+
         @if (node.keyInfo) {
-          <span class="node-type-badge type-{{ node.keyInfo.type.toLowerCase() }}">
+          <span
+            class="node-type-badge type-{{
+              node.keyInfo.type.toLowerCase()
+            }} text-[10px] py-0.5 px-[7px] rounded uppercase font-bold ml-2"
+          >
             {{ node.keyInfo.type }}
           </span>
         }
 
-        <div class="node-actions-bar" (click)="$event.stopPropagation()">
-          <button mat-icon-button type="button" class="node-action-btn edit-btn" (click)="onKeyClick(node)" matTooltip="View / Edit Key">
-            <mat-icon>edit_note</mat-icon>
+        <div
+          class="node-actions-bar inline-flex items-center gap-[3px] ml-auto"
+          (click)="$event.stopPropagation()"
+        >
+          <button
+            mat-icon-button
+            type="button"
+            class="node-action-btn edit-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.04] transition-all duration-150 text-[#38bdf8] hover:bg-sky-400/20"
+            (click)="onKeyClick(node)"
+            matTooltip="View / Edit Key"
+          >
+            <mat-icon class="!size-[15px] !text-[15px]">edit_note</mat-icon>
           </button>
-          <button mat-icon-button type="button" class="node-action-btn copy-btn" (click)="onCopyKey(node, $event)" matTooltip="Copy key name">
-            <mat-icon>content_copy</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="node-action-btn copy-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.04] transition-all duration-150 text-[#c084fc] hover:bg-purple-500/20"
+            (click)="onCopyKey(node, $event)"
+            matTooltip="Copy key name"
+          >
+            <mat-icon class="!size-[15px] !text-[15px]">content_copy</mat-icon>
           </button>
-          <button mat-icon-button type="button" class="node-action-btn rename-btn" (click)="onRenameKey(node, $event)" matTooltip="Rename Key">
-            <mat-icon>drive_file_rename_outline</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="node-action-btn rename-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.04] transition-all duration-150 text-[#fbbf24] hover:bg-amber-500/20"
+            (click)="onRenameKey(node, $event)"
+            matTooltip="Rename Key"
+          >
+            <mat-icon class="!size-[15px] !text-[15px]">drive_file_rename_outline</mat-icon>
           </button>
-          <button mat-icon-button type="button" class="node-action-btn duplicate-btn" (click)="onDuplicateKey(node, $event)" matTooltip="Duplicate Key">
-            <mat-icon>file_copy</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="node-action-btn duplicate-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.04] transition-all duration-150 text-[#34d399] hover:bg-emerald-500/20"
+            (click)="onDuplicateKey(node, $event)"
+            matTooltip="Duplicate Key"
+          >
+            <mat-icon class="!size-[15px] !text-[15px]">file_copy</mat-icon>
           </button>
-          <button mat-icon-button type="button" class="node-action-btn delete-btn" (click)="onDeleteKey(node, $event)" matTooltip="Delete Key">
-            <mat-icon>delete_outline</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="node-action-btn delete-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.04] transition-all duration-150 text-[#f87171] hover:bg-red-500/20"
+            (click)="onDeleteKey(node, $event)"
+            matTooltip="Delete Key"
+          >
+            <mat-icon class="!size-[15px] !text-[15px]">delete_outline</mat-icon>
           </button>
         </div>
       </mat-tree-node>
@@ -80,27 +140,66 @@
         *matTreeNodeDef="let node; when: hasChild"
         matTreeNodePadding
         [cdkTreeNodeTypeaheadLabel]="node.name"
-        class="tree-group-node"
-        (click)="toggleGroup(node, $event)">
-        
-        <button mat-icon-button type="button" [attr.aria-label]="'Toggle ' + node.name" class="toggle-btn" (click)="toggleGroup(node, $event)">
+        class="tree-group-node rounded-lg min-h-[38px] py-1 px-2.5 text-canvas-text flex items-center my-0.5 mx-0 cursor-pointer"
+        (click)="toggleGroup(node, $event)"
+      >
+        <button
+          mat-icon-button
+          type="button"
+          [attr.aria-label]="'Toggle ' + node.name"
+          class="toggle-btn w-[26px] h-[26px] leading-[26px] text-canvas-muted p-0 inline-flex items-center justify-center rounded shrink-0 mr-1"
+          (click)="toggleGroup(node, $event)"
+        >
           <mat-icon class="mat-icon-rtl-mirror">
             {{ isExpanded(node) ? 'expand_more' : 'chevron_right' }}
           </mat-icon>
         </button>
-        <mat-icon class="group-folder-icon">{{ isExpanded(node) ? 'folder_open' : 'folder' }}</mat-icon>
-        <span class="group-name">{{ node.name }}</span>
-        <span class="group-count">{{ node.keyCount }} {{ node.keyCount === 1 ? 'key' : 'keys' }}</span>
+        <mat-icon
+          class="group-folder-icon text-[20px] w-5 h-5 mr-2 flex items-center justify-center shrink-0"
+          >{{ isExpanded(node) ? 'folder_open' : 'folder' }}</mat-icon
+        >
+        <span class="group-name font-semibold text-[13.5px] mr-2 text-canvas-text">{{
+          node.name
+        }}</span>
+        <span
+          class="group-count text-[11px] font-semibold text-canvas-muted py-0.5 px-2 rounded-full ml-auto"
+          >{{ node.keyCount }} {{ node.keyCount === 1 ? 'key' : 'keys' }}</span
+        >
 
-        <div class="group-actions-bar" (click)="$event.stopPropagation()">
-          <button mat-icon-button type="button" class="group-action-btn add-btn" (click)="onAddKeyInGroup(node, $event)" matTooltip="Add key in this subfolder">
-            <mat-icon>add</mat-icon>
+        <div
+          class="group-actions-bar inline-flex items-center gap-1 ml-2"
+          (click)="$event.stopPropagation()"
+        >
+          <button
+            mat-icon-button
+            type="button"
+            class="group-action-btn add-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.05] transition-all duration-150 text-[#818cf8] hover:bg-indigo-500/25 hover:text-indigo-300 hover:border-indigo-500"
+            (click)="onAddKeyInGroup(node, $event)"
+            matTooltip="Add key in this subfolder"
+          >
+            <mat-icon class="!size-4 !text-[16px] flex items-center justify-center">add</mat-icon>
           </button>
-          <button mat-icon-button type="button" class="group-action-btn copy-btn" (click)="onCopyFolderPath(node, $event)" matTooltip="Copy folder namespace prefix">
-            <mat-icon>content_copy</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="group-action-btn copy-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.05] transition-all duration-150 text-[#c084fc] hover:bg-purple-500/20 hover:text-purple-200 hover:border-purple-500"
+            (click)="onCopyFolderPath(node, $event)"
+            matTooltip="Copy folder namespace prefix"
+          >
+            <mat-icon class="!size-4 !text-[16px] flex items-center justify-center"
+              >content_copy</mat-icon
+            >
           </button>
-          <button mat-icon-button type="button" class="group-action-btn delete-folder-btn" (click)="onDeleteFolder(node, $event)" matTooltip="Delete folder and all nested keys">
-            <mat-icon>delete_sweep</mat-icon>
+          <button
+            mat-icon-button
+            type="button"
+            class="group-action-btn delete-folder-btn w-[26px] h-[26px] leading-[26px] p-0 inline-flex items-center justify-center cursor-pointer rounded-[5px] border border-white/[0.08] bg-white/[0.05] transition-all duration-150 text-[#f87171] hover:bg-red-500/25 hover:text-red-300 hover:border-red-500"
+            (click)="onDeleteFolder(node, $event)"
+            matTooltip="Delete folder and all nested keys"
+          >
+            <mat-icon class="!size-4 !text-[16px] flex items-center justify-center"
+              >delete_sweep</mat-icon
+            >
           </button>
         </div>
       </mat-tree-node>

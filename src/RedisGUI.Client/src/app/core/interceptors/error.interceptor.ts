@@ -18,18 +18,18 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
       const errorMessage = getErrorMessage(error);
-      
+
       // Log error for debugging
       logError(error, req);
-      
+
       // Show user-friendly notification
       showErrorNotification(snackBar, errorMessage, durationInSeconds);
-      
+
       // Handle 401 Unauthorized - auto logout (clears token + state and redirects)
       if (error.status === 401) {
         authService.logout();
       }
-      
+
       return throwError(() => error);
     })
   );
@@ -116,12 +116,14 @@ function extractServerMessage(error: HttpErrorResponse): string | null {
 
   // Handle object error with various message properties
   if (typeof error.error === 'object') {
-    return error.error.message || 
-           error.error.error || 
-           error.error.title || 
-           error.error.detail ||
-           error.error.errorMessage ||
-           null;
+    return (
+      error.error.message ||
+      error.error.error ||
+      error.error.title ||
+      error.error.detail ||
+      error.error.errorMessage ||
+      null
+    );
   }
 
   return null;
@@ -137,7 +139,7 @@ function logError(error: HttpErrorResponse, request: { method: string; url: stri
   console.group('🔴 HTTP Error Intercepted');
   console.error('Request:', `${request.method} ${request.url}`);
   console.error('Status:', `${error.status} ${error.statusText}`);
-  
+
   if (structuredError) {
     console.error('Error Code:', structuredError.code);
     console.error('Error Message:', structuredError.message);
@@ -151,7 +153,7 @@ function logError(error: HttpErrorResponse, request: { method: string; url: stri
     console.error('Message:', getErrorMessage(error));
     console.error('Full Error:', error);
   }
-  
+
   console.groupEnd();
 
   // You can send this to a logging service in production
@@ -161,7 +163,11 @@ function logError(error: HttpErrorResponse, request: { method: string; url: stri
 /**
  * Display error notification to user
  */
-function showErrorNotification(snackBar: MatSnackBar, message: string, durationInSeconds: number): void {
+function showErrorNotification(
+  snackBar: MatSnackBar,
+  message: string,
+  durationInSeconds: number
+): void {
   snackBar.open(message, 'Close', {
     duration: durationInSeconds * 1000,
     horizontalPosition: 'end',
@@ -169,4 +175,3 @@ function showErrorNotification(snackBar: MatSnackBar, message: string, durationI
     panelClass: ['error-snackbar']
   });
 }
-

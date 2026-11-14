@@ -6,7 +6,7 @@ import { SIGNALR_HUBS, SIGNALR_METHODS } from '../../constants/api-routes.consta
 /**
  * Key Change Hub Service
  * Manages SignalR connection for Redis key change notifications
- * 
+ *
  * Matches backend: KeyChangeHub and IKeyChangeClientMethods
  */
 @Injectable({ providedIn: 'root' })
@@ -14,4 +14,3 @@ export class KeyChangeHubService extends SignalRHubService<KeyChangeEvent> {
   protected override hubUrl = SIGNALR_HUBS.KEY_CHANGE;
   protected override eventName = SIGNALR_METHODS.KEY_CHANGE.KEY_CHANGED;
 }
-

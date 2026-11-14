@@ -1,41 +1,63 @@
-<div class="health-card-body">
-  <div class="health-status-row">
-    <div class="health-label">Status & Latency</div>
-    <div class="status-badge" [ngClass]="statusClass()" matTooltip="Connection health status">
-      <mat-icon class="badge-icon">
+<div class="health-card-body flex flex-col gap-3.5">
+  <div class="health-status-row flex items-center justify-between">
+    <div class="health-label text-[11.5px] font-semibold uppercase text-canvas-muted">
+      Status & Latency
+    </div>
+    <div
+      class="status-badge inline-flex items-center gap-1.5 py-1 px-2.5 rounded-xl text-[11px] font-bold uppercase"
+      [ngClass]="statusClass()"
+      matTooltip="Connection health status"
+    >
+      <mat-icon class="badge-icon text-[14px] w-3.5 h-3.5">
         @switch (statusClass()) {
-          @case ('healthy') { check_circle }
-          @case ('degraded') { warning }
-          @case ('unhealthy') { error }
-          @default { help }
+          @case ('healthy') {
+            check_circle
+          }
+          @case ('degraded') {
+            warning
+          }
+          @case ('unhealthy') {
+            error
+          }
+          @default {
+            help
+          }
         }
       </mat-icon>
       <span>{{ health()?.status || 'HEALTHY' }}</span>
     </div>
   </div>
 
-  <div class="metrics-grid">
-    <div class="metric-item">
-      <span class="metric-label">Latency</span>
-      <span class="metric-val">{{ (health()?.responseTimeMs ?? 0) | number:'1.2-4' }} ms</span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">Failures</span>
-      <span class="metric-val" [class.has-failures]="(health()?.consecutiveFailures ?? 0) > 0">
+  <div class="metrics-grid grid gap-2 bg-canvas-card rounded-lg py-2.5 px-3">
+    <app-metric-item label="Latency">
+      {{ health()?.responseTimeMs ?? 0 | number: '1.2-4' }} ms
+    </app-metric-item>
+
+    <app-metric-item label="Failures">
+      <span [class.has-failures]="(health()?.consecutiveFailures ?? 0) > 0">
         {{ health()?.consecutiveFailures ?? health()?.failureStreak ?? 0 }}
       </span>
-    </div>
-    <div class="metric-item">
-      <span class="metric-label">Last Checked</span>
-      <span class="metric-val">
-        {{ (health()?.lastChecked || health()?.checkedAt) ? ((health()?.lastChecked || health()?.checkedAt) | date:'HH:mm:ss') : 'Just now' }}
-      </span>
-    </div>
+    </app-metric-item>
+
+    <app-metric-item label="Last Checked">
+      {{
+        health()?.lastChecked || health()?.checkedAt
+          ? (health()?.lastChecked || health()?.checkedAt | date: 'HH:mm:ss')
+          : 'Just now'
+      }}
+    </app-metric-item>
   </div>
 
   <!-- Realtime Sparkline Trend -->
-  <div class="sparkline-container" matTooltip="Response time latency history">
-    <svg viewBox="0 0 240 42" class="sparkline-svg" preserveAspectRatio="none">
+  <div
+    class="sparkline-container relative bg-canvas-card rounded-lg overflow-hidden"
+    matTooltip="Response time latency history"
+  >
+    <svg
+      viewBox="0 0 240 42"
+      class="sparkline-svg w-full h-[42px] block"
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient [id]="gradientId()" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#10b981" stop-opacity="0.35" />
@@ -46,50 +68,70 @@
         <path [attr.d]="svgAreaPath()" [attr.fill]="'url(#' + gradientId() + ')'" />
       }
       @if (svgPath()) {
-        <path [attr.d]="svgPath()" stroke="#10b981" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          [attr.d]="svgPath()"
+          stroke="#10b981"
+          fill="none"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       }
     </svg>
-    <div class="sparkline-axis">
+    <div
+      class="sparkline-axis flex justify-between items-center text-[9.5px] text-canvas-muted pt-0.5"
+    >
       <span>0 ms</span>
       <span>Live ping</span>
     </div>
   </div>
 
   @if (lastError()) {
-    <div class="error-notice">
+    <div class="error-notice flex items-center gap-1.5 py-1.5 px-2.5 rounded-md text-[12px]">
       <mat-icon>error_outline</mat-icon>
       <span>{{ lastError() }}</span>
     </div>
   }
 
   <!-- Controls Toolbar -->
-  <div class="health-controls-row">
-    <div class="interval-field">
-      <ui-select
-        [value]="autoRefreshMs()"
-        (valueChange)="autoRefreshMs.set($event); clearHistory()"
-        [options]="intervalOptions"
-        size="sm"
-        [fullWidth]="false"
-      />
-    </div>
-
-    <div class="btn-group">
-      <button mat-icon-button (click)="refresh()" [disabled]="loading()" matTooltip="Ping now" class="action-icon-btn">
-        <mat-icon [class.spinning]="loading()">refresh</mat-icon>
+  <div class="health-controls-row flex items-center justify-between gap-2 pt-1.5">
+    <div class="btn-group flex items-center gap-1">
+      <button
+        mat-icon-button
+        (click)="refresh()"
+        [disabled]="loading()"
+        matTooltip="Ping now"
+        class="action-icon-btn !w-8 !h-8 !min-w-8 !min-h-8 !p-0 !inline-flex !items-center !justify-center !rounded-full text-canvas-muted cursor-pointer"
+      >
+        <mat-icon [class.animate-spin]="loading()">refresh</mat-icon>
       </button>
       @if (active()) {
-        <button mat-stroked-button (click)="stop()" class="control-btn stop-btn" matTooltip="Pause background polling">
+        <button
+          mat-stroked-button
+          (click)="stop()"
+          class="control-btn stop-btn text-[12px] h-[30px] leading-[30px] py-0 px-2.5 rounded-md"
+          matTooltip="Pause background polling"
+        >
           <mat-icon>pause</mat-icon>
           <span>Stop</span>
         </button>
       } @else {
-        <button mat-stroked-button (click)="start()" class="control-btn start-btn" matTooltip="Resume live monitoring">
+        <button
+          mat-stroked-button
+          (click)="start()"
+          class="control-btn start-btn text-[12px] h-[30px] leading-[30px] py-0 px-2.5 rounded-md"
+          matTooltip="Resume live monitoring"
+        >
           <mat-icon>play_arrow</mat-icon>
           <span>Start</span>
         </button>
       }
-      <button mat-button (click)="clearHistory()" class="control-btn clear-btn" matTooltip="Reset latency graph">
+      <button
+        mat-button
+        (click)="clearHistory()"
+        class="control-btn clear-btn text-[12px] h-[30px] leading-[30px] py-0 px-2.5 rounded-md"
+        matTooltip="Reset latency graph"
+      >
         Clear
       </button>
     </div>

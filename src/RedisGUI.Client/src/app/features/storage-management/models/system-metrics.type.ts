@@ -4,6 +4,6 @@ export type SystemMetrics = {
   keyCount: number;
   memoryUsage: number;
   cpuUsageSystem: number;
-  cpuUsageUser: number;    
-  cpuUsageInPercent: number
+  cpuUsageUser: number;
+  cpuUsageInPercent: number;
 };

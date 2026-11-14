@@ -1,9 +1,9 @@
 /**
  * API Route Constants
- * 
+ *
  * Centralized definition of all API routes to ensure consistency
  * between client and backend endpoints.
- * 
+ *
  * All routes are prefixed with /api/v1 as defined in Program.cs
  */
 
@@ -52,17 +52,26 @@ export const API_ROUTES = {
       const query = params.toString();
       return `/api/v1/storage/${connectionId}${query ? `?${query}` : ''}`;
     },
-    GET_VALUE: (connectionId: string, key: string) => 
+    GET_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
     ADD_VALUE: (connectionId: string) => `/api/v1/storage/${connectionId}`,
-    UPDATE_VALUE: (connectionId: string, key: string) => 
+    UPDATE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
-    DELETE_VALUE: (connectionId: string, key: string) => 
+    DELETE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
-    DELETE_MULTIPLE: (connectionId: string) => 
+    DELETE_MULTIPLE: (connectionId: string) =>
       `/api/v1/storage/${connectionId}/keys/delete-multiple`,
-    DELETE_BY_PATTERN: (connectionId: string, pattern: string) => 
+    DELETE_BY_PATTERN: (connectionId: string, pattern: string) =>
       `/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`,
+    KEYS: (connectionId: string) => `/api/v1/storage/${connectionId}/keys`,
+    KEY: (connectionId: string, key: string) =>
+      `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
+    KEYSPACE: (connectionId: string) => `/api/v1/storage/${connectionId}/keyspace`,
+    SLOWLOG: (id: string, count: number) => `/api/v1/storage/${id}/slowlog?count=${count}`,
+    SEED: (connectionId: string) => `/api/v1/storage/${connectionId}/seed`,
+    RENAME_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/rename`,
+    DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`,
+    BULK_TTL: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/bulk-ttl`,
     IMPORT: (connectionId: string) => `/api/v1/storage/${connectionId}/import`,
     EXPORT: (connectionId: string, pattern?: string, format?: string) => {
       const params = new URLSearchParams();
@@ -78,16 +87,13 @@ export const API_ROUTES = {
    */
   REDIS: {
     BASE: '/api/v1',
-    EXECUTE_TRANSACTION: (connectionId: string) => 
-      `/api/v1/transaction/${connectionId}/execute`,
-    EXECUTE_LUA_SCRIPT: (connectionId: string) => 
-      `/api/v1/script/${connectionId}/execute`,
-    PUBSUB_SUBSCRIBE: (connectionId: string, channel: string) => 
+    EXECUTE_TRANSACTION: (connectionId: string) => `/api/v1/transaction/${connectionId}/execute`,
+    EXECUTE_LUA_SCRIPT: (connectionId: string) => `/api/v1/script/${connectionId}/execute`,
+    PUBSUB_SUBSCRIBE: (connectionId: string, channel: string) =>
       `/api/v1/pubsub/${connectionId}/subscribe/${encodeURIComponent(channel)}`,
-    PUBSUB_UNSUBSCRIBE: (connectionId: string, subscriptionId: string) => 
+    PUBSUB_UNSUBSCRIBE: (connectionId: string, subscriptionId: string) =>
       `/api/v1/pubsub/${connectionId}/subscribe/${subscriptionId}`,
-    PUBSUB_PUBLISH: (connectionId: string) => 
-      `/api/v1/pubsub/${connectionId}/publish`
+    PUBSUB_PUBLISH: (connectionId: string) => `/api/v1/pubsub/${connectionId}/publish`
   },
 
   /**
@@ -95,7 +101,14 @@ export const API_ROUTES = {
    */
   AUDIT: {
     BASE: '/api/v1/audit',
-    GET_LOGS: (userId?: string, action?: string, startDate?: string, endDate?: string, pageNumber?: number, pageSize?: number) => {
+    GET_LOGS: (
+      userId?: string,
+      action?: string,
+      startDate?: string,
+      endDate?: string,
+      pageNumber?: number,
+      pageSize?: number
+    ) => {
       const params = new URLSearchParams();
       if (userId) params.set('userId', userId);
       if (action) params.set('action', action);
@@ -111,7 +124,7 @@ export const API_ROUTES = {
 
 /**
  * SignalR Hub Routes
- * 
+ *
  * Centralized definition of all SignalR hub routes
  */
 export const SIGNALR_HUBS = {
@@ -125,7 +138,7 @@ export const SIGNALR_HUBS = {
 
 /**
  * SignalR Hub Method Names
- * 
+ *
  * Centralized definition of all SignalR hub method names
  * These must match the backend interface method names exactly
  */
@@ -133,7 +146,6 @@ export const SIGNALR_METHODS = {
   /**
    * Pub/Sub hub methods
    */
-  
 
   /**
    * Key Change hub methods
@@ -144,13 +156,13 @@ export const SIGNALR_METHODS = {
      * Matches: IKeyChangeClientMethods.KeyChanged
      */
     KEY_CHANGED: 'KeyChanged',
-    
+
     /**
      * Client-to-server: Subscribe to key changes for a specific Redis connection
      * Matches: KeyChangeHub.WatchConnection
      */
     WATCH_CONNECTION: 'WatchConnection',
-    
+
     /**
      * Client-to-server: Unsubscribe from key changes for a specific Redis connection
      * Matches: KeyChangeHub.UnwatchConnection
@@ -169,5 +181,3 @@ export const SIGNALR_METHODS = {
     NOTIFY_USER: 'NotifyUserAsync'
   }
 } as const;
-
-

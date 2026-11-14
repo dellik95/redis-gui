@@ -2,28 +2,28 @@
  * Definition for a side navigation link item
  */
 export interface SideNavLinkDefinition {
-	/**
-	 * Route path for the link
-	 */
-	href: string;
+  /**
+   * Route path for the link
+   */
+  href: string;
 
-	/**
-	 * Material icon name
-	 */
-	icon: string;
+  /**
+   * Material icon name
+   */
+  icon: string;
 
-	/**
-	 * Display title
-	 */
-	title: string;
+  /**
+   * Display title
+   */
+  title: string;
 
-	/**
-	 * Optional badge text or count
-	 */
-	badge?: string | number;
+  /**
+   * Optional badge text or count
+   */
+  badge?: string | number;
 
-	/**
-	 * Optional description text
-	 */
-	description?: string;
+  /**
+   * Optional description text
+   */
+  description?: string;
 }

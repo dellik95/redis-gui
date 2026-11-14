@@ -1,10 +1,19 @@
-import { Component, inject, ChangeDetectionStrategy, effect, signal, computed } from '@angular/core';
+import {
+  Component,
+  inject,
+  ChangeDetectionStrategy,
+  effect,
+  signal,
+  computed,
+  untracked
+} from '@angular/core';
 import { KeyValuePipe, DecimalPipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { map } from 'rxjs/operators';
-import { combineLatest } from 'rxjs';
-import { FormsModule } from '@angular/forms';
+import { combineLatest, debounceTime, Subject } from 'rxjs';
+import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -14,27 +23,25 @@ import { MatTableModule } from '@angular/material/table';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatButtonModule } from '@angular/material/button';
-import { MatInputModule } from '@angular/material/input';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatSelectModule } from '@angular/material/select';
-import { filter } from 'rxjs/operators';
 
 import { ServerInfoStore } from '../../core/stores/server-info.store';
 import { ConnectionsStore } from '../../core/stores/connections.store';
-import { PromptDialogComponent, PageHeaderComponent } from '../../shared/components';
+import {
+  PromptDialogComponent,
+  PageHeaderComponent,
+  InfoRowComponent,
+  EmptyStateComponent
+} from '../../shared/components';
 import { UiSelectComponent, UiSelectOption, UiInputComponent } from '../../shared/ui';
 
 /**
  * Info Component
- * Displays Redis server information and configuration
+ * Displays Redis server information and configuration.
  *
- * Features:
- * - Server information (version, memory, clients, etc.)
- * - Configuration parameters
- * - Config search functionality
- * - Config editing (for modifiable parameters)
+ * Config search is debounced (350 ms) so it fires automatically
+ * while the user types — no separate Refresh button needed.
  */
 @Component({
   selector: 'app-info',
@@ -51,18 +58,16 @@ import { UiSelectComponent, UiSelectOption, UiInputComponent } from '../../share
     MatIconModule,
     MatChipsModule,
     MatButtonModule,
-    MatInputModule,
-    MatFormFieldModule,
-    MatDialogModule,
     MatTooltipModule,
-    MatSelectModule,
-    FormsModule,
     UiSelectComponent,
     UiInputComponent,
-    PageHeaderComponent
+    PageHeaderComponent,
+    InfoRowComponent,
+    EmptyStateComponent
   ],
   templateUrl: './info.component.html',
-  styleUrl: './info.component.scss'
+  styleUrl: './info.component.scss',
+  providers: [ServerInfoStore]
 })
 export class InfoComponent {
   // 1. Injected dependencies
@@ -83,38 +88,56 @@ export class InfoComponent {
   readonly userSelectedConnectionId = signal<string | null>(null);
 
   // 4. Effective active connection ID
-  readonly activeConnectionId = computed(() => {
-    return this.userSelectedConnectionId() 
-      ?? this.routeConnectionId() 
-      ?? this.connectionsStore.connections()[0]?.id 
-      ?? null;
-  });
+  readonly activeConnectionId = computed(
+    () =>
+      this.userSelectedConnectionId() ??
+      this.routeConnectionId() ??
+      this.connectionsStore.connections()[0]?.id ??
+      null
+  );
 
-  // 5. Connections list
-  readonly connections = computed(() => this.connectionsStore.connections());
-  readonly connectionOptions = computed<UiSelectOption[]>(() => {
-    return this.connections().map(c => ({
+  // 5. Connection list for picker
+  readonly connectionOptions = computed<UiSelectOption[]>(() =>
+    this.connectionsStore.connections().map(c => ({
       label: `${c.name} (${c.host}:${c.port})`,
       value: c.id,
       icon: 'dns'
-    }));
-  });
+    }))
+  );
 
-  // 6. State signals
-  protected readonly configSearchQuery = signal('');
+  // 6. Config search — signal drives the UI; Subject drives the debounce
+  readonly configSearchQuery = signal('');
+  readonly selectedTab = signal(0);
+  private readonly configSearch$ = new Subject<string>();
 
-  // 7. Configuration table columns
+  // 7. Config table columns
   readonly configColumns = ['name', 'value', 'modifiable', 'actions'] as const;
 
   constructor() {
     this.connectionsStore.loadConnections();
 
-    // Watch for activeConnectionId changes and load server info/config
+    // Load data whenever the active connection changes
     effect(() => {
       const id = this.activeConnectionId();
-      if (id) {
-        this.loadData();
-      }
+      if (id) untracked(() => this.loadData());
+    });
+
+    effect(onCleanup => {
+      const id = this.activeConnectionId();
+      if (!id || this.selectedTab() !== 0) return;
+      const timer = window.setInterval(() => {
+        if (!this.store.isLoadingInfo() && !this.store.isPollingInfo()) {
+          this.store.loadServerInfo({ connectionId: id, background: true });
+        }
+      }, 5000);
+      onCleanup(() => window.clearInterval(timer));
+    });
+
+    // Debounced live config search (350 ms)
+    this.configSearch$.pipe(debounceTime(350), takeUntilDestroyed()).subscribe(query => {
+      const id = this.activeConnectionId();
+      if (!id) return;
+      this.loadConfig(id, query);
     });
   }
 
@@ -122,50 +145,42 @@ export class InfoComponent {
     this.userSelectedConnectionId.set(id);
   }
 
-  /**
-   * Loads server info and configuration data
-   */
+  /** Trigger from the (valueChange) event of the search input */
+  onConfigSearch(query: string | number): void {
+    const q = String(query ?? '');
+    this.configSearchQuery.set(q);
+    this.configSearch$.next(q);
+  }
+
+  /** Full reload — called by the header Refresh button */
   loadData(): void {
     const id = this.activeConnectionId();
     if (!id) return;
-
     this.store.loadServerInfo(id);
-    this.store.loadConfig({ connectionId: id });
+    this.loadConfig(id, this.configSearchQuery());
   }
 
-  /**
-   * Searches configuration parameters by pattern
-   */
-  searchConfig(): void {
-    const id = this.activeConnectionId();
-    if (!id) return;
-
-    const query = this.configSearchQuery();
-    this.store.loadConfig(query
-      ? { connectionId: id, pattern: query }
-      : { connectionId: id }
-    );
+  private loadConfig(connectionId: string, query: string): void {
+    const term = query.trim();
+    const pattern = term && !/[?*\[\]]/.test(term) ? `*${term}*` : term;
+    this.store.loadConfig(pattern ? { connectionId, pattern } : { connectionId });
   }
 
-  /**
-   * Edits a configuration parameter
-   *
-   * @param paramName - Name of the parameter to edit
-   * @param currentValue - Current value of the parameter
-   */
   editConfig(paramName: string, currentValue: string): void {
     const id = this.activeConnectionId();
     if (!id) return;
 
-    this.dialog.open(PromptDialogComponent, {
-      data: {
-        title: 'Edit Configuration',
-        message: `Enter new value for "${paramName}":`,
-        placeholder: 'Value',
-        defaultValue: currentValue,
-        required: true
-      }
-    }).afterClosed()
+    this.dialog
+      .open(PromptDialogComponent, {
+        data: {
+          title: 'Edit Configuration',
+          message: `Enter new value for "${paramName}":`,
+          placeholder: 'Value',
+          defaultValue: currentValue,
+          required: true
+        }
+      })
+      .afterClosed()
       .pipe(filter((value): value is string => value !== null && value !== currentValue))
       .subscribe(newValue => {
         this.store.updateConfig({

@@ -1,0 +1,44 @@
+<div class="metric-card">
+  <div class="flex justify-between items-center mb-2">
+    <span class="text-[12px] font-medium text-canvas-muted uppercase tracking-[0.5px]">{{ label() }}</span>
+    <mat-icon class="!text-[18px] !w-[18px] !h-[18px] text-canvas-muted">{{ icon() }}</mat-icon>
+  </div>
+
+  <div class="flex items-baseline justify-between gap-2">
+    <span class="text-[22px] font-bold text-canvas-text">
+      {{ primaryValue() }}<small class="text-[12px] font-medium opacity-70">{{ unit() }}</small>
+    </span>
+    <!-- Slot for custom secondary content (e.g. net-pills). Falls back to secondaryValue string. -->
+    <ng-content>
+      @if (secondaryValue()) {
+        <span class="text-[11px] text-canvas-muted">{{ secondaryValue() }}</span>
+      }
+    </ng-content>
+  </div>
+
+  <div class="mt-[10px] h-[52px] overflow-hidden">
+    <svg viewBox="0 0 200 50" class="w-full h-full block" preserveAspectRatio="none"
+         [style.filter]="'drop-shadow(0 0 6px ' + color() + '4d)'">
+      <defs>
+        <linearGradient [id]="gradientId()" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" [attr.stop-color]="color()" stop-opacity="0.38" />
+          <stop offset="100%" [attr.stop-color]="color()" stop-opacity="0.0" />
+        </linearGradient>
+      </defs>
+      <path [attr.d]="curve().area" [attr.fill]="'url(#' + gradientId() + ')'" />
+      <path
+        [attr.d]="curve().line"
+        fill="none"
+        [attr.stroke]="color()"
+        stroke-width="2.5"
+        stroke-linecap="round"
+      />
+      <circle
+        [attr.cx]="curve().lastPoint.x"
+        [attr.cy]="curve().lastPoint.y"
+        r="3.5"
+        [attr.fill]="color()"
+      />
+    </svg>
+  </div>
+</div>

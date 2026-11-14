@@ -1,0 +1,16 @@
+[
+  {
+    "Name": "RedisGUI (Angular + API)",
+    "Projects": [
+      {
+        "Path": "src\\RedisGUI.Server\\RedisGUI.Server.csproj",
+        "Action": "Start",
+        "DebugTarget": "https (Visual Studio)"
+      },
+      {
+        "Path": "src\\RedisGUI.Client\\RedisGUI.Client.esproj",
+        "Action": "Start"
+      }
+    ]
+  }
+]

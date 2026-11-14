@@ -10,4 +10,3 @@ export * from './auth';
 export * from './signalr-hub-services';
 export { SignalRHubService } from './signalr-hub.service';
 export type { ISignalRHubConnection } from './signalr-hub.interface';
-

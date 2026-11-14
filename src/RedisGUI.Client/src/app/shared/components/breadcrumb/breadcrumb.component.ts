@@ -5,12 +5,12 @@ import { BreadcrumbStore } from '../../../core/stores/breadcrumb.store';
 
 /**
  * Component for displaying breadcrumb navigation
- * 
+ *
  * Features:
  * - Automatically updates based on route changes
  * - Uses BreadcrumbStore for centralized state management
  * - Displays navigation path with clickable links
- * 
+ *
  * @example
  * ```html
  * <app-breadcrumb />
@@ -27,7 +27,7 @@ import { BreadcrumbStore } from '../../../core/stores/breadcrumb.store';
 export class BreadcrumbComponent {
   // 1. Injected dependencies
   private readonly breadcrumbStore = inject(BreadcrumbStore);
-  
+
   // 2. Store signals
   /**
    * Current breadcrumb trail as signal from store

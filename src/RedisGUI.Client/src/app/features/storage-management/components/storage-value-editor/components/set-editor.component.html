@@ -1,0 +1,64 @@
+    <div class="set-editor-container">
+      <div class="set-toolbar">
+        <div class="set-info">
+          <span class="count-badge">{{ members().length }} members</span>
+          @if (searchTerm().trim()) {
+            <span class="filtered-badge">{{ filteredMembers().length }} matching</span>
+          }
+        </div>
+
+        <div class="search-wrap">
+          <ui-input
+            [value]="searchTerm()"
+            (valueChange)="searchTerm.set(String($event))"
+            icon="search"
+            [clearable]="true"
+            (cleared)="searchTerm.set('')"
+            placeholder="Filter members..."
+          />
+        </div>
+      </div>
+
+      <!-- Add Member Section -->
+      <div class="add-member-bar">
+        <div class="new-member-field">
+          <ui-input
+            [value]="newMemberText()"
+            (valueChange)="newMemberText.set(String($event))"
+            placeholder="Add new member..."
+            (enter)="addMember()"
+            [error]="isDuplicate() ? 'Member already exists in this set!' : undefined"
+          />
+        </div>
+        <ui-button
+          variant="primary"
+          icon="add"
+          (clicked)="addMember()"
+          [disabled]="!newMemberText().trim() || isDuplicate()">
+          Add Member
+        </ui-button>
+      </div>
+
+      <!-- Members Chip Grid -->
+      <div class="members-chip-container">
+        @for (member of filteredMembers(); track member) {
+          <ui-tag
+            [label]="member"
+            [removable]="true"
+            variant="set"
+            (removed)="removeMember(member)"
+          />
+        }
+        @if (members().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">category</mat-icon>
+            <p>Set is currently empty. Add unique members above.</p>
+          </div>
+        } @else if (filteredMembers().length === 0) {
+          <div class="empty-state">
+            <p>No members match "{{ searchTerm() }}"</p>
+          </div>
+        }
+      </div>
+    </div>
+  

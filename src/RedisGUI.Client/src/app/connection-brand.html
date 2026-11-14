@@ -1,0 +1,24 @@
+<div class="brand-container flex items-center gap-2.5 ml-2 mr-4 select-none">
+  <div class="brand-icon-wrap flex items-center justify-center w-8 h-8 rounded-lg">
+    <mat-icon class="brand-icon text-[20px] w-5 h-5">storage</mat-icon>
+  </div>
+  <div class="brand-text flex items-baseline gap-1.5">
+    <span class="brand-name text-[17px] font-bold text-canvas-text"
+      >Redis<span class="brand-accent text-brand ml-[1px]">Studio</span></span
+    >
+    <span class="brand-version text-[10px] font-semibold py-0.5 px-1.5 text-brand uppercase"
+      >v2.2</span
+    >
+  </div>
+</div>
+
+@if (connection(); as conn) {
+<div
+  class="active-connection-chip inline-flex items-center gap-2 py-1 px-3 text-[12px] ml-3"
+  [matTooltip]="conn.host + ':' + conn.port + ' (DB ' + conn.database + ')'"
+>
+  <span class="pulse-indicator w-2 h-2 rounded-full"></span>
+  <span class="conn-name font-semibold text-canvas-text">{{ conn.name }}</span>
+  <span class="conn-details text-[11px] text-canvas-muted">{{ conn.host }}:{{ conn.port }}</span>
+</div>
+}

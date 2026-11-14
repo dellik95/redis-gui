@@ -1,0 +1,113 @@
+    <div class="stream-editor-container">
+      <div class="stream-toolbar">
+        <div class="stream-info">
+          <span class="count-badge">{{ entries().length }} entries</span>
+        </div>
+
+        <ui-button
+          variant="primary"
+          size="sm"
+          icon="add"
+          (clicked)="addEntry()">
+          Add Stream Entry
+        </ui-button>
+      </div>
+
+      <!-- Stream Entries Accordion -->
+      <mat-accordion multi class="entries-accordion">
+        @for (entry of entries(); track $index; let entryIdx = $index) {
+          <mat-expansion-panel
+            #panel
+            [expanded]="entries().length <= 3 || entryIdx === 0"
+            (opened)="onPanelOpened(panel)"
+            class="entry-panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title class="panel-title">
+                <mat-icon class="stream-icon">water</mat-icon>
+                <span>Entry #{{ entryIdx + 1 }}</span>
+              </mat-panel-title>
+              <mat-panel-description class="panel-desc">
+                ID: {{ entry.id || '*' }} ({{ entry.fields.length }} fields)
+              </mat-panel-description>
+            </mat-expansion-panel-header>
+
+            <div class="entry-content">
+              <div class="entry-meta-row">
+                <ui-input
+                  [value]="entry.id"
+                  (valueChange)="updateEntryId(entryIdx, String($event))"
+                  label="Entry ID (* for auto-generated ID)"
+                  placeholder="*"
+                  hint="Use * to let Redis auto-assign milliseconds-sequence ID"
+                  class="entry-id-field"
+                />
+
+                <ui-button
+                  variant="danger"
+                  size="sm"
+                  icon="delete"
+                  (clicked)="removeEntry(entryIdx)">
+                  Remove Entry
+                </ui-button>
+              </div>
+
+              <!-- Entry Fields -->
+              <div class="entry-fields-section">
+                <div class="fields-header">
+                  <span class="fields-title">Fields</span>
+                  <ui-button
+                    variant="ghost"
+                    size="sm"
+                    icon="add"
+                    (clicked)="addField(entryIdx)">
+                    Add Field
+                  </ui-button>
+                </div>
+
+                <div class="fields-grid">
+                  @for (field of entry.fields; track $index; let fieldIdx = $index) {
+                    <div class="field-item-row">
+                      <ui-input
+                        [value]="field.key"
+                        (valueChange)="updateField(entryIdx, fieldIdx, String($event), field.value)"
+                        placeholder="Key"
+                        class="field-key"
+                      />
+
+                      <ui-input
+                        [value]="field.value"
+                        (valueChange)="updateField(entryIdx, fieldIdx, field.key, String($event))"
+                        placeholder="Value"
+                        class="field-val"
+                      />
+
+                      <button
+                        mat-icon-button
+                        type="button"
+                        color="warn"
+                        (click)="removeField(entryIdx, fieldIdx)"
+                        matTooltip="Remove field">
+                        <mat-icon>delete_outline</mat-icon>
+                      </button>
+                    </div>
+                  }
+                  @if (entry.fields.length === 0) {
+                    <div class="no-fields-notice">
+                      No fields in this entry. Click "+ Add Field" above.
+                    </div>
+                  }
+                </div>
+              </div>
+            </div>
+          </mat-expansion-panel>
+        }
+
+        @if (entries().length === 0) {
+          <div class="empty-state">
+            <mat-icon class="empty-icon">water</mat-icon>
+            <p>Stream is currently empty. Click "Add Stream Entry" to create a new message entry.</p>
+          </div>
+        }
+      </mat-accordion>
+    </div>
+  

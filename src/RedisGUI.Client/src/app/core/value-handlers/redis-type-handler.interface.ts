@@ -12,12 +12,12 @@ export interface RedisValueJson {
  * Visual representation types for Redis values
  * These are the formats used in the UI editor
  */
-export type VisualValue = 
-  | string                    // String type
-  | string[]                  // List or Set type
-  | Array<{ key: string; value: string }>  // Hash type
-  | Array<{ member: string; score: number }>  // SortedSet type
-  | Array<{ id: string; fields: Array<{ key: string; value: string }> }>;  // Stream type
+export type VisualValue =
+  | string // String type
+  | string[] // List or Set type
+  | Array<{ key: string; value: string }> // Hash type
+  | Array<{ member: string; score: number }> // SortedSet type
+  | Array<{ id: string; fields: Array<{ key: string; value: string }> }>; // Stream type
 
 /**
  * Validation result from type handler
@@ -29,7 +29,7 @@ export interface ValidationResult {
 
 /**
  * Strategy interface for handling different Redis data types
- * 
+ *
  * Each Redis data type (String, Hash, List, Set, SortedSet, Stream) has its own handler
  * that knows how to transform data between visual editor, JSON, and Redis formats
  */

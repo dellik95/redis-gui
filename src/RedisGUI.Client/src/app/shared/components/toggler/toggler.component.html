@@ -4,7 +4,8 @@
       type="button"
       class="segment-btn"
       [class.active]="(value() ?? config().defaultValue) === item.value"
-      (click)="selectItem(item.value)">
+      (click)="selectItem(item.value)"
+    >
       @if (item.icon) {
         <mat-icon class="segment-icon">{{ item.icon }}</mat-icon>
       }

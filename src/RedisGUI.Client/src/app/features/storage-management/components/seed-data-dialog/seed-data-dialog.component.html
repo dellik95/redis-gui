@@ -1,0 +1,334 @@
+<div class="dialog-header flex justify-between items-center py-4 px-6 bg-canvas-card">
+  <div class="title-row flex items-center gap-3.5">
+    <div class="header-icon-box w-10 h-10 flex items-center justify-center">
+      <mat-icon class="header-icon text-[22px] w-[22px] h-[22px]">auto_awesome</mat-icon>
+    </div>
+    <div class="title-text-group flex flex-col gap-0.5">
+      <span class="title-text font-bold text-canvas-text">Seed Demo & Realistic Sample Data</span>
+      <span class="title-subtext text-canvas-muted"
+        >Populate Redis with configurable keys, realistic payloads, and multi-DB distribution</span
+      >
+    </div>
+  </div>
+  <button
+    mat-icon-button
+    mat-dialog-close
+    matTooltip="Close"
+    class="close-btn text-canvas-muted"
+    [disabled]="isSeeding()"
+  >
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<mat-dialog-content
+  class="dialog-content !py-5 !px-6 bg-canvas min-w-[580px] max-w-[720px] overflow-y-auto"
+>
+  @if (!isSeeding() && !result()) {
+    <div class="seed-form flex flex-col gap-4">
+      <!-- 1. Key Count Selector -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase"
+          >Total Keys to Generate</label
+        >
+        <app-number-preset-picker
+          label="Total Keys to Generate"
+          [options]="keyCountPresets"
+          [value]="keyCount()"
+          (valueChange)="keyCount.set($event)"
+        />
+      </div>
+
+      <!-- 2. Target Database Mode -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase">Target Databases</label>
+        <div class="db-mode-tabs grid gap-2">
+          <button
+            type="button"
+            class="db-tab-btn flex items-center justify-center gap-1.5 bg-canvas-card rounded-md py-2 px-2.5 cursor-pointer text-canvas-text font-semibold"
+            [class.active]="dbMode() === 'current'"
+            (click)="dbMode.set('current')"
+          >
+            <mat-icon>dns</mat-icon>
+            <span>Current DB only (DB {{ data.database }})</span>
+          </button>
+          <button
+            type="button"
+            class="db-tab-btn flex items-center justify-center gap-1.5 bg-canvas-card rounded-md py-2 px-2.5 cursor-pointer text-canvas-text font-semibold"
+            [class.active]="dbMode() === 'specific'"
+            (click)="dbMode.set('specific')"
+          >
+            <mat-icon>checklist</mat-icon>
+            <span>Specific DBs</span>
+          </button>
+          <button
+            type="button"
+            class="db-tab-btn flex items-center justify-center gap-1.5 bg-canvas-card rounded-md py-2 px-2.5 cursor-pointer text-canvas-text font-semibold"
+            [class.active]="dbMode() === 'random'"
+            (click)="dbMode.set('random')"
+          >
+            <mat-icon>shuffle</mat-icon>
+            <span>Random Distribution</span>
+          </button>
+        </div>
+
+        @if (dbMode() === 'specific') {
+          <div class="db-chip-grid flex flex-wrap gap-1.5 mt-1.5 bg-canvas-card rounded-lg p-2.5">
+            @for (dbNum of availableDbs; track dbNum) {
+              <button
+                type="button"
+                class="db-chip py-1 px-2.5 rounded bg-canvas text-canvas-muted cursor-pointer"
+                [class.selected]="isDbSelected(dbNum)"
+                (click)="toggleDbSelection(dbNum)"
+              >
+                DB {{ dbNum }}
+              </button>
+            }
+          </div>
+        }
+
+        @if (dbMode() === 'random') {
+          <div class="random-db-row flex items-center gap-2.5 text-canvas-muted mt-1">
+            <span>Distribute across</span>
+            <app-number-preset-picker
+              label="Random database count"
+              [options]="randomDatabasePresets"
+              [value]="randomDbCount()"
+              (valueChange)="randomDbCount.set($event)"
+            />
+            <span>randomly</span>
+          </div>
+        }
+      </div>
+
+      <!-- 3. Key Naming Complexity -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase"
+          >Key Naming Complexity</label
+        >
+        <div class="choice-cards-grid grid gap-2">
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="keyComplexity() === 'simple'"
+            (click)="keyComplexity.set('simple')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Simple Flat</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >demo:user:101</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="keyComplexity() === 'hierarchical'"
+            (click)="keyComplexity.set('hierarchical')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Hierarchical Folders</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >demo:ecommerce:orders:1001</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="keyComplexity() === 'uuid'"
+            (click)="keyComplexity.set('uuid')"
+          >
+            <span class="card-title font-semibold text-canvas-text">UUID / Session Tokens</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >demo:sessions:f47ac10b-...</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="keyComplexity() === 'hashtag'"
+            (click)="keyComplexity.set('hashtag')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Cluster HashTags</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >demo:&#123;tenant_1&#125;:profile</span
+            >
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Data Payload Complexity -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase">Payload Complexity</label>
+        <div class="choice-cards-grid three grid gap-2">
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="payloadComplexity() === 'simple'"
+            (click)="payloadComplexity.set('simple')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Simple Scalars</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >Primitive numbers & text</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="payloadComplexity() === 'json'"
+            (click)="payloadComplexity.set('json')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Realistic JSON</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >Users, orders & events</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="payloadComplexity() === 'complex'"
+            (click)="payloadComplexity.set('complex')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Complex / Nested</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >Deep nested policies & ACLs</span
+            >
+          </button>
+        </div>
+      </div>
+
+      <!-- 5. Data Types Multi-Select -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase"
+          >Data Types to Include</label
+        >
+        <div class="types-pill-group flex flex-wrap gap-2">
+          @for (type of ['string', 'hash', 'list', 'set', 'zset', 'stream']; track type) {
+            <button
+              type="button"
+              class="type-pill flex items-center gap-1.5 bg-canvas-card text-canvas-muted py-1.5 px-3 rounded-md cursor-pointer"
+              [class.selected]="isTypeSelected(type)"
+              (click)="toggleType(type)"
+            >
+              <mat-icon>{{ getTypeIcon(type) }}</mat-icon>
+              <span>{{ getTypeLabel(type) }}</span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <!-- 6. TTL Strategy -->
+      <div class="form-group flex flex-col gap-2">
+        <label class="form-label font-bold text-canvas-muted uppercase"
+          >TTL Expiration Strategy</label
+        >
+        <div class="choice-cards-grid three grid gap-2">
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="ttlStrategy() === 'mixed'"
+            (click)="ttlStrategy.set('mixed')"
+          >
+            <span class="card-title font-semibold text-canvas-text">Realistic Mixed</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >60% permanent, 40% expiring</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="ttlStrategy() === 'persistent'"
+            (click)="ttlStrategy.set('persistent')"
+          >
+            <span class="card-title font-semibold text-canvas-text">All Persistent</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >No expiration (TTL = -1)</span
+            >
+          </button>
+
+          <button
+            type="button"
+            class="choice-card flex flex-col gap-[3px] bg-canvas-card rounded-lg py-2.5 px-3 text-left cursor-pointer"
+            [class.active]="ttlStrategy() === 'expiring'"
+            (click)="ttlStrategy.set('expiring')"
+          >
+            <span class="card-title font-semibold text-canvas-text">All Expiring</span>
+            <span
+              class="card-example text-canvas-muted whitespace-nowrap overflow-hidden text-ellipsis"
+              >100% temporary keys</span
+            >
+          </button>
+        </div>
+      </div>
+
+      <!-- 7. Prefix Input -->
+      <div class="prefix-row flex items-center gap-3 bg-canvas-card rounded-lg py-2 px-3.5">
+        <label class="prefix-label font-bold text-canvas-muted">Key Prefix:</label>
+        <input
+          type="text"
+          class="prefix-input flex-1 bg-canvas rounded text-canvas-text py-1 px-2.5"
+          [formField]="seedForm.keyPrefix"
+          placeholder="demo"
+        />
+      </div>
+
+      @if (errorMessage()) {
+        <div class="error-banner flex items-center gap-2.5 py-2.5 px-3.5 rounded-lg">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ errorMessage() }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Loading State during Seeding -->
+  @if (isSeeding()) {
+    <div
+      class="seeding-state flex flex-col items-center justify-center py-12 px-6 text-center gap-4"
+    >
+      <mat-spinner diameter="52"></mat-spinner>
+      <h3>Generating & Populating Sample Data...</h3>
+      <p class="seeding-desc text-canvas-muted m-0">
+        Generating {{ keyCount() }} keys across {{ getTargetDbDescription() }} with
+        {{ payloadComplexity() }} payload complexity.
+      </p>
+    </div>
+  }
+
+  <!-- Result State -->
+  @if (!isSeeding() && result(); as res) {
+    <app-seed-result [result]="res" [typeIcon]="getTypeIcon" />
+  }
+</mat-dialog-content>
+
+<div class="dialog-actions flex justify-end items-center gap-3 py-3.5 px-6 bg-canvas-card">
+  @if (!isSeeding() && !result()) {
+    <button mat-stroked-button mat-dialog-close>Cancel</button>
+    <button
+      mat-flat-button
+      color="primary"
+      class="seed-btn font-semibold"
+      (click)="startSeed()"
+      [disabled]="selectedTypes().length === 0"
+    >
+      <mat-icon>cloud_upload</mat-icon>
+      <span>Seed {{ keyCount() }} Keys</span>
+    </button>
+  }
+
+  @if (!isSeeding() && result()) {
+    <button mat-flat-button color="primary" [mat-dialog-close]="true">Close & Refresh Keys</button>
+  }
+</div>

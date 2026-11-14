@@ -1,4 +1,11 @@
-import { Component, inject, signal, computed, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import {
+  Component,
+  inject,
+  signal,
+  computed,
+  ChangeDetectionStrategy,
+  DestroyRef
+} from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { form, FormField, required, email, minLength, submit } from '@angular/forms/signals';
 import { MatCardModule } from '@angular/material/card';
@@ -54,7 +61,7 @@ export class SigninComponent {
   /**
    * Signal Form definition with schema validations
    */
-  readonly loginForm = form(this.loginModel, (s) => {
+  readonly loginForm = form(this.loginModel, s => {
     required(s.email, { message: 'Email is required' });
     email(s.email, { message: 'Please enter a valid email address' });
     required(s.password, { message: 'Password is required' });
@@ -90,7 +97,8 @@ export class SigninComponent {
         password: this.loginModel().password
       };
 
-      this.authService.login(request)
+      this.authService
+        .login(request)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: () => {
@@ -102,9 +110,10 @@ export class SigninComponent {
             });
             this.router.navigate(['/home']);
           },
-          error: (error) => {
+          error: error => {
             this.isLoading.set(false);
-            const errorMessage = error.error?.message || error.error?.detail || 'Invalid email or password';
+            const errorMessage =
+              error.error?.message || error.error?.detail || 'Invalid email or password';
             this.snackBar.open(errorMessage, 'Close', {
               duration: 5000,
               horizontalPosition: 'end',

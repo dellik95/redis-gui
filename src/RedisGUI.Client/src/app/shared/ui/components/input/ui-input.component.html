@@ -1,0 +1,56 @@
+    <div class="ui-input-wrapper" [class.full-width]="fullWidth()">
+      @if (label()) {
+        <label [for]="inputId" class="ui-input-label">
+          {{ label() }}
+          @if (required()) {
+            <span class="required-asterisk">*</span>
+          }
+        </label>
+      }
+
+      <div
+        class="input-container"
+        [class.is-focused]="isFocused()"
+        [class.has-error]="!!computedError()"
+        [class.is-disabled]="isDisabled()"
+      >
+        @if (icon()) {
+          <mat-icon class="prefix-icon">{{ icon() }}</mat-icon>
+        }
+
+        <input
+          [id]="inputId"
+          [type]="type()"
+          [placeholder]="placeholder()"
+          [disabled]="isDisabled()"
+          [readonly]="readonly()"
+          [value]="value()"
+          (input)="onInput($event)"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+          (keydown.enter)="enter.emit()"
+          [class.monospace]="monospace()"
+          class="native-input"
+        />
+
+        @if (clearable() && hasValue() && !isDisabled() && !readonly()) {
+          <button type="button" class="clear-btn" (click)="clear($event)" matTooltip="Clear">
+            <mat-icon>close</mat-icon>
+          </button>
+        }
+
+        @if (suffixIcon()) {
+          <mat-icon class="suffix-icon" (click)="suffixClicked.emit()">{{ suffixIcon() }}</mat-icon>
+        }
+      </div>
+
+      @if (computedError()) {
+        <div class="input-error">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <span>{{ computedError() }}</span>
+        </div>
+      } @else if (hint()) {
+        <div class="input-hint">{{ hint() }}</div>
+      }
+    </div>
+  

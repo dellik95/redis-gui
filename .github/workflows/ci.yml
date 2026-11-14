@@ -64,8 +64,11 @@ jobs:
       - name: Run ESLint
         run: npm run lint
 
+      - name: Run Angular tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
       - name: Build Angular SPA
-        run: npm run build
+        run: npm run build -- --configuration production
 
   # ==========================================
   # 3. Docker Image Verification

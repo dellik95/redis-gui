@@ -3,7 +3,11 @@ import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { RedisDataType } from '../../../../models/redis-keys.types';
-import { StorageValueEditorComponent, ValueEditorInput, ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
+import {
+  StorageValueEditorComponent,
+  ValueEditorInput,
+  ValueEditorOutput
+} from '../storage-value-editor/storage-value-editor.component';
 
 /**
  * Dialog data for Add Key component
@@ -22,18 +26,15 @@ export interface AddKeyDialogData {
 @Component({
   selector: 'app-add-key',
   standalone: true,
-  imports: [
-    StorageValueEditorComponent,
-    MatButtonModule,
-    MatIconModule
-  ],
+  imports: [StorageValueEditorComponent, MatButtonModule, MatIconModule],
   templateUrl: './add-key.component.html',
   styleUrl: './add-key.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AddKeyComponent {
   // 1. Injected dependencies
-  private readonly dialogRef = inject<MatDialogRef<AddKeyComponent, ValueEditorOutput | undefined>>(MatDialogRef);
+  private readonly dialogRef =
+    inject<MatDialogRef<AddKeyComponent, ValueEditorOutput | undefined>>(MatDialogRef);
   private readonly dialogData = inject<AddKeyDialogData>(MAT_DIALOG_DATA);
 
   // 2. Configuration

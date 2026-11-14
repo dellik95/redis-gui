@@ -21,32 +21,31 @@ import { catchError } from 'rxjs/operators';
  * ```
  */
 @Injectable({
-	providedIn: 'root'
+  providedIn: 'root'
 })
 export class ImportService {
-	// 1. Injected dependencies
-	private readonly http = inject(HttpClient);
+  // 1. Injected dependencies
+  private readonly http = inject(HttpClient);
 
-	// 2. Constants
-	private readonly BASE_URL = '/api/v1/storage';
+  // 2. Constants
+  private readonly BASE_URL = '/api/v1/storage';
 
-	/**
-	 * Import Redis data from file
-	 * @param connectionId - The connection ID
-	 * @param file - File to import (JSON or CSV format)
-	 * @returns Observable that completes when import is done
-	 */
-	importData(connectionId: string, file: File): Observable<void> {
-		const formData = new FormData();
-		formData.append('file', file);
+  /**
+   * Import Redis data from file
+   * @param connectionId - The connection ID
+   * @param file - File to import (JSON or CSV format)
+   * @returns Observable that completes when import is done
+   */
+  importData(connectionId: string, file: File): Observable<void> {
+    const formData = new FormData();
+    formData.append('file', file);
 
-		return this.http.post<void>(`${this.BASE_URL}/${connectionId}/import`, formData).pipe(
-			catchError((error) => {
-				return throwError(() =>
-					new Error(error?.error?.message || 'Import failed. Ensure file format is correct.')
-				);
-			})
-		);
-	}
+    return this.http.post<void>(`${this.BASE_URL}/${connectionId}/import`, formData).pipe(
+      catchError(error => {
+        return throwError(
+          () => new Error(error?.error?.message || 'Import failed. Ensure file format is correct.')
+        );
+      })
+    );
+  }
 }
-

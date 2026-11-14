@@ -1,0 +1,41 @@
+    <div class="ui-textarea-wrapper" [class.full-width]="fullWidth()">
+      @if (label()) {
+        <label [for]="textareaId" class="ui-textarea-label">
+          {{ label() }}
+          @if (required()) {
+            <span class="required-asterisk">*</span>
+          }
+        </label>
+      }
+
+      <div
+        class="textarea-container"
+        [class.is-focused]="isFocused()"
+        [class.has-error]="!!computedError()"
+        [class.is-disabled]="isDisabled()"
+      >
+        <textarea
+          [id]="textareaId"
+          [rows]="rows()"
+          [placeholder]="placeholder()"
+          [disabled]="isDisabled()"
+          [readonly]="readonly()"
+          [value]="value()"
+          (input)="onInput($event)"
+          (focus)="onFocus()"
+          (blur)="onBlur()"
+          [class.monospace]="monospace()"
+          class="native-textarea"
+        ></textarea>
+      </div>
+
+      @if (computedError()) {
+        <div class="textarea-error">
+          <mat-icon class="error-icon">error_outline</mat-icon>
+          <span>{{ computedError() }}</span>
+        </div>
+      } @else if (hint()) {
+        <div class="textarea-hint">{{ hint() }}</div>
+      }
+    </div>
+  

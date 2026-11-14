@@ -1,22 +1,14 @@
-@use '../../../../styles/variables' as *;
-@use '../../../../styles/mixins' as *;
-
-// ============================================================================
-// Auth Card - Consistent with app design system
-// ============================================================================
-
 .signin-card {
   width: 100%;
-  max-width: $auth-card-width-lg;
-  padding: $spacing-xl * 2;
+  max-width: 500px;
+  padding: 32px;
   background: var(--mat-sys-surface);
   color: var(--mat-sys-on-surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-radius: $border-radius-lg;
-  font-family: 'Roboto', sans-serif;
+  border-radius: 12px;
 
   mat-card-header {
-    margin-bottom: $spacing-lg;
+    margin-bottom: 12px;
     text-align: center;
     padding: 0;
     display: flex;
@@ -26,48 +18,42 @@
     width: 100%;
 
     mat-card-title {
-      font-size: $font-size-2xl;
-      font-weight: $font-weight-semibold;
-      margin-bottom: $spacing-sm;
+      font-size: 2rem;
+      font-weight: 600;
+      margin-bottom: 8px;
       color: var(--mat-sys-on-surface);
       text-align: center;
       width: 100%;
     }
 
     mat-card-subtitle {
-      font-size: $font-size-base;
+      font-size: 0.95rem;
       color: var(--mat-sys-on-surface-variant);
-      opacity: $opacity-high;
+      opacity: 0.87;
       text-align: center;
       width: 100%;
     }
   }
 
-  mat-card-content {
-    padding: 0;
-  }
+  mat-card-content { padding: 0; }
 }
-
-// ============================================================================
-// Demo Quick Access Banner
-// ============================================================================
 
 .demo-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: $spacing-sm $spacing-md;
-  margin-bottom: $spacing-lg;
+  padding: 8px 10px;
+  margin-bottom: 12px;
   background: rgba(33, 150, 243, 0.08);
   border: 1px solid rgba(33, 150, 243, 0.25);
-  border-radius: $border-radius-md;
-  gap: $spacing-sm;
+  border-radius: 4px;
+  gap: 8px;
 
   .demo-info {
     display: flex;
     align-items: center;
-    gap: $spacing-sm;
-    font-size: $font-size-xs;
+    gap: 8px;
+    font-size: 0.75rem;
 
     .demo-icon {
       color: #1976d2;
@@ -79,97 +65,58 @@
     .demo-text {
       display: flex;
       flex-direction: column;
-
-      strong {
-        color: #1976d2;
-        font-weight: 600;
-      }
-
-      span {
-        color: var(--mat-sys-on-surface-variant);
-      }
+      strong { color: #1976d2; font-weight: 600; }
+      span { color: var(--mat-sys-on-surface-variant); }
     }
   }
 
   .demo-fill-btn {
-    font-size: $font-size-xs;
+    font-size: 0.75rem;
     height: 32px;
     line-height: 32px;
-    padding: 0 $spacing-sm;
+    padding: 0 8px;
     color: #1976d2;
 
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
-      margin-right: 4px;
-    }
+    mat-icon { font-size: 16px; width: 16px; height: 16px; margin-right: 4px; }
   }
 }
 
-// ============================================================================
-// Form Controls - Consistent with app form fields
-// ============================================================================
+.signin-form-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 
-.full-width {
-  width: 100%;
-  margin-bottom: $spacing-lg;
-
-  &:last-of-type {
-    margin-bottom: 0;
-  }
-}
-
-mat-form-field {
-  ::ng-deep {
-    .mat-mdc-form-field-subscript-wrapper {
-      margin-top: $spacing-xs;
-    }
-  }
+  ui-input { display: block; width: 100%; }
+  ui-button { display: block; width: 100%; margin-top: 8px; }
 }
 
 .submit-button {
-  margin-top: $spacing-xl;
-  height: $button-height-lg;
-  font-size: $font-size-base;
-  font-weight: $font-weight-medium;
+  margin-top: 16px;
+  height: 48px;
+  font-size: 0.95rem;
+  font-weight: 500;
   width: 100%;
 
-  .inline-spinner {
-    display: inline-block;
-    margin-right: $spacing-sm;
-  }
+  .inline-spinner { display: inline-block; margin-right: 8px; }
 }
-
-// ============================================================================
-// Auth Links - Consistent with app link styles
-// ============================================================================
 
 .register-link {
   text-align: center;
-  margin-top: $spacing-xl;
+  margin-top: 8px;
 
   p {
     margin: 0;
     color: var(--mat-sys-on-surface-variant);
-    font-size: $font-size-sm;
+    font-size: 0.875rem;
 
     a {
       color: var(--mat-sys-primary);
       text-decoration: none;
-      font-weight: $font-weight-medium;
-      transition: opacity $transition-fast;
+      font-weight: 500;
+      transition: opacity 150ms ease-in-out;
 
-      &:hover {
-        opacity: $opacity-high;
-        text-decoration: underline;
-      }
-
-      &:focus {
-        outline: 2px solid var(--mat-sys-primary);
-        outline-offset: 2px;
-        border-radius: $border-radius-sm;
-      }
+      &:hover { opacity: 0.87; text-decoration: underline; }
+      &:focus { outline: 2px solid var(--mat-sys-primary); outline-offset: 2px; border-radius: 2px; }
     }
   }
 }

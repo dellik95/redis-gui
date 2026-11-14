@@ -21,7 +21,9 @@ export class StringTypeHandler implements RedisTypeHandler {
     }
     if (typeof data === 'object' && 'value' in (data as Record<string, unknown>)) {
       const val = (data as Record<string, unknown>)['value'];
-      return typeof val === 'object' && val !== null ? JSON.stringify(val, null, 2) : String(val ?? '');
+      return typeof val === 'object' && val !== null
+        ? JSON.stringify(val, null, 2)
+        : String(val ?? '');
     }
     if (typeof data === 'object') {
       return JSON.stringify(data, null, 2);
@@ -35,7 +37,10 @@ export class StringTypeHandler implements RedisTypeHandler {
   toJson(data: unknown): string {
     const raw = this.toVisual(data);
     const trimmed = raw.trim();
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+    if (
+      (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'))
+    ) {
       try {
         const parsed = JSON.parse(trimmed);
         return JSON.stringify(parsed, null, 2);
@@ -52,16 +57,25 @@ export class StringTypeHandler implements RedisTypeHandler {
   fromJson(json: string | RedisValueJson): string {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-      if (typeof parsed === 'object' && parsed !== null && 'value' in parsed && Object.keys(parsed).length === 1) {
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'value' in parsed &&
+        Object.keys(parsed).length === 1
+      ) {
         const val = (parsed as Record<string, unknown>)['value'];
-        return typeof val === 'object' && val !== null ? JSON.stringify(val, null, 2) : String(val ?? '');
+        return typeof val === 'object' && val !== null
+          ? JSON.stringify(val, null, 2)
+          : String(val ?? '');
       }
       if (typeof parsed === 'object' && parsed !== null) {
         return JSON.stringify(parsed, null, 2);
       }
       return String(parsed ?? '');
     } catch (error) {
-      throw new Error(`Invalid JSON for String type: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Invalid JSON for String type: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 

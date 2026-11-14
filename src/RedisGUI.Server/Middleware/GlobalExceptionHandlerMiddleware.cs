@@ -67,6 +67,8 @@ public sealed class GlobalExceptionHandlerMiddleware
 
 		ApiErrorResponse response = exception switch
 		{
+			BadHttpRequestException badRequest => ApiErrorResponse.BadRequest(
+				"Request.Invalid", badRequest.Message, context.Request.Path),
 			ValidationException validationEx => HandleValidationException(context, validationEx),
 			ErrorException errorEx => HandleErrorException(context, errorEx),
 			ArgumentException argEx => HandleArgumentException(context, argEx),

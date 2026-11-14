@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
 
 export type CardVariant = 'default' | 'elevated' | 'outlined';
 export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
@@ -7,17 +6,9 @@ export type CardPadding = 'none' | 'sm' | 'md' | 'lg';
 @Component({
   selector: 'ui-card',
   standalone: true,
-  imports: [CommonModule],
-  template: `
-    <div [class]="cardClasses()">
-      <ng-content></ng-content>
-    </div>
-  `,
-  styles: [`
-    :host {
-      display: block;
-    }
-  `],
+  imports: [],
+  templateUrl: './ui-card.component.html',
+  styleUrl: './ui-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UiCardComponent {
@@ -26,7 +17,8 @@ export class UiCardComponent {
   readonly hoverable = input(false);
 
   readonly cardClasses = computed(() => {
-    const base = 'rounded-xl transition-all duration-200 border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)]';
+    const base =
+      'rounded-xl transition-all duration-200 border border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-text)]';
 
     const paddings: Record<CardPadding, string> = {
       none: '',

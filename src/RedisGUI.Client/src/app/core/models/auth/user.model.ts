@@ -1,6 +1,13 @@
 /**
  * Represents an authenticated user in the system
  */
+/** Matches RedisGUI.Domain.Users.UserRole and its JSON representation. */
+export enum UserRole {
+  User = 'User',
+  Admin = 'Admin',
+  ReadOnly = 'ReadOnly'
+}
+
 export interface User {
   /**
    * Unique identifier for the user
@@ -28,5 +35,5 @@ export interface User {
    * - User: Can create, read, update, delete own resources
    * - ReadOnly: Can only view resources
    */
-  role: 'Admin' | 'User' | 'ReadOnly';
+  role: UserRole;
 }

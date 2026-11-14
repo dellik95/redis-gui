@@ -6,7 +6,7 @@ import ngTemplateParser from '@angular-eslint/template-parser';
 
 export default [
   {
-    ignores: ['dist/**', 'node_modules/**', '.angular/**', '**/*.js', '**/*.mjs']
+    ignores: ['dist/**', 'node_modules/**', '.angular/**', 'obj/**', '**/*.js', '**/*.mjs']
   },
   {
     files: ['src/**/*.ts'],
@@ -19,9 +19,11 @@ export default [
     },
     plugins: {
       '@typescript-eslint': tsPlugin,
-      '@angular-eslint': ngPlugin
+      '@angular-eslint': ngPlugin,
+      '@angular-eslint/template': ngTemplatePlugin
     },
-    rules: {}
+    processor: '@angular-eslint/template/extract-inline-html',
+    rules: { '@typescript-eslint/no-duplicate-enum-values': 'error', '@angular-eslint/no-input-rename': 'error' }
   },
   {
     files: ['src/**/*.html'],
@@ -31,6 +33,6 @@ export default [
     plugins: {
       '@angular-eslint/template': ngTemplatePlugin
     },
-    rules: {}
+    rules: { '@angular-eslint/template/eqeqeq': ['error', { allowNullOrUndefined: true }], '@angular-eslint/template/no-duplicate-attributes': ['error', { allowStylePrecedenceDuplicates: true }] }
   }
 ];

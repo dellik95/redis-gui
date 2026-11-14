@@ -19,7 +19,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { RedisKeysStore } from '../../../core/stores/redis-keys.store';
-import { RedisKeyInfo, RedisDataType, RedisKeyGroup, RedisValue } from '../../../models/redis-keys.types';
+import { RedisKeyInfo, SelectedRedisKey, toRedisDataType } from '../../../models/redis-keys.types';
 
 /**
  * Tree node structure for displaying Redis keys in a hierarchical tree view
@@ -60,7 +60,7 @@ interface TreeNode {
   ],
   templateUrl: './tree-view-list.component.html',
   styleUrl: './tree-view-list.component.scss',
-  changeDetection: ChangeDetectionStrategy.OnPush,
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TreeViewListComponent {
   // 1. Injected dependencies
@@ -78,16 +78,15 @@ export class TreeViewListComponent {
   readonly delimiter = model<string>(':');
 
   /** Currently active key path for selection highlight */
+  readonly suppliedKeys = input<RedisKeyInfo[]>();
+  private readonly displayedKeys = computed(
+    () => this.suppliedKeys() ?? this.redisKeysStore.keys()
+  );
   readonly activeKey = input<string | null>(null);
 
   // 3. Outputs
   /** Emitted when a key is selected from the tree */
-  readonly keySelected = output<{
-    key: string;
-    type: RedisDataType;
-    value: RedisValue;
-    ttl: number;
-  }>();
+  readonly keySelected = output<SelectedRedisKey>();
 
   /** Emitted when adding a new key directly into a subfolder */
   readonly addKeyInFolder = output<string>();
@@ -102,7 +101,12 @@ export class TreeViewListComponent {
   readonly duplicateKey = output<string>();
 
   /** Emitted when deleting an entire folder/namespace in the tree */
-  readonly deleteFolder = output<{ path: string; name: string; keyCount: number; keys: string[] }>();
+  readonly deleteFolder = output<{
+    path: string;
+    name: string;
+    keyCount: number;
+    keys: string[];
+  }>();
 
   // 4. View children
   readonly tree = viewChild(MatTree);
@@ -112,7 +116,7 @@ export class TreeViewListComponent {
   readonly dataSource = signal<TreeNode[]>([]);
 
   /** Total number of leaf keys */
-  readonly totalKeysCount = computed<number>(() => this.redisKeysStore.keys().length);
+  readonly totalKeysCount = computed<number>(() => this.displayedKeys().length);
 
   /** Total number of folder groups */
   readonly totalFoldersCount = computed<number>(() => {
@@ -141,7 +145,7 @@ export class TreeViewListComponent {
       const connectionId = this.connectionId();
       const pattern = this.pattern();
 
-      if (connectionId) {
+      if (connectionId && this.suppliedKeys() === undefined) {
         this.redisKeysStore.loadKeys({
           connectionId,
           pattern: pattern || '*'
@@ -152,12 +156,11 @@ export class TreeViewListComponent {
     // Watch for changes in the store keys or delimiter and group keys for tree display.
     // Isolated from store.isLoading() so fetching individual key values doesn't reconstruct the tree.
     effect(() => {
-      const keys = this.redisKeysStore.keys();
+      const keys = this.displayedKeys();
       const delimiter = this.delimiter();
 
       if (keys.length > 0) {
-        const groups = this.groupKeysAsTree(keys, delimiter);
-        const treeNodes = this.buildTreeFromGroups(groups);
+        const treeNodes = this.buildTree(keys, delimiter);
         this.dataSource.set(treeNodes);
 
         // Re-apply expansion state so tree does not collapse on data refresh
@@ -199,10 +202,19 @@ export class TreeViewListComponent {
   readonly hasChild = (_: number, node: TreeNode) => node.isGroup;
 
   /** TrackBy function for Material Tree recycling */
-  readonly trackByPath = (_: number, node: TreeNode) => node.path;
+  readonly trackByPath = (_: number, node: TreeNode) => this.getNodeId(node);
 
   /** Key extractor function for preserving expansion state */
-  readonly getExpansionKey = (node: TreeNode) => node.path;
+  readonly getExpansionKey = (node: TreeNode) => this.getNodeId(node);
+
+  /**
+   * Unique node identity. A folder and a plain key may share the same path
+   * (e.g. key "test" and folder "test" built from "test:child"), so the node kind is part of the id.
+   * Without this the tree would recycle a folder row for a key row (or vice versa).
+   */
+  private getNodeId(node: TreeNode): string {
+    return node.isGroup ? `group:${node.path}` : `key:${node.path}`;
+  }
 
   // 7. Public methods
   /**
@@ -219,8 +231,7 @@ export class TreeViewListComponent {
 
       this.keySelected.emit({
         key: node.keyInfo.key,
-        type: this.mapTypeToRedisDataType(node.keyInfo.type),
-        value: null as any,
+        type: toRedisDataType(node.keyInfo.type),
         ttl: node.keyInfo.ttl ?? -1
       });
     }
@@ -247,7 +258,9 @@ export class TreeViewListComponent {
     const delim = this.delimiter() || ':';
     const folderPrefix = node.path.endsWith(delim) ? node.path : `${node.path}${delim}`;
     navigator.clipboard.writeText(folderPrefix).then(() => {
-      this.snackBar.open(`Copied folder "${folderPrefix}" to clipboard`, 'Close', { duration: 2500 });
+      this.snackBar.open(`Copied folder "${folderPrefix}" to clipboard`, 'Close', {
+        duration: 2500
+      });
     });
   }
 
@@ -441,13 +454,20 @@ export class TreeViewListComponent {
 
     if (node.keyInfo) {
       switch (node.keyInfo.type.toLowerCase()) {
-        case 'string': return 'text_fields';
-        case 'list': return 'list';
-        case 'set': return 'group_work';
-        case 'hash': return 'tag';
-        case 'sortedset': return 'sort';
-        case 'stream': return 'stream';
-        default: return 'description';
+        case 'string':
+          return 'text_fields';
+        case 'list':
+          return 'list';
+        case 'set':
+          return 'group_work';
+        case 'hash':
+          return 'tag';
+        case 'sortedset':
+          return 'sort';
+        case 'stream':
+          return 'stream';
+        default:
+          return 'description';
       }
     }
 
@@ -466,9 +486,10 @@ export class TreeViewListComponent {
     }
 
     if (node.keyInfo) {
-      const ttl = node.keyInfo.ttl !== null && node.keyInfo.ttl > 0
-        ? `TTL: ${node.keyInfo.ttl}s`
-        : 'No expiry';
+      const ttl =
+        node.keyInfo.ttl !== null && node.keyInfo.ttl > 0
+          ? `TTL: ${node.keyInfo.ttl}s`
+          : 'No expiry';
       return `${node.keyInfo.type} | Size: ${node.keyInfo.size} bytes | ${ttl}`;
     }
 
@@ -477,163 +498,84 @@ export class TreeViewListComponent {
 
   // 7. Private methods
   /**
-   * Builds tree nodes from Redis key groups
+   * Builds a hierarchical tree from a flat list of Redis keys.
    *
-   * @param groups - Array of Redis key groups
-   * @returns Array of tree nodes
-   */
-  private buildTreeFromGroups(groups: RedisKeyGroup[]): TreeNode[] {
-    const result: TreeNode[] = [];
-
-    for (const group of groups) {
-      const node: TreeNode = {
-        name: group.name,
-        path: group.path,
-        isGroup: true,
-        keyCount: group.keyCount,
-        children: []
-      };
-
-      // Add child groups
-      if (group.children && group.children.length > 0) {
-        node.children = this.buildTreeFromGroups(group.children);
-      }
-
-      // Add keys as leaf nodes
-      if (group.keys && group.keys.length > 0) {
-        const keyNodes = group.keys.map(key => ({
-          name: this.getKeyDisplayName(key.key, group.path),
-          path: key.key,
-          isGroup: false,
-          keyCount: 0,
-          keyInfo: key
-        }));
-
-        if (!node.children) {
-          node.children = [];
-        }
-        node.children.push(...keyNodes);
-      }
-
-      // If no children, remove the children property
-      if (!node.children || node.children.length === 0) {
-        delete node.children;
-      }
-
-      result.push(node);
-    }
-
-    return result;
-  }
-
-  /**
-   * Extracts the display name for a key by removing the group path prefix
+   * Keys are split by the delimiter: every segment except the last becomes a folder,
+   * the last segment becomes a leaf. Keys without a delimiter (e.g. "Test") are rendered
+   * as leaf nodes at the root level, never as empty folders.
    *
-   * @param fullKey - The full key path
-   * @param groupPath - The group path to remove
-   * @returns Display name for the key
-   */
-  private getKeyDisplayName(fullKey: string, groupPath: string): string {
-    // Extract the key name by removing the group path prefix
-    if (groupPath && fullKey.startsWith(groupPath)) {
-      const name = fullKey.substring(groupPath.length);
-      // Remove leading delimiter
-      return name.replace(/^[:\/\.]/, '');
-    }
-    return fullKey;
-  }
-
-  /**
-   * Groups Redis keys into a tree structure based on the delimiter
-   *
-   * @param keyInfos - Array of Redis key information
+   * @param keyInfos - Flat list of Redis keys
    * @param delimiter - Delimiter used to split key paths
-   * @returns Array of Redis key groups organized as a tree
+   * @returns Root-level tree nodes (folders first, then keys)
    */
-  private groupKeysAsTree(keyInfos: RedisKeyInfo[], delimiter: string): RedisKeyGroup[] {
-    const root: Map<string, RedisKeyGroup> = new Map();
+  private buildTree(keyInfos: RedisKeyInfo[], delimiter: string): TreeNode[] {
+    const roots: TreeNode[] = [];
+    const groupsByPath = new Map<string, TreeNode>();
 
     for (const keyInfo of keyInfos) {
-      const parts = keyInfo.key.split(delimiter).filter(p => p.length > 0);
+      const segments = delimiter
+        ? keyInfo.key.split(delimiter).filter(p => p.length > 0)
+        : [keyInfo.key];
 
-      if (parts.length === 0) {
-        // Root level key
-        if (!root.has('')) {
-          root.set('', {
-            name: 'Root',
-            path: '',
-            keys: [],
-            children: [],
-            keyCount: 0
-          });
-        }
-        const rootGroup = root.get('')!;
-        rootGroup.keys.push(keyInfo);
-        rootGroup.keyCount++;
-      } else {
-        // Nested key - build tree structure
-        this.addKeyToTree(root, keyInfo, parts, delimiter, 0, '');
+      // Plain keys (no delimiter) live at the root level as leaves
+      if (segments.length <= 1) {
+        roots.push(this.createLeafNode(keyInfo, keyInfo.key));
+        continue;
       }
+
+      let siblings = roots;
+      let currentPath = '';
+
+      for (let i = 0; i < segments.length - 1; i++) {
+        const segment = segments[i]!;
+        currentPath = currentPath ? `${currentPath}${delimiter}${segment}` : segment;
+
+        let group = groupsByPath.get(currentPath);
+        if (!group) {
+          group = { name: segment, path: currentPath, isGroup: true, keyCount: 0, children: [] };
+          groupsByPath.set(currentPath, group);
+          siblings.push(group);
+        }
+
+        group.keyCount++;
+        siblings = group.children!;
+      }
+
+      siblings.push(this.createLeafNode(keyInfo, segments[segments.length - 1]!));
     }
 
-    return Array.from(root.values());
+    this.sortTreeNodes(roots);
+    return roots;
   }
 
   /**
-   * Recursively adds a key to the tree structure
-   *
-   * @param currentLevel - Current level of the tree (Map of groups)
-   * @param keyInfo - Redis key information to add
-   * @param parts - Key path parts (split by delimiter)
-   * @param delimiter - Delimiter used in key paths
-   * @param depth - Current depth in the tree
-   * @param currentPath - Current path in the tree
+   * Creates a leaf (key) tree node
    */
-  private addKeyToTree(
-    currentLevel: Map<string, RedisKeyGroup>,
-    keyInfo: RedisKeyInfo,
-    parts: string[],
-    delimiter: string,
-    depth: number,
-    currentPath: string
-  ): void {
-    const part = parts[depth];
-    if (!part) return;
+  private createLeafNode(keyInfo: RedisKeyInfo, name: string): TreeNode {
+    return {
+      name,
+      path: keyInfo.key,
+      isGroup: false,
+      keyCount: 0,
+      keyInfo
+    };
+  }
 
-    const newPath = currentPath ? `${currentPath}${delimiter}${part}` : part;
-
-    // Get or create the group at this level
-    if (!currentLevel.has(part)) {
-      currentLevel.set(part, {
-        name: part,
-        path: newPath,
-        keys: [],
-        children: [],
-        keyCount: 0
-      });
-    }
-
-    const group = currentLevel.get(part)!;
-
-    // If the next part is the last one, add the key to this group (not create a new group)
-    if (depth + 1 === parts.length - 1) {
-      // Next part is the leaf - add the key directly to this group
-      group.keys.push(keyInfo);
-      group.keyCount++;
-    } else {
-      // Recursively add to next level
-      const childrenMap = new Map<string, RedisKeyGroup>();
-      for (const child of group.children) {
-        childrenMap.set(child.name, child);
+  /**
+   * Recursively sorts nodes: folders first, then keys, both alphabetically (natural order)
+   */
+  private sortTreeNodes(nodes: TreeNode[]): void {
+    nodes.sort((a, b) => {
+      if (a.isGroup !== b.isGroup) {
+        return a.isGroup ? -1 : 1;
       }
+      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+    });
 
-      this.addKeyToTree(childrenMap, keyInfo, parts, delimiter, depth + 1, newPath);
-
-      // Update the group with new children and increment key count
-      group.children = Array.from(childrenMap.values());
-      group.keyCount++;
-      // Update the map with the modified group
-      currentLevel.set(part, group);
+    for (const node of nodes) {
+      if (node.children && node.children.length > 0) {
+        this.sortTreeNodes(node.children);
+      }
     }
   }
 
@@ -643,15 +585,4 @@ export class TreeViewListComponent {
    * @param type - String representation of Redis data type
    * @returns RedisDataType enum value
    */
-  private mapTypeToRedisDataType(type: string): RedisDataType {
-    switch (type.toLowerCase()) {
-      case 'string': return RedisDataType.String;
-      case 'list': return RedisDataType.List;
-      case 'set': return RedisDataType.Set;
-      case 'hash': return RedisDataType.Hash;
-      case 'sortedset': return RedisDataType.SortedSet;
-      case 'stream': return RedisDataType.Stream;
-      default: return RedisDataType.String;
-    }
-  }
 }

@@ -10,7 +10,7 @@ RUN npm ci
 
 # Copy client source code and build production bundle
 COPY src/RedisGUI.Client/ ./
-RUN npm run build
+RUN npm run build -- --configuration production
 
 # ==========================================
 # Stage 2: Build & Publish .NET 10 Backend

@@ -15,3 +15,4 @@ export * from './components/select/ui-select.component';
 export * from './components/button-group/ui-button-group.component';
 export * from './components/tag/ui-tag.component';
 export * from './components/radio-group/ui-radio-group.component';
+export * from './components/toggle/ui-toggle.component';

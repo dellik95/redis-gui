@@ -17,14 +17,14 @@ import type { editor } from 'monaco-editor';
 /**
  * JSON Editor Component
  * Monaco Editor-based JSON editor with syntax highlighting, validation, and formatting
- * 
+ *
  * Features:
  * - Syntax highlighting for JSON
  * - Real-time validation
  * - Read-only mode support
  * - Customizable theme and height
  * - Emits value changes and validation status
- * 
+ *
  * @example
  * ```html
  * <app-json-editor
@@ -52,23 +52,23 @@ export class JsonEditorComponent {
   // 2. Inputs
   /** JSON string value to display/edit */
   readonly value = input<string>('');
-  
+
   /** Whether the editor is in read-only mode */
   readonly readOnly = input<boolean>(false);
-  
+
   /** Editor language (default: 'json') */
   readonly language = input<string>('json');
-  
+
   /** Editor theme: 'vs' (light), 'vs-dark' (dark), or 'hc-black' (high contrast) */
   readonly theme = input<'vs' | 'vs-dark' | 'hc-black'>('vs');
-  
+
   /** Editor height (CSS value, default: '400px') */
   readonly height = input<string>('400px');
 
   // 3. Outputs
   /** Emitted when the editor value changes */
   readonly valueChange = output<string>();
-  
+
   /** Emitted when validation status changes (true if valid JSON) */
   readonly valid = output<boolean>();
 
@@ -79,7 +79,7 @@ export class JsonEditorComponent {
   // 5. State signals
   /** Current error message (if JSON is invalid) */
   readonly errorMessage = signal<string>('');
-  
+
   /** Whether Monaco Editor has been initialized */
   readonly isInitialized = signal(false);
 
@@ -140,7 +140,9 @@ export class JsonEditorComponent {
    */
   private async initializeMonaco(): Promise<void> {
     try {
-      this.monaco = await loader.init();
+      const monaco = await loader.init();
+      if (this.destroyRef.destroyed) return;
+      this.monaco = monaco;
       this.initializeEditor();
       this.isInitialized.set(true);
     } catch (error) {
@@ -153,7 +155,7 @@ export class JsonEditorComponent {
     if (!this.monaco || !this.editorContainer()) return;
 
     const container = this.editorContainer().nativeElement;
-    
+
     this.editor = this.monaco.editor.create(container, {
       value: this.value(),
       language: this.language(),
@@ -205,9 +207,7 @@ export class JsonEditorComponent {
       this.errorMessage.set('');
       this.valid.emit(true);
     } catch (error: unknown) {
-      const message = error instanceof Error 
-        ? error.message 
-        : 'Invalid JSON';
+      const message = error instanceof Error ? error.message : 'Invalid JSON';
       this.errorMessage.set(message);
       this.valid.emit(false);
     }

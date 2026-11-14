@@ -10,10 +10,10 @@ import { StreamTypeHandler } from './stream-type.handler';
 
 /**
  * Registry service for Redis type handlers
- * 
+ *
  * Manages the collection of type-specific handlers using the Strategy pattern
  * Provides a centralized way to get the appropriate handler for any Redis data type
- * 
+ *
  * @example
  * ```typescript
  * const registry = inject(RedisTypeHandlerRegistry);
@@ -62,11 +62,11 @@ export class RedisTypeHandlerRegistry {
     }
 
     const handler = this.handlers.get(normalized as RedisDataType);
-    
+
     if (!handler) {
       throw new Error(`No handler registered for Redis type: ${type}`);
     }
-    
+
     return handler;
   }
 

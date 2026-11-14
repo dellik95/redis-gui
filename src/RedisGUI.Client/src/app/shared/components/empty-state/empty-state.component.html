@@ -1,0 +1,21 @@
+@if (type() === 'loading') {
+  <div class="flex flex-col items-center justify-center py-16 px-6 gap-4 text-canvas-muted">
+    <mat-spinner [diameter]="spinnerDiameter()" />
+    @if (message()) {
+      <p class="m-0 text-[14px]">{{ message() }}</p>
+    }
+  </div>
+} @else {
+  <div class="flex flex-col items-center justify-center py-16 px-6 text-center gap-3 text-canvas-muted">
+    <div class="w-16 h-16 rounded-full bg-canvas-hover flex items-center justify-center">
+      <mat-icon class="!text-[36px] !w-9 !h-9 opacity-70">{{ icon() }}</mat-icon>
+    </div>
+    @if (heading()) {
+      <h3 class="m-0 text-[18px] font-semibold text-canvas-text">{{ heading() }}</h3>
+    }
+    @if (description()) {
+      <p class="m-0 text-[14px] max-w-[480px]">{{ description() }}</p>
+    }
+    <ng-content />
+  </div>
+}

@@ -1,11 +1,9 @@
-
 import { Pipe, PipeTransform } from '@angular/core';
 
 @Pipe({
   name: 'formatBytes'
 })
 export class FormatBytesPipe implements PipeTransform {
-
   transform(bytes: number, decimalPlaces: number = 2): string {
     if (bytes === 0) {
       return '0 Bytes';

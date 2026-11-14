@@ -16,13 +16,14 @@
       <mat-icon>close</mat-icon>
     </button>
   </div>
-  
+
   <div class="dialog-body">
     <app-storage-value-editor
       [data]="editorData"
       [connectionId]="connectionId"
       (save)="onSave($event)"
-      (cancel)="onCancel()">
+      (cancel)="onCancel()"
+    >
     </app-storage-value-editor>
   </div>
 </div>

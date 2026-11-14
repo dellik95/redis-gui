@@ -1,4 +1,17 @@
-import { Component, inject, signal, input, output, effect, ChangeDetectionStrategy, computed, viewChild, DestroyRef } from '@angular/core';
+import { serializeRedisValue } from './serialize-redis-value';
+import {
+  Component,
+  inject,
+  signal,
+  input,
+  output,
+  effect,
+  untracked,
+  ChangeDetectionStrategy,
+  computed,
+  viewChild,
+  DestroyRef
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField, required, submit, readonly, disabled } from '@angular/forms/signals';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -6,15 +19,19 @@ import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
-import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { RedisCliService } from '../../../../core/services/redis-cli.service';
 
 import { JsonEditorComponent } from '../../../../shared/components/json-editor/json-editor.component';
-import { RedisTypeHandlerRegistry, HashField, SortedSetMember, StreamVisualEntry } from '../../../../core/value-handlers';
-import { RedisDataType, RedisValue } from '../../../../models/redis-keys.types';
+import {
+  RedisTypeHandlerRegistry,
+  HashField,
+  SortedSetMember,
+  StreamVisualEntry
+} from '../../../../core/value-handlers';
+import { RedisDataType, RedisValue, toRedisDataType } from '../../../../models/redis-keys.types';
 
 import {
   TtlSelectorComponent,
@@ -26,7 +43,7 @@ import {
   ZsetEditorComponent,
   StreamEditorComponent
 } from './components';
-import { UiInputComponent, UiSelectComponent, UiButtonComponent } from '../../../../shared/ui';
+import { UiInputComponent, UiSelectComponent, UiButtonComponent, UiToggleComponent } from '../../../../shared/ui';
 
 export interface ValueEditorInput {
   key?: string;
@@ -54,7 +71,6 @@ export interface ValueEditorOutput {
     MatButtonModule,
     MatSelectModule,
     MatIconModule,
-    MatSlideToggleModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     MatDialogModule,
@@ -69,7 +85,8 @@ export interface ValueEditorOutput {
     StreamEditorComponent,
     UiInputComponent,
     UiSelectComponent,
-    UiButtonComponent
+    UiButtonComponent,
+    UiToggleComponent
   ],
   templateUrl: './storage-value-editor.component.html',
   styleUrl: './storage-value-editor.component.scss',
@@ -77,8 +94,13 @@ export interface ValueEditorOutput {
 })
 export class StorageValueEditorComponent {
   private readonly handlerRegistry = inject(RedisTypeHandlerRegistry);
-  private readonly dialogRef = inject(MatDialogRef<StorageValueEditorComponent>, { optional: true });
-  private readonly dialogData = inject<{ data?: ValueEditorInput; connectionId?: string }>(MAT_DIALOG_DATA, { optional: true });
+  private readonly dialogRef = inject(MatDialogRef<StorageValueEditorComponent>, {
+    optional: true
+  });
+  private readonly dialogData = inject<{ data?: ValueEditorInput; connectionId?: string }>(
+    MAT_DIALOG_DATA,
+    { optional: true }
+  );
   private readonly cliService = inject(RedisCliService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -89,7 +111,7 @@ export class StorageValueEditorComponent {
   });
 
   /** Signal Form with declarative schema rules */
-  readonly editorForm = form(this.editorModel, (s) => {
+  readonly editorForm = form(this.editorModel, s => {
     required(s.key, { message: 'Key is required' });
     required(s.type, { message: 'Data type is required' });
     readonly(s.key, () => !this.isNewKey());
@@ -172,20 +194,11 @@ export class StorageValueEditorComponent {
 
   constructor() {
     effect(() => {
-      const dData = this.dialogData;
-      if (dData?.data && dData.connectionId) {
-        this.loadData({
-          ...dData.data,
-          connectionId: dData.connectionId
-        });
-      } else {
-        const inputData = this.data();
-        if (inputData) {
-          this.loadData(inputData);
-        } else {
-          this.reset();
-        }
-      }
+      const data =
+        this.dialogData?.data && this.dialogData.connectionId
+          ? { ...this.dialogData.data, connectionId: this.dialogData.connectionId }
+          : this.data();
+      untracked(() => (data ? this.loadData(data) : this.reset()));
     });
 
     effect(() => {
@@ -206,42 +219,13 @@ export class StorageValueEditorComponent {
         }
       }
     });
-
-    effect(() => {
-      const type = this.selectedType();
-      if (!this.useJsonEditor()) {
-        switch (type) {
-          case RedisDataType.String: this.stringValue(); break;
-          case RedisDataType.List: this.listItems(); break;
-          case RedisDataType.Set: this.setMembers(); break;
-          case RedisDataType.Hash: this.hashFields(); break;
-          case RedisDataType.SortedSet: this.sortedSetMembers(); break;
-          case RedisDataType.Stream: this.streamEntries(); break;
-        }
-        this.validateValue();
-      }
-    });
-  }
-
-  private normalizeType(type: RedisDataType | string | undefined | null): RedisDataType {
-    if (!type) return RedisDataType.String;
-    const lower = String(type).toLowerCase();
-    switch (lower) {
-      case 'list': return RedisDataType.List;
-      case 'set': return RedisDataType.Set;
-      case 'hash': return RedisDataType.Hash;
-      case 'sortedset':
-      case 'zset': return RedisDataType.SortedSet;
-      case 'stream': return RedisDataType.Stream;
-      default: return RedisDataType.String;
-    }
   }
 
   private loadData(data: ValueEditorInput): void {
     const isNew = data.isNew ?? false;
     this.isNewKey.set(isNew);
 
-    const type = this.normalizeType(data.type);
+    const type = toRedisDataType(data.type ?? '');
     this.selectedType.set(type);
 
     this.editorModel.set({
@@ -298,10 +282,11 @@ export class StorageValueEditorComponent {
     if (!connId || !key) return;
 
     this.isCheckingMemory.set(true);
-    this.cliService.getKeyMemoryUsage(connId, key)
+    this.cliService
+      .getKeyMemoryUsage(connId, key)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => {
+        next: res => {
           this.memoryUsageBytes.set(res.memoryBytes);
           this.isCheckingMemory.set(false);
         },
@@ -320,7 +305,7 @@ export class StorageValueEditorComponent {
   }
 
   private applyVisualValue(type: RedisDataType | string, visualValue: unknown): void {
-    const t = this.normalizeType(type);
+    const t = toRedisDataType(type);
     switch (t) {
       case RedisDataType.String:
         this.stringValue.set(String(visualValue ?? ''));
@@ -335,16 +320,20 @@ export class StorageValueEditorComponent {
         this.hashFields.set(Array.isArray(visualValue) ? (visualValue as HashField[]) : []);
         break;
       case RedisDataType.SortedSet:
-        this.sortedSetMembers.set(Array.isArray(visualValue) ? (visualValue as SortedSetMember[]) : []);
+        this.sortedSetMembers.set(
+          Array.isArray(visualValue) ? (visualValue as SortedSetMember[]) : []
+        );
         break;
       case RedisDataType.Stream:
-        this.streamEntries.set(Array.isArray(visualValue) ? (visualValue as StreamVisualEntry[]) : []);
+        this.streamEntries.set(
+          Array.isArray(visualValue) ? (visualValue as StreamVisualEntry[]) : []
+        );
         break;
     }
   }
 
   private getVisualValue(type: RedisDataType | string): unknown {
-    const t = this.normalizeType(type);
+    const t = toRedisDataType(type);
     switch (t) {
       case RedisDataType.String:
         return this.stringValue();
@@ -436,7 +425,11 @@ export class StorageValueEditorComponent {
         this.validationErrors.set([]);
         return true;
       }
-      if (typeof visualValue === 'object' && visualValue !== null && Object.keys(visualValue).length === 0) {
+      if (
+        typeof visualValue === 'object' &&
+        visualValue !== null &&
+        Object.keys(visualValue).length === 0
+      ) {
         this.validationErrors.set([]);
         return true;
       }
@@ -473,53 +466,7 @@ export class StorageValueEditorComponent {
         visualValue = this.getVisualValue(type);
       }
 
-      let redisValue: RedisValue;
-      switch (type) {
-        case RedisDataType.String:
-          redisValue = { value: String(visualValue ?? '') } as RedisValue;
-          break;
-        case RedisDataType.List:
-          redisValue = { items: Array.isArray(visualValue) ? (visualValue as string[]) : [] } as RedisValue;
-          break;
-        case RedisDataType.Set:
-          redisValue = { members: Array.isArray(visualValue) ? (visualValue as string[]) : [] } as RedisValue;
-          break;
-        case RedisDataType.Hash: {
-          const hashObj: Record<string, string> = {};
-          if (Array.isArray(visualValue)) {
-            (visualValue as HashField[]).forEach((field: HashField) => {
-              if (field.key) hashObj[field.key] = field.value;
-            });
-          }
-          redisValue = { fields: hashObj } as RedisValue;
-          break;
-        }
-        case RedisDataType.SortedSet: {
-          const sortedSetObj: Record<string, number> = {};
-          if (Array.isArray(visualValue)) {
-            (visualValue as SortedSetMember[]).forEach((item: SortedSetMember) => {
-              if (item.member) sortedSetObj[item.member] = item.score;
-            });
-          }
-          redisValue = { membersWithScores: sortedSetObj } as RedisValue;
-          break;
-        }
-        case RedisDataType.Stream: {
-          const streamEntriesData = (Array.isArray(visualValue) ? (visualValue as StreamVisualEntry[]) : []).map(entry => {
-            const vals: Record<string, string> = {};
-            if (Array.isArray(entry.fields)) {
-              entry.fields.forEach(f => {
-                if (f.key && f.key.trim()) vals[f.key.trim()] = f.value;
-              });
-            }
-            return { id: entry.id || '*', fields: vals, values: vals };
-          });
-          redisValue = { entries: streamEntriesData } as unknown as RedisValue;
-          break;
-        }
-        default:
-          redisValue = { value: String(visualValue ?? '') } as RedisValue;
-      }
+      const redisValue = serializeRedisValue(type, visualValue);
 
       const ttlVal = this.ttl();
       const finalTtl = ttlVal === null || ttlVal === undefined || ttlVal < 0 ? -1 : ttlVal;

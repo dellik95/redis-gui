@@ -4,9 +4,9 @@ import { RedisTypeHandler, RedisValueJson, ValidationResult } from './redis-type
 
 /**
  * Handler for Redis List data type
- * 
+ *
  * Lists are ordered collections of strings
- * 
+ *
  * Visual format: string[]
  * JSON format: { "items": ["item1", "item2", "item3"] }
  */
@@ -18,7 +18,7 @@ export class ListTypeHandler implements RedisTypeHandler {
 
   /**
    * Convert raw Redis value to visual editor format (string array)
-   * 
+   *
    * @param data Raw value from Redis (array of values or { items: [] })
    * @returns Array of strings
    */
@@ -38,7 +38,7 @@ export class ListTypeHandler implements RedisTypeHandler {
 
   /**
    * Convert value to JSON representation
-   * 
+   *
    * @param data Value in visual editor format (string array)
    * @returns JSON string representation
    */
@@ -49,7 +49,7 @@ export class ListTypeHandler implements RedisTypeHandler {
 
   /**
    * Parse JSON back to visual editor format
-   * 
+   *
    * @param json JSON string or parsed object
    * @returns Array of strings
    * @throws Error if JSON is invalid
@@ -57,7 +57,7 @@ export class ListTypeHandler implements RedisTypeHandler {
   fromJson(json: string | RedisValueJson): string[] {
     try {
       const parsed = typeof json === 'string' ? JSON.parse(json) : json;
-      
+
       if (!parsed.items || !Array.isArray(parsed.items)) {
         throw new Error('JSON must contain "items" array');
       }
@@ -70,7 +70,7 @@ export class ListTypeHandler implements RedisTypeHandler {
 
   /**
    * Validate value structure for List type
-   * 
+   *
    * @param value Value to validate (must be string array)
    * @returns Validation result with errors if invalid
    */
@@ -89,7 +89,7 @@ export class ListTypeHandler implements RedisTypeHandler {
 
   /**
    * Get default empty value for List type
-   * 
+   *
    * @returns Default empty string array
    */
   getDefaultValue(): string[] {

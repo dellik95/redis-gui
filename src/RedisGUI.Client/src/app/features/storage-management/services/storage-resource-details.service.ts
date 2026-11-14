@@ -3,12 +3,16 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { SignalRHubService } from '../../../core/services/signalr-hub.service';
 import { SystemMetrics } from '../models/system-metrics.type';
-import { API_ROUTES, SIGNALR_HUBS, SIGNALR_METHODS } from '../../../core/constants/api-routes.constants';
+import {
+  API_ROUTES,
+  SIGNALR_HUBS,
+  SIGNALR_METHODS
+} from '../../../core/constants/api-routes.constants';
 
 /**
  * SignalR service for real-time storage resource metrics
  * Connects to the metrics hub and streams system metrics data
- * 
+ *
  * Matches backend: RedisMetricsHub and IClientMethods
  *
  * @example
@@ -27,55 +31,54 @@ import { API_ROUTES, SIGNALR_HUBS, SIGNALR_METHODS } from '../../../core/constan
  * ```
  */
 @Injectable({
-	providedIn: 'root'
+  providedIn: 'root'
 })
 export class StorageResourceDetailsService extends SignalRHubService<SystemMetrics> {
-	private readonly http = inject(HttpClient);
-	protected override hubUrl = SIGNALR_HUBS.METRICS;
-	protected override eventName = SIGNALR_METHODS.METRICS.NOTIFY_USER;
+  private readonly http = inject(HttpClient);
+  protected override hubUrl = SIGNALR_HUBS.METRICS;
+  protected override eventName = SIGNALR_METHODS.METRICS.NOTIFY_USER;
 
-	/**
-	 * Get instantaneous metrics via REST API for immediate display
-	 */
-	getInstantMetrics(id: string): Observable<SystemMetrics> {
-		return this.http.get<SystemMetrics>(API_ROUTES.CONNECTIONS.METRICS(id));
-	}
+  /**
+   * Get instantaneous metrics via REST API for immediate display
+   */
+  getInstantMetrics(id: string): Observable<SystemMetrics> {
+    return this.http.get<SystemMetrics>(API_ROUTES.CONNECTIONS.METRICS(id));
+  }
 
-	/**
-	 * Start connection with connection ID
-	 * @param id - The Redis connection ID
-	 * @returns Observable that completes when connected
-	 */
-	startConnection(id: string): Observable<void> {
-		return this.connect({ connectionId: id });
-	}
+  /**
+   * Start connection with connection ID
+   * @param id - The Redis connection ID
+   * @returns Observable that completes when connected
+   */
+  startConnection(id: string): Observable<void> {
+    return this.connect({ connectionId: id });
+  }
 
-	/**
-	 * Stop the connection
-	 * @returns Observable that completes when disconnected
-	 */
-	stopConnection(): Observable<void> {
-		return this.disconnect();
-	}
+  /**
+   * Stop the connection
+   * @returns Observable that completes when disconnected
+   */
+  stopConnection(): Observable<void> {
+    return this.disconnect();
+  }
 
-	/**
-	 * Receive system metrics messages
-	 * @returns Observable stream of metrics
-	 */
-	receiveMessage(): Observable<SystemMetrics> {
-		return this.onMessage();
-	}
+  /**
+   * Receive system metrics messages
+   * @returns Observable stream of metrics
+   */
+  receiveMessage(): Observable<SystemMetrics> {
+    return this.onMessage();
+  }
 
-	protected override onConnected(): void {
-		// Connection established - no action needed
-	}
+  protected override onConnected(): void {
+    // Connection established - no action needed
+  }
 
-	protected override onDisconnected(): void {
-		// Connection closed - no action needed
-	}
+  protected override onDisconnected(): void {
+    // Connection closed - no action needed
+  }
 
-	protected override onConnectionError(_error: unknown): void {
-		// Error is handled by base class
-	}
+  protected override onConnectionError(_error: unknown): void {
+    // Error is handled by base class
+  }
 }
-

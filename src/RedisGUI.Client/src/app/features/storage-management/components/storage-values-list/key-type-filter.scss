@@ -1,0 +1,81 @@
+:host {
+  display: contents;
+}
+.type-chip {
+  border: 1px solid var(--color-border, #1e293b);
+  transition: all 0.15s ease-in-out;
+  .chip-count {
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    color: inherit;
+  }
+
+  &:hover {
+    background: var(--color-card-hover, #1e293b);
+    border-color: var(--color-border-light, #334155);
+    transform: translateY(-1px);
+  }
+
+  &.active {
+    background: var(--color-accent, #6366f1);
+    color: #ffffff;
+    border-color: var(--color-accent, #6366f1);
+    box-shadow: 0 2px 6px var(--color-accent-glow, rgba(99, 102, 241, 0.3));
+    .chip-count {
+      background: rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+    }
+  }
+
+  /* Distinctive category borders when inactive */
+  &.chip-string:not(.active) {
+    border-left: 3px solid #1976d2;
+  }
+  &.chip-hash:not(.active) {
+    border-left: 3px solid #f57c00;
+  }
+  &.chip-list:not(.active) {
+    border-left: 3px solid #388e3c;
+  }
+  &.chip-set:not(.active) {
+    border-left: 3px solid #7b1fa2;
+  }
+  &.chip-sortedset:not(.active) {
+    border-left: 3px solid #0097a7;
+  }
+  &.chip-stream:not(.active) {
+    border-left: 3px solid #e64a19;
+  }
+}
+
+.chip-icon {
+  opacity: 0.8;
+}
+
+:host-context(.light) {
+  .type-chip {
+    background: #ffffff !important;
+    color: #334155 !important;
+    border-color: #cbd5e1 !important;
+    .chip-count {
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      border: 1px solid #cbd5e1 !important;
+    }
+    &:hover {
+      background: #f1f5f9 !important;
+      border-color: #94a3b8 !important;
+      color: #0f172a !important;
+    }
+    &.active {
+      background: #4f46e5 !important;
+      color: #ffffff !important;
+      border-color: #4f46e5 !important;
+      .chip-count {
+        background: rgba(255, 255, 255, 0.25) !important;
+        color: #ffffff !important;
+        border: none !important;
+      }
+    }
+  }
+}

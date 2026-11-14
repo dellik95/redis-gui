@@ -1,0 +1,41 @@
+@let res = result();
+<div class="result-summary-card flex flex-col gap-4 bg-canvas-card p-4">
+  <div class="summary-top flex items-start gap-3.5">
+    <mat-icon class="success-icon text-[32px] w-8 h-8">check_circle</mat-icon>
+    <div class="summary-headings">
+      <h3>Successfully Seeded Sample Data!</h3>
+      <p>{{ res.summary }}</p>
+    </div>
+  </div>
+
+  <div class="stats-grid grid gap-3">
+    <div class="stat-box bg-canvas rounded-lg p-2.5 flex flex-col gap-0.5">
+      <span class="stat-label text-canvas-muted uppercase font-bold">Total Keys Created</span>
+      <span class="stat-val font-extrabold text-canvas-text">{{ res.totalKeysCreated }}</span>
+    </div>
+    <div class="stat-box bg-canvas rounded-lg p-2.5 flex flex-col gap-0.5">
+      <span class="stat-label text-canvas-muted uppercase font-bold">Target Databases</span>
+      <span class="stat-val font-extrabold text-canvas-text">
+        {{ res.targetDatabases.join(', ') }}
+      </span>
+    </div>
+  </div>
+
+  @if (typeCounts().length) {
+  <div class="type-counts-list flex flex-col gap-2">
+    <span class="type-counts-header font-bold text-canvas-muted uppercase"
+      >Keys Created by Data Type:</span
+    >
+    <div class="type-chips-row flex flex-wrap gap-1.5">
+      @for (item of typeCounts(); track item[0]) {
+      <span
+        class="type-result-chip inline-flex items-center gap-[5px] text-brand rounded py-[3px] px-2"
+      >
+        <mat-icon>{{ typeIcon()(item[0]) }}</mat-icon>
+        <strong>{{ item[0] | uppercase }}:</strong> {{ item[1] }}
+      </span>
+      }
+    </div>
+  </div>
+  }
+</div>

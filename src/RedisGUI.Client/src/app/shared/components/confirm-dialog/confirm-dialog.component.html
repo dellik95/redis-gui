@@ -1,8 +1,19 @@
-<h2 mat-dialog-title>{{ title() }}</h2>
+<h2 mat-dialog-title class="flex items-center gap-2.5">
+  @if (confirmColor() === 'warn') {
+    <mat-icon class="!text-[20px] !w-5 !h-5 text-red-400">warning</mat-icon>
+  } @else {
+    <mat-icon class="!text-[20px] !w-5 !h-5 text-brand">help_outline</mat-icon>
+  }
+  {{ title() }}
+</h2>
+
 <mat-dialog-content>
-	<p>{{ message() }}</p>
+  <p>{{ message() }}</p>
 </mat-dialog-content>
+
 <mat-dialog-actions align="end">
-	<button mat-button (click)="onCancel()">{{ cancelText() }}</button>
-	<button mat-flat-button [color]="confirmColor()" (click)="onConfirm()">{{ confirmText() }}</button>
+  <button mat-button (click)="onCancel()">{{ cancelText() }}</button>
+  <button mat-flat-button [color]="confirmColor()" (click)="onConfirm()">
+    {{ confirmText() }}
+  </button>
 </mat-dialog-actions>
