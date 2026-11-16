@@ -14,14 +14,14 @@ public sealed class RedisMessagingMetricsCollector(RedisMessagingService messagi
 		return new { subscribers, patterns };
 	}
 
-	public async Task<(long? Subscribers, long Patterns)> CollectChannelAsync(ConnectionMultiplexer redis, RedisConnection connection, string channel, bool pattern)
+	public static async Task<(long? Subscribers, long Patterns)> CollectChannelAsync(ConnectionMultiplexer redis, RedisConnection connection, string channel, bool pattern)
 	{
 		var server = redis.GetConnectedServer(connection);
 		long? subscribers = pattern ? null : await server.SubscriptionSubscriberCountAsync(RedisChannel.Literal(channel));
 		return (subscribers, await server.SubscriptionPatternCountAsync());
 	}
 
-	public async Task<(long Length, long Groups)> CollectStreamAsync(IDatabase database, string key)
+	public static async Task<(long Length, long Groups)> CollectStreamAsync(IDatabase database, string key)
 	{
 		var info = await database.StreamInfoAsync(key);
 		return (info.Length, (await database.StreamGroupInfoAsync(key)).Length);

@@ -8,17 +8,18 @@ import {
   ChangeDetectionStrategy,
   DestroyRef
 } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  RedisCliService,
   LoadTestRequest,
   LoadTestResult,
   LoadTestProgress
 } from '../../../../core/services/redis-cli.service';
+import { BackgroundJob, BackgroundJobsService } from '../../../../core/services/background-jobs.service';
+import { Subscription } from 'rxjs';
 import { NumberPresetOption, NumberPresetPickerComponent } from '../../../../shared/components';
 
 const DURATION_PRESETS: readonly NumberPresetOption[] = [
@@ -74,7 +75,8 @@ export interface LoadTestDialogData {
 })
 export class LoadTestDialogComponent {
   readonly data: LoadTestDialogData = inject(MAT_DIALOG_DATA);
-  private readonly cliService = inject(RedisCliService);
+  private readonly dialogRef = inject(MatDialogRef<LoadTestDialogComponent>);
+  private readonly jobs = inject(BackgroundJobsService);
   private readonly destroyRef = inject(DestroyRef);
 
   // Form options
@@ -95,27 +97,30 @@ export class LoadTestDialogComponent {
   readonly errorMessage = signal<string | null>(null);
   readonly liveProgress = signal<LoadTestProgress | null>(null);
   readonly result = signal<LoadTestResult | null>(null);
+  readonly connectionStatus = signal<string | null>(null);
+  readonly activeJobId = signal<string | null>(null);
+  private readonly jobProgress = signal(0);
 
-  private activeTestId: string | null = null;
-  private abortController: AbortController | null = null;
+  private watchSubscription?: Subscription;
+  private resultRequested = false;
+  private lastRevision = -1;
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      if (this.abortController) {
-        this.abortController.abort();
-      }
-    });
+    const saved = sessionStorage.getItem(this.storageKey());
+    if (saved) { this.activeJobId.set(saved); this.isRunning.set(true); this.watch(saved); }
+    this.destroyRef.onDestroy(() => this.watchSubscription?.unsubscribe());
   }
 
   startLoadTest(): void {
+    this.dialogRef.disableClose = true;
+    this.watchSubscription?.unsubscribe();
+    this.activeJobId.set(null);
+    sessionStorage.removeItem(this.storageKey());
     this.isRunning.set(true);
     this.isStopping.set(false);
     this.errorMessage.set(null);
     this.result.set(null);
     this.liveProgress.set(null);
-
-    const testId = 'bench_' + Date.now();
-    this.activeTestId = testId;
 
     const isDuration = this.benchmarkMode() === 'duration';
     const request: LoadTestRequest = {
@@ -128,74 +133,82 @@ export class LoadTestDialogComponent {
       keyPrefix: '__bench_'
     };
 
-    this.abortController = this.cliService.streamLoadTest(
-      this.data.connectionId,
-      request,
-      testId,
-      progress => {
-        this.liveProgress.set(progress);
+    this.resultRequested = false;
+    this.lastRevision = -1;
+    this.jobs.start('load-test', this.data.connectionId, request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: job => {
+        this.dialogRef.disableClose = false;
+        this.activeJobId.set(job.jobId);
+        sessionStorage.setItem(this.storageKey(), job.jobId);
+        this.watch(job.jobId);
       },
-      res => {
-        this.isRunning.set(false);
-        this.isStopping.set(false);
-        this.result.set(res);
-        this.activeTestId = null;
-        this.abortController = null;
-      },
-      err => {
-        this.isRunning.set(false);
-        this.isStopping.set(false);
-        this.errorMessage.set(err);
-        this.activeTestId = null;
-        this.abortController = null;
-      }
-    );
+      error: error => { this.dialogRef.disableClose = false; this.isRunning.set(false); this.errorMessage.set(error.error?.detail || error.message || 'Could not start the job.'); }
+    });
   }
 
   stopLoadTest(): void {
-    if (!this.activeTestId) return;
+    const jobId = this.activeJobId();
+    if (!jobId) return;
     this.isStopping.set(true);
 
-    this.cliService
-      .stopLoadTest(this.data.connectionId, this.activeTestId)
+    this.jobs
+      .cancel(jobId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: response => {
-          this.isStopping.set(false);
-          if (response.success) {
-            this.abortController?.abort();
-            this.abortController = null;
-            this.activeTestId = null;
-            this.isRunning.set(false);
-          } else {
-            this.errorMessage.set(response.message);
-          }
-        },
+        next: job => this.applyJob(job),
         error: () => {
           this.isStopping.set(false);
+          this.connectionStatus.set('Could not request cancellation. Refresh status and try again.');
         }
       });
   }
 
   reset(): void {
+    this.watchSubscription?.unsubscribe();
+    this.activeJobId.set(null);
+    sessionStorage.removeItem(this.storageKey());
+    this.resultRequested = false;
+    this.lastRevision = -1;
     this.result.set(null);
     this.liveProgress.set(null);
     this.errorMessage.set(null);
     this.isStopping.set(false);
   }
 
-  readonly progressPercent = computed(() => {
-    const p = this.liveProgress();
-    if (!p) return 0;
+  refreshStatus(): void {
+    const id = this.activeJobId();
+    if (id) this.jobs.status(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: job => this.applyJob(job),
+      error: () => { this.isRunning.set(false); this.errorMessage.set('Job status is unavailable or has expired.'); }
+    });
+  }
 
-    if (this.benchmarkMode() === 'duration') {
-      const dur = this.durationSeconds();
-      if (!dur || dur <= 0) return 0;
-      return Math.min(100, (p.elapsedSeconds / dur) * 100);
-    } else {
-      const total = this.operationsCount();
-      if (!total || total <= 0) return 0;
-      return Math.min(100, (p.completedOperations / total) * 100);
+  private watch(jobId: string): void {
+    this.watchSubscription?.unsubscribe();
+    this.watchSubscription = this.jobs.watch(jobId).subscribe(event => {
+      this.connectionStatus.set(event.connected ? null : (event.error || 'Reconnecting live updates…'));
+      if (event.job) this.applyJob(event.job);
+    });
+  }
+
+  private applyJob(job: BackgroundJob): void {
+    if (job.revision < this.lastRevision) return;
+    this.lastRevision = job.revision;
+    this.jobProgress.set(job.progressPercent ?? 0);
+    if (job.metrics) this.liveProgress.set(job.metrics as LoadTestProgress);
+    this.isStopping.set(job.status === 'Cancelling');
+    this.isRunning.set(job.status === 'Queued' || job.status === 'Running' || job.status === 'Cancelling');
+    if (job.status === 'Failed') this.errorMessage.set(job.error || 'Load test failed.');
+    if (job.status === 'Cancelled' && !job.hasResult) this.errorMessage.set('Load test cancelled.');
+    if (job.hasResult && !this.resultRequested) {
+      this.resultRequested = true;
+      this.jobs.result<LoadTestResult>(job.jobId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: result => this.result.set(result),
+        error: () => { this.resultRequested = false; this.errorMessage.set('Could not retrieve the job result.'); }
+      });
     }
-  });
+  }
+
+  private storageKey(): string { return `redisgui:load-test:${this.data.connectionId}:${this.data.database}`; }
+  readonly progressPercent = computed(() => this.jobProgress());
 }

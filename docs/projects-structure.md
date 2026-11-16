@@ -27,7 +27,9 @@ Redis use cases are grouped by feature in `Redis/Keys`, `Redis/DataTransfer`, `R
 
 Redis infrastructure services are grouped under `Redis/Services` by responsibility: `Connections`, `Keys`, `Messaging`, `Diagnostics`, and `Tools`. HTTP endpoint files are grouped under `Endpoints/Connections`, `Keys`, `Messaging`, `DataTransfer`, `Diagnostics`, `Tools`, and `Audit`. Endpoint routes are unchanged by the folder organization.
 
-The messaging endpoints dispatch requests through the application mediator. The streaming load test delegates the operation and access checks to an application command while the HTTP layer writes SSE events and handles stream cancellation. The streaming endpoints require write access, and a running test can be stopped only by the user who started it for the same connection.
+The messaging endpoints dispatch requests through the application mediator. Long-running operations use the background job queue: HTTP starts, cancels, checks, and retrieves jobs; the authenticated jobs hub publishes status and progress to the owning user. The worker runs application handlers in an isolated scope with the initiating identity, and checks connection access again. Clients resubscribe and retrieve current status after a SignalR reconnect.
+
+The current queue and results are held in the application process and expire 30 minutes after completion. File results use temporary server storage and are removed at expiration or graceful shutdown; an unclean shutdown can leave files behind. Jobs do not survive a restart and are not shared between application instances; multi-instance deployments need shared job storage and coordinated processing before relying on this implementation. The queue is bounded and rejects new work when full. Load-test jobs require write access and Safe Mode to be off.
 
 ## Validation and pipeline
 

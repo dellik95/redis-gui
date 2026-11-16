@@ -395,13 +395,14 @@ export class KeyActionsService {
   }
 
   /** Open load test dialog. */
-  async openLoadTest(connectionId: string): Promise<void> {
+  async openLoadTest(connectionId: string, database = 0): Promise<void> {
     const { LoadTestDialogComponent } =
       await import('../load-test-dialog/load-test-dialog.component');
     this.dialog.open(LoadTestDialogComponent, {
       width: '720px',
       maxWidth: '94vw',
-      data: { connectionId }
+      closeOnNavigation: false,
+      data: { connectionId, database }
     });
   }
 

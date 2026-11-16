@@ -38,6 +38,11 @@ public class LoggingBehavior<TRequest, TResponse>
 
 			return result;
 		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			logger.LogInformation("Request {Request} was cancelled.", name);
+			throw;
+		}
 		catch (Exception e)
 		{
 			logger.LogError(e, "Request {Request} processing failed.", name);

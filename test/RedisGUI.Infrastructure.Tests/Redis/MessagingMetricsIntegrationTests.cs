@@ -24,7 +24,6 @@ public class MessagingMetricsIntegrationTests
         var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
         if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
         using var redis = await ConnectionMultiplexer.ConnectAsync(configuration!);
-        var collector = new RedisMessagingMetricsCollector(new RedisMessagingService(Mock.Of<IRedisConnectionManager>()));
         var subscriptions = new MessagingSubscriptions(NullLogger<MessagingSubscriptions>.Instance);
         var samples = new ConcurrentQueue<JsonElement>();
         var client = new Mock<IClientProxy>();
@@ -38,7 +37,7 @@ public class MessagingMetricsIntegrationTests
         var db = redis.GetDatabase();
         try
         {
-            await subscriptions.WatchChannelAsync("channel", redis, connection, key, false, client.Object, new Lease(), collector);
+            await subscriptions.WatchChannelAsync("channel", redis, connection, key, false, client.Object, new Lease());
             await redis.GetSubscriber().PublishAsync(RedisChannel.Literal(key), "one");
             var channelSample = await WaitForAsync(samples, sample => sample.GetProperty("delivered").GetInt64() > 0);
             Assert.That(channelSample.GetProperty("primary").GetInt64(), Is.GreaterThanOrEqualTo(1));
@@ -46,7 +45,7 @@ public class MessagingMetricsIntegrationTests
             await subscriptions.RemoveAsync("channel");
             while (samples.TryDequeue(out _)) { }
 
-            await subscriptions.WatchChannelAsync("pattern", redis, connection, key + "*", true, client.Object, new Lease(), collector);
+            await subscriptions.WatchChannelAsync("pattern", redis, connection, key + "*", true, client.Object, new Lease());
             await redis.GetSubscriber().PublishAsync(RedisChannel.Literal(key), "two");
             var patternSample = await WaitForAsync(samples, sample => sample.GetProperty("primary").ValueKind == JsonValueKind.Null);
             Assert.That(patternSample.GetProperty("secondary").GetInt64(), Is.GreaterThanOrEqualTo(1));
@@ -55,7 +54,7 @@ public class MessagingMetricsIntegrationTests
 
             await db.StreamAddAsync(key, "event", "initial");
             await db.StreamCreateConsumerGroupAsync(key, "workers", "0-0");
-            await subscriptions.WatchStreamAsync("stream", db, key, "0-0", client.Object, new Lease(), collector);
+            await subscriptions.WatchStreamAsync("stream", db, key, "0-0", client.Object, new Lease());
             var streamSample = await WaitForAsync(samples, sample => sample.GetProperty("primary").ValueKind == JsonValueKind.Number && sample.GetProperty("secondary").GetInt64() == 1 && sample.GetProperty("delivered").GetInt64() > 0);
             Assert.That(streamSample.GetProperty("primary").GetInt64(), Is.EqualTo(1));
             Assert.That(streamSample.GetProperty("secondary").GetInt64(), Is.EqualTo(1));

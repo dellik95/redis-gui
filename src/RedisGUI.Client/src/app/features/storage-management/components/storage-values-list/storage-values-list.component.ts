@@ -759,6 +759,7 @@ export class StorageValuesListComponent {
     this.dialog.open(LoadTestDialogComponent, {
       width: '680px',
       maxWidth: '94vw',
+      closeOnNavigation: false,
       data: {
         connectionId: this.connectionId(),
         database: this.selectedDb()

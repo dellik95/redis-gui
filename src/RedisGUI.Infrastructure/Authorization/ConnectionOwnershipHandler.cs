@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authorization;
-using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Users;
 using System.Security.Claims;
 
@@ -10,16 +9,6 @@ namespace RedisGUI.Infrastructure.Authorization;
 /// </summary>
 public sealed class ConnectionOwnershipHandler : AuthorizationHandler<ConnectionOwnershipRequirement, RedisConnection>
 {
-	private readonly ICurrentUserService _currentUserService;
-
-	/// <summary>
-	/// Initializes a new instance of the ConnectionOwnershipHandler
-	/// </summary>
-	public ConnectionOwnershipHandler(ICurrentUserService currentUserService)
-	{
-		_currentUserService = currentUserService;
-	}
-
 	/// <summary>
 	/// Handles the authorization requirement
 	/// </summary>
@@ -29,8 +18,8 @@ public sealed class ConnectionOwnershipHandler : AuthorizationHandler<Connection
 		RedisConnection resource)
 	{
 		// Get user ID from claims
-		Guid? userId = _currentUserService.UserId;
-		if (!userId.HasValue)
+		string? identifier = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? context.User.FindFirst("sub")?.Value;
+		if (!Guid.TryParse(identifier, out var userId))
 		{
 			return Task.CompletedTask; // Not authenticated
 		}
@@ -43,7 +32,7 @@ public sealed class ConnectionOwnershipHandler : AuthorizationHandler<Connection
 		}
 
 		// Check if user can access the connection using domain logic
-		if (resource.CanBeAccessedBy(userId.Value, userRole))
+		if (resource.CanBeAccessedBy(userId, userRole))
 		{
 			context.Succeed(requirement);
 		}

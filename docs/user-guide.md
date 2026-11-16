@@ -285,7 +285,9 @@ Measure Redis server throughput, latency, and concurrency under realistic condit
   * *Write Heavy*: 80% SET, 20% GET.
   * *Balanced*: 50% GET, 50% SET.
 * **Comprehensive Metrics**: Displays total elapsed time, Requests Per Second (RPS), and latency percentiles (`p50`, `p95`, `p99`).
-* **Automatic Cleanup**: Benchmark keys (`bench:*`) are automatically removed upon completion.
+* **Automatic Cleanup**: The application attempts to remove benchmark keys (`__bench:*`) when the test stops.
+
+Load tests run as background jobs. The dialog shows the job ID and receives progress over SignalR; closing it does not stop the job. Reopen the dialog in the same browser session to check its status or request cancellation. Live updates reconnect automatically, and **Refresh status** is available when the connection is unavailable. Jobs and their results are held in the application process for 30 minutes after completion and are lost if the server restarts; they are not shared across server instances. Cleanup is attempted on completion or cancellation.
 
 ---
 

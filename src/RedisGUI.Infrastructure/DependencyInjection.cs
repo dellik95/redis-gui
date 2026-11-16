@@ -67,6 +67,7 @@ public static class DependencyInjection
 		services.AddScoped<IRedisConnectionService, RedisConnectionService>();
 		services.AddScoped<IRedisKeyService, RedisKeyService>();
 		services.AddScoped<IConnectionAccessService, Authorization.ConnectionAccessService>();
+		services.AddScoped<JobIdentity>();
 		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
 		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
 		services.AddScoped<IRedisCliService, RedisCliService>();
@@ -149,7 +150,7 @@ public static class DependencyInjection
 			{
 				OnMessageReceived = context =>
 				{
-					if (context.Request.Path.StartsWithSegments("/hub/messaging"))
+					if (context.Request.Path.StartsWithSegments("/hub/messaging") || context.Request.Path.StartsWithSegments("/hub/jobs"))
 						context.Token = context.Request.Query["access_token"];
 					return Task.CompletedTask;
 				}
@@ -296,6 +297,8 @@ public static class DependencyInjection
 
 	private static void AddBackgroundJobs(IServiceCollection services)
 	{
+		services.AddSingleton<BackgroundJobManager>();
+		services.AddHostedService(provider => provider.GetRequiredService<BackgroundJobManager>());
 		services.AddHostedService<RedisMetricsBackgroundJob>();
 		services.AddHostedService<ConnectionHealthMonitor>();
 		services.AddSingleton<IConnectionHealthMonitor>(sp =>

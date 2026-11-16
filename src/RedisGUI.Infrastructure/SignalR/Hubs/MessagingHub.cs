@@ -10,7 +10,7 @@ namespace RedisGUI.Infrastructure.SignalR.Hubs;
 /// <summary>Authenticated, per-client messaging subscriptions.</summary>
 [Authorize]
 public sealed class MessagingHub(IRedisConnectionRepository repository, IAuthorizationService authorization,
-    RedisMessagingService messaging, RedisMessagingMetricsCollector metrics, MessagingSubscriptions subscriptions) : Hub
+    RedisMessagingService messaging, MessagingSubscriptions subscriptions) : Hub
 {
     private async Task<RedisConnection> GetConnection(Guid id)
     {
@@ -26,7 +26,7 @@ public sealed class MessagingHub(IRedisConnectionRepository repository, IAuthori
         var connection = await GetConnection(connectionId);
         var redis = await messaging.ConnectAsync(connection, Context.ConnectionAborted);
         var lease = messaging.Pin(redis) ?? throw new HubException("Connection was retired. Please retry.");
-        await subscriptions.WatchChannelAsync(Context.ConnectionId, redis, connection, channel, pattern, Clients.Caller, lease, metrics);
+        await subscriptions.WatchChannelAsync(Context.ConnectionId, redis, connection, channel, pattern, Clients.Caller, lease);
     }
 
     public async Task WatchStream(Guid connectionId, string key, string afterId)
@@ -35,7 +35,7 @@ public sealed class MessagingHub(IRedisConnectionRepository repository, IAuthori
         var connection = await GetConnection(connectionId);
         var redis = await messaging.ConnectAsync(connection, Context.ConnectionAborted);
         var lease = messaging.Pin(redis) ?? throw new HubException("Connection was retired. Please retry.");
-        await subscriptions.WatchStreamAsync(Context.ConnectionId, redis.GetDatabase(connection.DatabaseNumber.Value), key, afterId, Clients.Caller, lease, metrics);
+        await subscriptions.WatchStreamAsync(Context.ConnectionId, redis.GetDatabase(connection.DatabaseNumber.Value), key, afterId, Clients.Caller, lease);
     }
 
     public Task StopWatching() => subscriptions.RemoveAsync(Context.ConnectionId);
@@ -57,7 +57,7 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
             try { await cts.CancelAsync(); } catch (ObjectDisposedException) { }
         }
     }
-    public async Task WatchChannelAsync(string clientId, ConnectionMultiplexer redis, RedisConnection connection, string channel, bool pattern, IClientProxy client, IDisposable lease, RedisMessagingMetricsCollector metrics)
+    public async Task WatchChannelAsync(string clientId, ConnectionMultiplexer redis, RedisConnection connection, string channel, bool pattern, IClientProxy client, IDisposable lease)
     {
         await RemoveAsync(clientId);
         var cts = new CancellationTokenSource();
@@ -68,7 +68,7 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
             var counter = new DeliveryCounter();
             _ = RunChannelAsync(clientId, cts, queue, client, lease, counter, () => RunMetricsAsync(cts.Token, client, counter, async () =>
             {
-                var (subscribers, patterns) = await metrics.CollectChannelAsync(redis, connection, channel, pattern);
+                var (subscribers, patterns) = await RedisMessagingMetricsCollector.CollectChannelAsync(redis, connection, channel, pattern);
                 return (subscribers, (long?)patterns);
             }));
         }
@@ -94,7 +94,7 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
             finally { watches.TryRemove(new KeyValuePair<string, CancellationTokenSource>(clientId, cts)); cts.Dispose(); lease.Dispose(); }
         }
     }
-    public async Task WatchStreamAsync(string clientId, IDatabase db, string key, string afterId, IClientProxy client, IDisposable lease, RedisMessagingMetricsCollector metrics)
+    public async Task WatchStreamAsync(string clientId, IDatabase db, string key, string afterId, IClientProxy client, IDisposable lease)
     {
         await RemoveAsync(clientId);
         var cts = new CancellationTokenSource();
@@ -102,7 +102,7 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
         var counter = new DeliveryCounter();
         _ = RunStreamAsync(clientId, cts, db, key, afterId, client, lease, counter, () => RunMetricsAsync(cts.Token, client, counter, async () =>
         {
-            var (length, groups) = await metrics.CollectStreamAsync(db, key);
+            var (length, groups) = await RedisMessagingMetricsCollector.CollectStreamAsync(db, key);
             return ((long?)length, (long?)groups);
         }));
     }

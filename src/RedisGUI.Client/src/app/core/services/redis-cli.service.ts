@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { TokenStorageService } from './auth/token-storage.service';
 
 export interface CliExecutionResponse {
   output: string;
@@ -82,7 +81,6 @@ export interface SeedDataResult {
 })
 export class RedisCliService {
   private readonly http = inject(HttpClient);
-  private readonly tokenStorage = inject(TokenStorageService);
   private readonly baseUrl = '/api/v1/storage';
 
   /**
@@ -112,122 +110,6 @@ export class RedisCliService {
   getKeyMemoryUsage(connectionId: string, key: string): Observable<KeyMemoryResponse> {
     return this.http.get<KeyMemoryResponse>(
       `${this.baseUrl}/${connectionId}/keys/${encodeURIComponent(key)}/memory`
-    );
-  }
-
-  /**
-   * Executes synthetic Redis load test with automated cleanup (one-shot POST)
-   */
-  runLoadTest(connectionId: string, request: LoadTestRequest): Observable<LoadTestResult> {
-    return this.http.post<LoadTestResult>(`${this.baseUrl}/${connectionId}/load-test`, request);
-  }
-
-  /**
-   * Starts real-time streaming load test via Server-Sent Events (SSE)
-   */
-  streamLoadTest(
-    connectionId: string,
-    request: LoadTestRequest,
-    testId: string,
-    onProgress: (progress: LoadTestProgress) => void,
-    onComplete: (result: LoadTestResult) => void,
-    onError: (error: string) => void
-  ): AbortController {
-    const controller = new AbortController();
-    const url = `${this.baseUrl}/${connectionId}/load-test/stream?testId=${encodeURIComponent(testId)}`;
-
-    const token = this.tokenStorage.token();
-    fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && !this.tokenStorage.isTokenExpired()
-          ? { Authorization: `Bearer ${token}` }
-          : {})
-      },
-      body: JSON.stringify(request),
-      signal: controller.signal
-    })
-      .then(async response => {
-        if (!response.ok) {
-          const errText = await response.text();
-          onError(errText || `Server returned ${response.status}`);
-          return;
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          onError('ReadableStream not supported by browser');
-          return;
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const events = buffer.split('\n\n');
-          buffer = events.pop() ?? '';
-
-          for (const eventBlock of events) {
-            if (!eventBlock.trim()) continue;
-
-            let currentEvent = 'message';
-            let currentData = '';
-
-            for (const line of eventBlock.split('\n')) {
-              if (line.startsWith('event: ')) {
-                currentEvent = line.slice(7).trim();
-              } else if (line.startsWith('data: ')) {
-                currentData = line.slice(6).trim();
-              }
-            }
-
-            if (currentEvent === 'progress' && currentData) {
-              try {
-                onProgress(JSON.parse(currentData));
-              } catch (e) {
-                console.error('Error parsing progress SSE', e);
-              }
-            } else if (currentEvent === 'complete' && currentData) {
-              try {
-                onComplete(JSON.parse(currentData));
-              } catch (e) {
-                console.error('Error parsing complete SSE', e);
-              }
-            } else if (currentEvent === 'error' && currentData) {
-              try {
-                const parsed = JSON.parse(currentData);
-                onError(parsed.error || currentData);
-              } catch {
-                onError(currentData);
-              }
-            }
-          }
-        }
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          onError(err.message || 'Stream connection error');
-        }
-      });
-
-    return controller;
-  }
-
-  /**
-   * Stops a running load test immediately
-   */
-  stopLoadTest(
-    connectionId: string,
-    testId: string
-  ): Observable<{ message: string; success: boolean }> {
-    return this.http.post<{ message: string; success: boolean }>(
-      `${this.baseUrl}/${connectionId}/load-test/stop`,
-      { testId }
     );
   }
 

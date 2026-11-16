@@ -142,6 +142,7 @@ public class Program
 		app.MapHub<RedisMetricsHub>("/hub/metrics");
 		app.MapHub<KeyChangeHub>("/hub/keychange");
 		app.MapHub<MessagingHub>("/hub/messaging");
+		app.MapHub<BackgroundJobsHub>("/hub/jobs");
 
 		app.MapHealthChecks("/health");
 		app.MapHealthChecks("/health/ready");

@@ -31,7 +31,7 @@
       mat-dialog-close
       matTooltip="Close"
       class="close-btn text-canvas-muted"
-      [disabled]="isRunning() && !isStopping()"
+      [disabled]="isRunning() && !activeJobId()"
     >
       <mat-icon>close</mat-icon>
     </button>
@@ -48,8 +48,7 @@
       <div class="info-banner flex items-center gap-3 rounded-lg py-2.5 px-3.5 mb-4">
         <mat-icon class="info-icon text-[20px] w-5 h-5 shrink-0">verified_user</mat-icon>
         <div class="info-text">
-          <strong>Guaranteed Safe & Isolated:</strong> Benchmarks execute with dedicated keys
-          (<code>__bench_*:</code>). All test keys are automatically purged and verified after
+          Benchmarks use dedicated keys (<code>__bench_*:</code>) and attempt cleanup after
           completion or cancellation.
         </div>
       </div>
@@ -209,6 +208,12 @@
   }
 
   <!-- Real-Time Live Streaming State -->
+  @if (activeJobId()) {
+    <p class="text-canvas-muted">Job {{ activeJobId() }} · The job continues if this dialog closes.</p>
+  }
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+  }
   @if (isRunning()) {
     <app-load-test-progress
       [liveProgress]="liveProgress()"
