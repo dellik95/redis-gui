@@ -94,6 +94,8 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 			Result<DeleteMultipleKeysResponse> selected when selected.IsSuccess =>
 				$"Deleted {selected.Value.DeletedCount} of {selected.Value.TotalRequested}; failed or missing: {selected.Value.FailedKeys.Count}.",
 			Result<DeleteKeysByPatternResponse> pattern when pattern.IsSuccess => $"Deleted {pattern.Value.DeletedCount} matching keys.",
+			Result<StreamDeleteKeysByPatternResult> stream when stream.IsSuccess =>
+				$"Deleted {stream.Value.DeletedCount} matching keys; cancelled: {stream.Value.Cancelled}; failed: {stream.Value.Error is not null}.",
 			Result<RedisBulkTtlResult> ttl when ttl.IsSuccess && request is BulkUpdateTtlCommand =>
 				$"Updated TTL: {ttl.Value.UpdatedCount}; unchanged or missing: {ttl.Value.UnchangedCount}; failed: {ttl.Value.FailedKeys.Count}.",
 			_ => null
@@ -112,7 +114,8 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 			metadata: metadata);
 
 		auditLogRepository.Add(auditLog);
-		await unitOfWork.SaveChangesAsync(cancellationToken);
+		await unitOfWork.SaveChangesAsync(request is StreamDeleteKeysByPatternCommand && cancellationToken.IsCancellationRequested
+			? CancellationToken.None : cancellationToken);
 
 		return response;
 	}

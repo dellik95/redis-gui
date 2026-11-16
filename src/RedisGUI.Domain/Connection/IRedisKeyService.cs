@@ -59,8 +59,10 @@ public interface IRedisKeyService
 	/// <param name="pattern">Pattern to match keys (e.g., "user:*")</param>
 	/// <param name="cancellationToken">Cancellation token</param>
 	/// <param name="database">Target database index</param>
+	/// <param name="onProgress">Optional callback for the number of confirmed deletions.</param>
 	/// <returns>Number of keys deleted</returns>
-	Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default, int? database = null);
+	Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default,
+		int? database = null, Func<int, Task>? onProgress = null);
 
 	/// <summary>
 	/// Get the type of key in redis

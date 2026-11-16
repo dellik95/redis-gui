@@ -166,7 +166,8 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Delete keys from redis matching a pattern
 	/// </summary>
-	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default, int? database = null)
+	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default,
+		int? database = null, Func<int, Task>? onProgress = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -191,7 +192,11 @@ public class RedisKeyService : IRedisKeyService
 				{
 					cancellationToken.ThrowIfCancellationRequested();
 					RedisKey key = item.RawKey is null ? (RedisKey)item.Key : (RedisKey)item.RawKey;
-					if (await db.KeyDeleteAsync(key)) deletedCount++;
+					if (await db.KeyDeleteAsync(key))
+					{
+						deletedCount++;
+						if (onProgress is not null) await onProgress(deletedCount);
+					}
 				}
 				cursor = page.Value.NextCursor;
 			} while (cursor is not null);

@@ -47,7 +47,6 @@ import { filter } from 'rxjs/operators';
 
 import { StorageManagementStore } from '../../stores/storage-management.store';
 import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
-import { RedisOperationsStore } from '../../stores/redis-operations.store';
 import {
   RedisDataType,
   RedisKeyInfo,
@@ -91,7 +90,6 @@ export class StorageValuesListComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly storageStore = inject(StorageManagementStore);
   private readonly redisKeysStore = inject(RedisKeysStore);
-  private readonly redisOperationsStore = inject(RedisOperationsStore);
   private readonly destroyRef = inject(DestroyRef);
 
   // 2. Inputs & Outputs
@@ -425,6 +423,7 @@ export class StorageValuesListComponent {
   deleteFolder(event: { path: string; name: string; keyCount: number; keys: string[] }): void {
     const delim = this.keyDelimiter() || ':';
     const pattern = event.path.endsWith(delim) ? `${event.path}*` : `${event.path}${delim}*`;
+    const database = this.selectedDb();
 
     this.dialog
       .open(ConfirmDialogComponent, {
@@ -444,37 +443,9 @@ export class StorageValuesListComponent {
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
         if (event.keys.length > 0) {
-          this.redisOperationsStore.deleteMultipleKeys({
-            connectionId: this.connectionId(),
-            keys: event.keys,
-            database: this.selectedDb(),
-            onSuccess: result => {
-              this.selection.clear();
-              this.redisKeysStore.clearCache();
-              this.loadKeys();
-              this.snackBar.open(
-                `Folder "${event.name}": deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`,
-                'Close',
-                { duration: 3500 }
-              );
-            },
-            onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
-          });
+          void this.runSelectedBulk('delete', [...event.keys], database);
         } else {
-          this.redisOperationsStore.deleteKeysByPattern({
-            connectionId: this.connectionId(),
-            pattern,
-            database: this.selectedDb(),
-            onSuccess: result => {
-              this.selection.clear();
-              this.redisKeysStore.clearCache();
-              this.loadKeys();
-              this.snackBar.open(`Deleted ${result.deletedCount} key(s) from folder "${event.name}"`, 'Close', {
-                duration: 3500
-              });
-            },
-            onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
-          });
+          void this.runPatternBulk(pattern, database);
         }
       });
   }
@@ -520,6 +491,7 @@ export class StorageValuesListComponent {
 
   deleteSelected(): void {
     const selectedKeys = [...this.selection.selected];
+    const database = this.selectedDb();
     if (selectedKeys.length === 0) {
       this.snackBar.open('No keys selected', 'Close', { duration: 3000 });
       return;
@@ -529,7 +501,7 @@ export class StorageValuesListComponent {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Delete Selected Keys',
-          message: `Delete ${selectedKeys.length} selected key(s) from DB ${this.selectedDb()}? Examples: ${selectedKeys.slice(0, 5).join(', ')}${selectedKeys.length > 5 ? ', …' : ''}. Keys may change before deletion.`,
+          message: `Delete ${selectedKeys.length} selected key(s) from DB ${database}? Examples: ${selectedKeys.slice(0, 5).join(', ')}${selectedKeys.length > 5 ? ', …' : ''}. Keys may change before deletion.`,
           confirmText: 'Delete',
           cancelText: 'Cancel',
           confirmColor: 'warn'
@@ -537,22 +509,7 @@ export class StorageValuesListComponent {
       })
       .afterClosed()
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
-      .subscribe(() => {
-        this.redisOperationsStore.deleteMultipleKeys({
-          connectionId: this.connectionId(),
-          keys: selectedKeys,
-          database: this.selectedDb(),
-          onSuccess: result => {
-            this.selection.clear();
-            this.redisKeysStore.clearCache();
-            this.loadKeys();
-            this.snackBar.open(`Deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`, 'Close', {
-              duration: 4000
-            });
-          },
-          onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
-        });
-      });
+      .subscribe(() => { void this.runSelectedBulk('delete', selectedKeys, database); });
   }
 
   deleteByPattern(): void {
@@ -576,34 +533,14 @@ export class StorageValuesListComponent {
         ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
           next: preview => {
             const examples = preview.keys.slice(0, 5).map(item => item.key).join(', ') || '(none in this scan page)';
-        this.dialog
-          .open(ConfirmDialogComponent, {
-            data: {
-              title: 'Confirm Delete',
-              message: `Delete all keys matching "${pattern}" in DB ${database}? Preview (one scan page): ${examples}. This preview may be partial and keys may change before or during deletion.`,
-              confirmText: 'Delete',
-              cancelText: 'Cancel',
-              confirmColor: 'warn'
-            }
-          })
-          .afterClosed()
-          .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
-          .subscribe(() => {
-            this.redisOperationsStore.deleteKeysByPattern({
-              connectionId: this.connectionId(),
-              pattern,
-              database,
-              onSuccess: result => {
-                this.selection.clear();
-                this.redisKeysStore.clearCache();
-                this.loadKeys();
-                this.snackBar.open(`Deleted ${result.deletedCount} key(s) matching "${pattern}"`, 'Close', {
-                  duration: 4000
-                });
-              },
-              onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
-            });
-          });
+            this.dialog.open(ConfirmDialogComponent, {
+              data: {
+                title: 'Confirm Delete',
+                message: `Delete all keys matching "${pattern}" in DB ${database}? Preview (one scan page): ${examples}. This preview may be partial and keys may change before or during deletion.`,
+                confirmText: 'Delete', cancelText: 'Cancel', confirmColor: 'warn'
+              }
+            }).afterClosed().pipe(filter((confirmed): confirmed is boolean => confirmed === true))
+              .subscribe(() => { void this.runPatternBulk(pattern, database); });
           },
           error: () => this.snackBar.open('Could not preview matching keys; deletion was not started.', 'Close', { duration: 5000 })
         });
@@ -706,7 +643,8 @@ export class StorageValuesListComponent {
   }
 
   openBulkTtl(): void {
-    const selected = this.selection.selected;
+    const selected = [...this.selection.selected];
+    const database = this.selectedDb();
     if (selected.length === 0) return;
 
     this.dialog
@@ -733,23 +671,32 @@ export class StorageValuesListComponent {
 
         this.dialog.open(ConfirmDialogComponent, { data: {
           title: 'Confirm TTL change',
-          message: `${ttlSeconds === null ? 'Persist' : `Set TTL to ${ttlSeconds}s for`} ${selected.length} key(s) in DB ${this.selectedDb()}? Examples: ${selected.slice(0, 5).join(', ')}${selected.length > 5 ? ', …' : ''}. Keys may change before this runs.`,
+          message: `${ttlSeconds === null ? 'Persist' : `Set TTL to ${ttlSeconds}s for`} ${selected.length} key(s) in DB ${database}? Examples: ${selected.slice(0, 5).join(', ')}${selected.length > 5 ? ', …' : ''}. Keys may change before this runs.`,
           confirmText: 'Apply', cancelText: 'Cancel'
-        }}).afterClosed().pipe(filter((confirmed): confirmed is boolean => confirmed === true)).subscribe(() => this.redisKeysStore.bulkUpdateTtl({
-          connectionId: this.connectionId(),
-          keys: selected,
-          ttlSeconds,
-          database: this.selectedDb(),
-          onSuccess: result => {
-            const label = ttlSeconds
-              ? `TTL set to ${ttlSeconds}s for ${result.updatedCount} keys`
-              : `Persisted ${result.updatedCount} keys indefinitely`;
-            this.snackBar.open(`${label}; ${result.unchangedCount} unchanged or missing, ${result.failedKeys.length} failed.`, 'Close', { duration: 5000 });
-            this.selection.clear();
-            this.loadKeys();
-          }
-        }));
+        }}).afterClosed().pipe(filter((confirmed): confirmed is boolean => confirmed === true))
+          .subscribe(() => { void this.runSelectedBulk('ttl', selected, database, ttlSeconds); });
       });
+  }
+
+  private async runPatternBulk(pattern: string, database: number): Promise<void> {
+    const { BulkDeleteProgressComponent } = await import('../bulk-delete-progress/bulk-delete-progress.component');
+    this.dialog.open(BulkDeleteProgressComponent, {
+      disableClose: true, closeOnNavigation: false, width: '480px', data: { connectionId: this.connectionId(), pattern, database }
+    }).afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshAfterBulk());
+  }
+
+  private async runSelectedBulk(operation: 'delete' | 'ttl', keys: string[], database: number, ttlSeconds?: number | null): Promise<void> {
+    const { BulkSelectedProgressComponent } = await import('../bulk-selected-progress/bulk-selected-progress.component');
+    this.dialog.open(BulkSelectedProgressComponent, {
+      disableClose: true, closeOnNavigation: false, width: '480px',
+      data: { connectionId: this.connectionId(), operation, keys, database, ttlSeconds }
+    }).afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshAfterBulk());
+  }
+
+  private refreshAfterBulk(): void {
+    this.selection.clear();
+    this.redisKeysStore.clearCache();
+    this.loadKeys();
   }
 
   async seedDemoData(): Promise<void> {

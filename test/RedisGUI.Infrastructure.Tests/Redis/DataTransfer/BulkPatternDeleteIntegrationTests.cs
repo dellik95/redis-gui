@@ -18,6 +18,35 @@ namespace RedisGUI.Infrastructure.Tests.Redis.DataTransfer;
 public class BulkPatternDeleteIntegrationTests
 {
 	[Test]
+	public async Task DeletePattern_CancellationStopsAfterConfirmedDeletion()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+		using var mux = await ConnectionMultiplexer.ConnectAsync(configuration!);
+		var manager = new Mock<IRedisConnectionManager>();
+		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Bulk cancellation test"), new ConnectionHost("localhost"),
+			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
+		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
+		var prefix = "redisgui-bulk-cancel:" + Guid.NewGuid().ToString("N") + ":";
+		var keys = Enumerable.Range(0, 20).Select(i => prefix + i).ToArray();
+		var db = mux.GetDatabase(1);
+		using var cancellation = new CancellationTokenSource();
+		int confirmed = 0;
+		try
+		{
+			foreach (var key in keys) await db.StringSetAsync(key, "value");
+			await Assert.ThrowsAsync<OperationCanceledException>(async () => await service.DeleteKeysByPatternAsync(connection, prefix + "*",
+				cancellation.Token, 1, count => { confirmed = count; cancellation.Cancel(); return Task.CompletedTask; }));
+			Assert.That(confirmed, Is.EqualTo(1));
+			int remaining = 0;
+			foreach (var key in keys) if (await db.KeyExistsAsync(key)) remaining++;
+			Assert.That(remaining, Is.EqualTo(19));
+		}
+		finally { foreach (var key in keys) await db.KeyDeleteAsync(key); }
+	}
+
+	[Test]
 	public async Task BulkTtl_ReportsUpdatedAndUnchangedKeys()
 	{
 		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
