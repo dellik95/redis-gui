@@ -23,7 +23,7 @@ public class RedisKeyService : IRedisKeyService
 	/// <summary>
 	/// Retrieves all keys from the Redis database
 	/// </summary>
-	public async ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default)
+	public async ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
@@ -37,7 +37,7 @@ public class RedisKeyService : IRedisKeyService
 		List<string> keys = [];
 
 		var result = servers
-			.Select(server => server.Keys(connection.DatabaseNumber.Value).Select(x => x.ToString()))
+			.Select(server => server.Keys(database ?? connection.DatabaseNumber.Value).Select(x => x.ToString()))
 			.Aggregate(keys, (current, serverKeys) => current.Union(serverKeys).ToList());
 
 		return Result.Success<IEnumerable<string>>(result);
