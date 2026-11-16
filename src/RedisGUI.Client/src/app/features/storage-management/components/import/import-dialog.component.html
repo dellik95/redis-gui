@@ -15,16 +15,27 @@
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-      <span>Importing keys and values into Redis...</span>
+      <span>{{ jobStatus() || 'Uploading and starting' }} · {{ processed() }} of {{ total() }} keys processed</span>
     </div>
   }
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
+  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the import.</p> }
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+  }
+  @if (result(); as outcome) {
+    <p>Imported {{ outcome.importedCount }}, skipped {{ outcome.skippedCount }}, failed {{ outcome.failedCount }}.</p>
+    @if (outcome.cancelled) { <p>Import stopped before all keys were processed.</p> }
+    @if (outcome.mayHaveUnconfirmedChanges) { <p>A Redis operation was in flight when stopped; refresh the keys before retrying.</p> }
+    @if (outcome.failedCount > 0) { <p>Failed keys (Base64 for snapshots): {{ outcome.failedKeys.slice(0, 10).join(', ') }}</p> }
+  }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button (click)="dialogRef.close()">Cancel</button>
+  <button mat-button (click)="close()" [disabled]="isLoading() && !jobId()">Close</button>
+  @if (isLoading() && jobId()) { <button mat-button (click)="cancel()" [disabled]="stopping()">{{ stopping() ? 'Stopping…' : 'Stop' }}</button> }
   <button mat-flat-button color="primary" [disabled]="!canImport()" (click)="onImport()">
-    Import
+    Start import
   </button>
 </mat-dialog-actions>

@@ -15,7 +15,7 @@ namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 
 /// <summary>Exports matching keys from a selected Redis database.</summary>
 public sealed record ExportRedisDataQuery(Guid ConnectionId, string Pattern = "*", ExportFormat Format = ExportFormat.Json,
-	int? Database = null) : IQuery<ExportRedisDataResponse>;
+	int? Database = null, Func<int, Task>? OnProgress = null) : IQuery<ExportRedisDataResponse>;
 
 internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository repository, IConnectionAccessService access,
 	IRedisKeyService keys, IRedisSnapshotService snapshots, IExportSessionFactory sessions)
@@ -37,6 +37,7 @@ internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository rep
 		await writer.WriteAsync(json ? "[\n" : "KeyBase64,DumpBase64,Type,TtlMilliseconds\r\n");
 		string? cursor = null;
 		bool first = true;
+		int exported = 0;
 		do
 		{
 			cancellationToken.ThrowIfCancellationRequested();
@@ -66,6 +67,8 @@ internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository rep
 					await writer.WriteLineAsync($"{Csv(keyBase64)},{Csv(dumpBase64)},{Csv(value.Value.Type)},{Csv(ttl)}".AsMemory(), cancellationToken);
 				}
 				first = false;
+				exported++;
+				if (request.OnProgress is not null) await request.OnProgress(exported);
 			}
 			cursor = page.Value.NextCursor;
 		} while (cursor is not null);

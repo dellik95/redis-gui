@@ -4,7 +4,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using Moq;
 using RedisGUI.Application.Core.Services;
+using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Application.Redis.Commands.ImportRedisData;
+using RedisGUI.Domain.Abstraction;
+using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Primitives;
@@ -69,6 +72,38 @@ public class ImportRedisDataCommandHandlerTests
 		Assert.That(result.IsSuccess, Is.True);
 		Assert.That(result.Value.SkippedCount, Is.EqualTo(1));
 		Assert.That(result.Value.FailedKeys, Does.Contain("list"));
+	}
+
+	[Test]
+	public async Task Handle_CancelBetweenKeys_ReturnsConfirmedPartialResult()
+	{
+		using var cancellation = new CancellationTokenSource();
+		var items = new[] { new RedisImportItem { Key = "a", Value = "1" }, new RedisImportItem { Key = "b", Value = "2" } };
+		snapshots.Setup(x => x.SetLegacyStringAsync(connection, It.IsAny<string>(), It.IsAny<string>(), null, false, 0, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(true));
+		var command = new ImportRedisDataCommand(connection.Id, JsonSerializer.Serialize(items), ImportFormat.Json,
+			OnProgress: _ => { cancellation.Cancel(); return Task.CompletedTask; }, OperationCancellation: cancellation.Token);
+		var logs = new Mock<IAuditLogRepository>();
+		var pipeline = new AuditingBehavior<ImportRedisDataCommand, Result<ImportRedisDataResponse>>(
+			logs.Object, Mock.Of<IUnitOfWork>(), Mock.Of<ICurrentUserService>());
+		var result = await pipeline.Handle(command, CancellationToken.None, () => handler.Handle(command, CancellationToken.None));
+		Assert.That(result.Value.ImportedCount, Is.EqualTo(1));
+		Assert.That(result.Value.Cancelled, Is.True);
+		Assert.That(result.Value.MayHaveUnconfirmedChanges, Is.False);
+		logs.Verify(x => x.Add(It.Is<AuditLog>(log => log.Metadata.NewValue!.Contains("cancelled: True"))), Times.Once);
+		snapshots.Verify(x => x.SetLegacyStringAsync(connection, It.IsAny<string>(), It.IsAny<string>(), null, false, 0, It.IsAny<CancellationToken>()), Times.Once);
+	}
+
+	[Test]
+	public async Task Handle_CancelDuringRedisCall_ReportsUnconfirmedChanges()
+	{
+		using var cancellation = new CancellationTokenSource();
+		snapshots.Setup(x => x.SetLegacyStringAsync(connection, "a", "1", null, false, 0, It.IsAny<CancellationToken>()))
+			.Returns(() => { cancellation.Cancel(); throw new OperationCanceledException(cancellation.Token); });
+		var json = JsonSerializer.Serialize(new[] { new RedisImportItem { Key = "a", Value = "1" } });
+		var result = await handler.Handle(new ImportRedisDataCommand(connection.Id, json, ImportFormat.Json, OperationCancellation: cancellation.Token), CancellationToken.None);
+		Assert.That(result.Value.Cancelled, Is.True);
+		Assert.That(result.Value.MayHaveUnconfirmedChanges, Is.True);
 	}
 
 	[Test]

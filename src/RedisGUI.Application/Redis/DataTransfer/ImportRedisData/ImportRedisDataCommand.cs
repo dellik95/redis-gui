@@ -23,13 +23,19 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <param name="Format">Format of the data (JSON or CSV).</param>
 /// <param name="Overwrite">Whether to overwrite existing keys.</param>
 /// <param name="Database">Optional target Redis database.</param>
+/// <param name="OnProgress">Optional callback for completed entries.</param>
+/// <param name="OperationCancellation">Optional cooperative cancellation for background execution.</param>
 [Auditable(AuditAction.DataImported, "Redis")]
 public sealed record ImportRedisDataCommand(
 	Guid ConnectionId,
 	string Data,
 	ImportFormat Format,
 	bool Overwrite = false,
-	int? Database = null) : ICommand<ImportRedisDataResponse>;
+	int? Database = null,
+	Func<ImportRedisDataProgress, Task>? OnProgress = null,
+	CancellationToken? OperationCancellation = null) : ICommand<ImportRedisDataResponse>;
+
+public sealed record ImportRedisDataProgress(int Processed, int Total, int Imported, int Skipped, int Failed);
 
 /// <summary>
 /// Represents a Redis key-value item for import.
@@ -127,10 +133,14 @@ internal sealed class ImportRedisDataCommandHandler
 		int importedCount = 0;
 		int skippedCount = 0;
 		List<string> failedKeys = new();
+		int processed = 0;
+		bool cancelled = false;
+		bool unconfirmed = false;
+		var operationToken = request.OperationCancellation ?? cancellationToken;
 
 		foreach (RedisImportItem item in items)
 		{
-			cancellationToken.ThrowIfCancellationRequested();
+			if (operationToken.IsCancellationRequested) { cancelled = true; break; }
 			try
 			{
 				if (item.KeyBase64 is not null || item.DumpBase64 is not null)
@@ -140,7 +150,7 @@ internal sealed class ImportRedisDataCommandHandler
 					byte[] rawKey = Convert.FromBase64String(item.KeyBase64);
 					byte[] payload = Convert.FromBase64String(item.DumpBase64);
 					TimeSpan? snapshotTtl = item.TtlMilliseconds is long ms ? TimeSpan.FromMilliseconds(ms) : null;
-					var restored = await snapshots.RestoreAsync(connectionResult.Value, rawKey, payload, snapshotTtl, request.Overwrite, database, cancellationToken);
+					var restored = await snapshots.RestoreAsync(connectionResult.Value, rawKey, payload, snapshotTtl, request.Overwrite, database, operationToken);
 					if (restored.IsFailure) failedKeys.Add(item.KeyBase64);
 					else if (restored.Value) importedCount++;
 					else skippedCount++;
@@ -162,16 +172,24 @@ internal sealed class ImportRedisDataCommandHandler
 					connectionResult.Value,
 					item.Key,
 					item.Value,
-					ttl, request.Overwrite, database, cancellationToken);
+					ttl, request.Overwrite, database, operationToken);
 
 				if (setResult.IsFailure) failedKeys.Add(item.Key);
 				else if (setResult.Value) importedCount++;
 				else skippedCount++;
 			}
-			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+			catch (OperationCanceledException) when (operationToken.IsCancellationRequested) { cancelled = true; unconfirmed = true; break; }
 			catch
 			{
 				failedKeys.Add(item.KeyBase64 ?? item.Key);
+			}
+			finally
+			{
+				if (!cancelled)
+				{
+					processed++;
+					if (request.OnProgress is not null) await request.OnProgress(new ImportRedisDataProgress(processed, items.Count, importedCount, skippedCount, failedKeys.Count));
+				}
 			}
 		}
 
@@ -179,7 +197,7 @@ internal sealed class ImportRedisDataCommandHandler
 			importedCount,
 			skippedCount,
 			failedKeys.Count,
-			failedKeys);
+			failedKeys, cancelled, unconfirmed);
 
 		return Result.Success(response);
 	}

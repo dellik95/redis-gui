@@ -4,6 +4,8 @@ using System.Linq;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Redis.Commands.RunLoadTest;
 using RedisGUI.Application.Redis.Commands.SeedSampleData;
+using RedisGUI.Application.Redis.Queries.ExportRedisData;
+using RedisGUI.Application.Redis.Commands.ImportRedisData;
 
 namespace RedisGUI.Application;
 
@@ -31,6 +33,8 @@ public static class DependencyInjection
 	{
 		services.AddScoped<IBackgroundJobHandler, LoadTestJobHandler>();
 		services.AddScoped<IBackgroundJobHandler, SeedSampleDataJobHandler>();
+		services.AddScoped<IBackgroundJobHandler, ExportRedisDataJobHandler>();
+		services.AddScoped<IBackgroundJobHandler, ImportRedisDataJobHandler>();
 		// Register concrete validators, including internal use-case validators.
 		foreach (var type in typeof(DependencyInjection).Assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false }))
 		{

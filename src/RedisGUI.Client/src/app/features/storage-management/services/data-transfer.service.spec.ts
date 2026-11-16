@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { ExportService } from './export.service';
 import { ImportService } from './import.service';
+import { BackgroundJobsService } from '../../../core/services/background-jobs.service';
 
 describe('Redis data transfer', () => {
   beforeEach(() => {
@@ -15,11 +16,13 @@ describe('Redis data transfer', () => {
     spyOn(URL, 'createObjectURL').and.returnValue('blob:test');
     spyOn(URL, 'revokeObjectURL');
     spyOn(HTMLAnchorElement.prototype, 'click');
-    service.downloadExport('connection', 'json', 'user:*', 2).subscribe();
-    const request = http.expectOne(req => req.url === '/api/v1/storage/connection/export');
-    expect(request.request.params.get('database')).toBe('2');
-    expect(request.request.params.get('pattern')).toBe('user:*');
-    request.flush(new Blob(['[]'], { type: 'application/json' }));
+    TestBed.inject(BackgroundJobsService).start('redis-export', 'connection', { database: 2, pattern: 'user:*', format: 'json' }).subscribe();
+    const start = http.expectOne('/api/v1/jobs');
+    expect(start.request.body.parameters).toEqual({ database: 2, pattern: 'user:*', format: 'json' });
+    start.flush({ jobId: 'job' });
+    service.downloadExport('job', 'json').subscribe();
+    const download = http.expectOne('/api/v1/jobs/job/result');
+    download.flush(new Blob(['[]'], { type: 'application/json' }));
     http.verify();
   });
 
@@ -30,9 +33,9 @@ describe('Redis data transfer', () => {
     spyOn(file, 'text').and.returnValue(Promise.resolve('[]'));
     service.importData('connection', file, 2).subscribe();
     await Promise.resolve();
-    const request = http.expectOne('/api/v1/storage/connection/import');
-    expect(request.request.body).toEqual({ data: '[]', format: 'json', overwrite: false, database: 2 });
-    request.flush({ importedCount: 0, skippedCount: 0, failedCount: 0, failedKeys: [] });
+    const request = http.expectOne('/api/v1/jobs');
+    expect(request.request.body).toEqual({ kind: 'redis-import', connectionId: 'connection', parameters: { data: '[]', format: 'json', overwrite: false, database: 2 } });
+    request.flush({ jobId: 'job' });
     http.verify();
   });
 });

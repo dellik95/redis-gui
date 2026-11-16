@@ -8,14 +8,20 @@
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-      <span>Preparing and downloading export...</span>
+      <span>{{ jobStatus() || 'Starting' }} · {{ exportedCount() }} keys exported</span>
     </div>
   }
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
+  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the export.</p> }
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }} <button type="button" (click)="refreshStatus()">Refresh status</button></p>
+  }
 </mat-dialog-content>
 <mat-dialog-actions align="end" class="dialog-actions">
-  <ui-button variant="ghost" (click)="dialogRef.close()">Cancel</ui-button>
-  <ui-button variant="primary" [loading]="isLoading()" (click)="onExport()"> Export </ui-button>
+  <ui-button variant="ghost" [disabled]="isLoading() && !jobId()" (click)="dialogRef.close()">Close</ui-button>
+  @if (isLoading() && jobId()) { <ui-button variant="ghost" [loading]="stopping()" (click)="cancel()">Stop</ui-button> }
+  @if (canDownload()) { <ui-button variant="primary" (click)="download()">Download</ui-button> }
+  @if (!isLoading()) { <ui-button variant="primary" (click)="onExport()">Start export</ui-button> }
 </mat-dialog-actions>

@@ -7,8 +7,6 @@ import {
   PagedRedisValuesResponse,
   DeleteKeysByPatternResponse,
   DeleteMultipleKeysResponse,
-  ImportRedisDataRequest,
-  ImportRedisDataResponse,
   GetConnectionHealthResponse
 } from '../../../models/redis-advanced.types';
 
@@ -208,66 +206,6 @@ export const RedisOperationsStore = signalStore(
                 })
               );
           })
-        )
-      ),
-
-      // ========== Export/Import ==========
-
-      /**
-       * Export Redis data to JSON or CSV
-       */
-      exportData: rxMethod<{
-        connectionId: string;
-        pattern?: string;
-        format?: 'json' | 'csv';
-      }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, pattern = '*', format = 'json' }) => {
-            const params = new HttpParams().set('pattern', pattern).set('format', format);
-
-            return httpClient
-              .get(`/api/v1/storage/${connectionId}/export`, {
-                params,
-                responseType: 'blob'
-              })
-              .pipe(
-                tap(() => patchState(store, { isLoading: false })),
-                catchError(error => {
-                  patchState(store, {
-                    error: error.message || 'Failed to export data',
-                    isLoading: false
-                  });
-                  return of(null);
-                })
-              );
-          })
-        )
-      ),
-
-      /**
-       * Import Redis data from JSON or CSV
-       */
-      importData: rxMethod<{
-        connectionId: string;
-        request: ImportRedisDataRequest;
-      }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, request }) =>
-            httpClient
-              .post<ImportRedisDataResponse>(`/api/v1/storage/${connectionId}/import`, request)
-              .pipe(
-                tap(() => patchState(store, { isLoading: false })),
-                catchError(error => {
-                  patchState(store, {
-                    error: error.message || 'Failed to import data',
-                    isLoading: false
-                  });
-                  return of(null);
-                })
-              )
-          )
         )
       ),
 

@@ -410,11 +410,13 @@ export class KeyActionsService {
   async openExport(
     connectionId: string,
     format: 'json' | 'csv',
-    onSuccess?: () => void
+    onSuccess?: () => void,
+    database = 0,
+    pattern = '*'
   ): Promise<void> {
     const { ExportDialogComponent } = await import('../export/export-dialog.component');
     this.dialog
-      .open(ExportDialogComponent, { data: { connectionId, format } })
+      .open(ExportDialogComponent, { closeOnNavigation: false, data: { connectionId, format, database, pattern } })
       .afterClosed()
       .subscribe(success => {
         if (success) this.snackBar.open('Export completed', 'Close', { duration: 3000 });
@@ -422,10 +424,10 @@ export class KeyActionsService {
   }
 
   /** Open import dialog. */
-  async openImport(connectionId: string, onSuccess?: () => void): Promise<void> {
+  async openImport(connectionId: string, onSuccess?: () => void, database = 0): Promise<void> {
     const { ImportDialogComponent } = await import('../import/import-dialog.component');
     this.dialog
-      .open(ImportDialogComponent, { data: { connectionId } })
+      .open(ImportDialogComponent, { closeOnNavigation: false, data: { connectionId, database } })
       .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(success => {

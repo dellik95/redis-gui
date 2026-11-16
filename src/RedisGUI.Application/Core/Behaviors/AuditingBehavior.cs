@@ -2,6 +2,7 @@ using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Users.Commands.LoginUser;
 using RedisGUI.Domain.Redis;
+using RedisGUI.Application.Redis.Commands.ImportRedisData;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Shared.Mediator;
@@ -81,9 +82,12 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 		}
 
 		// Create audit metadata
-		string? outcome = response is Result<SeedDataResult> seed && seed.IsSuccess
-			? $"Seeded {seed.Value.TotalKeysSeeded}; cancelled: {seed.Value.Cancelled}; unconfirmed changes: {seed.Value.MayHaveUnconfirmedChanges}."
-			: null;
+		string? outcome = response switch
+		{
+			Result<SeedDataResult> seed when seed.IsSuccess => $"Seeded {seed.Value.TotalKeysSeeded}; cancelled: {seed.Value.Cancelled}; unconfirmed changes: {seed.Value.MayHaveUnconfirmedChanges}.",
+			Result<ImportRedisDataResponse> import when import.IsSuccess => $"Imported {import.Value.ImportedCount}; skipped {import.Value.SkippedCount}; failed {import.Value.FailedCount}; cancelled: {import.Value.Cancelled}; unconfirmed changes: {import.Value.MayHaveUnconfirmedChanges}.",
+			_ => null
+		};
 		var metadata = AuditMetadata.Create(
 			ipAddress: currentUserService.IpAddress,
 			userAgent: currentUserService.UserAgent,

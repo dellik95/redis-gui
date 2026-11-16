@@ -27,9 +27,11 @@ using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Infrastructure.Authorization;
+using RedisGUI.Infrastructure.BackgroundJobs;
 using RedisGUI.Infrastructure.Redis.ConnectionManager;
 using RedisGUI.Infrastructure.Redis.Services;
 using RedisGUI.Server.Endpoints.Redis;
+using RedisGUI.Server.Endpoints.Jobs;
 using RedisGUI.Shared.Primitives;
 using StackExchange.Redis;
 
@@ -52,12 +54,20 @@ public class RedisTransferHttpTests
 		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success<RedisConnection>(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
+		var owner = Guid.NewGuid();
+		var currentUser = new Mock<ICurrentUserService>();
+		currentUser.SetupGet(x => x.UserId).Returns(owner);
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseUrls("http://127.0.0.1:0");
 		builder.Services.AddApplication();
 		builder.Services.AddProblemDetails();
 		builder.Services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuth>("Test", _ => { });
-		builder.Services.AddAuthorization(options => options.AddPolicy(Policies.WriteAccess, policy => policy.RequireRole("User")));
+		builder.Services.AddAuthorization(options =>
+		{
+			options.AddPolicy(Policies.Authenticated, policy => policy.RequireAuthenticatedUser());
+			options.AddPolicy(Policies.WriteAccess, policy => policy.RequireRole("User"));
+		});
+		builder.Services.AddSignalR();
 		builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("sensitive", policy =>
 		{
 			policy.PermitLimit = 50;
@@ -69,7 +79,10 @@ public class RedisTransferHttpTests
 		builder.Services.AddSingleton(access.Object);
 		builder.Services.AddSingleton(Mock.Of<IAuditLogRepository>());
 		builder.Services.AddSingleton(Mock.Of<IUnitOfWork>());
-		builder.Services.AddSingleton(Mock.Of<ICurrentUserService>());
+		builder.Services.AddSingleton(currentUser.Object);
+		builder.Services.AddScoped<JobIdentity>();
+		builder.Services.AddSingleton<BackgroundJobManager>();
+		builder.Services.AddHostedService(provider => provider.GetRequiredService<BackgroundJobManager>());
 		builder.Services.AddScoped<IRedisKeyService, RedisKeyService>();
 		builder.Services.AddScoped<IRedisSnapshotService, RedisSnapshotService>();
 		builder.Services.AddScoped<IExportSessionFactory, RedisExportSessionFactory>();
@@ -78,8 +91,7 @@ public class RedisTransferHttpTests
 		app.UseAuthentication();
 		app.UseAuthorization();
 		app.UseRateLimiter();
-		new ExportRedisDataEndpoint().MapEndpoint(app);
-		new ImportRedisDataEndpoint().MapEndpoint(app);
+		new BackgroundJobsEndpoint().MapEndpoint(app);
 		await app.StartAsync();
 		var address = System.Linq.Enumerable.Single(app.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.Server.IServer>().Features.Get<IServerAddressesFeature>()!.Addresses);
 		using var client = new HttpClient { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(30) };
@@ -97,13 +109,28 @@ public class RedisTransferHttpTests
 			foreach (var key in allKeys.Take(120)) await source.StringSetAsync((RedisKey)key, "value", TimeSpan.FromMinutes(5));
 			await source.StringSetAsync((RedisKey)binaryKey, (RedisValue)new byte[] { 0, 0xff, 0x01 });
 			for (int i = 0; i < 120; i++) await source.StreamAddAsync((RedisKey)streamKey, "item", i);
-			string url = $"/storage/{connection.Id}/export?format=json&database=1&pattern={Uri.EscapeDataString(prefix + "*")}";
-			using var export = await client.GetAsync(url);
+			using var start = await client.PostAsJsonAsync("/jobs", new { kind = "redis-export", connectionId = connection.Id, parameters = new { format = "json", database = 1, pattern = prefix + "*" } });
+			Assert.That(start.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), await start.Content.ReadAsStringAsync());
+			var job = await start.Content.ReadFromJsonAsync<BackgroundJobSnapshot>();
+			using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+			var jobs = app.Services.GetRequiredService<BackgroundJobManager>();
+			while (jobs.Get(job!.JobId, owner)?.Status is "Queued" or "Running") await Task.Delay(10, deadline.Token);
+			Assert.That(jobs.Get(job!.JobId, owner)!.Status, Is.EqualTo("Completed"));
+			using var export = await client.GetAsync($"/jobs/{job.JobId}/result");
 			Assert.That(export.StatusCode, Is.EqualTo(HttpStatusCode.OK), await export.Content.ReadAsStringAsync());
 			var data = await export.Content.ReadAsStringAsync();
 			using (var json = JsonDocument.Parse(data)) Assert.That(json.RootElement.GetArrayLength(), Is.EqualTo(allKeys.Count));
 
-			using var import = await client.PostAsJsonAsync($"/storage/{connection.Id}/import", new { data, format = "json", database = 2, overwrite = false });
+			async Task<HttpResponseMessage> ImportAsync()
+			{
+				using var importStart = await client.PostAsJsonAsync("/jobs", new { kind = "redis-import", connectionId = connection.Id, parameters = new { data, format = "json", database = 2, overwrite = false } });
+				Assert.That(importStart.StatusCode, Is.EqualTo(HttpStatusCode.Accepted), await importStart.Content.ReadAsStringAsync());
+				var importJob = await importStart.Content.ReadFromJsonAsync<BackgroundJobSnapshot>();
+				while (jobs.Get(importJob!.JobId, owner)?.Status is "Queued" or "Running") await Task.Delay(10, deadline.Token);
+				Assert.That(jobs.Get(importJob!.JobId, owner)!.Status, Is.EqualTo("Completed"));
+				return await client.GetAsync($"/jobs/{importJob.JobId}/result");
+			}
+			using var import = await ImportAsync();
 			Assert.That(import.StatusCode, Is.EqualTo(HttpStatusCode.OK), await import.Content.ReadAsStringAsync());
 			using (var json = JsonDocument.Parse(await import.Content.ReadAsStringAsync()))
 			{
@@ -114,7 +141,7 @@ public class RedisTransferHttpTests
 			Assert.That(await destination.StreamLengthAsync((RedisKey)streamKey), Is.EqualTo(120));
 			Assert.That(await destination.KeyTimeToLiveAsync((RedisKey)allKeys[0]), Is.Not.Null);
 
-			using var again = await client.PostAsJsonAsync($"/storage/{connection.Id}/import", new { data, format = "json", database = 2, overwrite = false });
+			using var again = await ImportAsync();
 			using var repeat = JsonDocument.Parse(await again.Content.ReadAsStringAsync());
 			Assert.That(repeat.RootElement.GetProperty("skippedCount").GetInt32(), Is.EqualTo(allKeys.Count));
 		}

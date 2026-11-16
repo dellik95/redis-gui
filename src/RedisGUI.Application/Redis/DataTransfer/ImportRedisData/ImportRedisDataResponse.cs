@@ -9,8 +9,12 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <param name="SkippedCount">Number of keys skipped (existing keys when Overwrite=false).</param>
 /// <param name="FailedCount">Number of keys that failed to import.</param>
 /// <param name="FailedKeys">List of keys that failed to import.</param>
+/// <param name="Cancelled">Whether the import stopped before processing all entries.</param>
+/// <param name="MayHaveUnconfirmedChanges">Whether a Redis command was in flight when cancellation was requested.</param>
 public sealed record ImportRedisDataResponse(
 	int ImportedCount,
 	int SkippedCount,
 	int FailedCount,
-	IReadOnlyList<string> FailedKeys);
+	IReadOnlyList<string> FailedKeys,
+	bool Cancelled = false,
+	bool MayHaveUnconfirmedChanges = false);
