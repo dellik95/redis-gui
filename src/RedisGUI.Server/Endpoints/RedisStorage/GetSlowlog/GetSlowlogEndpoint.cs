@@ -20,7 +20,7 @@ public class GetSlowlogEndpoint : IEndpoint
 			int count = 25) =>
 		{
 			var query = new GetSlowlogQuery(connectionId, count);
-			return await sender.Send<List<SlowlogEntryInfo>>(query).Match(Results.Ok, Results.BadRequest);
+			return await sender.Send<List<SlowlogEntryInfo>>(query).Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetSlowlog")
 		.WithSummary("Get Redis slowlog entries")

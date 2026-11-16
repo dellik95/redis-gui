@@ -22,12 +22,7 @@ public sealed class ScanRedisKeysEndpoint : IEndpoint
 			IMediator mediator, CancellationToken cancellationToken) =>
 		{
 			var result = await mediator.Send<RedisKeyScanPage>(new ScanRedisKeysQuery(connectionId, pattern ?? "*", database, cursor, count ?? 100), cancellationToken);
-			return result.Match<RedisKeyScanPage, IResult>(Results.Ok, error => error.Code switch
-			{
-				"Connection.NotFound" => Results.NotFound(new { message = error.Message }),
-				"Connection.Forbidden" => Results.Forbid(),
-				_ => Results.BadRequest(new { message = error.Message })
-			});
+			return result.ToHttpResult();
 		}).WithName("ScanRedisKeys").WithTags("Redis Storage").RequireAuthorization(Policies.Authenticated);
 	}
 }

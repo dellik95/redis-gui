@@ -24,15 +24,7 @@ public sealed class GetKeyspaceInfoEndpoint : IEndpoint
 		{
 			GetKeyspaceInfoQuery query = new(connectionId);
 			var result = await sender.Send<GetKeyspaceInfoResponse>(query, cancellationToken);
-			if (result.IsFailure)
-			{
-				if (result.Error.Code == "Connection.NotFound")
-				{
-					return Results.NotFound(new { error = result.Error.Code, message = result.Error.Message });
-				}
-				return Results.BadRequest(new { error = result.Error.Code, message = result.Error.Message });
-			}
-			return Results.Ok(result.Value);
+			return result.ToHttpResult();
 		})
 		.WithName("GetKeyspaceInfo")
 		.WithSummary("Get Redis keyspace statistics")

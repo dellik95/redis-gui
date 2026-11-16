@@ -28,8 +28,8 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 			{
 				var command = new DeleteRedisKeyCommand(connectionId, key, database);
 				return await sender.Send(command).Match(
-					deleted => deleted ? Results.Ok() : Results.NotFound(),
-					Results.BadRequest);
+					deleted => deleted ? Results.Ok() : new Error("Redis.KeyNotFound", "The specified key was not found.").ToProblemDetails(),
+					error => error.ToProblemDetails());
 			}
 
 			routerBuilder.MapDelete("storage/{connectionId:guid}/{*key}", HandleDelete).WithOpenApi();

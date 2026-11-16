@@ -41,7 +41,7 @@ public class GetAuditLogsEndpoint : IEndpoint
 				take);
 
 			return await sender.Send<GetAuditLogsResponse>(query, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetAuditLogs")
 		.WithSummary("Get audit logs")

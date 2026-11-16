@@ -25,7 +25,7 @@ public sealed class ExecuteCliEndpoint : IEndpoint
 		{
 			ExecuteCliCommand command = new(connectionId, request.Command, request.Database);
 			return await sender.Send<ExecuteCliResponse>(command, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("ExecuteRedisCli")
 		.WithSummary("Execute raw Redis CLI command")

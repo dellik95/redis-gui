@@ -19,7 +19,7 @@ namespace RedisGUI.Server.Endpoints.Connections.GetAllConnections
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder) => routerBuilder.MapGet("connections/", static async (IMediator sender, [AsParameters] GetAllConnectionsRequest request) =>
 																				 {
 																					 GetAllConnectionsQuery query = new(request.PageNumber, request.PageSize);
-																					 return await sender.Send<IEnumerable<GetConnectionResponse>>(query).Match(Results.Ok, Results.BadRequest);
+																					 return await sender.Send<IEnumerable<GetConnectionResponse>>(query).Match(Results.Ok, error => error.ToProblemDetails());
 																				 })
 																				 .WithName("GetAllConnections")
 																				 .WithSummary("Get all Redis connections")

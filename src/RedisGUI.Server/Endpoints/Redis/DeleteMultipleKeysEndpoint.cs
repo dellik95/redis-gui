@@ -23,7 +23,7 @@ public class DeleteMultipleKeysEndpoint : IEndpoint
 			async (IMediator sender, Guid connectionId, DeleteKeysRequest request, int? database) =>
 			{
 				var command = new DeleteMultipleKeysCommand(connectionId, request.Keys, database ?? request.Database);
-				return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
+				return await sender.Send(command).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("DeleteMultipleKeys")
 			.WithTags("Redis")

@@ -37,8 +37,7 @@ public class RunLoadTestStreamEndpoint : IEndpoint
 			var connectionResult = await connectionRepo.GetConnectionByIdAsync(connectionId, httpContext.RequestAborted);
 			if (connectionResult.IsFailure)
 			{
-				httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-				await httpContext.Response.WriteAsJsonAsync(new { error = connectionResult.Error.Message });
+				await connectionResult.Error.ToProblemDetails(httpContext).ExecuteAsync(httpContext);
 				return;
 			}
 

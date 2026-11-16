@@ -22,7 +22,7 @@ public class GetServerInfoEndpoint : IEndpoint
 		{
 			var query = new GetServerInfoQuery(connectionId);
 			return await sender.Send<RedisServerInfoDto>(query, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetServerInfo")
 		.WithSummary("Get Redis server info")

@@ -24,7 +24,7 @@ public class BulkUpdateTtlEndpoint : IEndpoint
 			var command = new BulkUpdateTtlCommand(connectionId, request.Keys, request.TtlSeconds, request.Database);
 			return await sender.Send<int>(command).Match(
 				count => Results.Ok(new { UpdatedCount = count }),
-				Results.BadRequest);
+				error => error.ToProblemDetails());
 		})
 		.WithName("BulkUpdateTtl")
 		.WithSummary("Bulk update TTL or persist keys")

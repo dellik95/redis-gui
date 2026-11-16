@@ -38,15 +38,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetAllRedisKeys
 			{
 				GetAllRedisKeysQuery query = new(connectionId, pattern ?? "*", pageSize, pageNumber, database);
 				var result = await sender.Send<GetAllRedisValuesResponse>(query, cancellationToken);
-				if (result.IsFailure)
-				{
-					if (result.Error.Code == "Connection.NotFound")
-					{
-						return Results.NotFound(new { error = result.Error.Code, message = result.Error.Message });
-					}
-					return Results.BadRequest(new { error = result.Error.Code, message = result.Error.Message });
-				}
-				return Results.Ok(result.Value);
+				return result.ToHttpResult();
 			})
 			.WithName("GetAllRedisKeys")
 			.WithSummary("Get all Redis keys")

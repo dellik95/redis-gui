@@ -39,7 +39,7 @@ public class ExportRedisDataEndpoint : IEndpoint
 						Encoding.UTF8.GetBytes(success.Data),
 						success.ContentType,
 						success.FileName),
-					error => Results.BadRequest(error));
+					error => error.ToProblemDetails());
 			})
 			.WithName("ExportRedisData")
 			.WithSummary("Export Redis data")

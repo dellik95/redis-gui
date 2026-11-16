@@ -23,7 +23,7 @@ public class UpdateServerConfigEndpoint : IEndpoint
 		{
 			var command = new UpdateServerConfigCommand(connectionId, request.ParameterName, request.ParameterValue);
 			return await sender.Send<RedisSetConfigResponseDto>(command, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("UpdateServerConfig")
 		.WithSummary("Update Redis server configuration")

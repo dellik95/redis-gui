@@ -6,10 +6,10 @@ using RedisGUI.Application.Exceptions;
 using RedisGUI.Domain.Exceptions;
 using RedisGUI.Domain.Primitives;
 using RedisGUI.Server.Abstraction;
+using RedisGUI.Server.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace RedisGUI.Server.Middleware;
@@ -22,16 +22,6 @@ public sealed class GlobalExceptionHandlerMiddleware
 	private readonly RequestDelegate next;
 	private readonly ILogger<GlobalExceptionHandlerMiddleware> logger;
 	private readonly IWebHostEnvironment environment;
-	private static readonly JsonSerializerOptions JsonOptions = new()
-	{
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		WriteIndented = false
-	};
-	private static readonly JsonSerializerOptions JsonOptionsDev = new()
-	{
-		PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-		WriteIndented = true
-	};
 
 	public GlobalExceptionHandlerMiddleware(
 		RequestDelegate next,
@@ -76,12 +66,18 @@ public sealed class GlobalExceptionHandlerMiddleware
 			_ => HandleGenericException(context, exception)
 		};
 
-		context.Response.ContentType = "application/json";
-		context.Response.StatusCode = response.StatusCode;
-
-		var jsonOptions = environment.IsDevelopment() ? JsonOptionsDev : JsonOptions;
-
-		await context.Response.WriteAsync(JsonSerializer.Serialize(response, jsonOptions));
+		var extensions = new Dictionary<string, object?>
+		{
+			["code"] = response.Code,
+			["error"] = response.Code,
+			["message"] = response.Message,
+			["statusCode"] = response.StatusCode,
+			["timestamp"] = response.Timestamp,
+			["correlationId"] = correlationId
+		};
+		if (response.Details is not null) extensions["details"] = response.Details;
+		await Results.Problem(statusCode: response.StatusCode, detail: response.Message,
+			instance: context.Request.Path, extensions: extensions).ExecuteAsync(context);
 	}
 
 	private static ApiErrorResponse HandleValidationException(HttpContext context, ValidationException exception)
@@ -112,14 +108,7 @@ public sealed class GlobalExceptionHandlerMiddleware
 		}
 
 		// Map error codes to HTTP status codes
-		int statusCode = firstError.Code switch
-		{
-			var code when code.Contains("NotFound") => StatusCodes.Status404NotFound,
-			var code when code.Contains("Unauthorized") || code.Contains("InvalidCredentials") => StatusCodes.Status401Unauthorized,
-			var code when code.Contains("Forbidden") => StatusCodes.Status403Forbidden,
-			var code when code.Contains("Conflict") || code.Contains("ConcurrencyConflict") => StatusCodes.Status409Conflict,
-			_ => StatusCodes.Status400BadRequest
-		};
+		int statusCode = ErrorResultExtensions.GetStatusCode(firstError);
 
 		return new ApiErrorResponse
 		{

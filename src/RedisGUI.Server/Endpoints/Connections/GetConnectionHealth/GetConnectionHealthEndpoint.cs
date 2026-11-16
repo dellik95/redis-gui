@@ -25,7 +25,7 @@ public class GetConnectionHealthEndpoint : IEndpoint
 			var query = new GetConnectionHealthQuery(connectionId);
 
 			return await sender.Send<GetConnectionHealthResponse>(query)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetConnectionHealth")
 		.WithSummary("Get connection health status")

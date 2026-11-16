@@ -33,7 +33,7 @@ namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 				CancellationToken cancellationToken) =>
 			{
 				DeleteConnectionCommand command = new(id);
-				return await sender.Send(command, cancellationToken).Match(() => Results.Ok(), Results.BadRequest);
+				return await sender.Send(command, cancellationToken).Match(() => Results.Ok(), error => error.ToProblemDetails());
 			})
 			.WithName("DeleteConnection")
 			.WithSummary("Delete a Redis connection")

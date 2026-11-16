@@ -23,7 +23,7 @@ public class DeleteKeysByPatternEndpoint : IEndpoint
 			async (IMediator sender, Guid connectionId, string pattern, int? database) =>
 			{
 				var command = new DeleteKeysByPatternCommand(connectionId, pattern, database);
-				return await sender.Send(command).Match(Results.Ok, Results.BadRequest);
+				return await sender.Send(command).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("DeleteKeysByPattern")
 			.WithTags("Redis")

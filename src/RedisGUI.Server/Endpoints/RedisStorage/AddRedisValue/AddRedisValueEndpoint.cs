@@ -41,7 +41,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 
 				return await sender.Send(command).Match(
 					() => Results.Ok(),
-					error => Results.BadRequest(new { error = error.Code, message = error.Message }));
+					error => error.ToProblemDetails());
 			}
 
 			routerBuilder.MapPost("storage/{connectionId:guid}", HandleAddKey)

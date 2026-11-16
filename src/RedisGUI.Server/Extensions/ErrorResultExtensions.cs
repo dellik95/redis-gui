@@ -1,6 +1,4 @@
 using Microsoft.AspNetCore.Http;
-using RedisGUI.Domain.Primitives;
-using RedisGUI.Server.Abstraction;
 using System.Collections.Generic;
 
 namespace RedisGUI.Server.Extensions;
@@ -13,57 +11,35 @@ public static class ErrorResultExtensions
 	/// <summary>
 	/// Converts an Error to an IResult with appropriate status code and structured response
 	/// </summary>
-	public static IResult ToProblemDetails(this Error error, HttpContext httpContext)
+	public static IResult ToProblemDetails(this Error error, HttpContext? httpContext = null)
 	{
-		var errorResponse = ApiErrorResponse.BadRequest(
-			error.Code,
-			error.Message,
-			httpContext.Request.Path
-		);
-
-		return Results.Json(errorResponse, statusCode: errorResponse.StatusCode);
+		int status = GetStatusCode(error);
+		return Results.Problem(
+			statusCode: status,
+			detail: error.Message,
+			instance: httpContext?.Request.Path,
+			extensions: new Dictionary<string, object?>
+			{
+				["code"] = error.Code,
+				["error"] = error.Code,
+				["message"] = error.Message,
+				["statusCode"] = status,
+				["timestamp"] = System.DateTime.UtcNow
+			});
 	}
 
-	/// <summary>
-	/// Converts an Error to a BadRequest result with structured response
-	/// </summary>
-	public static IResult ToBadRequest(this Error error, HttpContext? httpContext = null)
+	/// <summary>Maps known application errors to HTTP statuses; other errors are client errors.</summary>
+	public static int GetStatusCode(Error error) => error.Code switch
 	{
-		var errorResponse = ApiErrorResponse.BadRequest(
-			error.Code,
-			error.Message,
-			httpContext?.Request.Path
-		);
+		"Connection.Forbidden" or "Connection.ReadOnlyMode" => StatusCodes.Status403Forbidden,
+		"User.InvalidCredentials" or "User.Unauthorized" => StatusCodes.Status401Unauthorized,
+		"Storage.ConcurrencyConflict" or "Email.AlreadyExists" or "User.EmailAlreadyExists" => StatusCodes.Status409Conflict,
+		var code when code.EndsWith("NotFound", System.StringComparison.Ordinal) => StatusCodes.Status404NotFound,
+		_ => StatusCodes.Status400BadRequest
+	};
 
-		return Results.Json(errorResponse, statusCode: StatusCodes.Status400BadRequest);
-	}
-
-	/// <summary>
-	/// Converts an Error to a NotFound result with structured response
-	/// </summary>
-	public static IResult ToNotFound(this Error error, HttpContext? httpContext = null)
-	{
-		var errorResponse = ApiErrorResponse.NotFound(
-			error.Code,
-			error.Message,
-			httpContext?.Request.Path
-		);
-
-		return Results.Json(errorResponse, statusCode: StatusCodes.Status404NotFound);
-	}
-
-	/// <summary>
-	/// Creates a validation error result with field-level errors
-	/// </summary>
-	public static IResult ValidationError(Dictionary<string, string[]> errors, HttpContext? httpContext = null)
-	{
-		var errorResponse = ApiErrorResponse.BadRequest(
-			"Validation.Failed",
-			"One or more validation errors occurred",
-			httpContext?.Request.Path,
-			new Dictionary<string, object> { ["errors"] = errors }
-		);
-
-		return Results.Json(errorResponse, statusCode: StatusCodes.Status400BadRequest);
-	}
+	/// <summary>Creates a validation problem with field-level errors.</summary>
+	public static IResult ValidationError(Dictionary<string, string[]> errors, HttpContext? httpContext = null) =>
+		Results.ValidationProblem(errors, instance: httpContext?.Request.Path,
+			extensions: new Dictionary<string, object?> { ["code"] = "Validation.Failed", ["message"] = "One or more validation errors occurred" });
 }

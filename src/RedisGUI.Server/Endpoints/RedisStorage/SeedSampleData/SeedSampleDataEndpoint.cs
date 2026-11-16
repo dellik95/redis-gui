@@ -40,7 +40,7 @@ public class SeedSampleDataEndpoint : IEndpoint
 			var command = new SeedSampleDataCommand(connectionId, options);
 			return await sender.Send<SeedDataResult>(command).Match(
 				Results.Ok,
-				Results.BadRequest);
+				error => error.ToProblemDetails());
 		}
 
 		routerBuilder.MapPost("storage/{connectionId:guid}/seed-sample-data", HandleSeed)

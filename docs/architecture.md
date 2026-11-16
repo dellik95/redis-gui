@@ -2,6 +2,10 @@
 
 ## 1. Overview & Architectural Principles
 
+### API errors
+
+Application `Error` results are mapped centrally to HTTP Problem Details by the server's `ToHttpResult` and `MatchHttp` helpers. Known not-found, authorization, and conflict codes map to 404, 401/403, and 409 respectively; unmapped codes default to 400. Responses use `application/problem+json` and include the error code and message as extensions for existing clients. Exceptions use the same status mapping, while unexpected exceptions return a generic 500 response outside development. Streaming responses use their own event protocol once the response has started.
+
 **RedisGUI** is an enterprise-grade, high-performance Redis management studio and diagnostics platform built on modern **.NET 10** and **Angular 22**.
 
 The solution strictly adheres to the following engineering paradigms:

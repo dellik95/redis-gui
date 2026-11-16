@@ -20,7 +20,7 @@ namespace RedisGUI.Server.Endpoints.Connections.GetConnection
 			routerBuilder.MapGet("connections/{id:guid}", async (IMediator sender, Guid id) =>
 				{
 					var query = new GetConnectionByIdQuery(id);
-					return await sender.Send<GetConnectionResponse>(query).Match(Results.Ok, Results.BadRequest);
+					return await sender.Send<GetConnectionResponse>(query).Match(Results.Ok, error => error.ToProblemDetails());
 				})
 				.WithOpenApi();
 		}

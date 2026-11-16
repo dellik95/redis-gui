@@ -32,7 +32,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CheckConnection
 						request.UserName, request.Password);
 
 					return await sender.Send(createConnectionCommand)
-						.Match(() => Results.Ok(), Results.BadRequest);
+						.Match(() => Results.Ok(), error => error.ToProblemDetails());
 				})
 				.WithOpenApi();
 		}

@@ -21,7 +21,7 @@ public class DuplicateKeyEndpoint : IEndpoint
 			[FromBody] DuplicateKeyRequest request) =>
 		{
 			var command = new DuplicateKeyCommand(connectionId, request.SourceKey, request.TargetKey, request.Database);
-			return await sender.Send(command).Match(() => Results.Ok(new { Success = true }), Results.BadRequest);
+			return await sender.Send(command).Match(() => Results.Ok(new { Success = true }), error => error.ToProblemDetails());
 		})
 		.WithName("DuplicateRedisKey")
 		.WithSummary("Duplicate a Redis key")

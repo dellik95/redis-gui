@@ -19,7 +19,7 @@ public static class ResultExtensions
 			return Results.Ok(result.Value);
 		}
 
-		return result.Error.ToBadRequest(httpContext);
+		return result.Error.ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -32,7 +32,7 @@ public static class ResultExtensions
 			return Results.Ok();
 		}
 
-		return result.Error.ToBadRequest(httpContext);
+		return result.Error.ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -45,7 +45,7 @@ public static class ResultExtensions
 	{
 		return result.IsSuccess
 			? onSuccess(result.Value)
-			: result.Error.ToBadRequest(httpContext);
+			: result.Error.ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -58,6 +58,6 @@ public static class ResultExtensions
 	{
 		return result.IsSuccess
 			? onSuccess()
-			: result.Error.ToBadRequest(httpContext);
+			: result.Error.ToProblemDetails(httpContext);
 	}
 }

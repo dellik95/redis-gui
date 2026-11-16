@@ -36,7 +36,7 @@ public class ImportRedisDataEndpoint : IEndpoint
 					importFormat,
 					request.Overwrite);
 
-				return await sender.Send(command, cancellationToken).Match(Results.Ok, Results.BadRequest);
+				return await sender.Send(command, cancellationToken).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("ImportRedisData")
 			.WithSummary("Import Redis data")

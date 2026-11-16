@@ -25,7 +25,7 @@ public class GetConnectionMetricsEndpoint : IEndpoint
 			var query = new GetRedisMetricsQuery(connectionId);
 
 			return await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(query)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetConnectionMetrics")
 		.WithSummary("Get connection metrics")

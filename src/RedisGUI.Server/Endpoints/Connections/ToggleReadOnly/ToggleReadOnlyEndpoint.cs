@@ -23,7 +23,7 @@ public class ToggleReadOnlyEndpoint : IEndpoint
 			var command = new ToggleReadOnlyCommand(connectionId, request.IsReadOnly);
 			return await sender.Send<bool>(command).Match(
 				isReadOnly => Results.Ok(new { ConnectionId = connectionId, IsReadOnly = isReadOnly }),
-				Results.BadRequest);
+				error => error.ToProblemDetails());
 		})
 		.WithName("ToggleReadOnly")
 		.WithSummary("Toggle connection Safe Read-Only mode")

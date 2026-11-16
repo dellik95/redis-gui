@@ -50,14 +50,7 @@ public class AuthenticationEndpoints : IEndpoint
 	{
 		Result<Guid> result = await mediator.Send(command, cancellationToken);
 
-		return result.IsSuccess
-			? Results.Ok(result.Value)
-			: Results.BadRequest(new ProblemDetails
-			{
-				Title = "Registration failed",
-				Detail = result.Error.Message,
-				Status = StatusCodes.Status400BadRequest
-			});
+		return result.ToHttpResult();
 	}
 
 	/// <summary>
@@ -72,6 +65,6 @@ public class AuthenticationEndpoints : IEndpoint
 
 		return result.IsSuccess
 			? Results.Ok(result.Value)
-			: Results.Unauthorized();
+			: new Error("User.InvalidCredentials", "Invalid email or password.").ToProblemDetails();
 	}
 }

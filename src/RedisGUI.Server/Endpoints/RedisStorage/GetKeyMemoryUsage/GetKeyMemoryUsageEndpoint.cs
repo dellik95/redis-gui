@@ -25,7 +25,7 @@ public sealed class GetKeyMemoryUsageEndpoint : IEndpoint
 		{
 			GetKeyMemoryUsageQuery query = new(connectionId, key);
 			return await sender.Send<GetKeyMemoryUsageResponse>(query, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetKeyMemoryUsage")
 		.WithSummary("Get key memory usage in bytes")

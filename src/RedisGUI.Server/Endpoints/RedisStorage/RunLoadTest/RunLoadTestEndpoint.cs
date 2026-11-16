@@ -31,7 +31,7 @@ public class RunLoadTestEndpoint : IEndpoint
 
 			return await sender.Send<RedisLoadTestResult>(command).Match(
 				Results.Ok,
-				Results.BadRequest);
+				error => error.ToProblemDetails());
 		})
 		.WithName("RunLoadTest")
 		.WithSummary("Run Redis load test and performance benchmark")

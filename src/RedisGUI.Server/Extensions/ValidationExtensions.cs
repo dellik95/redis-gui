@@ -44,7 +44,7 @@ public static class ValidationExtensions
 
 			if (model is null)
 			{
-				return Results.BadRequest(new { Error = "Request model is required" });
+				return new Error("Request.Invalid", "Request model is required").ToProblemDetails(context.HttpContext);
 			}
 
 			ValidationResult validationResult = await validator.ValidateAsync(model, context.HttpContext.RequestAborted);
@@ -57,7 +57,7 @@ public static class ValidationExtensions
 						g => g.Key,
 						g => g.Select(e => e.ErrorMessage).ToArray());
 
-				return Results.ValidationProblem(errors);
+				return ErrorResultExtensions.ValidationError(errors, context.HttpContext);
 			}
 
 			return await next(context);

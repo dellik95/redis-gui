@@ -21,7 +21,7 @@ public class RenameKeyEndpoint : IEndpoint
 			[FromBody] RenameKeyRequest request) =>
 		{
 			var command = new RenameKeyCommand(connectionId, request.OldKey, request.NewKey, request.Overwrite, request.Database);
-			return await sender.Send(command).Match(() => Results.Ok(new { Success = true }), Results.BadRequest);
+			return await sender.Send(command).Match(() => Results.Ok(new { Success = true }), error => error.ToProblemDetails());
 		})
 		.WithName("RenameRedisKey")
 		.WithSummary("Rename a Redis key")

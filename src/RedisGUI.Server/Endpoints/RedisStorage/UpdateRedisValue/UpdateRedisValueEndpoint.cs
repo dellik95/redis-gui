@@ -38,7 +38,7 @@ public class UpdateRedisValueEndpoint : IEndpoint
 				ttl,
 				database ?? request.Database);
 
-			return await sender.Send(command).Match(() => Results.Ok(), Results.BadRequest);
+			return await sender.Send(command).Match(() => Results.Ok(), error => error.ToProblemDetails());
 		})
 		.WithName("UpdateRedisValue")
 		.WithSummary("Update a Redis value")
