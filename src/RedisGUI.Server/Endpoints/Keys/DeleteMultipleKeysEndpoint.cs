@@ -1,10 +1,12 @@
 using System;
+using System.Threading;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
+using RedisGUI.Infrastructure.Authorization;
 
 namespace RedisGUI.Server.Endpoints.Redis;
 
@@ -20,12 +22,13 @@ public class DeleteMultipleKeysEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapPost("storage/{connectionId:guid}/keys/delete-multiple",
-			async (IMediator sender, Guid connectionId, DeleteKeysRequest request, int? database) =>
+			async (IMediator sender, Guid connectionId, DeleteKeysRequest request, int? database, CancellationToken cancellationToken) =>
 			{
 				var command = new DeleteMultipleKeysCommand(connectionId, request.Keys, database ?? request.Database);
-				return await sender.Send(command).Match(Results.Ok, error => error.ToProblemDetails());
+				return await sender.Send(command, cancellationToken).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("DeleteMultipleKeys")
+			.RequireAuthorization(Policies.WriteAccess)
 			.WithTags("Redis")
 			.WithOpenApi();
 	}

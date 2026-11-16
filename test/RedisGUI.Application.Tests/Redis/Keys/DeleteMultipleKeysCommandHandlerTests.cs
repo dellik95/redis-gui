@@ -1,4 +1,5 @@
 using FluentAssertions;
+using RedisGUI.Application.Core.Services;
 using Moq;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Connection;
@@ -15,6 +16,7 @@ public class DeleteMultipleKeysCommandHandlerTests
 {
 	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
 	private Mock<IRedisKeyService> connectionServiceMock = null!;
+	private Mock<IConnectionAccessService> access = null!;
 	private DeleteMultipleKeysCommandHandler handler = null!;
 
 	[SetUp]
@@ -22,9 +24,11 @@ public class DeleteMultipleKeysCommandHandlerTests
 	{
 		connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
 		connectionServiceMock = new Mock<IRedisKeyService>();
+		access = new Mock<IConnectionAccessService>();
+		access.Setup(x => x.CanAccessAsync(It.IsAny<RedisConnection>())).ReturnsAsync(true);
 		handler = new DeleteMultipleKeysCommandHandler(
 			connectionRepositoryMock.Object,
-			connectionServiceMock.Object);
+			connectionServiceMock.Object, access.Object);
 	}
 
 	[Test]

@@ -21,6 +21,7 @@ This comprehensive guide walks you through getting started with **RedisGUI**, co
    - [Namespace Tree View & Direct Subfolder Key Creation](#namespace-tree-view--direct-subfolder-key-creation)
    - [Column Sorting & Filters](#column-sorting--filters)
    - [Import and Export](#import-and-export)
+   - [Bulk Key Operations](#bulk-key-operations)
    - [Command Palette (`Ctrl + K`)](#command-palette-ctrl--k)
    - [Creating Keys & Namespaces (Add Key Dialog)](#creating-keys--namespaces-add-key-dialog)
 5. [Visual Data Structure Editors](#5-visual-data-structure-editors)
@@ -154,6 +155,12 @@ Click **Add Connection** in the upper right header to register a new Redis insta
 ## 4. Storage Manager & Key Exploration
 
 The Storage Manager is the core workspace for querying, creating, and modifying Redis keys.
+
+### Bulk Key Operations
+
+Select keys to delete them or change their TTL. The confirmation shows the database and example keys; the result reports how many were changed, unchanged or missing, and failed. TTL accepts whole positive seconds, or zero to remove expiration. Deleting by pattern first previews one scan page; this sample may be partial and the keyspace can change before or during deletion. Folder deletion explicitly distinguishes loaded keys from all keys matching a pattern.
+
+Pattern deletion scans incrementally, so it does not need to load the entire keyspace at once. A failure can occur after some keys have already been deleted; the error reports the number deleted before the failure. Refresh the key list before retrying. Cancellation on request disconnect stops further work, but in-flight Redis commands may already have taken effect; the current UI does not show live progress or offer a dedicated cancel control. Bulk mutations require write access, permission to use the connection, and a connection outside Safe Mode. Successful outcomes are included in the audit log.
 
 ### Import and Export
 

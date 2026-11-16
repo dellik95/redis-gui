@@ -139,11 +139,12 @@ export const RedisOperationsStore = signalStore(
         connectionId: string;
         pattern: string;
         database?: number;
-        onSuccess?: () => void;
+        onSuccess?: (result: DeleteKeysByPatternResponse) => void;
+        onError?: (message: string) => void;
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, pattern, database, onSuccess }) => {
+          switchMap(({ connectionId, pattern, database, onSuccess, onError }) => {
             let params = new HttpParams();
             if (database !== undefined && database !== null) {
               params = params.set('database', database.toString());
@@ -154,15 +155,17 @@ export const RedisOperationsStore = signalStore(
                 { params }
               )
               .pipe(
-                tap(() => {
+                tap(result => {
                   patchState(store, { isLoading: false });
-                  onSuccess?.();
+                  onSuccess?.(result);
                 }),
                 catchError(error => {
+                  const message = error.error?.detail || error.error?.message || error.message || 'Failed to delete keys by pattern';
                   patchState(store, {
-                    error: error.message || 'Failed to delete keys by pattern',
+                    error: message,
                     isLoading: false
                   });
+                  onError?.(message);
                   return of(null);
                 })
               );
@@ -177,11 +180,12 @@ export const RedisOperationsStore = signalStore(
         connectionId: string;
         keys: string[];
         database?: number;
-        onSuccess?: () => void;
+        onSuccess?: (result: DeleteMultipleKeysResponse) => void;
+        onError?: (message: string) => void;
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, keys, database, onSuccess }) => {
+          switchMap(({ connectionId, keys, database, onSuccess, onError }) => {
             let params = new HttpParams();
             if (database !== undefined && database !== null) {
               params = params.set('database', database.toString());
@@ -193,15 +197,17 @@ export const RedisOperationsStore = signalStore(
                 { params }
               )
               .pipe(
-                tap(() => {
+                tap(result => {
                   patchState(store, { isLoading: false });
-                  onSuccess?.();
+                  onSuccess?.(result);
                 }),
                 catchError(error => {
+                  const message = error.error?.detail || error.error?.message || error.message || 'Failed to delete multiple keys';
                   patchState(store, {
-                    error: error.message || 'Failed to delete multiple keys',
+                    error: message,
                     isLoading: false
                   });
+                  onError?.(message);
                   return of(null);
                 })
               );

@@ -140,6 +140,7 @@ public class RedisKeyService : IRedisKeyService
 
 		foreach (string key in keys)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			try
 			{
 				bool deleted = await db.KeyDeleteAsync(key);
@@ -176,23 +177,31 @@ public class RedisKeyService : IRedisKeyService
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		IDatabase db = multiplexer.GetDatabase(targetDb);
+		int deletedCount = 0;
 		try
 		{
-			IServer server = multiplexer.GetConnectedServer(connection);
-			RedisKey[] keys = server.Keys(targetDb, pattern).ToArray();
-
-			if (keys.Length == 0)
+			string? cursor = null;
+			do
 			{
-				return Result.Success(0);
-			}
-
-			long deletedCount = await db.KeyDeleteAsync(keys);
-			return Result.Success((int)deletedCount);
+				cancellationToken.ThrowIfCancellationRequested();
+				var page = await ScanKeysAsync(connection, pattern, targetDb, cursor, 100, cancellationToken);
+				if (page.IsFailure)
+					return Result.Failure<int>(new Error("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s): {page.Error.Message}"));
+				foreach (var item in page.Value.Keys)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					RedisKey key = item.RawKey is null ? (RedisKey)item.Key : (RedisKey)item.RawKey;
+					if (await db.KeyDeleteAsync(key)) deletedCount++;
+				}
+				cursor = page.Value.NextCursor;
+			} while (cursor is not null);
+			return Result.Success(deletedCount);
 		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to delete keys by pattern {Pattern}", pattern);
-			return Result.Failure<int>(DomainErrors.Redis.DeleteByPatternFailed);
+			return Result.Failure<int>(new Error("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s). Refresh the key list before retrying."));
 		}
 	}
 

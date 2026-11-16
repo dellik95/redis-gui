@@ -118,10 +118,10 @@ export class KeyActionsService {
           connectionId,
           keys,
           database,
-          onSuccess: () => {
+          onSuccess: result => {
             this.redisKeysStore.clearCache();
             onSuccess?.();
-            this.snackBar.open(`Deleted ${keys.length} key(s)`, 'Close', { duration: 4000 });
+            this.snackBar.open(`Deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`, 'Close', { duration: 4000 });
           }
         });
       });
@@ -165,10 +165,10 @@ export class KeyActionsService {
               connectionId,
               pattern,
               database,
-              onSuccess: () => {
+              onSuccess: result => {
                 this.redisKeysStore.clearCache();
                 onSuccess?.();
-                this.snackBar.open(`Deleted keys matching "${pattern}"`, 'Close', {
+                this.snackBar.open(`Deleted ${result.deletedCount} key(s) matching "${pattern}"`, 'Close', {
                   duration: 4000
                 });
               }
@@ -263,12 +263,12 @@ export class KeyActionsService {
           keys,
           ttlSeconds: ttlSec <= 0 ? null : ttlSec,
           database,
-          onSuccess: (count: number) => {
+          onSuccess: result => {
             onSuccess?.();
             this.snackBar.open(
               ttlSec <= 0
-                ? `${count} key(s) persisted indefinitely`
-                : `TTL set to ${ttlSec}s on ${count} key(s)`,
+                ? `${result.updatedCount} key(s) persisted; ${result.unchangedCount} unchanged or missing, ${result.failedKeys.length} failed.`
+                : `TTL set to ${ttlSec}s on ${result.updatedCount} key(s); ${result.unchangedCount} unchanged or missing, ${result.failedKeys.length} failed.`,
               'Close',
               { duration: 3000 }
             );
@@ -309,11 +309,11 @@ export class KeyActionsService {
                 connectionId,
                 keys: event.keys,
                 database,
-                onSuccess: () => {
+                onSuccess: result => {
                   this.redisKeysStore.clearCache();
                   onSuccess?.();
                   this.snackBar.open(
-                    `Folder "${event.name}" and ${event.keys.length} key(s) deleted`,
+                    `Folder "${event.name}": deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`,
                     'Close',
                     { duration: 3500 }
                   );
@@ -323,10 +323,10 @@ export class KeyActionsService {
                 connectionId,
                 pattern,
                 database,
-                onSuccess: () => {
+                onSuccess: result => {
                   this.redisKeysStore.clearCache();
                   onSuccess?.();
-                  this.snackBar.open(`Folder "${event.name}" keys deleted`, 'Close', {
+                  this.snackBar.open(`Deleted ${result.deletedCount} key(s) from folder "${event.name}"`, 'Close', {
                     duration: 3500
                   });
                 }

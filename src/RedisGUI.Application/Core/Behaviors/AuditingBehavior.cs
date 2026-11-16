@@ -3,8 +3,12 @@ using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Users.Commands.LoginUser;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Application.Redis.Commands.ImportRedisData;
+using RedisGUI.Application.Redis.Commands.BulkUpdateTtl;
+using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
+using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
+using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -69,7 +73,7 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 			entityId = guidResult.Value;
 		}
 
-		if (entityId == null && auditAttribute.EntityType == "Connection")
+		if (entityId == null && (auditAttribute.EntityType == "Connection" || auditAttribute.EntityType == "Redis"))
 		{
 			entityId = requestType.GetProperty("Id")?.GetValue(request) as Guid?
 				?? requestType.GetProperty("ConnectionId")?.GetValue(request) as Guid?;
@@ -85,7 +89,13 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 		string? outcome = response switch
 		{
 			Result<SeedDataResult> seed when seed.IsSuccess => $"Seeded {seed.Value.TotalKeysSeeded}; cancelled: {seed.Value.Cancelled}; unconfirmed changes: {seed.Value.MayHaveUnconfirmedChanges}.",
-			Result<ImportRedisDataResponse> import when import.IsSuccess => $"Imported {import.Value.ImportedCount}; skipped {import.Value.SkippedCount}; failed {import.Value.FailedCount}; cancelled: {import.Value.Cancelled}; unconfirmed changes: {import.Value.MayHaveUnconfirmedChanges}.",
+			Result<ImportRedisDataResponse> import when import.IsSuccess =>
+				$"Imported {import.Value.ImportedCount}; skipped {import.Value.SkippedCount}; failed {import.Value.FailedCount}; cancelled: {import.Value.Cancelled}; unconfirmed changes: {import.Value.MayHaveUnconfirmedChanges}.",
+			Result<DeleteMultipleKeysResponse> selected when selected.IsSuccess =>
+				$"Deleted {selected.Value.DeletedCount} of {selected.Value.TotalRequested}; failed or missing: {selected.Value.FailedKeys.Count}.",
+			Result<DeleteKeysByPatternResponse> pattern when pattern.IsSuccess => $"Deleted {pattern.Value.DeletedCount} matching keys.",
+			Result<RedisBulkTtlResult> ttl when ttl.IsSuccess && request is BulkUpdateTtlCommand =>
+				$"Updated TTL: {ttl.Value.UpdatedCount}; unchanged or missing: {ttl.Value.UnchangedCount}; failed: {ttl.Value.FailedKeys.Count}.",
 			_ => null
 		};
 		var metadata = AuditMetadata.Create(

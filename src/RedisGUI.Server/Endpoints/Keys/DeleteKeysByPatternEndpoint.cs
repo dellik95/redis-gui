@@ -1,10 +1,12 @@
 using System;
+using System.Threading;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
+using RedisGUI.Infrastructure.Authorization;
 
 namespace RedisGUI.Server.Endpoints.Redis;
 
@@ -20,12 +22,13 @@ public class DeleteKeysByPatternEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapDelete("storage/{connectionId:guid}/keys/pattern/{pattern}",
-			async (IMediator sender, Guid connectionId, string pattern, int? database) =>
+			async (IMediator sender, Guid connectionId, string pattern, int? database, CancellationToken cancellationToken) =>
 			{
 				var command = new DeleteKeysByPatternCommand(connectionId, pattern, database);
-				return await sender.Send(command).Match(Results.Ok, error => error.ToProblemDetails());
+				return await sender.Send(command, cancellationToken).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("DeleteKeysByPattern")
+			.RequireAuthorization(Policies.WriteAccess)
 			.WithTags("Redis")
 			.WithOpenApi();
 	}

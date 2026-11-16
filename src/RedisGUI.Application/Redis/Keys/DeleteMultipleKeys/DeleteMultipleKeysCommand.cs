@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using System;
 using System.Collections.Generic;
 using RedisGUI.Shared.Mediator;
@@ -29,13 +30,15 @@ internal sealed class DeleteMultipleKeysCommandHandler : ICommandHandler<DeleteM
 {
 	private readonly IRedisConnectionRepository connectionRepository;
 	private readonly IRedisKeyService keyService;
+	private readonly IConnectionAccessService access;
 
 	public DeleteMultipleKeysCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IRedisKeyService keyService)
+		IRedisKeyService keyService, IConnectionAccessService access)
 	{
 		this.connectionRepository = connectionRepository;
 		this.keyService = keyService;
+		this.access = access;
 	}
 
 	public async Task<Result<DeleteMultipleKeysResponse>> Handle(
@@ -50,6 +53,9 @@ internal sealed class DeleteMultipleKeysCommandHandler : ICommandHandler<DeleteM
 		{
 			return Result.Failure<DeleteMultipleKeysResponse>(connectionResult.Error);
 		}
+
+		if (!await access.CanAccessAsync(connectionResult.Value))
+			return Result.Failure<DeleteMultipleKeysResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
 
 		if (connectionResult.Value.IsReadOnly)
 		{

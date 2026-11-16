@@ -3,6 +3,7 @@ using Moq;
 using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Users.Commands.RegisterUser;
+using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Errors;
@@ -105,6 +106,19 @@ public class AuditingBehaviorTests
 		// Assert
 		result.Should().Be(response);
 		auditLogRepositoryMock.Verify(x => x.Add(It.IsAny<AuditLog>()), Times.Never);
+	}
+
+	[Test]
+	public async Task Handle_BulkDelete_RecordsConnectionAndActualOutcome()
+	{
+		var pipeline = new AuditingBehavior<DeleteMultipleKeysCommand, Result<DeleteMultipleKeysResponse>>(
+			auditLogRepositoryMock.Object, unitOfWorkMock.Object, currentUserServiceMock.Object);
+		var connectionId = Guid.NewGuid();
+		var command = new DeleteMultipleKeysCommand(connectionId, ["a", "b"]);
+		var response = Result.Success(new DeleteMultipleKeysResponse(1, 2, ["b"]));
+		await pipeline.Handle(command, CancellationToken.None, () => Task.FromResult(response));
+		auditLogRepositoryMock.Verify(x => x.Add(It.Is<AuditLog>(log =>
+			log.EntityId == connectionId && log.Metadata.NewValue == "Deleted 1 of 2; failed or missing: 1.")), Times.Once);
 	}
 
 	[Test]

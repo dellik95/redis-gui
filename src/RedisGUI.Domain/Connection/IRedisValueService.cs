@@ -124,11 +124,14 @@ public interface IRedisValueService :
 	/// <param name="ttl">New TTL or null to persist</param>
 	/// <param name="database">Database index</param>
 	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>Number of keys updated</returns>
-	Task<Result<int>> BulkUpdateTtlAsync(
+	/// <returns>Updated, unchanged or missing, and failed key counts.</returns>
+	Task<Result<RedisBulkTtlResult>> BulkUpdateTtlAsync(
 		RedisConnection connection,
 		IEnumerable<string> keys,
 		TimeSpan? ttl,
 		int? database = null,
 		CancellationToken cancellationToken = default);
 }
+
+/// <summary>Outcome of a bounded bulk TTL operation.</summary>
+public sealed record RedisBulkTtlResult(int UpdatedCount, int UnchangedCount, IReadOnlyList<string> FailedKeys);

@@ -1,4 +1,5 @@
 using FluentAssertions;
+using RedisGUI.Application.Core.Services;
 using Moq;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using RedisGUI.Domain.Connection;
@@ -15,6 +16,7 @@ public class DeleteKeysByPatternCommandHandlerTests
 {
 	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
 	private Mock<IRedisKeyService> connectionServiceMock = null!;
+	private Mock<IConnectionAccessService> access = null!;
 	private DeleteKeysByPatternCommandHandler handler = null!;
 
 	[SetUp]
@@ -22,9 +24,11 @@ public class DeleteKeysByPatternCommandHandlerTests
 	{
 		connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
 		connectionServiceMock = new Mock<IRedisKeyService>();
+		access = new Mock<IConnectionAccessService>();
+		access.Setup(x => x.CanAccessAsync(It.IsAny<RedisConnection>())).ReturnsAsync(true);
 		handler = new DeleteKeysByPatternCommandHandler(
 			connectionRepositoryMock.Object,
-			connectionServiceMock.Object);
+			connectionServiceMock.Object, access.Object);
 	}
 
 	[Test]

@@ -309,7 +309,7 @@ public class RedisValueService(
 	}
 
 	/// <inheritdoc />
-	public async Task<Result<int>> BulkUpdateTtlAsync(
+	public async Task<Result<RedisBulkTtlResult>> BulkUpdateTtlAsync(
 		RedisConnection connection,
 		IEnumerable<string> keys,
 		TimeSpan? ttl,
@@ -317,22 +317,30 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<int>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailure) return Result.Failure<RedisBulkTtlResult>(multiplexerResult.Error);
 
 		var db = multiplexerResult.Value.GetDatabase(database ?? connection.DatabaseNumber.Value);
 		int updatedCount = 0;
+		int unchangedCount = 0;
+		List<string> failedKeys = [];
 		foreach (var key in keys)
 		{
-			if (ttl.HasValue && ttl.Value > TimeSpan.Zero)
+			cancellationToken.ThrowIfCancellationRequested();
+			try
 			{
-				if (await db.KeyExpireAsync(key, ttl.Value)) updatedCount++;
+				bool updated = ttl.HasValue && ttl.Value > TimeSpan.Zero
+					? await db.KeyExpireAsync(key, ttl.Value)
+					: await db.KeyPersistAsync(key);
+				if (updated) updatedCount++;
+				else unchangedCount++;
 			}
-			else
+			catch (Exception ex)
 			{
-				if (await db.KeyPersistAsync(key)) updatedCount++;
+				logger.LogError(ex, "Failed to update TTL for key {Key}", key);
+				failedKeys.Add(key);
 			}
 		}
-		return Result.Success(updatedCount);
+		return Result.Success(new RedisBulkTtlResult(updatedCount, unchangedCount, failedKeys));
 	}
 
 	#endregion

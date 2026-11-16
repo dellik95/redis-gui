@@ -19,6 +19,12 @@ interface KeyScanPage {
   nextCursor: string | null;
 }
 
+export interface BulkTtlResult {
+  updatedCount: number;
+  unchangedCount: number;
+  failedKeys: string[];
+}
+
 /**
  * Redis key with value data
  */
@@ -548,13 +554,13 @@ export const RedisKeysStore = signalStore(
         keys: string[];
         ttlSeconds: number | null;
         database?: number;
-        onSuccess?: (count: number) => void;
+        onSuccess?: (result: BulkTtlResult) => void;
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
           switchMap(({ connectionId, keys, ttlSeconds, database, onSuccess }) =>
             httpClient
-              .post<{ updatedCount: number }>(API_ROUTES.STORAGE.BULK_TTL(connectionId), {
+              .post<BulkTtlResult>(API_ROUTES.STORAGE.BULK_TTL(connectionId), {
                 keys,
                 ttlSeconds,
                 database
@@ -562,7 +568,7 @@ export const RedisKeysStore = signalStore(
               .pipe(
                 tap(res => {
                   patchState(store, { isLoading: false, lastFetched: null });
-                  onSuccess?.(res?.updatedCount ?? keys.length);
+                  onSuccess?.(res);
                 }),
                 catchError(error => {
                   patchState(store, {

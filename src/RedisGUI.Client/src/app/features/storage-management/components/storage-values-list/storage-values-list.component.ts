@@ -16,6 +16,8 @@ import {
   output
 } from '@angular/core';
 import { interval } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { API_ROUTES } from '../../../../core/constants/api-routes.constants';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MatButtonModule } from '@angular/material/button';
@@ -85,6 +87,7 @@ import {
 export class StorageValuesListComponent {
   // 1. Injected dependencies
   private readonly dialog = inject(MatDialog);
+  private readonly http = inject(HttpClient);
   private readonly snackBar = inject(MatSnackBar);
   private readonly storageStore = inject(StorageManagementStore);
   private readonly redisKeysStore = inject(RedisKeysStore);
@@ -445,30 +448,32 @@ export class StorageValuesListComponent {
             connectionId: this.connectionId(),
             keys: event.keys,
             database: this.selectedDb(),
-            onSuccess: () => {
+            onSuccess: result => {
               this.selection.clear();
               this.redisKeysStore.clearCache();
               this.loadKeys();
               this.snackBar.open(
-                `Folder "${event.name}" and ${event.keys.length} key(s) deleted`,
+                `Folder "${event.name}": deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`,
                 'Close',
                 { duration: 3500 }
               );
-            }
+            },
+            onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
           });
         } else {
           this.redisOperationsStore.deleteKeysByPattern({
             connectionId: this.connectionId(),
             pattern,
             database: this.selectedDb(),
-            onSuccess: () => {
+            onSuccess: result => {
               this.selection.clear();
               this.redisKeysStore.clearCache();
               this.loadKeys();
-              this.snackBar.open(`Folder "${event.name}" keys deleted`, 'Close', {
+              this.snackBar.open(`Deleted ${result.deletedCount} key(s) from folder "${event.name}"`, 'Close', {
                 duration: 3500
               });
-            }
+            },
+            onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
           });
         }
       });
@@ -524,7 +529,7 @@ export class StorageValuesListComponent {
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Delete Selected Keys',
-          message: `Are you sure you want to delete ${selectedKeys.length} selected key(s)?`,
+          message: `Delete ${selectedKeys.length} selected key(s) from DB ${this.selectedDb()}? Examples: ${selectedKeys.slice(0, 5).join(', ')}${selectedKeys.length > 5 ? ', …' : ''}. Keys may change before deletion.`,
           confirmText: 'Delete',
           cancelText: 'Cancel',
           confirmColor: 'warn'
@@ -537,14 +542,15 @@ export class StorageValuesListComponent {
           connectionId: this.connectionId(),
           keys: selectedKeys,
           database: this.selectedDb(),
-          onSuccess: () => {
+          onSuccess: result => {
             this.selection.clear();
             this.redisKeysStore.clearCache();
             this.loadKeys();
-            this.snackBar.open(`Deleted ${selectedKeys.length} key(s)`, 'Close', {
+            this.snackBar.open(`Deleted ${result.deletedCount} of ${result.totalRequested} key(s); ${result.failedKeys.length} failed or no longer existed.`, 'Close', {
               duration: 4000
             });
-          }
+          },
+          onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
         });
       });
   }
@@ -563,11 +569,18 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((pattern): pattern is string => pattern !== null && pattern.trim().length > 0))
       .subscribe(pattern => {
+        const database = this.selectedDb();
+        const params = new HttpParams().set('pattern', pattern).set('database', database).set('count', 100);
+        this.http.get<{ keys: { key: string }[]; nextCursor: string | null }>(
+          API_ROUTES.STORAGE.SCAN(this.connectionId()), { params }
+        ).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+          next: preview => {
+            const examples = preview.keys.slice(0, 5).map(item => item.key).join(', ') || '(none in this scan page)';
         this.dialog
           .open(ConfirmDialogComponent, {
             data: {
               title: 'Confirm Delete',
-              message: `Are you sure you want to delete all keys matching "${pattern}"?`,
+              message: `Delete all keys matching "${pattern}" in DB ${database}? Preview (one scan page): ${examples}. This preview may be partial and keys may change before or during deletion.`,
               confirmText: 'Delete',
               cancelText: 'Cancel',
               confirmColor: 'warn'
@@ -579,17 +592,21 @@ export class StorageValuesListComponent {
             this.redisOperationsStore.deleteKeysByPattern({
               connectionId: this.connectionId(),
               pattern,
-              database: this.selectedDb(),
-              onSuccess: () => {
+              database,
+              onSuccess: result => {
                 this.selection.clear();
                 this.redisKeysStore.clearCache();
                 this.loadKeys();
-                this.snackBar.open(`Deleted keys matching "${pattern}"`, 'Close', {
+                this.snackBar.open(`Deleted ${result.deletedCount} key(s) matching "${pattern}"`, 'Close', {
                   duration: 4000
                 });
-              }
+              },
+              onError: message => { this.loadKeys(); this.snackBar.open(message, 'Close', { duration: 7000 }); }
             });
           });
+          },
+          error: () => this.snackBar.open('Could not preview matching keys; deletion was not started.', 'Close', { duration: 5000 })
+        });
       });
   }
 
@@ -706,23 +723,32 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((val): val is string => val !== null && val.trim().length > 0))
       .subscribe(val => {
-        const seconds = parseInt(val.trim(), 10);
-        const ttlSeconds = isNaN(seconds) || seconds <= 0 ? null : seconds;
+        const input = val.trim();
+        const seconds = Number(input);
+        if (!/^\d+$/.test(input) || !Number.isSafeInteger(seconds)) {
+          this.snackBar.open('Enter a whole number of seconds, or 0 to persist.', 'Close', { duration: 4000 });
+          return;
+        }
+        const ttlSeconds = seconds === 0 ? null : seconds;
 
-        this.redisKeysStore.bulkUpdateTtl({
+        this.dialog.open(ConfirmDialogComponent, { data: {
+          title: 'Confirm TTL change',
+          message: `${ttlSeconds === null ? 'Persist' : `Set TTL to ${ttlSeconds}s for`} ${selected.length} key(s) in DB ${this.selectedDb()}? Examples: ${selected.slice(0, 5).join(', ')}${selected.length > 5 ? ', …' : ''}. Keys may change before this runs.`,
+          confirmText: 'Apply', cancelText: 'Cancel'
+        }}).afterClosed().pipe(filter((confirmed): confirmed is boolean => confirmed === true)).subscribe(() => this.redisKeysStore.bulkUpdateTtl({
           connectionId: this.connectionId(),
           keys: selected,
           ttlSeconds,
           database: this.selectedDb(),
-          onSuccess: count => {
+          onSuccess: result => {
             const label = ttlSeconds
-              ? `TTL set to ${ttlSeconds}s for ${count} keys`
-              : `Persisted ${count} keys indefinitely`;
-            this.snackBar.open(label, 'Close', { duration: 3000 });
+              ? `TTL set to ${ttlSeconds}s for ${result.updatedCount} keys`
+              : `Persisted ${result.updatedCount} keys indefinitely`;
+            this.snackBar.open(`${label}; ${result.unchangedCount} unchanged or missing, ${result.failedKeys.length} failed.`, 'Close', { duration: 5000 });
             this.selection.clear();
             this.loadKeys();
           }
-        });
+        }));
       });
   }
 
