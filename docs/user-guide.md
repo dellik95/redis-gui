@@ -338,4 +338,10 @@ RedisGUI features a design system supporting dark and light themes:
 
 Connect to a Redis instance and select **Messaging Inspector** in the sidebar. In **Pub/Sub**, enter a channel or pattern and start monitoring. Pattern subscriptions use Redis glob syntax; publishing always treats the channel as a literal name. Messages sent before monitoring begins or while disconnected are not retained by pub/sub. The display keeps the most recent 200 messages. Channel info reports direct subscribers for the literal channel and the server-wide pattern subscription count on the selected Redis server; pattern subscribers are not included in the direct count. Publishing is unavailable for read-only users and connections in Safe Mode.
 
+While monitoring, the **Live metrics** panel charts the rate delivered to this monitor and either direct subscribers or stream length. It also shows the delivered total and the server's pattern subscription count or the stream's consumer-group count. Counts are sampled from the selected Redis server or database once per second and sent over SignalR; the chart keeps up to 60 samples. Delivery rate is not server-wide throughput, and stream delivery excludes the initial snapshot. Pattern subscriptions have no direct-subscriber count. History and delivered totals reset when monitoring starts or reconnects; a warning indicates when sampling fails and retries. Redis permissions must allow the relevant PUBSUB and XINFO commands.
+
+![Live pub/sub metrics](screenshots/17_pubsub_metrics.jpg)
+
+![Live stream metrics](screenshots/18_stream_metrics.jpg)
+
 In **Streams**, enter an existing stream key and select **Inspect and monitor**. The inspector loads its length, consumer-group count, last generated ID and up to 100 recent entries, then displays new entries as they arrive. It retains up to 200 displayed entries. Stream monitoring reads the connection’s configured Redis database and resumes from the last received ID after a SignalR reconnect. Select Stop to end monitoring.

@@ -78,3 +78,5 @@ The system uses the **Strategy Pattern** across both backend and frontend layers
 ## Messaging Inspector
 
 Monitor literal and pattern pub/sub subscriptions, publish to channels, and inspect recent and live stream entries. SignalR delivers updates; pub/sub is ephemeral, while Redis streams persist entries. Publishing respects read-only roles and Safe Mode.
+
+Live SignalR metrics include a rolling delivery-rate chart, a direct-subscriber or stream-length chart, and current counts for delivered messages and server pattern subscriptions or consumer groups. Delivery measures what this monitor receives, not server-wide publishing or ingestion. Redis counts are sampled once per second. Pattern subscriptions do not have a direct-subscriber count.

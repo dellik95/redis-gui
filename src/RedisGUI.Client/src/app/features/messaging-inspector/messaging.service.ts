@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 export interface StreamEntry { id: string; fields: { name: string; value: string }[]; }
 export interface StreamSnapshot { length: number; groups: number; lastGeneratedId: string; entries: StreamEntry[]; }
 export interface LiveMessage { channel: string; payload: string; receivedAt: string; }
+export interface MessagingMetrics { timestamp: string; primary: number | null; secondary: number | null; delivered: number; rate: number; }
 
 @Injectable({ providedIn: 'root' })
 export class MessagingService {
