@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using System;
 using RedisGUI.Shared.Mediator;
 
@@ -9,6 +10,7 @@ namespace RedisGUI.Application.Redis.Commands.ExecuteCli;
 /// <param name="ConnectionId">The Redis connection identifier</param>
 /// <param name="Command">The raw command string</param>
 /// <param name="Database">Optional target database</param>
+[Auditable(AuditAction.RedisCommandExecuted, "Redis")]
 public sealed record ExecuteCliCommand(
 	Guid ConnectionId,
 	string Command,

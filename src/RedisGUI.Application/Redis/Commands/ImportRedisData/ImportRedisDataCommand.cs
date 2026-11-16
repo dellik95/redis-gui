@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Mediator;
 using System;
@@ -11,6 +12,7 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <param name="Data">The data to import.</param>
 /// <param name="Format">Format of the data (JSON or CSV).</param>
 /// <param name="Overwrite">Whether to overwrite existing keys.</param>
+[Auditable(AuditAction.DataImported, "Redis")]
 public sealed record ImportRedisDataCommand(
 	Guid ConnectionId,
 	string Data,

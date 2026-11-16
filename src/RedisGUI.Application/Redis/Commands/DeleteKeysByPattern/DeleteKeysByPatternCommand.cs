@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using System;
 using RedisGUI.Shared.Mediator;
 
@@ -9,6 +10,7 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// <param name="ConnectionId">The Redis connection identifier.</param>
 /// <param name="Pattern">Pattern to match keys (e.g., "user:*", "session:*").</param>
 /// <param name="Database">Optional database index.</param>
+[Auditable(AuditAction.Delete, "Redis")]
 public sealed record DeleteKeysByPatternCommand(
 	Guid ConnectionId,
 	string Pattern,

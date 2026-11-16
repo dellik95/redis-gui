@@ -29,7 +29,7 @@ public class RedisLoadTestService(
 		Func<RedisLoadTestProgress, Task>? onProgress = null,
 		CancellationToken cancellationToken = default)
 	{
-		if (connection.IsReadOnly && !string.Equals(request.OperationType, "read", StringComparison.OrdinalIgnoreCase))
+		if (connection.IsReadOnly)
 		{
 			return Result.Failure<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
@@ -46,21 +46,13 @@ public class RedisLoadTestService(
 
 		int concurrency = Math.Clamp(request.Concurrency, 1, 50);
 		int payloadSize = Math.Clamp(request.PayloadSizeBytes, 16, 65536);
-		string prefix = string.IsNullOrWhiteSpace(request.KeyPrefix)
-			? $"__bench_{Guid.NewGuid():N}:"
-			: (request.KeyPrefix.EndsWith(':') ? request.KeyPrefix : request.KeyPrefix + ":");
+		string prefixBase = string.IsNullOrWhiteSpace(request.KeyPrefix) ? "__bench" : request.KeyPrefix.TrimEnd(':');
+		string prefix = $"{prefixBase}:{Guid.NewGuid():N}:";
 
 		string opType = (request.OperationType ?? "mixed").ToLowerInvariant();
 		string samplePayload = new string('x', payloadSize);
 
 		const int prePopulatedKeysCount = 25;
-		if (opType is "read" or "mixed")
-		{
-			for (int i = 0; i < prePopulatedKeysCount; i++)
-			{
-				await db.StringSetAsync($"{prefix}warm:{i}", samplePayload, TimeSpan.FromMinutes(10));
-			}
-		}
 
 		var operationStrategy = LoadTestOperationFactory.GetOperation(opType);
 		var latencies = new ConcurrentBag<double>();
@@ -72,16 +64,45 @@ public class RedisLoadTestService(
 		double maxDurationSec = isDurationMode ? Math.Clamp(request.DurationSeconds, 1, 600) : 0;
 		int targetTotalOps = isDurationMode ? 0 : Math.Clamp(request.OperationsCount, 10, 100000);
 
-		var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+		var stopwatch = new System.Diagnostics.Stopwatch();
 
+		var workerConnections = new List<ConnectionMultiplexer>();
+		int cleanedCount = 0;
 		try
 		{
+			if (opType is "read" or "mixed")
+			{
+				for (int i = 0; i < prePopulatedKeysCount; i++)
+				{
+					await db.StringSetAsync($"{prefix}warm:{i}", samplePayload, TimeSpan.FromMinutes(10));
+				}
+			}
+
+			string connectionString = connection.BuildConnectionString();
+			for (int i = 0; i < concurrency; i++)
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				var options = ConfigurationOptions.Parse(connectionString);
+				// The manager may have connected through its Docker-host fallback.
+				// Keep the configured credentials and TLS settings, but use its effective endpoints.
+				options.EndPoints.Clear();
+				foreach (var endpoint in multiplexer.GetEndPoints(configuredOnly: true))
+				{
+					options.EndPoints.Add(endpoint);
+				}
+				options.ClientName = $"redis-gui-load-test-{i + 1}";
+				options.AbortOnConnectFail = true;
+				workerConnections.Add(await ConnectionMultiplexer.ConnectAsync(options));
+			}
+
+			stopwatch.Start();
 			using var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 			var token = cts.Token;
 
 			var workerTasks = new Task[concurrency];
 			for (int w = 0; w < concurrency; w++)
 			{
+				IDatabase workerDb = workerConnections[w].GetDatabase(targetDb);
 				workerTasks[w] = Task.Run(async () =>
 				{
 					while (!token.IsCancellationRequested)
@@ -103,7 +124,7 @@ public class RedisLoadTestService(
 
 						try
 						{
-							ok = await operationStrategy.ExecuteAsync(db, prefix, opIndex, samplePayload, prePopulatedKeysCount);
+							ok = await operationStrategy.ExecuteAsync(workerDb, prefix, opIndex, samplePayload, prePopulatedKeysCount);
 						}
 						catch
 						{
@@ -120,12 +141,13 @@ public class RedisLoadTestService(
 				}, token);
 			}
 
+			Task allWorkers = Task.WhenAll(workerTasks);
 			if (onProgress != null)
 			{
 				int lastReportedCompleted = 0;
 				long lastTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
 
-				while (!Task.WhenAll(workerTasks).IsCompleted && !token.IsCancellationRequested)
+				while (!allWorkers.IsCompleted && !token.IsCancellationRequested)
 				{
 					if (isDurationMode && stopwatch.Elapsed.TotalSeconds >= maxDurationSec) break;
 
@@ -164,14 +186,17 @@ public class RedisLoadTestService(
 				}
 			}
 
-			await Task.WhenAll(workerTasks);
+			await allWorkers;
 		}
 		finally
 		{
 			stopwatch.Stop();
+			foreach (var workerConnection in workerConnections)
+			{
+				workerConnection.Dispose();
+			}
+			cleanedCount = await CleanupBenchmarkKeysAsync(multiplexer, targetDb, prefix);
 		}
-
-		int cleanedCount = await CleanupBenchmarkKeysAsync(multiplexer, targetDb, prefix);
 
 		var result = new BenchmarkResultBuilder()
 			.WithCounters(successfulOps, failedOps)
@@ -184,6 +209,9 @@ public class RedisLoadTestService(
 		return Result.Success(result);
 	}
 
+	private static string EscapeScanPattern(string value) =>
+		value.Replace("\\", "\\\\").Replace("*", "\\*").Replace("?", "\\?").Replace("[", "\\[").Replace("]", "\\]");
+
 	private async Task<int> CleanupBenchmarkKeysAsync(ConnectionMultiplexer multiplexer, int targetDb, string prefix)
 	{
 		int cleanedCount = 0;
@@ -195,7 +223,7 @@ public class RedisLoadTestService(
 
 			foreach (var server in servers)
 			{
-				await foreach (var k in server.KeysAsync(targetDb, pattern: $"{prefix}*"))
+				await foreach (var k in server.KeysAsync(targetDb, pattern: $"{EscapeScanPattern(prefix)}*"))
 				{
 					keysToDelete.Add(k);
 				}

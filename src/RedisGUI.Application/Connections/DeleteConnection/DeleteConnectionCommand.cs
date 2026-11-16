@@ -1,3 +1,5 @@
+using RedisGUI.Application.Core.Behaviors;
+using RedisGUI.Domain.Audit;
 using System;
 using RedisGUI.Shared.Mediator;
 

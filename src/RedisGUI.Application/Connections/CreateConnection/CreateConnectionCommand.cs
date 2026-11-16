@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using System;
 using RedisGUI.Shared.Mediator;
 
@@ -13,6 +14,7 @@ namespace RedisGUI.Application.Connections.CreateConnection;
 /// <param name="UserName">The username for authentication (optional)</param>
 /// <param name="Password">The password for authentication (optional)</param>
 /// <param name="IsReadOnly">Whether the connection is in Safe Read-Only mode</param>
+[Auditable(AuditAction.Create, "Connection")]
 public sealed record CreateConnectionCommand(
 	string Name,
 	string Host,

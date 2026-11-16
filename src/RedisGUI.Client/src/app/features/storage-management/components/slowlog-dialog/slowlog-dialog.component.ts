@@ -37,12 +37,10 @@ export interface SlowlogEntry {
 export class SlowlogDialogComponent {
   private readonly data = inject<{ connectionId: string }>(MAT_DIALOG_DATA);
 
-  private readonly slowlog = httpResource<{ entries: SlowlogEntry[]; totalCount: number }>(() =>
+  private readonly slowlog = httpResource<SlowlogEntry[]>(() =>
     API_ROUTES.STORAGE.SLOWLOG(this.data.connectionId, 25)
   );
-  readonly entries = computed(() =>
-    this.slowlog.hasValue() ? (this.slowlog.value().entries ?? []) : []
-  );
+  readonly entries = computed(() => (this.slowlog.hasValue() ? this.slowlog.value() : []));
   readonly loading = this.slowlog.isLoading;
   readonly loadError = this.slowlog.error;
   readonly columns = ['id', 'timestamp', 'duration', 'arguments'] as const;

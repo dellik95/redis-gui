@@ -7,6 +7,9 @@ namespace RedisGUI.Domain.Audit;
 /// </summary>
 public interface IAuditLogRepository : IRepository<AuditLog>
 {
+	/// <summary>Queries matching entries and their total count.</summary>
+	Task<(List<AuditLog> Items, int TotalCount)> SearchAsync(Guid? userId, string? entityType, Guid? entityId, DateTime? fromDate, DateTime? toDate, int skip, int take, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Gets audit logs for a specific user
 	/// </summary>
