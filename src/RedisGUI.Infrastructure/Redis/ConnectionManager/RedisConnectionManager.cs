@@ -81,7 +81,8 @@ public class RedisConnectionManager : IRedisConnectionManager
 				if (existingEntry.ConfigurationFingerprint != fingerprint)
 				{
 					logger.LogInformation("Redis configuration changed for server {ServerKey}. Replacing existing connection", sanitizedKey);
-					EvictAndRetire(existingEntry, "Configuration changed");
+					EvictAndRetire(existingEntry, "Configuration changed", allowActive: true);
+					continue;
 				}
 				else if (existingEntry.IsRetired)
 				{
@@ -239,19 +240,6 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 			connectTask = connectionFactory.ConnectAsync(configOptions);
 
-			// Attach background safety continuation to ensure late-completing connections are disposed if abandoned
-			_ = connectTask.ContinueWith(async t =>
-			{
-				if (t.IsCompletedSuccessfully && (entry.IsRetired || disposeState != 0 || entry.Multiplexer != t.Result))
-				{
-					try
-					{
-						await t.Result.CloseAsync(allowCommandsToComplete: false);
-						await t.Result.DisposeAsync();
-					}
-					catch { }
-				}
-			}, TaskScheduler.Default);
 
 			multiplexer = await connectTask.WaitAsync(initCts.Token);
 
@@ -283,6 +271,7 @@ public class RedisConnectionManager : IRedisConnectionManager
 		}
 		catch (Exception ex)
 		{
+			if (multiplexer == null && connectTask != null) DisposeLateConnection(connectTask);
 			sw.Stop();
 			entry.State = RedisConnectionState.Faulted;
 			entry.LastFailure = ex.Message;
@@ -338,20 +327,10 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		Task<ConnectionMultiplexer> fallbackTask = connectionFactory.ConnectAsync(fallbackOptions);
 
-		_ = fallbackTask.ContinueWith(async t =>
-		{
-			if (t.IsCompletedSuccessfully && (entry.IsRetired || disposeState != 0 || entry.Multiplexer != t.Result))
-			{
-				try
-				{
-					await t.Result.CloseAsync(allowCommandsToComplete: false);
-					await t.Result.DisposeAsync();
-				}
-				catch { }
-			}
-		}, TaskScheduler.Default);
 
-		ConnectionMultiplexer fallbackMux = await fallbackTask.WaitAsync(initCts.Token);
+		ConnectionMultiplexer fallbackMux;
+		try { fallbackMux = await fallbackTask.WaitAsync(initCts.Token); }
+		catch { DisposeLateConnection(fallbackTask); throw; }
 
 		if (disposeState != 0 || entry.IsRetired)
 		{
@@ -371,6 +350,16 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		logger.LogInformation("Redis connection established via Docker fallback for server {ServerKey}", entry.SanitizedKey);
 		return fallbackMux;
+	}
+
+	private static void DisposeLateConnection(Task<ConnectionMultiplexer> task)
+	{
+		_ = task.ContinueWith(async completed =>
+		{
+			if (!completed.IsCompletedSuccessfully) return;
+			try { await completed.Result.CloseAsync(allowCommandsToComplete: false); await completed.Result.DisposeAsync(); }
+			catch { }
+		}, TaskScheduler.Default).Unwrap();
 	}
 
 	private static bool IsDockerRedisHost(string configuration)
@@ -428,11 +417,11 @@ public class RedisConnectionManager : IRedisConnectionManager
 		}
 	}
 
-	private void EvictAndRetire(ConnectionEntry entry, string reason)
+	private void EvictAndRetire(ConnectionEntry entry, string reason, bool allowActive = false)
 	{
 		lock (entry)
 		{
-			if (entry.ActiveOperations > 0) return;
+			if (!allowActive && entry.ActiveOperations > 0) return;
 			if (connections.TryRemove(new KeyValuePair<string, ConnectionEntry>(entry.Key, entry)))
 			{
 				entry.IsRetired = true;
@@ -448,6 +437,7 @@ public class RedisConnectionManager : IRedisConnectionManager
 	{
 		try
 		{
+			await entry.WaitForOperationsAsync().WaitAsync(shutdownCts.Token);
 			if (options.DrainTimeout > TimeSpan.Zero && disposeState == 0)
 			{
 				await Task.Delay(options.DrainTimeout, shutdownCts.Token).ConfigureAwait(false);
@@ -499,7 +489,10 @@ public class RedisConnectionManager : IRedisConnectionManager
 	{
 		if (connections.TryGetValue(key, out ConnectionEntry? entry))
 		{
-			return entry.TrackOperation();
+			lock (entry)
+			{
+				return entry.IsRetired ? null : entry.TrackOperation();
+			}
 		}
 		return null;
 	}
@@ -583,6 +576,7 @@ public class RedisConnectionManager : IRedisConnectionManager
 		private readonly Lazy<Task<ConnectionMultiplexer>> lazyMultiplexer;
 		private readonly RedisConnectionManager manager;
 		private int disposalState;
+		private TaskCompletionSource? operationsDrained;
 
 		public Task<ConnectionMultiplexer> MultiplexerTask => lazyMultiplexer.Value;
 
@@ -607,6 +601,15 @@ public class RedisConnectionManager : IRedisConnectionManager
 		}
 
 		public IDisposable TrackOperation() => new OperationScope(this);
+
+		public Task WaitForOperationsAsync()
+		{
+			lock (this)
+			{
+				if (ActiveOperations == 0) return Task.CompletedTask;
+				return (operationsDrained ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+			}
+		}
 
 		internal void OnConnectionFailed(object? sender, ConnectionFailedEventArgs e)
 		{
@@ -732,7 +735,11 @@ public class RedisConnectionManager : IRedisConnectionManager
 			{
 				if (Interlocked.CompareExchange(ref disposed, 1, 0) == 0)
 				{
-					Interlocked.Decrement(ref entry.ActiveOperations);
+					lock (entry)
+					{
+						if (Interlocked.Decrement(ref entry.ActiveOperations) == 0)
+							entry.operationsDrained?.TrySetResult();
+					}
 				}
 			}
 		}
