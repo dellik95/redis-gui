@@ -15,6 +15,17 @@ namespace RedisGUI.Infrastructure.Tests.Services;
 public class BackgroundJobQueueTests
 {
 	[Test]
+	public void Queue_RejectsPayloadsThatExceedSharedMemoryBudget()
+	{
+		using var manager = new BackgroundJobManager(Mock.Of<IServiceScopeFactory>(), Mock.Of<IHubContext<BackgroundJobsHub>>(), NullLogger<BackgroundJobManager>.Instance);
+		var owner = Guid.NewGuid();
+		var principal = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, owner.ToString())], "test"));
+		using var parameters = JsonDocument.Parse("{\"data\":\"" + new string('a', 17 * 1024 * 1024) + "\"}");
+		Assert.That(manager.TryStart(owner, principal, Guid.NewGuid(), "test", parameters.RootElement, out _), Is.True);
+		Assert.That(manager.TryStart(owner, principal, Guid.NewGuid(), "test", parameters.RootElement, out _), Is.False);
+	}
+
+	[Test]
 	public async Task Queue_IsBoundedAndOnlyOwnerCanCancel()
 	{
 		var proxy = new Mock<IClientProxy>();

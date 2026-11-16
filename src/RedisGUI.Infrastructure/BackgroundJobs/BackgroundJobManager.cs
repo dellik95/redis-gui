@@ -21,6 +21,8 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 	ILogger<BackgroundJobManager> logger) : BackgroundService
 {
 	private const int MaxJobs = 512;
+	private const long MaxActiveParameterBytes = 64L * 1024 * 1024;
+	private long activeParameterBytes;
 	private readonly ConcurrentDictionary<Guid, Job> jobs = new();
 	private readonly Channel<Job> queue = Channel.CreateBounded<Job>(new BoundedChannelOptions(100)
 	{
@@ -33,7 +35,8 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 		lock (admission)
 		{
 			RemoveExpired();
-			if (jobs.Count >= MaxJobs) { snapshot = null; return false; }
+			long payloadBytes = (long)parameters.GetRawText().Length * sizeof(char);
+			if (jobs.Count >= MaxJobs || payloadBytes > MaxActiveParameterBytes - activeParameterBytes) { snapshot = null; return false; }
 			var identity = new ClaimsPrincipal(principal.Identities.Select(identity => new ClaimsIdentity(identity)));
 			var job = new Job(Guid.NewGuid(), ownerId, identity, connectionId, kind, parameters.Clone());
 			if (!jobs.TryAdd(job.Id, job) || !queue.Writer.TryWrite(job))
@@ -43,6 +46,8 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 				snapshot = null;
 				return false;
 			}
+			activeParameterBytes += payloadBytes;
+			job.ParameterBytes = payloadBytes;
 			snapshot = job.Snapshot();
 			return true;
 		}
@@ -131,6 +136,10 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 				logger.LogError(ex, "Background job {JobId} failed", job.Id);
 				await PublishAsync(job.Update("Failed", "The operation failed. Check the server logs."));
 			}
+			finally
+			{
+				lock (admission) { activeParameterBytes -= job.ParameterBytes; job.ReleaseParameters(); }
+			}
 		}
 	}
 
@@ -161,7 +170,9 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 		public ClaimsPrincipal Principal { get; } = principal;
 		public Guid ConnectionId { get; } = connectionId;
 		public string Kind { get; } = kind;
-		public JsonElement Parameters { get; } = parameters;
+		public JsonElement Parameters { get; private set; } = parameters;
+		public long ParameterBytes { get; set; }
+		public void ReleaseParameters() => Parameters = default;
 		public CancellationTokenSource Cancellation { get; } = new();
 		public object? Result { get { lock (gate) return IsFinished(status) ? result : null; } }
 		public BackgroundJobSnapshot Snapshot() { lock (gate) return Current(); }

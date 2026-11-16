@@ -11,6 +11,8 @@ public interface IBackgroundJobHandler
 {
 	string Kind { get; }
 	bool RequiresWriteAccess { get; }
+	/// <summary>Maximum serialized parameter length accepted from the client.</summary>
+	int MaxParameterCharacters => 16384;
 	Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken cancellationToken);
 	Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters,
 		Func<double?, object?, Task> reportProgress, CancellationToken cancellationToken);

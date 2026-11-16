@@ -26,10 +26,12 @@ public sealed class BackgroundJobsEndpoint : IEndpoint
 			IEnumerable<IBackgroundJobHandler> handlers, BackgroundJobManager jobs, IAuthorizationService authorization, CancellationToken cancellationToken) =>
 		{
 			if (currentUser.UserId is not Guid ownerId) return Results.Forbid();
-			if (request.Parameters.ValueKind != JsonValueKind.Object || request.Parameters.GetRawText().Length > 16384)
-				return Results.BadRequest(new { message = "Job parameters must be an object of at most 16 KB." });
+			if (request.Parameters.ValueKind != JsonValueKind.Object)
+				return Results.BadRequest(new { message = "Job parameters must be an object." });
 			var handler = handlers.SingleOrDefault(item => item.Kind == request.Kind);
 			if (handler is null) return Results.BadRequest(new { message = "Unknown job kind." });
+			if (request.Parameters.GetRawText().Length > handler.MaxParameterCharacters)
+				return Results.BadRequest(new { message = "Job parameters exceed the limit for this operation." });
 			if (handler.RequiresWriteAccess && !(await authorization.AuthorizeAsync(context.User, Policies.WriteAccess)).Succeeded) return Results.Forbid();
 			var validation = await handler.ValidateAsync(request.ConnectionId, request.Parameters, cancellationToken);
 			if (validation.IsFailure) return validation.Error.ToProblemDetails(context);
