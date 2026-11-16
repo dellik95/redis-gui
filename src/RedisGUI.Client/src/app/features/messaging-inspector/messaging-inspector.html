@@ -8,6 +8,34 @@
   </div>
   @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
   @if (result()) { <div class="notice" role="status">{{ result() }}</div> }
+  @if (activeWatch(); as watch) {
+    <section class="panel telemetry" aria-label="Live messaging metrics">
+      <div class="telemetry-heading"><div><h2>Live metrics</h2><p>{{ watch.mode === 'channel' ? 'Pub/sub' : 'Stream' }} · {{ watch.target }} · Last 60 samples</p></div>
+        @if (latest(); as sample) { <small>Updated {{ sample.timestamp | date:'mediumTime' }}</small> }
+      </div>
+      @if (metricsError()) { <p class="metrics-warning" role="status">{{ metricsError() }} The last sample may be stale.</p> }
+      @if (latest(); as sample) {
+        <div class="metric-cards">
+          <div><span>Delivered to this monitor</span><strong>{{ sample.delivered | number }}</strong></div>
+          <div><span>Delivery rate</span><strong>{{ sample.rate | number:'1.1-1' }} <small>/ sec</small></strong></div>
+          <div><span>{{ watch.mode === 'stream' ? 'Stream length' : 'Direct subscribers' }}</span><strong>{{ sample.primary === null ? '—' : (sample.primary | number) }}</strong></div>
+          <div><span>{{ watch.mode === 'stream' ? 'Consumer groups' : 'Server pattern subscriptions' }}</span><strong>{{ sample.secondary | number }}</strong></div>
+        </div>
+        <div class="charts">
+          <div class="chart"><div class="chart-title"><strong>Delivery rate</strong><span>{{ rateMax() | number:'1.0-1' }} / sec max</span></div>
+            <svg viewBox="0 0 600 150" preserveAspectRatio="none" role="img" [attr.aria-label]="'Delivery rate, currently ' + (sample.rate | number:'1.1-1') + ' per second'"><path class="grid" d="M0 10H600 M0 75H600 M0 140H600" /><polyline [attr.points]="ratePoints()" /></svg><div class="axis"><span>Older</span><span>Now</span></div>
+          </div>
+          @if (sample.primary !== null) {
+            <div class="chart"><div class="chart-title"><strong>{{ watch.mode === 'stream' ? 'Stream length' : 'Direct subscribers' }}</strong><span>{{ countMax() | number:'1.0-0' }} max</span></div>
+              <svg viewBox="0 0 600 150" preserveAspectRatio="none" role="img" [attr.aria-label]="(watch.mode === 'stream' ? 'Stream length, currently ' : 'Direct subscribers, currently ') + sample.primary"><path class="grid" d="M0 10H600 M0 75H600 M0 140H600" /><polyline class="secondary-line" [attr.points]="countPoints()" /></svg><div class="axis"><span>Older</span><span>Now</span></div>
+            </div>
+          }
+        </div>
+        <p>Delivery rate counts messages delivered to this monitor, not server-wide throughput. Counts are sampled from Redis once per second{{ watch.mode === 'channel' ? ' on the selected server' : ' in the selected database' }}. History resets when monitoring restarts or reconnects.</p>
+        @if (watch.mode === 'channel' && watch.pattern) { <p>Direct subscriber counts are unavailable for patterns; the pattern count is server-wide.</p> }
+      } @else { <p>Waiting for the first metrics sample…</p> }
+    </section>
+  }
   @if (mode() === 'channel') {
     <section class="panel">
       <h2>Subscribe to messages</h2>
@@ -30,7 +58,7 @@
     <section class="panel"><h2>Stream monitor</h2><p>Loads the latest 100 entries, then watches for new entries. The list retains up to 200 entries.</p>
       <div class="controls"><label>Stream key <input [(ngModel)]="streamKey" placeholder="orders:events" /></label>
         <button class="btn-primary" (click)="start()">Inspect and monitor</button><button class="btn-secondary" (click)="stop()">Stop</button></div>
-      @if (snapshot(); as info) { <p>Length: {{ info.length }} - Consumer groups: {{ info.groups }} - Last generated ID: {{ info.lastGeneratedId }}</p> }
+      @if (snapshot(); as info) { <p>At start — length: {{ info.length }} - consumer groups: {{ info.groups }} - last generated ID: {{ info.lastGeneratedId }}</p> }
     </section>
     <section class="panel"><h2>Stream entries ({{ entries().length }})</h2>
       @for (entry of entries(); track entry.id) { <article><strong>{{ entry.id }}</strong><pre>{{ entry.fields | json }}</pre></article> }

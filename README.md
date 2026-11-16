@@ -32,6 +32,7 @@ Full visual inspection and editing across all native Redis types using the **Str
 ### Messaging Inspector
 - Subscribe to literal pub/sub channels or patterns and publish messages. Pub/sub messages are transient and only appear while monitoring.
 - Inspect stream length, consumer-group count, last generated ID, and recent entries; new entries arrive over SignalR.
+- Watch live charts for delivery rate and direct subscribers or stream length, with current consumer-group and pattern-subscription counts.
 - Publishing respects user write access and connection Safe Mode.
 
 ### ⚡ Real-Time Live Telemetry
@@ -72,6 +73,10 @@ Full visual inspection and editing across all native Redis types using the **Str
 ---
 
 ## 📸 Screenshots Gallery
+
+| Live Pub/Sub Metrics | Live Stream Metrics |
+| :---: | :---: |
+| ![Live pub/sub metrics](docs/screenshots/17_pubsub_metrics.jpg) | ![Live stream metrics](docs/screenshots/18_stream_metrics.jpg) |
 
 | Dashboard & Metrics | Storage Manager (Table View) |
 | :---: | :---: |
