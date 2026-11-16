@@ -107,6 +107,17 @@ public class AuditingBehaviorTests
 		auditLogRepositoryMock.Verify(x => x.Add(It.IsAny<AuditLog>()), Times.Never);
 	}
 
+	[Test]
+	public async Task Handle_InterfaceRequest_AuditsTheConcreteCommand()
+	{
+		var pipeline = new AuditingBehavior<ICommand<Guid>, Result<Guid>>(
+			auditLogRepositoryMock.Object, unitOfWorkMock.Object, currentUserServiceMock.Object);
+		var id = Guid.NewGuid();
+		ICommand<Guid> request = new RegisterUserCommand("test@example.com", "Password123!", "John", "Doe");
+		await pipeline.Handle(request, CancellationToken.None, () => Task.FromResult(Result.Success(id)));
+		auditLogRepositoryMock.Verify(x => x.Add(It.Is<AuditLog>(log => log.Action == AuditAction.Create && log.EntityId == id)), Times.Once);
+	}
+
 	private class TestRequestWithoutAttribute : IRequest<Result<Guid>>
 	{
 	}

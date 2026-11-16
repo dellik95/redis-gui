@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using System;
 using RedisGUI.Shared.Mediator;
 
@@ -9,4 +10,5 @@ namespace RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 /// <param name="ConnectionId">The Redis connection identifier.</param>
 /// <param name="Key">The key to delete.</param>
 /// <param name="Database">Optional database index.</param>
+[Auditable(AuditAction.Delete, "Redis")]
 public sealed record DeleteRedisKeyCommand(Guid ConnectionId, string Key, int? Database = null) : ICommand<bool>;

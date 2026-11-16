@@ -18,7 +18,7 @@ describe('slow log', () => {
     const http = TestBed.inject(HttpTestingController);
     const get = () => http.expectOne(r => r.url.includes('slowlog'));
     fixture.detectChanges();
-    get().flush({ entries: [], totalCount: 0 });
+    get().flush([]);
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain('No Slow Queries Detected');
@@ -30,10 +30,9 @@ describe('slow log', () => {
     expect(fixture.nativeElement.textContent).toContain('Could not load the slow log');
     dialog.loadSlowlog();
     fixture.detectChanges();
-    get().flush({
-      entries: [{ id: 1, timestamp: '2026-11-13', arguments: ['PING'] }],
-      totalCount: 1
-    });
+    get().flush([
+      { id: 1, timestamp: '2026-11-13', duration: '00:00:00.001', arguments: ['PING'] }
+    ]);
     await fixture.whenStable();
     fixture.detectChanges();
     expect(dialog.entries()[0]?.arguments).toEqual(['PING']);

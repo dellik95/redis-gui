@@ -25,47 +25,11 @@ internal sealed class GetAuditLogsQueryHandler : IQueryHandler<GetAuditLogsQuery
 		GetAuditLogsQuery request,
 		CancellationToken cancellationToken)
 	{
-		List<AuditLog> logs;
-		int totalCount;
-
-		if (request.UserId.HasValue)
-		{
-			logs = await auditLogRepository.GetByUserIdAsync(
-				request.UserId.Value,
-				request.Skip,
-				request.Take,
-				cancellationToken);
-			totalCount = logs.Count; // Simplified - in production would have separate count query
-		}
-		else if (!string.IsNullOrEmpty(request.EntityType) && request.EntityId.HasValue)
-		{
-			logs = await auditLogRepository.GetByEntityAsync(
-				request.EntityType,
-				request.EntityId.Value,
-				cancellationToken);
-			totalCount = logs.Count;
-		}
-		else if (request.FromDate.HasValue && request.ToDate.HasValue)
-		{
-			logs = await auditLogRepository.GetByDateRangeAsync(
-				request.FromDate.Value,
-				request.ToDate.Value,
-				request.Skip,
-				request.Take,
-				cancellationToken);
-			totalCount = logs.Count;
-		}
-		else
-		{
-			// Default: get recent logs
-			logs = await auditLogRepository.GetByDateRangeAsync(
-				DateTime.UtcNow.AddDays(-30),
-				DateTime.UtcNow,
-				request.Skip,
-				request.Take,
-				cancellationToken);
-			totalCount = logs.Count;
-		}
+		int skip = Math.Max(0, request.Skip);
+		int take = Math.Clamp(request.Take, 1, 1000);
+		var (logs, totalCount) = await auditLogRepository.SearchAsync(
+			request.UserId, request.EntityType, request.EntityId, request.FromDate, request.ToDate,
+			skip, take, cancellationToken);
 
 		var items = logs.Select(log => new AuditLogItem(
 			log.Id,
@@ -74,13 +38,13 @@ internal sealed class GetAuditLogsQueryHandler : IQueryHandler<GetAuditLogsQuery
 			log.EntityType,
 			log.EntityId,
 			log.Timestamp,
-			log.Metadata.IpAddress,
-			log.Metadata.UserAgent,
-			log.Metadata.OldValue,
-			log.Metadata.NewValue
+			log.Metadata?.IpAddress,
+			log.Metadata?.UserAgent,
+			log.Metadata?.OldValue,
+			log.Metadata?.NewValue
 		)).ToList();
 
-		return new GetAuditLogsResponse(items, totalCount, request.Skip, request.Take);
+		return new GetAuditLogsResponse(items, totalCount, skip, take);
 	}
 }
 

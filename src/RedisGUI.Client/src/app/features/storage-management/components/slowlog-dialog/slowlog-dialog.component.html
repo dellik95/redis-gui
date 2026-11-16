@@ -34,7 +34,7 @@
       type="empty"
       icon="check_circle"
       heading="No Slow Queries Detected"
-      description="Your Redis instance is operating within optimal response time thresholds."
+      description="Redis has no entries above its configured slowlog threshold."
     />
   } @else {
     <div class="table-scroll">
@@ -77,6 +77,6 @@
 </mat-dialog-content>
 
 <mat-dialog-actions align="end" class="dialog-actions">
-  <span class="info-note">Showing top {{ entries().length }} slowest operations</span>
+  <span class="info-note">Showing {{ entries().length }} most recent entries</span>
   <button type="button" class="btn-secondary" mat-dialog-close>Close</button>
 </mat-dialog-actions>

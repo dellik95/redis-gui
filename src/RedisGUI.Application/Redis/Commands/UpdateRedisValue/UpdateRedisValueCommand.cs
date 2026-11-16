@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using System;
 using System.Collections.Generic;
 using RedisGUI.Shared.Mediator;
@@ -7,6 +8,7 @@ namespace RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 /// <summary>
 /// Command to update a Redis value with type-specific handling.
 /// </summary>
+[Auditable(AuditAction.Update, "Redis")]
 public sealed record UpdateRedisValueCommand(
 	Guid ConnectionId,
 	string Key,

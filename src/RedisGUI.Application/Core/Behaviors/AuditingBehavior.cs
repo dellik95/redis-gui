@@ -1,5 +1,6 @@
 using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
+using RedisGUI.Application.Users.Commands.LoginUser;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Shared.Mediator;
@@ -43,7 +44,8 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 		Func<Task<TResponse>> next)
 	{
 		// Check if the request should be audited
-		var auditAttribute = typeof(TRequest).GetCustomAttribute<AuditableAttribute>();
+		Type requestType = request.GetType();
+		var auditAttribute = requestType.GetCustomAttribute<AuditableAttribute>();
 		if (auditAttribute == null)
 		{
 			return await next();
@@ -65,6 +67,18 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 			entityId = guidResult.Value;
 		}
 
+		if (entityId == null && auditAttribute.EntityType == "Connection")
+		{
+			entityId = requestType.GetProperty("Id")?.GetValue(request) as Guid?
+				?? requestType.GetProperty("ConnectionId")?.GetValue(request) as Guid?;
+		}
+		Guid? actorId = currentUserService.UserId;
+		if (response is Result<LoginUserResponse> loginResult)
+		{
+			actorId = loginResult.Value.UserId;
+			entityId = actorId;
+		}
+
 		// Create audit metadata
 		var metadata = AuditMetadata.Create(
 			ipAddress: currentUserService.IpAddress,
@@ -72,9 +86,9 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 
 		// Create audit log
 		var auditLog = AuditLog.Create(
-			userId: currentUserService.UserId,
+			userId: actorId,
 			action: auditAttribute.Action,
-			entityType: auditAttribute.EntityType ?? typeof(TRequest).Name.Replace("Command", ""),
+			entityType: auditAttribute.EntityType ?? requestType.Name.Replace("Command", ""),
 			entityId: entityId,
 			metadata: metadata);
 

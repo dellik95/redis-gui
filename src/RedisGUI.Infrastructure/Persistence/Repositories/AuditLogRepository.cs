@@ -10,6 +10,21 @@ namespace RedisGUI.Infrastructure.Persistence.Repositories;
 /// </summary>
 internal sealed class AuditLogRepository(ApplicationDbContext context) : IAuditLogRepository
 {
+	/// <inheritdoc />
+	public async Task<(List<AuditLog> Items, int TotalCount)> SearchAsync(Guid? userId, string? entityType, Guid? entityId, DateTime? fromDate, DateTime? toDate, int skip, int take, CancellationToken cancellationToken = default)
+	{
+		IQueryable<AuditLog> query = context.AuditLogs.AsNoTracking();
+		if (userId.HasValue) query = query.Where(a => a.UserId == userId);
+		if (!string.IsNullOrWhiteSpace(entityType)) query = query.Where(a => a.EntityType == entityType);
+		if (entityId.HasValue) query = query.Where(a => a.EntityId == entityId);
+		if (fromDate.HasValue) query = query.Where(a => a.Timestamp >= fromDate);
+		if (toDate.HasValue) query = query.Where(a => a.Timestamp <= toDate);
+		int count = await query.CountAsync(cancellationToken);
+		var items = await query.OrderByDescending(a => a.Timestamp).ThenByDescending(a => a.Id)
+			.Skip(skip).Take(take).ToListAsync(cancellationToken);
+		return (items, count);
+	}
+
 	/// <summary>
 	/// Gets an audit log by its unique identifier (read-only, uses AsNoTracking)
 	/// </summary>
