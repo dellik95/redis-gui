@@ -19,6 +19,35 @@ namespace RedisGUI.Infrastructure.Tests.Redis;
 public class RedisServerFallbackTests
 {
 	[Test]
+	public async Task GetKeys_UsesRequestedDatabase()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
+		var manager = new Mock<IRedisConnectionManager>();
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(multiplexer));
+		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Database test"),
+			new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
+		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
+		var key = "redisgui-database-test:" + Guid.NewGuid();
+		try
+		{
+			await multiplexer.GetDatabase(1).StringSetAsync(key, "value");
+			var defaultKeys = await service.GetKeysAsync(connection);
+			var selectedKeys = await service.GetKeysAsync(connection, database: 1);
+			Assert.That(defaultKeys.IsSuccess, Is.True);
+			Assert.That(selectedKeys.IsSuccess, Is.True);
+			Assert.That(defaultKeys.Value, Does.Not.Contain(key));
+			Assert.That(selectedKeys.Value, Does.Contain(key));
+		}
+		finally
+		{
+			await multiplexer.GetDatabase(1).KeyDeleteAsync(key);
+		}
+	}
+
+	[Test]
 	public async Task ServerOperations_UseTheConnectedFallbackEndpoint()
 	{
 		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");

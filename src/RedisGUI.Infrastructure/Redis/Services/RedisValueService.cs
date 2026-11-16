@@ -193,7 +193,7 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
-		Result<IEnumerable<string>> keysResult = await keyService.GetKeysAsync(connection, cancellationToken);
+		Result<IEnumerable<string>> keysResult = await keyService.GetKeysAsync(connection, cancellationToken, database);
 		if (keysResult.IsFailure)
 		{
 			return Result.Failure<PagedRedisValues>(keysResult.Error);

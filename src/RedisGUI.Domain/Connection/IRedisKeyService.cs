@@ -10,8 +10,9 @@ public interface IRedisKeyService
 	/// </summary>
 	/// <param name="connection">Redis connection</param>
 	/// <param name="cancellationToken">Cancellation token</param>
+	/// <param name="database">Target database index, or the connection default when omitted.</param>
 	/// <returns>Collection of key names</returns>
-	ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default);
+	ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default, int? database = null);
 
 	/// <summary>
 	/// Delete a single key from redis
