@@ -68,6 +68,8 @@ public static class DependencyInjection
 		services.AddScoped<IRedisKeyService, RedisKeyService>();
 		services.AddScoped<IConnectionAccessService, Authorization.ConnectionAccessService>();
 		services.AddScoped<JobIdentity>();
+		services.AddScoped<IExportSessionFactory, RedisExportSessionFactory>();
+		services.AddScoped<IRedisSnapshotService, RedisSnapshotService>();
 		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
 		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
 		services.AddScoped<IRedisCliService, RedisCliService>();

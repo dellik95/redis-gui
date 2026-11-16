@@ -1,6 +1,7 @@
 <h2 mat-dialog-title>Import Redis Data</h2>
 <mat-dialog-content>
-  <p class="import-hint">Select a JSON or CSV file to import keys and values into Redis:</p>
+  <p class="import-hint">Import into database {{ data.database }}. Existing keys are skipped. Files are limited to 10 MB.</p>
+  <p class="import-hint">Snapshots require a compatible Redis version and RESTORE permission. Legacy files support string keys only.</p>
   <div class="file-input-wrapper">
     <input
       type="file"

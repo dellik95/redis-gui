@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Mediator;
 using System;
@@ -6,6 +7,8 @@ using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Primitives;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,12 +22,14 @@ namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 /// <param name="Data">The data to import.</param>
 /// <param name="Format">Format of the data (JSON or CSV).</param>
 /// <param name="Overwrite">Whether to overwrite existing keys.</param>
+/// <param name="Database">Optional target Redis database.</param>
 [Auditable(AuditAction.DataImported, "Redis")]
 public sealed record ImportRedisDataCommand(
 	Guid ConnectionId,
 	string Data,
 	ImportFormat Format,
-	bool Overwrite = false) : ICommand<ImportRedisDataResponse>;
+	bool Overwrite = false,
+	int? Database = null) : ICommand<ImportRedisDataResponse>;
 
 /// <summary>
 /// Represents a Redis key-value item for import.
@@ -50,6 +55,9 @@ public sealed record RedisImportItem
 	/// Time to live in seconds
 	/// </summary>
 	public double? TimeToLive { get; init; }
+	public string? KeyBase64 { get; init; }
+	public string? DumpBase64 { get; init; }
+	public long? TtlMilliseconds { get; init; }
 }
 
 /// <summary>
@@ -59,19 +67,22 @@ internal sealed class ImportRedisDataCommandHandler
 	: ICommandHandler<ImportRedisDataCommand, ImportRedisDataResponse>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
+	private readonly IRedisSnapshotService snapshots;
+	private readonly IConnectionAccessService access;
 
 	/// <summary>
 	/// Initializes a new instance of the ImportRedisDataCommandHandler.
 	/// </summary>
 	/// <param name="connectionRepository">Repository for Redis connections.</param>
-	/// <param name="valueService">Service for Redis value operations.</param>
+	/// <param name="snapshots">Service for restoring Redis snapshots.</param>
+	/// <param name="access">Current user's connection access.</param>
 	public ImportRedisDataCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
+		IRedisSnapshotService snapshots, IConnectionAccessService access)
 	{
 		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
+		this.snapshots = snapshots;
+		this.access = access;
 	}
 
 	/// <summary>
@@ -93,6 +104,12 @@ internal sealed class ImportRedisDataCommandHandler
 			return Result.Failure<ImportRedisDataResponse>(connectionResult.Error);
 		}
 
+		if (!await access.CanAccessAsync(connectionResult.Value))
+			return Result.Failure<ImportRedisDataResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+		if (connectionResult.Value.IsReadOnly)
+			return Result.Failure<ImportRedisDataResponse>(DomainErrors.Connection.ReadOnlyMode);
+		int database = request.Database ?? connectionResult.Value.DatabaseNumber.Value;
+
 		List<RedisImportItem> items;
 
 		try
@@ -113,41 +130,48 @@ internal sealed class ImportRedisDataCommandHandler
 
 		foreach (RedisImportItem item in items)
 		{
+			cancellationToken.ThrowIfCancellationRequested();
 			try
 			{
-				if (!request.Overwrite)
+				if (item.KeyBase64 is not null || item.DumpBase64 is not null)
 				{
-					Result<RedisValue> existsResult = await valueService.GetValueAsync(connectionResult.Value, item.Key, cancellationToken);
-					if (existsResult.IsSuccess)
-					{
-						skippedCount++;
-						continue;
-					}
+					if (item.KeyBase64 is null || item.DumpBase64 is null || item.TtlMilliseconds is <= 0)
+						throw new FormatException("Invalid snapshot fields.");
+					byte[] rawKey = Convert.FromBase64String(item.KeyBase64);
+					byte[] payload = Convert.FromBase64String(item.DumpBase64);
+					TimeSpan? snapshotTtl = item.TtlMilliseconds is long ms ? TimeSpan.FromMilliseconds(ms) : null;
+					var restored = await snapshots.RestoreAsync(connectionResult.Value, rawKey, payload, snapshotTtl, request.Overwrite, database, cancellationToken);
+					if (restored.IsFailure) failedKeys.Add(item.KeyBase64);
+					else if (restored.Value) importedCount++;
+					else skippedCount++;
+					continue;
 				}
 
+				// Legacy exports only round-trip strings. Never silently restore other types as strings.
+				if (!string.Equals(item.Type, "String", StringComparison.OrdinalIgnoreCase))
+				{
+					failedKeys.Add(item.Key);
+					continue;
+				}
+				if (item.TimeToLive is <= 0) throw new FormatException("Invalid legacy TTL.");
 				TimeSpan? ttl = item.TimeToLive.HasValue
 					? TimeSpan.FromSeconds(item.TimeToLive.Value)
 					: null;
 
-				Result setResult = await valueService.SetValueAsync(
+				Result<bool> setResult = await snapshots.SetLegacyStringAsync(
 					connectionResult.Value,
 					item.Key,
 					item.Value,
-					ttl,
-					cancellationToken);
+					ttl, request.Overwrite, database, cancellationToken);
 
-				if (setResult.IsSuccess)
-				{
-					importedCount++;
-				}
-				else
-				{
-					failedKeys.Add(item.Key);
-				}
+				if (setResult.IsFailure) failedKeys.Add(item.Key);
+				else if (setResult.Value) importedCount++;
+				else skippedCount++;
 			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
 			catch
 			{
-				failedKeys.Add(item.Key);
+				failedKeys.Add(item.KeyBase64 ?? item.Key);
 			}
 		}
 
@@ -176,6 +200,7 @@ internal sealed class ImportRedisDataCommandHandler
 			return items;
 		}
 
+		bool snapshotFormat = lines[0].StartsWith("KeyBase64,DumpBase64,", StringComparison.OrdinalIgnoreCase);
 		for (int i = 1; i < lines.Length; i++)
 		{
 			string line = lines[i];
@@ -183,12 +208,16 @@ internal sealed class ImportRedisDataCommandHandler
 
 			if (fields.Length >= 2)
 			{
-				RedisImportItem item = new()
+				RedisImportItem item = snapshotFormat ? new RedisImportItem
+				{
+					KeyBase64 = fields[0], DumpBase64 = fields[1], Type = fields.Length > 2 ? fields[2] : "String",
+					TtlMilliseconds = fields.Length > 3 && fields[3].Length > 0 ? long.Parse(fields[3], CultureInfo.InvariantCulture) : null
+				} : new RedisImportItem
 				{
 					Key = fields[0],
 					Value = fields.Length > 1 ? fields[1] : string.Empty,
 					Type = fields.Length > 2 ? fields[2] : "String",
-					TimeToLive = fields.Length > 3 && double.TryParse(fields[3], out double ttl) ? ttl : null
+					TimeToLive = fields.Length > 3 && double.TryParse(fields[3], NumberStyles.Float, CultureInfo.InvariantCulture, out double ttl) ? ttl : null
 				};
 
 				items.Add(item);
@@ -201,7 +230,7 @@ internal sealed class ImportRedisDataCommandHandler
 	private static string[] ParseCsvLine(string line)
 	{
 		List<string> fields = new();
-		string current = string.Empty;
+		var current = new StringBuilder();
 		bool inQuotes = false;
 
 		for (int i = 0; i < line.Length; i++)
@@ -212,7 +241,7 @@ internal sealed class ImportRedisDataCommandHandler
 			{
 				if (inQuotes && i + 1 < line.Length && line[i + 1] == '"')
 				{
-					current += '"';
+					current.Append('"');
 					i++;
 				}
 				else
@@ -222,16 +251,16 @@ internal sealed class ImportRedisDataCommandHandler
 			}
 			else if (c == ',' && !inQuotes)
 			{
-				fields.Add(current);
-				current = string.Empty;
+				fields.Add(current.ToString());
+				current.Clear();
 			}
 			else
 			{
-				current += c;
+				current.Append(c);
 			}
 		}
 
-		fields.Add(current);
+		fields.Add(current.ToString());
 		return fields.ToArray();
 	}
 }

@@ -56,7 +56,7 @@ export class ImportDialogComponent {
   private readonly importService = inject(ImportService);
   private readonly destroyRef = inject(DestroyRef);
   readonly dialogRef = inject(MatDialogRef<ImportDialogComponent>);
-  private readonly data = inject<{ connectionId: string }>(MAT_DIALOG_DATA);
+  readonly data = inject<{ connectionId: string; database: number }>(MAT_DIALOG_DATA);
 
   // 2. State signals
   /** Selected file for import */
@@ -99,14 +99,18 @@ export class ImportDialogComponent {
     this.isLoading.set(true);
 
     this.importService
-      .importData(this.data.connectionId, fileValue)
+      .importData(this.data.connectionId, fileValue, this.data.database)
       .pipe(
         finalize(() => this.isLoading.set(false)),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe({
-        next: () => {
-          this.dialogRef.close(true);
+        next: result => {
+          if (result.failedCount > 0) {
+            this.error.set(`Imported ${result.importedCount}, skipped ${result.skippedCount}, failed ${result.failedCount}. Failed keys (Base64 for snapshots): ${result.failedKeys.slice(0, 10).join(', ')}`);
+          } else {
+            this.dialogRef.close(result);
+          }
         },
         error: (err: Error) => {
           this.error.set(err.message || 'Import failed. Ensure file format is correct.');

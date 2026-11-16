@@ -596,7 +596,7 @@ export class StorageValuesListComponent {
   async exportData(format: 'json' | 'csv'): Promise<void> {
     const { ExportDialogComponent } = await import('../export/export-dialog.component');
     const ref = this.dialog.open(ExportDialogComponent, {
-      data: { connectionId: this.connectionId(), format }
+      data: { connectionId: this.connectionId(), format, database: this.selectedDb(), pattern: this.searchPattern() }
     });
     ref.afterClosed().subscribe(success => {
       if (success) this.snackBar.open('Export completed', 'Close', { duration: 3000 });
@@ -606,18 +606,18 @@ export class StorageValuesListComponent {
   async importData(): Promise<void> {
     const { ImportDialogComponent } = await import('../import/import-dialog.component');
     const dialogRef = this.dialog.open(ImportDialogComponent, {
-      data: { connectionId: this.connectionId() }
+      data: { connectionId: this.connectionId(), database: this.selectedDb() }
     });
 
     dialogRef
       .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(success => {
+		this.redisKeysStore.clearCache();
         if (success) {
-          this.redisKeysStore.clearCache();
-          this.snackBar.open('Data imported successfully', 'Close', { duration: 3000 });
-          this.loadKeys();
+          this.snackBar.open(`Imported ${success.importedCount} key(s); skipped ${success.skippedCount}.`, 'Close', { duration: 3000 });
         }
+        this.loadKeys();
       });
   }
 

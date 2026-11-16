@@ -34,7 +34,8 @@ public class ImportRedisDataEndpoint : IEndpoint
 					connectionId,
 					request.Data,
 					importFormat,
-					request.Overwrite);
+					request.Overwrite,
+					request.Database);
 
 				return await sender.Send(command, cancellationToken).Match(Results.Ok, error => error.ToProblemDetails());
 			})
@@ -55,8 +56,10 @@ public class ImportRedisDataEndpoint : IEndpoint
 	/// <param name="Data">Data to import.</param>
 	/// <param name="Format">Format of the data (json or csv).</param>
 	/// <param name="Overwrite">Whether to overwrite existing keys.</param>
+/// <param name="Database">Optional target Redis database.</param>
 	public sealed record ImportRequest(
 		string Data,
 		string Format = "json",
-		bool Overwrite = false);
+		bool Overwrite = false,
+		int? Database = null);
 }

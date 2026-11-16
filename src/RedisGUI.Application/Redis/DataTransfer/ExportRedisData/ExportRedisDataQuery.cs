@@ -1,120 +1,82 @@
-using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using System;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Primitives;
-using System.Linq;
+using System.Globalization;
+using System.IO;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using RedisGUI.Application.Core.Services;
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.Redis;
+using RedisGUI.Shared.Mediator;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 
-/// <summary>
-/// Query to export Redis data in a specified format.
-/// </summary>
-/// <param name="ConnectionId">The Redis connection identifier.</param>
-/// <param name="Pattern">Pattern to filter keys (defaults to "*").</param>
-/// <param name="Format">Export format (JSON or CSV).</param>
-public sealed record ExportRedisDataQuery(
-	Guid ConnectionId,
-	string Pattern = "*",
-	ExportFormat Format = ExportFormat.Json) : IQuery<ExportRedisDataResponse>;
+/// <summary>Exports matching keys from a selected Redis database.</summary>
+public sealed record ExportRedisDataQuery(Guid ConnectionId, string Pattern = "*", ExportFormat Format = ExportFormat.Json,
+	int? Database = null) : IQuery<ExportRedisDataResponse>;
 
-/// <summary>
-/// Handles the query to export Redis data.
-/// </summary>
-internal sealed class ExportRedisDataQueryHandler
+internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository repository, IConnectionAccessService access,
+	IRedisKeyService keys, IRedisSnapshotService snapshots, IExportSessionFactory sessions)
 	: IQueryHandler<ExportRedisDataQuery, ExportRedisDataResponse>
 {
-	private static readonly JsonSerializerOptions jsonOptions = new() { WriteIndented = true };
-
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
-
-	/// <summary>
-	/// Initializes a new instance of the ExportRedisDataQueryHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections.</param>
-	/// <param name="valueService">Service for Redis value operations.</param>
-	public ExportRedisDataQueryHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
+	public async Task<Result<ExportRedisDataResponse>> Handle(ExportRedisDataQuery request, CancellationToken cancellationToken)
 	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
+		var connectionResult = await repository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		if (connectionResult.IsFailure) return Result.Failure<ExportRedisDataResponse>(connectionResult.Error);
+		var connection = connectionResult.Value;
+		if (!await access.CanAccessAsync(connection))
+			return Result.Failure<ExportRedisDataResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
 
-	/// <summary>
-	/// Handles the query to export Redis data.
-	/// </summary>
-	/// <param name="request">The query request.</param>
-	/// <param name="cancellationToken">Cancellation token.</param>
-	/// <returns>A Result containing the response or an error.</returns>
-	public async Task<Result<ExportRedisDataResponse>> Handle(
-		ExportRedisDataQuery request,
-		CancellationToken cancellationToken)
-	{
-		Result<RedisConnection> connectionResult = await connectionRepository.GetConnectionByIdAsync(
-			request.ConnectionId,
-			cancellationToken);
-
-		if (connectionResult.IsFailure)
+		int database = request.Database ?? connection.DatabaseNumber.Value;
+		await using var session = await sessions.CreateAsync(cancellationToken);
+		await using var writer = new StreamWriter(session.Output, new UTF8Encoding(false), 65536, leaveOpen: true);
+		writer.NewLine = "\r\n";
+		bool json = request.Format == ExportFormat.Json;
+		await writer.WriteAsync(json ? "[\n" : "KeyBase64,DumpBase64,Type,TtlMilliseconds\r\n");
+		string? cursor = null;
+		bool first = true;
+		do
 		{
-			return Result.Failure<ExportRedisDataResponse>(connectionResult.Error);
-		}
-
-		Result<PagedRedisValues> valuesResult = await valueService.GetAllValuesAsync(
-			connectionResult.Value,
-			request.Pattern,
-			cancellationToken: cancellationToken);
-
-		if (valuesResult.IsFailure)
-		{
-			return Result.Failure<ExportRedisDataResponse>(valuesResult.Error);
-		}
-
-		PagedRedisValues pagedValues = valuesResult.Value;
-		string timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-
-		string data;
-		string fileName;
-		string contentType;
-
-		if (request.Format == ExportFormat.Json)
-		{
-			var exportData = pagedValues.Values.Select(v => new
+			cancellationToken.ThrowIfCancellationRequested();
+			var page = await keys.ScanKeysAsync(connection, request.Pattern, database, cursor, 100, cancellationToken);
+			if (page.IsFailure) return Result.Failure<ExportRedisDataResponse>(page.Error);
+			if (page.Value.MissingCount > 0)
+				return Result.Failure<ExportRedisDataResponse>(new Error("Export.KeyReadFailed", "Export stopped because a scanned key disappeared. Retry the export."));
+			foreach (var item in page.Value.Keys)
 			{
-				Key = v.Key,
-				Value = v.Value,
-				Type = v.Type,
-				TimeToLive = v.TimeToLive?.TotalSeconds
-			});
-
-			// Cached JsonSerializerOptions to avoid creating new instances
-			data = JsonSerializer.Serialize(exportData, jsonOptions);
-			fileName = $"redis_export_{timestamp}.json";
-			contentType = "application/json";
-		}
-		else
-		{
-			StringBuilder csv = new();
-			csv.AppendLine("Key,Value,Type,TTL");
-
-			foreach (RedisValue value in pagedValues.Values)
-			{
-				string ttl = value.TimeToLive?.TotalSeconds.ToString() ?? "";
-				string escapedValue = value.Value?.Replace("\"", "\"\"") ?? "";
-				csv.AppendLine($"\"{value.Key}\",\"{escapedValue}\",\"{value.Type}\",\"{ttl}\"");
+				cancellationToken.ThrowIfCancellationRequested();
+				byte[] key = item.RawKey ?? Encoding.UTF8.GetBytes(item.Key);
+				if (!await session.AddKeyAsync(key, cancellationToken)) continue;
+				var value = await snapshots.CaptureAsync(connection, key, database, cancellationToken);
+				if (value.IsFailure)
+					return Result.Failure<ExportRedisDataResponse>(new Error("Export.KeyReadFailed", $"Export stopped because a key could not be read: {value.Error.Message}"));
+				string keyBase64 = Convert.ToBase64String(key);
+				string dumpBase64 = Convert.ToBase64String(value.Value.Payload);
+				if (json)
+				{
+					if (!first) await writer.WriteAsync(",\n");
+					var serialized = JsonSerializer.Serialize(new ExportItem(keyBase64, dumpBase64, value.Value.Type, value.Value.TtlMilliseconds));
+					await writer.WriteAsync(serialized.AsMemory(), cancellationToken);
+				}
+				else
+				{
+					var ttl = value.Value.TtlMilliseconds?.ToString(CultureInfo.InvariantCulture) ?? "";
+					await writer.WriteLineAsync($"{Csv(keyBase64)},{Csv(dumpBase64)},{Csv(value.Value.Type)},{Csv(ttl)}".AsMemory(), cancellationToken);
+				}
+				first = false;
 			}
-
-			data = csv.ToString();
-			fileName = $"redis_export_{timestamp}.csv";
-			contentType = "text/csv";
-		}
-
-		ExportRedisDataResponse response = new(data, fileName, contentType);
-		return Result.Success(response);
+			cursor = page.Value.NextCursor;
+		} while (cursor is not null);
+		if (json) await writer.WriteAsync("\n]");
+		await writer.FlushAsync(cancellationToken);
+		session.Output.Position = 0;
+		string extension = json ? "json" : "csv";
+		return Result.Success(new ExportRedisDataResponse(session.DetachOutput(), $"redis_export_{DateTime.UtcNow:yyyyMMddHHmmss}.{extension}",
+			json ? "application/json" : "text/csv"));
 	}
+
+	private static string Csv(string value) => "\"" + value.Replace("\"", "\"\"") + "\"";
+	private sealed record ExportItem(string KeyBase64, string DumpBase64, string Type, long? TtlMilliseconds);
 }

@@ -7,7 +7,6 @@ using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using System;
-using System.Text;
 using System.Threading;
 
 namespace RedisGUI.Server.Endpoints.Redis;
@@ -29,14 +28,15 @@ public class ExportRedisDataEndpoint : IEndpoint
 				Guid connectionId,
 				string? pattern,
 				string? format,
+				int? database,
 				CancellationToken cancellationToken) =>
 			{
 				ExportFormat exportFormat = format?.ToLower() == "csv" ? ExportFormat.Csv : ExportFormat.Json;
-				ExportRedisDataQuery query = new(connectionId, pattern ?? "*", exportFormat);
+				ExportRedisDataQuery query = new(connectionId, pattern ?? "*", exportFormat, database);
 
 				return await sender.Send(query, cancellationToken).Match(
 					success => Results.File(
-						Encoding.UTF8.GetBytes(success.Data),
+						success.Data,
 						success.ContentType,
 						success.FileName),
 					error => error.ToProblemDetails());

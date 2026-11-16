@@ -37,7 +37,7 @@ export class ExportDialogComponent {
   private readonly exportService = inject(ExportService);
   private readonly destroyRef = inject(DestroyRef);
   readonly dialogRef = inject(MatDialogRef<ExportDialogComponent>);
-  private readonly data = inject<{ connectionId: string; format?: 'json' | 'csv' }>(
+  readonly data = inject<{ connectionId: string; format?: 'json' | 'csv'; database: number; pattern: string }>(
     MAT_DIALOG_DATA
   );
 
@@ -48,12 +48,12 @@ export class ExportDialogComponent {
   readonly formatOptions: readonly UiRadioOption<'json' | 'csv'>[] = [
     {
       label: 'JSON format',
-      description: 'Full data structure with keys, data types, and TTL metadata',
+      description: 'Redis-native snapshots encoded as JSON',
       value: 'json'
     },
     {
       label: 'CSV format',
-      description: 'Tabular representation of keys, types, and serialized values',
+      description: 'Redis-native snapshots encoded as CSV',
       value: 'csv'
     }
   ];
@@ -69,7 +69,7 @@ export class ExportDialogComponent {
       const format = this.exportModel().format;
 
       this.exportService
-        .downloadExport(this.data.connectionId, format)
+        .downloadExport(this.data.connectionId, format, this.data.pattern, this.data.database)
         .pipe(
           finalize(() => this.isLoading.set(false)),
           takeUntilDestroyed(this.destroyRef)

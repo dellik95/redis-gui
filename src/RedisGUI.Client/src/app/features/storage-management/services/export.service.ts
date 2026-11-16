@@ -1,7 +1,19 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
+import { Observable, from, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
+
+async function getExportError(error: unknown): Promise<string> {
+  if (error instanceof HttpErrorResponse && error.error instanceof Blob) {
+    try {
+      const problem = JSON.parse(await error.error.text()) as { detail?: string; message?: string };
+      return problem.detail || problem.message || 'Export failed. Please try again.';
+    } catch {
+      return 'Export failed. Please try again.';
+    }
+  }
+  return 'Export failed. Please try again.';
+}
 
 /**
  * Export Service
@@ -45,11 +57,7 @@ export class ExportService {
         responseType: 'blob'
       })
       .pipe(
-        catchError(error => {
-          return throwError(
-            () => new Error(error?.error?.message || 'Export failed. Please try again.')
-          );
-        })
+        catchError(error => from(getExportError(error)).pipe(switchMap(message => throwError(() => new Error(message)))))
       );
   }
 
@@ -61,10 +69,10 @@ export class ExportService {
    * @param format - Export format: 'json' or 'csv' (default: 'json')
    * @returns Observable that completes when download is initiated
    */
-  downloadExport(connectionId: string, format: 'json' | 'csv' = 'json'): Observable<void> {
+  downloadExport(connectionId: string, format: 'json' | 'csv' = 'json', pattern = '*', database = 0): Observable<void> {
     return this.http
       .get(`${this.BASE_URL}/${connectionId}/export`, {
-        params: new HttpParams().set('format', format),
+        params: new HttpParams().set('format', format).set('pattern', pattern).set('database', database),
         responseType: 'blob',
         observe: 'response'
       })
@@ -90,11 +98,7 @@ export class ExportService {
           link.remove();
           window.URL.revokeObjectURL(link.href);
         }),
-        catchError(error => {
-          return throwError(
-            () => new Error(error?.error?.message || 'Export failed. Please try again.')
-          );
-        })
+        catchError(error => from(getExportError(error)).pipe(switchMap(message => throwError(() => new Error(message)))))
       );
   }
 }

@@ -1,6 +1,7 @@
 <h2 mat-dialog-title>Export Redis Data</h2>
 <mat-dialog-content>
-  <p class="export-hint">Select the export format for your Redis keys and values:</p>
+  <p class="export-hint">Export database {{ data.database }}, pattern <code>{{ data.pattern }}</code>.</p>
+  <p class="export-hint">The file contains Redis-native snapshots. Restore requires a compatible Redis version and RESTORE permission. Keys can change while the scan runs.</p>
 
   <ui-radio-group [formField]="exportForm.format" [options]="formatOptions" />
 

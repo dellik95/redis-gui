@@ -1,3 +1,5 @@
+using System.IO;
+
 namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 
 /// <summary>
@@ -7,6 +9,6 @@ namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 /// <param name="FileName">Suggested filename for the export.</param>
 /// <param name="ContentType">MIME type of the exported data.</param>
 public sealed record ExportRedisDataResponse(
-	string Data,
+	Stream Data,
 	string FileName,
 	string ContentType);

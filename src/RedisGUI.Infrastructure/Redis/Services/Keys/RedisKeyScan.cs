@@ -96,18 +96,20 @@ internal static class RedisKeyScan
 		RedisResult[] parts = (RedisResult[])raw!;
 		string next = (string)parts[0]!;
 		RedisResult[] keys = (RedisResult[])parts[1]!;
-		RedisKeyScanItem?[] metadata = await Task.WhenAll(keys.Select(key => ReadMetadataAsync(database, (string)key!, cancellationToken)));
+		RedisKeyScanItem?[] metadata = await Task.WhenAll(keys.Select(key => ReadMetadataAsync(database, (byte[])key!, cancellationToken)));
 		int node = state.NodeIndex + (next == "0" ? 1 : 0);
 		string? nextCursor = node >= context.Servers.Length ? null : EncodeCursor(state, node, next);
-		return Result.Success(new RedisKeyScanPage(metadata.OfType<RedisKeyScanItem>().ToArray(), nextCursor));
+		return Result.Success(new RedisKeyScanPage(metadata.OfType<RedisKeyScanItem>().ToArray(), nextCursor,
+			metadata.Count(item => item is null)));
 	}
 
-	private static async Task<RedisKeyScanItem?> ReadMetadataAsync(IDatabase database, string key, CancellationToken cancellationToken)
+	private static async Task<RedisKeyScanItem?> ReadMetadataAsync(IDatabase database, byte[] rawKey, CancellationToken cancellationToken)
 	{
+		RedisKey key = rawKey;
 		Task<RedisType> typeTask = database.KeyTypeAsync(key);
 		Task<TimeSpan?> ttlTask = database.KeyTimeToLiveAsync(key);
 		await Task.WhenAll(typeTask, ttlTask).WaitAsync(cancellationToken);
-		return typeTask.Result == RedisType.None ? null : new RedisKeyScanItem(key, typeTask.Result.ToString(), ttlTask.Result?.TotalSeconds);
+		return typeTask.Result == RedisType.None ? null : new RedisKeyScanItem(key.ToString(), typeTask.Result.ToString(), ttlTask.Result?.TotalSeconds, rawKey);
 	}
 
 	private static string EncodeCursor(Cursor state, int node, string next) => Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(

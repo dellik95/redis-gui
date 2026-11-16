@@ -20,6 +20,7 @@ This comprehensive guide walks you through getting started with **RedisGUI**, co
    - [Table View & Real-Time Telemetry](#table-view--real-time-telemetry)
    - [Namespace Tree View & Direct Subfolder Key Creation](#namespace-tree-view--direct-subfolder-key-creation)
    - [Column Sorting & Filters](#column-sorting--filters)
+   - [Import and Export](#import-and-export)
    - [Command Palette (`Ctrl + K`)](#command-palette-ctrl--k)
    - [Creating Keys & Namespaces (Add Key Dialog)](#creating-keys--namespaces-add-key-dialog)
 5. [Visual Data Structure Editors](#5-visual-data-structure-editors)
@@ -153,6 +154,16 @@ Click **Add Connection** in the upper right header to register a new Redis insta
 ## 4. Storage Manager & Key Exploration
 
 The Storage Manager is the core workspace for querying, creating, and modifying Redis keys.
+
+### Import and Export
+
+Choose a database and key pattern in Storage Manager, then use Export to download all matching keys as JSON or CSV. Export scans every page and removes duplicate keys. It preserves binary key names, Redis values and types, including full streams, and the remaining TTL recorded when each key is captured. If a scanned key disappears or cannot be read, the export fails instead of returning a partial file. Cancel is available while the export runs; there is no percentage progress indicator.
+
+The files contain Base64-encoded key names and Redis `DUMP` payloads (`KeyBase64`, `DumpBase64`, `Type`, and `TtlMilliseconds`). This format replaces the older value-based export and is not readable by older RedisGUI versions. Import accepts this format and legacy string records; legacy non-string records are rejected because they cannot be restored safely. Redis `RESTORE` compatibility depends on the destination Redis version and installed modules. The Redis account needs permissions for `SCAN`, `TYPE`, `PTTL`, `EVAL`, `DUMP` and, for import, `RESTORE`.
+
+Import targets the selected database, skips existing keys, and reports imported, skipped, and failed counts. The browser currently accepts files up to 10 MB and loads the file into memory; larger exports cannot be imported through this dialog. Safe Mode blocks import. TTLs represent remaining time at capture and restart on import, rather than counting down while the file is stored.
+
+An export is a scan of a changing database, not a point-in-time backup: keys created, modified, deleted, or moved during the scan may not be represented consistently. For a consistent backup, use Redis's persistence and backup facilities. The server stores temporary export data and a deduplication index on disk until the request completes; a process crash can leave an index file containing key names in the system temporary directory. Memory usage depends on the largest individual value and the browser holds the downloaded file in memory. Ensure adequate temporary disk space and protect the exported files.
 
 ### Table View & Real-Time Telemetry
 

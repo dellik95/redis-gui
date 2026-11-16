@@ -1,7 +1,14 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { Observable, from, throwError } from 'rxjs';
+import { catchError, switchMap } from 'rxjs/operators';
+
+export interface ImportResult {
+  importedCount: number;
+  skippedCount: number;
+  failedCount: number;
+  failedKeys: string[];
+}
 
 /**
  * Import Service
@@ -36,11 +43,15 @@ export class ImportService {
    * @param file - File to import (JSON or CSV format)
    * @returns Observable that completes when import is done
    */
-  importData(connectionId: string, file: File): Observable<void> {
-    const formData = new FormData();
-    formData.append('file', file);
-
-    return this.http.post<void>(`${this.BASE_URL}/${connectionId}/import`, formData).pipe(
+  importData(connectionId: string, file: File, database: number): Observable<ImportResult> {
+    if (file.size > 10 * 1024 * 1024) {
+      return throwError(() => new Error('Import files must not exceed 10 MB.'));
+    }
+    const format = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'json';
+    return from(file.text()).pipe(
+      switchMap(data => this.http.post<ImportResult>(`${this.BASE_URL}/${connectionId}/import`, {
+        data, format, overwrite: false, database
+      })),
       catchError(error => {
         return throwError(
           () => new Error(error?.error?.message || 'Import failed. Ensure file format is correct.')

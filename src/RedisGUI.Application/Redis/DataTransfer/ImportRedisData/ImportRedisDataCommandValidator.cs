@@ -25,5 +25,7 @@ public sealed class ImportRedisDataCommandValidator : AbstractValidator<ImportRe
 		RuleFor(x => x.Format)
 			.IsInEnum()
 			.WithMessage("Invalid import format.");
+
+		RuleFor(x => x.Database).InclusiveBetween(0, 15).When(x => x.Database.HasValue);
 	}
 }

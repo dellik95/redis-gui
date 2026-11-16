@@ -25,5 +25,7 @@ public sealed class ExportRedisDataQueryValidator : AbstractValidator<ExportRedi
 		RuleFor(x => x.Format)
 			.IsInEnum()
 			.WithMessage("Invalid export format.");
+
+		RuleFor(x => x.Database).InclusiveBetween(0, 15).When(x => x.Database.HasValue);
 	}
 }

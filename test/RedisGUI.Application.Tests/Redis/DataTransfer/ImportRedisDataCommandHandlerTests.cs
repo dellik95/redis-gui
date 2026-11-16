@@ -1,140 +1,82 @@
-using FluentAssertions;
-using Moq;
-using RedisGUI.Application.Redis.Commands.ImportRedisData;
-using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Primitives;
 using System;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Moq;
+using RedisGUI.Application.Core.Services;
+using RedisGUI.Application.Redis.Commands.ImportRedisData;
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.Redis;
+using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Tests.Redis.Commands;
 
 [TestFixture]
 public class ImportRedisDataCommandHandlerTests
 {
-	private Mock<IRedisConnectionRepository> connectionRepositoryMock = null!;
-	private Mock<IRedisValueService> connectionServiceMock = null!;
+	private RedisConnection connection = null!;
+	private Mock<IRedisConnectionRepository> repository = null!;
+	private Mock<IRedisSnapshotService> snapshots = null!;
+	private Mock<IConnectionAccessService> access = null!;
 	private ImportRedisDataCommandHandler handler = null!;
 
 	[SetUp]
 	public void Setup()
 	{
-		connectionRepositoryMock = new Mock<IRedisConnectionRepository>();
-		connectionServiceMock = new Mock<IRedisValueService>();
-		handler = new ImportRedisDataCommandHandler(
-			connectionRepositoryMock.Object,
-			connectionServiceMock.Object);
+		connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
+			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
+		repository = new Mock<IRedisConnectionRepository>();
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		snapshots = new Mock<IRedisSnapshotService>();
+		access = new Mock<IConnectionAccessService>();
+		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
+		handler = new ImportRedisDataCommandHandler(repository.Object, snapshots.Object, access.Object);
 	}
 
 	[Test]
-	public async Task Handle_JsonFormat_ImportsSuccessfully()
+	public async Task Handle_JsonSnapshot_PreservesBinaryKeyPayloadTtlAndDatabase()
 	{
-		// Arrange
-		var connectionId = Guid.NewGuid();
-		var items = new[]
-		{
-			new RedisImportItem { Key = "key1", Value = "value1", Type = "String" },
-			new RedisImportItem { Key = "key2", Value = "value2", Type = "String", TimeToLive = 60 }
-		};
-		var jsonData = JsonSerializer.Serialize(items);
-		var command = new ImportRedisDataCommand(connectionId, jsonData, ImportFormat.Json, true);
-
-		var connection = RedisConnection.Create(
-			  new ConnectionName("Test Connection"),
-			  new ConnectionHost("localhost"),
-			  new ConnectionPort(6379),
-			new DatabaseNumber(0),
-			ConnectionOwnerId.None()).Value!;
-
-		connectionRepositoryMock
-			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
-
-		connectionServiceMock
-			.Setup(x => x.SetValueAsync(connection, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan?>()))
-			.ReturnsAsync(Result.Success());
-
-		// Act
-		var result = await handler.Handle(command, CancellationToken.None);
-
-		// Assert
-		result.IsSuccess.Should().BeTrue();
-		result.Value.ImportedCount.Should().Be(2);
-		result.Value.SkippedCount.Should().Be(0);
-		result.Value.FailedCount.Should().Be(0);
+		byte[] key = [0, 255, 2];
+		byte[] dump = [0, 3, 255];
+		var json = JsonSerializer.Serialize(new[] { new RedisImportItem { KeyBase64 = Convert.ToBase64String(key), DumpBase64 = Convert.ToBase64String(dump), Type = "stream", TtlMilliseconds = 5000 } });
+		snapshots.Setup(x => x.RestoreAsync(connection, It.Is<byte[]>(v => v[1] == 255), It.Is<byte[]>(v => v[2] == 255),
+			TimeSpan.FromSeconds(5), false, 2, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(true));
+		var result = await handler.Handle(new ImportRedisDataCommand(connection.Id, json, ImportFormat.Json, false, 2), CancellationToken.None);
+		Assert.That(result.IsSuccess, Is.True);
+		Assert.That(result.Value.ImportedCount, Is.EqualTo(1));
+		snapshots.VerifyAll();
 	}
 
 	[Test]
-	public async Task Handle_CsvFormat_ImportsSuccessfully()
+	public async Task Handle_CsvSnapshot_ReportsCollisionAndFailure()
 	{
-		// Arrange
-		var connectionId = Guid.NewGuid();
-		var csvData = "Key,Value,Type,TTL\n\"key1\",\"value1\",\"String\",\"\"\n\"key2\",\"value2\",\"String\",\"60\"";
-		var command = new ImportRedisDataCommand(connectionId, csvData, ImportFormat.Csv, true);
-
-		var connection = RedisConnection.Create(
-			  new ConnectionName("Test Connection"),
-			  new ConnectionHost("localhost"),
-			  new ConnectionPort(6379),
-			new DatabaseNumber(0),
-			ConnectionOwnerId.None()).Value!;
-
-		connectionRepositoryMock
-			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
-
-		connectionServiceMock
-			.Setup(x => x.SetValueAsync(connection, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan?>()))
-			.ReturnsAsync(Result.Success());
-
-		// Act
-		var result = await handler.Handle(command, CancellationToken.None);
-
-		// Assert
-		result.IsSuccess.Should().BeTrue();
-		result.Value.ImportedCount.Should().Be(2);
+		var csv = "KeyBase64,DumpBase64,Type,TtlMilliseconds\r\n\"/w==\",\"AA==\",\"string\",\"\"\r\n\"bad!\",\"AA==\",\"string\",\"\"\r\n";
+		snapshots.Setup(x => x.RestoreAsync(connection, It.IsAny<byte[]>(), It.IsAny<byte[]>(), null, false, 0, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(false));
+		var result = await handler.Handle(new ImportRedisDataCommand(connection.Id, csv, ImportFormat.Csv), CancellationToken.None);
+		Assert.That(result.IsSuccess, Is.True);
+		Assert.That(result.Value.SkippedCount, Is.EqualTo(1));
+		Assert.That(result.Value.FailedCount, Is.EqualTo(1));
 	}
 
 	[Test]
-	public async Task Handle_OverwriteFalse_SkipsExistingKeys()
+	public async Task Handle_LegacyOnlyImportsStringsAndUsesAtomicSkip()
 	{
-		// Arrange
-		var connectionId = Guid.NewGuid();
-		var items = new[]
-		{
-			new RedisImportItem { Key = "existing", Value = "value1", Type = "String" }
-		};
-		var jsonData = JsonSerializer.Serialize(items);
-		var command = new ImportRedisDataCommand(connectionId, jsonData, ImportFormat.Json, false);
+		var items = new[] { new RedisImportItem { Key = "existing", Value = "old", Type = "String" }, new RedisImportItem { Key = "list", Value = "[]", Type = "List" } };
+		snapshots.Setup(x => x.SetLegacyStringAsync(connection, "existing", "old", null, false, 0, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(false));
+		var result = await handler.Handle(new ImportRedisDataCommand(connection.Id, JsonSerializer.Serialize(items), ImportFormat.Json), CancellationToken.None);
+		Assert.That(result.IsSuccess, Is.True);
+		Assert.That(result.Value.SkippedCount, Is.EqualTo(1));
+		Assert.That(result.Value.FailedKeys, Does.Contain("list"));
+	}
 
-		var connection = RedisConnection.Create(
-			  new ConnectionName("Test Connection"),
-			  new ConnectionHost("localhost"),
-			  new ConnectionPort(6379),
-			new DatabaseNumber(0),
-			ConnectionOwnerId.None()).Value!;
-
-		connectionRepositoryMock
-			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
-
-		connectionServiceMock
-			.Setup(x => x.GetValueAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(RedisValue.Create("existing", "old", "String").Value));
-
-		// Act
-		var result = await handler.Handle(command, CancellationToken.None);
-
-		// Assert
-		result.IsSuccess.Should().BeTrue();
-		result.Value.ImportedCount.Should().Be(0);
-		result.Value.SkippedCount.Should().Be(1);
+	[Test]
+	public async Task Handle_RejectsReadOnlyConnectionBeforeRestoring()
+	{
+		connection.SetReadOnly(true);
+		var result = await handler.Handle(new ImportRedisDataCommand(connection.Id, "[]", ImportFormat.Json), CancellationToken.None);
+		Assert.That(result.Error.Code, Is.EqualTo("Connection.ReadOnlyMode"));
+		snapshots.VerifyNoOtherCalls();
 	}
 }
-
-
-
-
-
