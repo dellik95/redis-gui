@@ -66,6 +66,8 @@ Provides foundational primitives for robust, exception-safe code across the enti
 
 Implements application business use cases using the CQRS pattern.
 
+Each command or query is declared in the same source file as its mediator handler. Validators and response models remain in their respective use-case folders.
+
 ### Key Use-Case Handlers:
 1. **`Connections/`**:
    * `CreateConnectionCommand`, `UpdateConnectionCommand`, `DeleteConnectionCommand`, `CheckConnectionCommand`.
