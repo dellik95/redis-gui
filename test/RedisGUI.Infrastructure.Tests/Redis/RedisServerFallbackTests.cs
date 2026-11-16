@@ -20,6 +20,48 @@ namespace RedisGUI.Infrastructure.Tests.Redis;
 public class RedisServerFallbackTests
 {
 	[Test]
+	public async Task ScanKeys_RejectsContinuationAfterClusterFailover()
+	{
+		// This test changes cluster topology. Only run it against a disposable cluster.
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_CLUSTER_FAILOVER");
+		var replicaEndpoint = Environment.GetEnvironmentVariable("REDISGUI_TEST_CLUSTER_FAILOVER_REPLICA");
+		var primaryEndpoint = Environment.GetEnvironmentVariable("REDISGUI_TEST_CLUSTER_FAILOVER_PRIMARY");
+		if (string.IsNullOrEmpty(configuration) || string.IsNullOrEmpty(replicaEndpoint) || string.IsNullOrEmpty(primaryEndpoint))
+			Assert.Ignore("Set REDISGUI_TEST_CLUSTER_FAILOVER and the primary/replica endpoints for a disposable cluster.");
+		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
+		var primary = multiplexer.GetServer(primaryEndpoint!);
+		var replica = multiplexer.GetServer(replicaEndpoint!);
+		Assert.That(primary.IsReplica, Is.False);
+		Assert.That(replica.IsReplica, Is.True);
+		var manager = new Mock<IRedisConnectionManager>();
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(multiplexer));
+		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Failover test"),
+			new ConnectionHost("localhost"), new ConnectionPort(17100), new DatabaseNumber(0), ConnectionOwnerId.None());
+		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
+		var initial = await service.ScanKeysAsync(connection, "*", 0, null, 1);
+		Assert.That(initial.IsSuccess, Is.True, initial.IsFailure ? initial.Error.Message : "");
+		Assert.That(initial.Value.NextCursor, Is.Not.Null);
+
+		await replica.ExecuteAsync("CLUSTER", "FAILOVER");
+		var deadline = DateTime.UtcNow.AddSeconds(30);
+		string? replicaRole = null;
+		string? primaryRole = null;
+		while (DateTime.UtcNow < deadline)
+		{
+			replicaRole = (string)((RedisResult[])(await replica.ExecuteAsync("ROLE"))!)[0]!;
+			primaryRole = (string)((RedisResult[])(await primary.ExecuteAsync("ROLE"))!)[0]!;
+			if (replicaRole == "master" && primaryRole == "slave") break;
+			await Task.Delay(200);
+		}
+		Assert.That(replicaRole, Is.EqualTo("master"), "Replica did not become primary.");
+		Assert.That(primaryRole, Is.EqualTo("slave"), "Original primary did not become a replica.");
+
+		var continuation = await service.ScanKeysAsync(connection, "*", 0, initial.Value.NextCursor, 1);
+		Assert.That(continuation.IsFailure, Is.True, "A cursor from the old topology must not continue silently.");
+		Assert.That(continuation.Error.Code, Is.AnyOf("Redis.InvalidCursor", "Redis.ScanUnavailable"));
+	}
+
+	[Test]
 	public async Task ScanKeys_TraversesClusterPrimaries()
 	{
 		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_CLUSTER");

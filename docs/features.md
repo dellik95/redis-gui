@@ -38,6 +38,7 @@ The system uses the **Strategy Pattern** across both backend and frontend layers
 ### 2. Namespace Tree View & Full Management Controls
 - The browser scans one Redis cursor page per request and provides **Load more**, including when a page contains no matching keys. Key type and TTL are fetched without reading the value. The scan checks the selected database and scans cluster primaries individually.
 - Results are not a point-in-time snapshot. Keys can be added, removed, or returned more than once while scanning; the UI deduplicates loaded names. The Redis `COUNT` value is a hint rather than a strict limit. Counts, filters, sorting and the tree describe loaded results only. A changed cluster topology requires a refresh.
+- Cluster scans check live node roles using `ROLE` on each page. All discovered nodes must be reachable and the Redis user must have permission to run `ROLE`; otherwise the scan fails rather than returning a potentially incomplete result.
 - Parses Redis keys using configurable delimiters (e.g. `users:profile:1001` becomes folder `users` -> folder `profile` -> key `1001`).
 - **Tree Toolbar**: Real-time summary stats badge with instant `Expand All` and `Collapse All` buttons.
 - **Folder / Namespace Actions**:

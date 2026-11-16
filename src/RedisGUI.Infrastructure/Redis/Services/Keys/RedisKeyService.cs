@@ -38,23 +38,20 @@ public class RedisKeyService : IRedisKeyService
 	private async Task<Result<RedisKeyScanPage>> ScanKeysAsync(ConnectionMultiplexer multiplexer, RedisConnection connection,
 		string pattern, int database, string? cursor, int count, CancellationToken cancellationToken)
 	{
-		Result<RedisKeyScan.Context> context = RedisKeyScan.CreateContext(multiplexer, connection.Id, pattern, database, cursor);
-		return await context.BindAsync(async scan =>
+		try
 		{
-			try
-			{
-				return await RedisKeyScan.ReadPageAsync(multiplexer, scan, count, cancellationToken);
-			}
-			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-			{
-				throw;
-			}
-			catch (Exception ex)
-			{
-				logger.LogWarning(ex, "Redis key scan failed");
-				return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanFailed", "Unable to scan Redis keys. Check the connection and command permissions."));
-			}
-		});
+			var context = await RedisKeyScan.CreateContextAsync(multiplexer, connection.Id, pattern, database, cursor, cancellationToken);
+			return await context.BindAsync(scan => RedisKeyScan.ReadPageAsync(multiplexer, scan, count, cancellationToken));
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
+		}
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Redis key scan failed");
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanFailed", "Unable to scan Redis keys. Check the connection and command permissions."));
+		}
 	}
 
 	private Task<Result<ConnectionMultiplexer>> GetConnectionAsync(RedisConnection connection, CancellationToken cancellationToken) =>

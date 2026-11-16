@@ -17,10 +17,27 @@ internal static class RedisKeyScan
 			? Result.Failure(new Error("Redis.InvalidScan", "Invalid scan parameters."))
 			: Result.Success();
 
-	internal static Result<Context> CreateContext(ConnectionMultiplexer multiplexer, Guid connectionId, string pattern, int database, string? cursor)
+	internal static async Task<Result<Context>> CreateContextAsync(ConnectionMultiplexer multiplexer, Guid connectionId, string pattern, int database,
+		string? cursor, CancellationToken cancellationToken)
 	{
-		IServer[] servers = multiplexer.GetServers()
-			.Where(server => !server.IsReplica && server.ServerType != ServerType.Sentinel)
+		IServer[] candidates = multiplexer.GetServers().Where(server => server.ServerType != ServerType.Sentinel).ToArray();
+		bool cluster = candidates.Any(server => server.ServerType == ServerType.Cluster);
+		if (cluster && candidates.Any(server => !server.IsConnected || server.ServerType != ServerType.Cluster))
+		{
+			return Result.Failure<Context>(new Error("Redis.ScanUnavailable", "A cluster node is unavailable; refresh when all nodes are reachable."));
+		}
+
+		// Cached IsReplica flags can lag behind a successful failover. Query current node roles
+		// before every cluster page so a cursor cannot silently continue on an old topology.
+		IServer[] primaryServers = cluster
+			? (await Task.WhenAll(candidates.Select(async server =>
+			{
+				RedisResult[] role = (RedisResult[])(await server.ExecuteAsync("ROLE").WaitAsync(cancellationToken))!;
+				return (Server: server, Role: (string)role[0]!);
+			}))).Where(item => item.Role == "master").Select(item => item.Server).ToArray()
+			: candidates.Where(server => !server.IsReplica).ToArray();
+
+		IServer[] servers = primaryServers
 			.OrderBy(server => server.EndPoint.ToString(), StringComparer.Ordinal)
 			.ToArray();
 		if (servers.Length == 0 || servers.Any(server => !server.IsConnected || !server.Features.Scan))

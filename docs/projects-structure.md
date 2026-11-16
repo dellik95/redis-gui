@@ -42,3 +42,5 @@ Angular components and services specific to storage management live under `featu
 ## Running tests
 
 Run `dotnet test RedisGUI.slnx`. Redis and MySQL integration tests require their documented environment variables; tests without the required service configuration are skipped. Run the client build with `npm run build` from `src/RedisGUI.Client`.
+
+The opt-in cluster failover test changes Redis topology. Run it only against a disposable cluster with `REDISGUI_TEST_CLUSTER_FAILOVER` set to the connection string (including `allowAdmin=true`) and `REDISGUI_TEST_CLUSTER_FAILOVER_PRIMARY` and `REDISGUI_TEST_CLUSTER_FAILOVER_REPLICA` set to the corresponding `host:port` endpoints.
