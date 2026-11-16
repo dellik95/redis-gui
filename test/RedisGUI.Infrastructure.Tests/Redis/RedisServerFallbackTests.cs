@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -18,6 +19,44 @@ namespace RedisGUI.Infrastructure.Tests.Redis;
 [TestFixture]
 public class RedisServerFallbackTests
 {
+	[Test]
+	public async Task ScanKeys_TraversesClusterPrimaries()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_CLUSTER");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_CLUSTER to run the Redis Cluster integration check.");
+		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
+		var manager = new Mock<IRedisConnectionManager>();
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(multiplexer));
+		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Cluster scan test"),
+			new ConnectionHost("localhost"), new ConnectionPort(17000), new DatabaseNumber(0), ConnectionOwnerId.None());
+		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
+		var prefix = "redisgui-cluster-scan:" + Guid.NewGuid() + ":";
+		var db = multiplexer.GetDatabase(0);
+		try
+		{
+			for (var i = 0; i < 90; i++) await db.StringSetAsync(prefix + i, "value");
+			string? cursor = null;
+			var found = new System.Collections.Generic.HashSet<string>();
+			var pages = 0;
+			do
+			{
+				var page = await service.ScanKeysAsync(connection, prefix + "*", 0, cursor, 10);
+				Assert.That(page.IsSuccess, Is.True, page.IsFailure ? page.Error.Message : "");
+				foreach (var item in page.Value.Keys) found.Add(item.Key);
+				cursor = page.Value.NextCursor;
+				Assert.That(++pages, Is.LessThan(1000));
+			} while (cursor != null);
+			Assert.That(multiplexer.GetServers().Length, Is.GreaterThanOrEqualTo(3));
+			Assert.That(multiplexer.GetServers().Count(server => server.Keys(0, prefix + "*").Any()), Is.GreaterThanOrEqualTo(3));
+			Assert.That(found, Has.Count.EqualTo(90));
+		}
+		finally
+		{
+			for (var i = 0; i < 90; i++) await db.KeyDeleteAsync(prefix + i);
+		}
+	}
+
 	[Test]
 	public async Task ScanKeys_ContinuesAcrossPagesAndUsesPatternAndDatabase()
 	{
