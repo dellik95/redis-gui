@@ -1,6 +1,7 @@
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 using System.Linq;
+using System.Text.Json;
 
 namespace RedisGUI.Infrastructure.Redis.Services;
 
@@ -9,6 +10,8 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// </summary>
 public class RedisKeyService : IRedisKeyService
 {
+	private sealed record ScanCursor(Guid ConnectionId, int Database, string Pattern, string[] Nodes, int NodeIndex, string Cursor);
+
 	private readonly IRedisConnectionManager connectionManager;
 	private readonly ILogger<RedisKeyService> logger;
 
@@ -18,6 +21,75 @@ public class RedisKeyService : IRedisKeyService
 	{
 		this.connectionManager = connectionManager;
 		this.logger = logger;
+	}
+
+	/// <inheritdoc />
+	public async Task<Result<RedisKeyScanPage>> ScanKeysAsync(RedisConnection connection, string pattern, int database,
+		string? cursor, int count, CancellationToken cancellationToken = default)
+	{
+		cancellationToken.ThrowIfCancellationRequested();
+		if (database < 0 || database > 15 || count < 1 || count > 500 || string.IsNullOrEmpty(pattern) || pattern.Length > 1024 || cursor?.Length > 8192)
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.InvalidScan", "Invalid scan parameters."));
+
+		var connectionResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		if (connectionResult.IsFailure) return Result.Failure<RedisKeyScanPage>(connectionResult.Error);
+		var multiplexer = connectionResult.Value;
+		var servers = multiplexer.GetServers().Where(s => !s.IsReplica && s.ServerType != ServerType.Sentinel)
+			.OrderBy(s => s.EndPoint.ToString(), StringComparer.Ordinal).ToArray();
+		if (servers.Length == 0 || servers.Any(s => !s.IsConnected || !s.Features.Scan))
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanUnavailable", "A primary Redis server is unavailable or does not support SCAN."));
+		if (servers.Length > 1 && servers.Any(s => s.ServerType != ServerType.Cluster))
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanUnavailable", "Multiple standalone primaries cannot be scanned reliably through one connection."));
+		var nodes = servers.Select(s => s.EndPoint.ToString()!).ToArray();
+		ScanCursor state;
+		try
+		{
+			state = cursor is null ? new(connection.Id, database, pattern, nodes, 0, "0") :
+				JsonSerializer.Deserialize<ScanCursor>(Convert.FromBase64String(cursor))!;
+			if (state is null || state.ConnectionId != connection.Id || state.Database != database || state.Pattern != pattern ||
+				state.Nodes is null || !state.Nodes.SequenceEqual(nodes) || state.NodeIndex < 0 || state.NodeIndex >= servers.Length ||
+				!ulong.TryParse(state.Cursor, out _))
+				return Result.Failure<RedisKeyScanPage>(new Error("Redis.InvalidCursor", "Scan cursor is invalid or the Redis topology changed. Refresh to start again."));
+		}
+		catch (Exception ex) when (ex is FormatException or JsonException or ArgumentException)
+		{
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.InvalidCursor", "Scan cursor is invalid. Refresh to start again."));
+		}
+
+		try
+		{
+			var server = servers[state.NodeIndex];
+			if (server.ServerType == ServerType.Cluster && database != 0)
+				return Result.Failure<RedisKeyScanPage>(new Error("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."));
+			object[] args = [state.Cursor, "MATCH", pattern, "COUNT", count];
+			// Cluster SCAN must target the selected primary; standalone SCAN must use the selected database.
+			RedisResult raw = server.ServerType == ServerType.Cluster
+				? await server.ExecuteAsync("SCAN", args).WaitAsync(cancellationToken)
+				: await multiplexer.GetDatabase(database).ExecuteAsync("SCAN", args, CommandFlags.DemandMaster).WaitAsync(cancellationToken);
+			RedisResult[] parts = (RedisResult[])raw!;
+			string next = (string)parts[0]!;
+			RedisResult[] scanned = (RedisResult[])parts[1]!;
+			IDatabase db = multiplexer.GetDatabase(database);
+			var metadata = await Task.WhenAll(scanned.Select(async item =>
+			{
+				string key = (string)item!;
+				var typeTask = db.KeyTypeAsync(key);
+				var ttlTask = db.KeyTimeToLiveAsync(key);
+				await Task.WhenAll(typeTask, ttlTask).WaitAsync(cancellationToken);
+				return typeTask.Result == RedisType.None ? null : new RedisKeyScanItem(key, typeTask.Result.ToString(), ttlTask.Result?.TotalSeconds);
+			}));
+			int node = state.NodeIndex;
+			if (next == "0") node++;
+			string? nextCursor = node >= servers.Length ? null : Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(
+				new ScanCursor(connection.Id, database, pattern, nodes, node, next)));
+			return Result.Success(new RedisKeyScanPage(metadata.Where(x => x is not null).Select(x => x!).ToArray(), nextCursor));
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Redis key scan failed");
+			return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanFailed", "Unable to scan Redis keys. Check the connection and command permissions."));
+		}
 	}
 
 	/// <summary>

@@ -1819,15 +1819,15 @@
           </div>
           <div class="tour-card">
             <span class="tour-badge" data-i18n="s2_badge">SCREEN 02 • STORAGE MANAGER</span>
-            <h3 data-i18n="s2_title">100k+ Key Browser With Non-Blocking SCAN</h3>
-            <p data-i18n="s2_desc">Browse massive production keyspaces safely using cursor-based SCAN pagination, hierarchical colon-delimiter Trees, and instant data-type filter chips with live totals.</p>
+            <h3 data-i18n="s2_title">Browse keys incrementally with Redis SCAN</h3>
+            <p data-i18n="s2_desc">Load key metadata one cursor page at a time, then explore the loaded results in a table or namespace tree.</p>
             <ul class="tour-list">
               <li data-i18n="s2_f1">Switch effortlessly between flat Virtualized Table mode and Hierarchical Tree grouped by custom delimiters (:).</li>
-              <li data-i18n="s2_f2">Filter instantly across All, String, Hash, List, Set, Sorted Set, and Stream with real-time type counters and byte sizes.</li>
-              <li data-i18n="s2_f3">Full Enterprise Toolbar: JSON Export/Import, Safe Delete by Pattern, 1-click Seed Demo (10k keys), Slowlog &amp; Load Test.</li>
+              <li data-i18n="s2_f2">Search with Redis patterns and filter loaded keys by type; continue scanning with Load more.</li>
+              <li data-i18n="s2_f3">Use the toolbar for import/export, pattern deletion, sample data, Slowlog, and load testing.</li>
             </ul>
             <div class="tech-mini-pills">
-              <span>Cursor SCAN</span><span>Delimiter Tree</span><span>TTL &amp; Byte Profiler</span><span>Bulk Actions</span>
+              <span>Cursor SCAN</span><span>Delimiter Tree</span><span>TTL</span><span>Bulk Actions</span>
             </div>
           </div>
         </article>
@@ -2136,11 +2136,11 @@
         s1_f2: 'Centralized environment cards displaying host:port, active DB, security badges, and 1-click switch across Staging & Prod.',
         s1_f3: 'Governance-ready navigation (Dashboard, Health Monitoring, Audit Logs [ADMIN]) plus instant Ctrl+K Quick Search.',
         s2_badge: 'SCREEN 02 • STORAGE MANAGER',
-        s2_title: 'Browse Millions of Keys Safely Without Blocking Traffic',
-        s2_desc: 'Navigate high-volume production keyspaces safely with non-blocking pagination, structured namespace trees, and instant memory visibility per key.',
+        s2_title: 'Browse keys incrementally with Redis SCAN',
+        s2_desc: 'Load key metadata one cursor page at a time, then explore loaded results in a table or namespace tree.',
         s2_f1: 'Switch seamlessly between flat sortable Tables and domain-grouped Folder Trees divided by namespace delimiter (:).',
-        s2_f2: 'Locate hot keys or memory hogs fast with live type counters (String, Hash, List, Set, ZSet, Stream) and byte footprint.',
-        s2_f3: 'Complete ops toolkit: JSON Backup/Import, Safe Delete by Pattern, Stress Seeder (10k keys), Slowlog & Load Tester.',
+        s2_f2: 'Search with Redis patterns and filter loaded keys by type; continue scanning with Load more.',
+        s2_f3: 'Use the toolbar for import/export, pattern deletion, sample data, Slowlog, and load testing.',
         tt_kicker: 'INTERACTIVE STORAGE MODE • LIVE VISUALIZER',
         tt_title: 'Switch Between Flat Sortable Tables & Domain Folder Trees',
         tt_sub: 'Click between Table and Tree modes, switch namespace delimiters (: / .), sort columns, or expand production domains — identical to Storage Manager inside RedisStudio V2.2.',
@@ -2233,11 +2233,11 @@
         s1_f2: 'Централізовані картки середовищ із хостом, активною БД, TLS-статусом та перемиканням між Dev, Staging і Prod у 1 клік.',
         s1_f3: 'Корпоративна навігація (Dashboard, Health Monitoring, Audit Logs [ADMIN]) та миттєвий глобальний пошук Ctrl+K.',
         s2_badge: 'ЕКРАН 02 • STORAGE MANAGER',
-        s2_title: 'Працюйте з мільйонами ключів без ризику «покласти» прод',
-        s2_desc: 'Безпечно переглядайте великі бази даних: неблокуючий пошук, дерево за роздільником (:), фільтри типів та аудит розміру кожного ключа.',
+        s2_title: 'Поступовий перегляд ключів за допомогою Redis SCAN',
+        s2_desc: 'Завантажуйте метадані ключів сторінками та переглядайте результати в таблиці або дереві просторів імен.',
         s2_f1: 'Зручне перемикання між таблицею та ієрархічним деревом бізнес-доменів за роздільником (:).',
-        s2_f2: 'Миттєвий пошук проблемних ключів за типом (String, Hash, List, Set, Sorted Set, Stream), TTL та розміром у байтах.',
-        s2_f3: 'Повний інструментарій команди: JSON-експорт/імпорт бекапів, безпечне видалення за маскою, 10k Seeder, Slowlog та Load Test.',
+        s2_f2: 'Шукайте за шаблоном Redis, фільтруйте завантажені ключі за типом і продовжуйте сканування кнопкою Load more.',
+        s2_f3: 'Панель інструментів: імпорт і експорт, видалення за шаблоном, тестові дані, Slowlog та Load Test.',
         tt_kicker: 'ІНТЕРАКТИВНИЙ РЕЖИМ ПЕРЕГЛЯДУ • STORAGE MANAGER',
         tt_title: 'Миттєве перемикання між плоскою таблицею та деревом доменів',
         tt_sub: 'Перемикайте Table / Tree, змінюйте роздільник простору імен (: / .), сортуйте колонки або розгортайте папки доменів — точно як у RedisStudio V2.2.',
@@ -2310,7 +2310,7 @@
       {
         tone: ['rgba(99, 102, 241, 0.16)', 'rgba(99, 102, 241, 0.4)', '#818cf8'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v5H4z" fill="currentColor" opacity="0.22"/><path d="M14 4h6v4h-6zM14 14h6v4h-6z"/><path d="M7 10v6h7M7 6v0M10 7.5h4" opacity="0.85"/></svg>`,
-        en: ['Table & Delimiter Tree Views', 'Group 100k+ flat keys by custom separator (:) into collapsible namespace trees or sort inside a virtualized grid.'],
+        en: ['Table & Delimiter Tree Views', 'Group loaded keys by custom separator (:) into collapsible namespace trees or sort inside a virtualized grid.'],
         uk: ['Таблиця та Дерево (Delimiter :)', 'Автоматичне групування 100k+ ключів за роздільником (:) у зручні папки або сортування у віртуалізованій таблиці.']
       },
       {

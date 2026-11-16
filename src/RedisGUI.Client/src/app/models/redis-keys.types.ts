@@ -115,6 +115,7 @@ export interface RedisKeyInfo {
   size: number;
   ttl: number | null;
   memoryUsage: number | null;
+  fetchedAt?: number;
 }
 
 export interface RedisKeyGroup {

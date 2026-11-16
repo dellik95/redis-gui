@@ -26,7 +26,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -77,7 +76,6 @@ import {
     MatProgressSpinnerModule,
     MatProgressBarModule,
     MatTooltipModule,
-    MatPaginatorModule,
     MatCheckboxModule,
     FormatBytesPipe,
     TypeBadgeComponent,
@@ -111,9 +109,9 @@ export class StorageValuesListComponent {
 
   // 5. State signals
   readonly isLoading = computed(() => this.redisKeysStore.isLoading() && this.keys().length === 0);
-  readonly chunkLoading = signal<boolean>(false);
-  readonly pageSize = signal<number>(50);
-  readonly pageNumber = signal<number>(1);
+  readonly scanLoading = this.redisKeysStore.isLoading;
+  readonly nextCursor = this.redisKeysStore.nextCursor;
+  readonly scanError = this.redisKeysStore.error;
   readonly selectedDb = signal<number>(0);
   readonly fetchTimestamp = signal<number>(Date.now());
   readonly currentTimestamp = signal<number>(Date.now());
@@ -142,7 +140,6 @@ export class StorageValuesListComponent {
     'type',
     'key',
     'ttl',
-    'size',
     'actions'
   ] as const;
 
@@ -255,22 +252,6 @@ export class StorageValuesListComponent {
       });
   }
 
-  onScroll(index: number): void {
-    const dataLength = this.keys().length;
-    if (
-      dataLength >= this.pageSize() * this.pageNumber() &&
-      index > dataLength - 20 &&
-      !this.chunkLoading()
-    ) {
-      this.chunkLoading.set(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          this.chunkLoading.set(false);
-        });
-      });
-    }
-  }
-
   setTypeFilter(type: string): void {
     this.typeFilter.set(this.typeFilter() === type ? '' : type);
   }
@@ -311,8 +292,19 @@ export class StorageValuesListComponent {
 
   loadKeys(): void {
     this.fetchTimestamp.set(Date.now());
+    this.selection.clear();
     this.storageStore.loadKeys(this.searchPattern(), this.keyDelimiter(), this.selectedDb());
     this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+  }
+
+  loadMore(): void {
+    if (this.scanLoading() || !this.nextCursor()) return;
+    this.redisKeysStore.loadKeys({
+      connectionId: this.connectionId(),
+      pattern: this.searchPattern(),
+      database: this.selectedDb(),
+      append: true
+    });
   }
 
   onDatabaseChange(db: number): void {
@@ -321,9 +313,11 @@ export class StorageValuesListComponent {
     this.loadKeys();
   }
 
-  getLiveTtl(originalTtl: number | null): number | null {
+  getLiveTtl(originalTtl: number | null, fetchedAt?: number): number | null {
     if (originalTtl === null || originalTtl <= 0) return originalTtl;
-    const elapsedSec = Math.floor((this.currentTimestamp() - this.fetchTimestamp()) / 1000);
+    const elapsedSec = Math.floor(
+      (this.currentTimestamp() - (fetchedAt ?? this.fetchTimestamp())) / 1000
+    );
     return Math.max(0, originalTtl - elapsedSec);
   }
 
@@ -433,8 +427,12 @@ export class StorageValuesListComponent {
       .open(ConfirmDialogComponent, {
         data: {
           title: `Delete Folder "${event.name}"`,
-          message: `Are you sure you want to delete folder "${event.path}" and all ${event.keyCount} key(s) under it? This will delete all keys matching "${pattern}". This action cannot be undone.`,
-          confirmText: `Delete ${event.keyCount} Key(s)`,
+          message:
+            event.keys.length > 0
+              ? `Delete the ${event.keys.length} loaded key(s) in "${event.path}"? Keys not loaded in the browser will not be deleted. This action cannot be undone.`
+              : `Delete all keys matching "${pattern}", including keys not loaded in the browser? This action cannot be undone.`,
+          confirmText:
+            event.keys.length > 0 ? `Delete ${event.keys.length} Key(s)` : 'Delete matching keys',
           cancelText: 'Cancel',
           confirmColor: 'warn'
         }
@@ -498,12 +496,6 @@ export class StorageValuesListComponent {
     if (seconds < 86400)
       return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
     return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
-  }
-
-  onPageChange(event: PageEvent): void {
-    this.pageSize.set(event.pageSize);
-    this.pageNumber.set(event.pageIndex + 1);
-    this.loadKeys();
   }
 
   isAllSelected(): boolean {

@@ -166,6 +166,8 @@ The Storage Manager is the core workspace for querying, creating, and modifying 
 * **Database Selector**: Switch instantly between logical databases (`DB 0` through `DB 15`) with real-time key counts per database.
 * **Data Type Chips**: Filter by key type (`All`, `String`, `Hash`, `List`, `Set`, `ZSet`, `Stream`) with badge counts.
 * **Pattern Search**: Search keys using glob patterns (e.g. `user:*`, `session:2026:*`).
+* **Incremental results**: The first scan returns a page of key metadata. Select **Load more** until the scan is complete; an empty page can still have more results. Changing the pattern or database starts a new scan.
+* **Partial results**: Type counts, sorting, selection and the namespace tree apply to loaded keys. Redis scanning is not a snapshot, so keys can change during the scan. Refresh to restart, including after a topology change. The browser does not load values or report their sizes while scanning.
 
 ### Namespace Tree View & Full Management Controls
 

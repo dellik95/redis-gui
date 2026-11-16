@@ -19,6 +19,62 @@ namespace RedisGUI.Infrastructure.Tests.Redis;
 public class RedisServerFallbackTests
 {
 	[Test]
+	public async Task ScanKeys_ContinuesAcrossPagesAndUsesPatternAndDatabase()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
+		var manager = new Mock<IRedisConnectionManager>();
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+			.ReturnsAsync(Result.Success(multiplexer));
+		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Scan test"),
+			new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
+		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
+		var prefix = "redisgui-scan-test:" + Guid.NewGuid() + ":";
+		var db = multiplexer.GetDatabase(1);
+		try
+		{
+			for (var i = 0; i < 120; i++) await db.StringSetAsync(prefix + i, "value", TimeSpan.FromMinutes(5));
+			await multiplexer.GetDatabase(0).StringSetAsync(prefix + "wrong-db", "value");
+			string? cursor = null;
+			var found = new System.Collections.Generic.HashSet<string>();
+			var pages = 0;
+			do
+			{
+				var page = await service.ScanKeysAsync(connection, prefix + "*", 1, cursor, 10);
+				Assert.That(page.IsSuccess, Is.True, page.IsFailure ? page.Error.Message : "");
+				foreach (var item in page.Value.Keys)
+				{
+					found.Add(item.Key);
+					Assert.That(item.Type, Is.EqualTo("String"));
+					Assert.That(item.TtlSeconds, Is.GreaterThan(0));
+				}
+				cursor = page.Value.NextCursor;
+				if (pages == 0 && cursor != null)
+				{
+					var wrongPattern = await service.ScanKeysAsync(connection, "different:*", 1, cursor, 10);
+					Assert.That(wrongPattern.IsFailure, Is.True);
+				}
+				Assert.That(++pages, Is.LessThan(1000));
+			} while (cursor != null);
+			Assert.That(pages, Is.GreaterThan(1));
+			Assert.That(found, Has.Count.EqualTo(120));
+			Assert.That(found, Does.Not.Contain(prefix + "wrong-db"));
+			var invalid = await service.ScanKeysAsync(connection, prefix + "*", 1, "not-a-cursor", 10);
+			Assert.That(invalid.IsFailure, Is.True);
+			using var cancelled = new CancellationTokenSource();
+			cancelled.Cancel();
+			await Assert.ThrowsAsync<OperationCanceledException>(async () =>
+				await service.ScanKeysAsync(connection, prefix + "*", 1, null, 10, cancelled.Token));
+		}
+		finally
+		{
+			for (var i = 0; i < 120; i++) await db.KeyDeleteAsync(prefix + i);
+			await multiplexer.GetDatabase(0).KeyDeleteAsync(prefix + "wrong-db");
+		}
+	}
+
+	[Test]
 	public async Task GetKeys_UsesRequestedDatabase()
 	{
 		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");

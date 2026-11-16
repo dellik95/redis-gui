@@ -5,6 +5,10 @@ namespace RedisGUI.Domain.Connection;
 /// </summary>
 public interface IRedisKeyService
 {
+	/// <summary>Scans one Redis cursor page in the requested database.</summary>
+	Task<Result<RedisKeyScanPage>> ScanKeysAsync(RedisConnection connection, string pattern, int database,
+		string? cursor, int count, CancellationToken cancellationToken = default);
+
 	/// <summary>
 	/// Returns all keys from redis
 	/// </summary>

@@ -44,6 +44,7 @@ export const API_ROUTES = {
    */
   STORAGE: {
     BASE: '/api/v1/storage',
+    SCAN: (connectionId: string) => `/api/v1/connections/${connectionId}/key-scan`,
     GET_ALL: (connectionId: string, pattern?: string, pageSize?: number, pageNumber?: number) => {
       const params = new URLSearchParams();
       if (pattern) params.set('pattern', pattern);

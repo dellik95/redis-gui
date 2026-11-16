@@ -84,6 +84,15 @@
           message="Loading keys from Redis..."
           [spinnerDiameter]="40"
         />
+      } @else if (scanError()) {
+        <app-empty-state type="empty" icon="error_outline" heading="Unable to load keys">
+          <p>{{ scanError() }}</p>
+          <button class="btn-secondary" (click)="loadKeys()">Retry scan</button>
+        </app-empty-state>
+      } @else if (nextCursor()) {
+        <app-empty-state type="empty" icon="search" heading="No keys in this scan page">
+          <p>More keys may match. Use Load more to continue scanning.</p>
+        </app-empty-state>
       } @else {
         <app-empty-state type="empty" icon="search_off" heading="No keys found">
           <p class="text-[14px] text-canvas-muted max-w-[420px] text-center m-0">
@@ -117,7 +126,6 @@
           class="virtual-table-viewport flex-1 w-full h-full overflow-auto min-h-0"
           [minBufferPx]="280"
           [maxBufferPx]="560"
-          (scrolledIndexChange)="onScroll($event)"
         >
           <table
             mat-table
@@ -236,7 +244,7 @@
                 </div>
               </th>
               <td mat-cell *matCellDef="let element" class="ttl-col w-[140px]">
-                @let liveTtl = getLiveTtl(element.ttl);
+                @let liveTtl = getLiveTtl(element.ttl, element.fetchedAt);
                 @if (liveTtl !== null && liveTtl > 0) {
                   <span
                     class="ttl-badge ttl-expiring inline-flex items-center gap-[5px] py-[3px] px-2 rounded-md text-[12px] font-medium"
@@ -351,34 +359,24 @@
               (click)="editKey(row.key)"
             ></tr>
           </table>
-
-          <!-- Chunk loading spinner -->
-          @if (chunkLoading()) {
-            <div
-              class="chunk-loading-spinner flex items-center justify-center gap-2 p-3 text-[12px]"
-            >
-              <mat-spinner diameter="24"></mat-spinner>
-              <span>Loading more keys...</span>
-            </div>
-          }
         </cdk-virtual-scroll-viewport>
-      </div>
-
-      <!-- Paginator at the bottom -->
-      <div class="paginator-container shrink-0">
-        <mat-paginator
-          [length]="totalCount()"
-          [pageSize]="pageSize()"
-          [pageIndex]="pageNumber() - 1"
-          [pageSizeOptions]="[25, 50, 100, 250]"
-          (page)="onPageChange($event)"
-          showFirstLastButtons
-        >
-        </mat-paginator>
       </div>
     }
   </div>
 }
+
+<div class="flex items-center gap-3 p-3 text-sm" aria-live="polite">
+  <span>{{ keys().length }} keys loaded. Filters and sorting apply to loaded keys.</span>
+  @if (scanError()) {
+    <span role="alert">{{ scanError() }}</span>
+  }
+  @if (nextCursor()) {
+    <button class="btn-secondary" (click)="loadMore()" [disabled]="scanLoading()">
+      {{ scanLoading() ? 'Loading…' : 'Load more' }}
+    </button>
+    <span>Scan incomplete; more keys may match.</span>
+  }
+</div>
 
 @if (viewMode() === 'tree') {
   <div class="tree-container p-2 min-h-[460px] relative h-full overflow-y-auto bg-canvas-card">

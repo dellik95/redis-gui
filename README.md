@@ -40,8 +40,10 @@ Full visual inspection and editing across all native Redis types using the **Str
 - Live status pills in the Storage Manager header with pulsing indicators.
 
 ### 📂 Dual Exploration Modes
-- **Table View**: Fast virtual-scrolled data grid with instant pattern search, type filter chips, live TTL countdowns, and aligned column sorting (Key, Type, TTL, Size).
+- **Table View**: A virtual-scrolled grid with Redis glob search, type filters, TTL countdowns, and sorting of loaded keys. Cursor-based scans load key metadata incrementally; use **Load more** to continue.
 - **Namespace Tree View**: Hierarchical folder tree grouping keys by delimiter (`:`, `/`, `.`, etc.) with **direct subfolder key creation** via the folder `+` action.
+
+The browser shows only keys discovered so far. Redis `SCAN` is not a snapshot: keys may change during a scan, and the count hint is not a strict page-size limit. Type counts, sorting, and tree contents apply to loaded results. The browser does not load values or report value sizes while scanning.
 
 ### 🛠️ Interactive Redis CLI Drawer
 - Built-in slide-out terminal drawer.

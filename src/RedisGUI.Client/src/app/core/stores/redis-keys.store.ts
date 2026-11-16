@@ -1,7 +1,7 @@
 import { computed, inject } from '@angular/core';
 import { signalStore, withState, withMethods, withComputed, patchState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { pipe, tap, catchError, of, switchMap, concatMap, map } from 'rxjs';
+import { pipe, tap, catchError, of, switchMap, concatMap } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   RedisDataType,
@@ -13,8 +13,12 @@ import {
   SeedRedisDataResponse,
   RedisKeyMutationResponse
 } from '../../models/redis-keys.types';
-import { PagedRedisValuesResponse, RedisKeyValuePair } from '../../models/redis-advanced.types';
 import { API_ROUTES } from '../constants/api-routes.constants';
+
+interface KeyScanPage {
+  keys: { key: string; type: string; ttlSeconds: number | null }[];
+  nextCursor: string | null;
+}
 
 /**
  * Redis key with value data
@@ -73,6 +77,7 @@ interface RedisKeysState {
    * Last fetch timestamp
    */
   lastFetched: number | null;
+  nextCursor: string | null;
 }
 
 /**
@@ -86,7 +91,8 @@ const initialState: RedisKeysState = {
   lastFetchParams: null,
   activeDatabase: 0,
   keyspace: {},
-  lastFetched: null
+  lastFetched: null,
+  nextCursor: null
 };
 
 /**
@@ -126,19 +132,6 @@ export const RedisKeysStore = signalStore(
 
   // Define methods
   withMethods((store, httpClient = inject(HttpClient)) => {
-    /**
-     * Convert RedisKeyValuePair to RedisKeyInfo
-     */
-    const convertToKeyInfo = (pair: RedisKeyValuePair): RedisKeyInfo => {
-      return {
-        key: pair.key,
-        type: pair.type,
-        size: pair.value?.length || 0,
-        ttl: pair.timeToLive ? Math.floor(pair.timeToLive / 1000) : null,
-        memoryUsage: null
-      };
-    };
-
     return {
       /**
        * Set active database
@@ -168,34 +161,48 @@ export const RedisKeysStore = signalStore(
       ),
 
       /**
-       * Load Redis keys (fetches all keys - components handle grouping/display)
+       * Start a new scan or load the next cursor page.
        */
       loadKeys: rxMethod<{
         connectionId: string;
         pattern?: string | undefined;
         database?: number | undefined;
+        append?: boolean;
       }>(
         pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, pattern = '*', database }) => {
+          switchMap(({ connectionId, pattern = '*', database, append = false }) => {
             const targetDb = database ?? store.activeDatabase();
-
-            // Fetch all keys without pagination
-            let params = new HttpParams().set('pattern', pattern);
-            if (targetDb !== undefined && targetDb !== null) {
-              params = params.set('database', targetDb.toString());
-            }
+            const continuation = append ? store.nextCursor() : null;
+            if (append && !continuation) return of(null);
+            patchState(store, {
+              isLoading: true,
+              error: null,
+              ...(!append ? { keys: [], nextCursor: null } : {})
+            });
+            let params = new HttpParams()
+              .set('pattern', pattern)
+              .set('database', targetDb)
+              .set('count', 100);
+            if (continuation) params = params.set('cursor', continuation);
 
             return httpClient
-              .get<PagedRedisValuesResponse>(API_ROUTES.STORAGE.GET_ALL(connectionId), { params })
+              .get<KeyScanPage>(API_ROUTES.STORAGE.SCAN(connectionId), { params })
               .pipe(
-                map(response => {
-                  // Convert RedisKeyValuePair[] to RedisKeyInfo[]
-                  return response.values.map(pair => convertToKeyInfo(pair));
-                }),
-                tap(keys =>
+                tap(response => {
+                  const fetchedAt = Date.now();
+                  const keys: RedisKeyInfo[] = response.keys.map(item => ({
+                    key: item.key,
+                    type: item.type,
+                    ttl: item.ttlSeconds === null ? null : Math.ceil(item.ttlSeconds),
+                    size: 0,
+                    memoryUsage: null,
+                    fetchedAt
+                  }));
+                  const merged = new Map((append ? store.keys() : []).map(key => [key.key, key]));
+                  for (const key of keys) merged.set(key.key, key);
                   patchState(store, {
-                    keys,
+                    keys: [...merged.values()],
+                    nextCursor: response.nextCursor,
                     isLoading: false,
                     activeDatabase: targetDb,
                     lastFetchParams: {
@@ -203,12 +210,12 @@ export const RedisKeysStore = signalStore(
                       pattern,
                       database: targetDb
                     },
-                    lastFetched: Date.now()
-                  })
-                ),
+                    lastFetched: fetchedAt
+                  });
+                }),
                 catchError(error => {
                   patchState(store, {
-                    error: error.message || 'Failed to load keys',
+                    error: error.error?.message || error.message || 'Failed to load keys',
                     isLoading: false
                   });
                   return of(null);

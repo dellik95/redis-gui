@@ -9,9 +9,9 @@ RedisGUI is engineered as a modern, production-ready GUI client for Redis 7.x an
 | Feature Module | Capabilities | Backend Implementation | Frontend Implementation |
 | :--- | :--- | :--- | :--- |
 | **Key & Data Management** | CRUD operations across String, Hash, List, Set, Sorted Set, Stream | Strategy pattern via `IRedisTypeHandlerFactory` & `IRedisTypeHandler` | `RedisTypeHandlerRegistry`, visual editors + Monaco JSON |
-| **Namespace Tree Explorer** | Hierarchical key browsing with custom delimiters (`:`, `/`, `.`) | Redis `SCAN` cursor iteration with count estimation | Angular Material Tree with persistent node expansion |
+| **Namespace Tree Explorer** | Hierarchical browsing of loaded keys with custom delimiters (`:`, `/`, `.`) | Incremental Redis `SCAN` with continuation and server-side pattern matching | Angular Material Tree with persistent node expansion |
 | **Direct Subfolder Key Creation**| Create keys directly within a chosen namespace folder via `+` action | Strongly-typed prefix routing and automatic store refresh | Tree group hover action button + pre-filled modal badge |
-| **Table Column Sorting** | Sort by Key, Type, TTL, Size with vertically centered icons | In-memory computed signal sorting and live TTL ticker | Pixel-perfect sort header styling in Angular Material table |
+| **Table Column Sorting** | Sort loaded keys by Key, Type, or TTL | In-memory computed signal sorting and live TTL ticker | Sort headers in Angular Material table |
 | **Real-time Telemetry** | Instant ops/sec, memory RSS, CPU usage, bandwidth, key counters | Background timer service + SignalR `RedisMetricsHub` | Reactive Signal component with live pulsing pills |
 | **Interactive Redis CLI** | Full command prompt with multi-database support & history | `IRedisCliService`, command sanitizer, RESP executor | Draggable drawer terminal with history navigation (`↑`/`↓`) |
 | **Benchmarking & Load Testing** | Synthetic load runner with configurable concurrency & read/write ratios | `IRedisLoadTestService`, parallel Task workers, Stopwatch | Load test modal dialog with latency percentiles |
@@ -36,12 +36,14 @@ The system uses the **Strategy Pattern** across both backend and frontend layers
 - **Stream Handler**: Displays append-only log entries with millisecond timestamp IDs, field-value dictionaries, and real-time append capability.
 
 ### 2. Namespace Tree View & Full Management Controls
+- The browser scans one Redis cursor page per request and provides **Load more**, including when a page contains no matching keys. Key type and TTL are fetched without reading the value. The scan checks the selected database and scans cluster primaries individually.
+- Results are not a point-in-time snapshot. Keys can be added, removed, or returned more than once while scanning; the UI deduplicates loaded names. The Redis `COUNT` value is a hint rather than a strict limit. Counts, filters, sorting and the tree describe loaded results only. A changed cluster topology requires a refresh.
 - Parses Redis keys using configurable delimiters (e.g. `users:profile:1001` becomes folder `users` -> folder `profile` -> key `1001`).
 - **Tree Toolbar**: Real-time summary stats badge with instant `Expand All` and `Collapse All` buttons.
 - **Folder / Namespace Actions**:
   - `+` (Add Key): Opens the Add Key modal pre-populated with the folder prefix.
   - Copy Path: Copies the complete namespace prefix to the clipboard.
-  - Delete Folder (`delete_sweep`): Prompts confirmation and deletes all keys belonging to this namespace in a single batch, automatically refreshing the tree structure and database counters.
+  - Delete Folder (`delete_sweep`): Prompts confirmation and deletes the loaded keys supplied by the tree; the dialog distinguishes this from a pattern-based deletion that may affect keys not yet loaded.
 - **Leaf Key Actions Bar**: Full management toolbar on hover (View/Edit, Copy Name, Rename, Duplicate, Delete) delivering 100% feature parity with the Table View controls.
 - Automatic cache invalidation and store refresh ensuring immediate updates upon key creation, rename, duplicate, or deletion.
 
