@@ -90,9 +90,7 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
         catch (Exception ex) { logger.LogWarning(ex, "Messaging subscription failed for {ClientId}", clientId); try { await client.SendAsync("MonitorError", "Channel monitoring stopped. Check the connection."); } catch (Exception) { } }
         finally
         {
-            await cts.CancelAsync();
-            await metricsTask;
-            try { await queue.UnsubscribeAsync(); }
+            try { await cts.CancelAsync(); try { await queue.UnsubscribeAsync(); } finally { await metricsTask; } }
             finally { watches.TryRemove(new KeyValuePair<string, CancellationTokenSource>(clientId, cts)); cts.Dispose(); lease.Dispose(); }
         }
     }
@@ -122,7 +120,11 @@ public sealed class MessagingSubscriptions(ILogger<MessagingSubscriptions> logge
         }
         catch (OperationCanceledException) { }
         catch (Exception ex) { logger.LogWarning(ex, "Stream monitor failed for {ClientId}", clientId); try { await client.SendAsync("MonitorError", "Stream monitoring stopped. Check the key and connection."); } catch (Exception) { } }
-        finally { await cts.CancelAsync(); await metricsTask; watches.TryRemove(new KeyValuePair<string, CancellationTokenSource>(clientId, cts)); cts.Dispose(); lease.Dispose(); }
+        finally
+        {
+            try { await cts.CancelAsync(); await metricsTask; }
+            finally { watches.TryRemove(new KeyValuePair<string, CancellationTokenSource>(clientId, cts)); cts.Dispose(); lease.Dispose(); }
+        }
     }
 
     private sealed class DeliveryCounter { public long Value; }

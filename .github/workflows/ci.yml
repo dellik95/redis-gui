@@ -2,12 +2,18 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - '**'
+    branches: [main]
   pull_request:
     branches:
       - '**'
   workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ==========================================
@@ -16,6 +22,29 @@ jobs:
   backend:
     name: Backend Build & Test (.NET 11)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 16391:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: ci-password
+          MYSQL_DATABASE: redisgui_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -pci-password"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
 
     steps:
       - name: Checkout
@@ -33,7 +62,24 @@ jobs:
         run: dotnet build RedisGUI.slnx --configuration Release --no-restore
 
       - name: Run unit & integration tests
-        run: dotnet test RedisGUI.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage"
+        env:
+          REDISGUI_TEST_REDIS: 127.0.0.1:16391,allowAdmin=true
+          REDISGUI_TEST_MYSQL: Server=127.0.0.1;Port=3306;Database=redisgui_test;User=root;Password=ci-password
+        run: dotnet test RedisGUI.slnx --configuration Release --no-build --verbosity normal --logger trx --results-directory TestResults --collect:"XPlat Code Coverage"
+
+      # This test changes Redis server configuration and requires this exact endpoint.
+      - name: Run Redis diagnostics integration test
+        env:
+          REDISGUI_TEST_REDIS: 127.0.0.1:16391
+        run: dotnet test test/RedisGUI.Infrastructure.Tests/RedisGUI.Infrastructure.Tests.csproj --configuration Release --no-build --filter FullyQualifiedName~RedisDiagnosticsIntegrationTests --logger "trx;LogFileName=diagnostics.trx" --results-directory TestResults
+
+      - name: Upload backend test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: TestResults
+          if-no-files-found: ignore
 
   # ==========================================
   # 2. Frontend Validation (Angular 22)
@@ -41,6 +87,7 @@ jobs:
   frontend:
     name: Frontend Lint & Build (Node 26 / Angular 22)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -75,6 +122,7 @@ jobs:
   docker:
     name: Docker Build Verification
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     needs: [backend, frontend]
 
     steps:
@@ -91,3 +139,5 @@ jobs:
           file: Dockerfile
           push: false
           tags: redisgui:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
