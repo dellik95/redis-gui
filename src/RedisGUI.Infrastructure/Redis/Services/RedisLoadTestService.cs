@@ -83,6 +83,13 @@ public class RedisLoadTestService(
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 				var options = ConfigurationOptions.Parse(connectionString);
+				// The manager may have connected through its Docker-host fallback.
+				// Keep the configured credentials and TLS settings, but use its effective endpoints.
+				options.EndPoints.Clear();
+				foreach (var endpoint in multiplexer.GetEndPoints(configuredOnly: true))
+				{
+					options.EndPoints.Add(endpoint);
+				}
 				options.ClientName = $"redis-gui-load-test-{i + 1}";
 				options.AbortOnConnectFail = true;
 				workerConnections.Add(await ConnectionMultiplexer.ConnectAsync(options));
