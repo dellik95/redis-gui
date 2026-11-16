@@ -5,8 +5,6 @@ import { pipe, tap, catchError, of, switchMap } from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   PagedRedisValuesResponse,
-  DeleteKeysByPatternResponse,
-  DeleteMultipleKeysResponse,
   GetConnectionHealthResponse
 } from '../../../models/redis-advanced.types';
 
@@ -123,91 +121,6 @@ export const RedisOperationsStore = signalStore(
                     error: error.message || 'Failed to load paged values',
                     isLoading: false
                   });
-                  return of(null);
-                })
-              );
-          })
-        )
-      ),
-
-      // ========== Bulk Delete ==========
-
-      /**
-       * Delete keys matching a pattern
-       */
-      deleteKeysByPattern: rxMethod<{
-        connectionId: string;
-        pattern: string;
-        database?: number;
-        onSuccess?: (result: DeleteKeysByPatternResponse) => void;
-        onError?: (message: string) => void;
-      }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, pattern, database, onSuccess, onError }) => {
-            let params = new HttpParams();
-            if (database !== undefined && database !== null) {
-              params = params.set('database', database.toString());
-            }
-            return httpClient
-              .delete<DeleteKeysByPatternResponse>(
-                `/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`,
-                { params }
-              )
-              .pipe(
-                tap(result => {
-                  patchState(store, { isLoading: false });
-                  onSuccess?.(result);
-                }),
-                catchError(error => {
-                  const message = error.error?.detail || error.error?.message || error.message || 'Failed to delete keys by pattern';
-                  patchState(store, {
-                    error: message,
-                    isLoading: false
-                  });
-                  onError?.(message);
-                  return of(null);
-                })
-              );
-          })
-        )
-      ),
-
-      /**
-       * Delete multiple specific keys
-       */
-      deleteMultipleKeys: rxMethod<{
-        connectionId: string;
-        keys: string[];
-        database?: number;
-        onSuccess?: (result: DeleteMultipleKeysResponse) => void;
-        onError?: (message: string) => void;
-      }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, keys, database, onSuccess, onError }) => {
-            let params = new HttpParams();
-            if (database !== undefined && database !== null) {
-              params = params.set('database', database.toString());
-            }
-            return httpClient
-              .post<DeleteMultipleKeysResponse>(
-                `/api/v1/storage/${connectionId}/keys/delete-multiple`,
-                { keys, database },
-                { params }
-              )
-              .pipe(
-                tap(result => {
-                  patchState(store, { isLoading: false });
-                  onSuccess?.(result);
-                }),
-                catchError(error => {
-                  const message = error.error?.detail || error.error?.message || error.message || 'Failed to delete multiple keys';
-                  patchState(store, {
-                    error: message,
-                    isLoading: false
-                  });
-                  onError?.(message);
                   return of(null);
                 })
               );

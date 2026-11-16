@@ -679,15 +679,15 @@ export class StorageValuesListComponent {
   }
 
   private async runPatternBulk(pattern: string, database: number): Promise<void> {
-    const { BulkDeleteProgressComponent } = await import('../bulk-delete-progress/bulk-delete-progress.component');
-    this.dialog.open(BulkDeleteProgressComponent, {
-      disableClose: true, closeOnNavigation: false, width: '480px', data: { connectionId: this.connectionId(), pattern, database }
+    const { BulkJobProgressComponent } = await import('../bulk-job-progress/bulk-job-progress.component');
+    this.dialog.open(BulkJobProgressComponent, {
+      disableClose: true, closeOnNavigation: false, width: '480px', data: { connectionId: this.connectionId(), operation: 'delete-pattern', pattern, database }
     }).afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshAfterBulk());
   }
 
   private async runSelectedBulk(operation: 'delete' | 'ttl', keys: string[], database: number, ttlSeconds?: number | null): Promise<void> {
-    const { BulkSelectedProgressComponent } = await import('../bulk-selected-progress/bulk-selected-progress.component');
-    this.dialog.open(BulkSelectedProgressComponent, {
+    const { BulkJobProgressComponent } = await import('../bulk-job-progress/bulk-job-progress.component');
+    this.dialog.open(BulkJobProgressComponent, {
       disableClose: true, closeOnNavigation: false, width: '480px',
       data: { connectionId: this.connectionId(), operation, keys, database, ttlSeconds }
     }).afterClosed().pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.refreshAfterBulk());

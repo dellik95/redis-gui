@@ -60,26 +60,13 @@ export const API_ROUTES = {
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
     DELETE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
-    DELETE_MULTIPLE: (connectionId: string) =>
-      `/api/v1/storage/${connectionId}/keys/delete-multiple`,
-    DELETE_BY_PATTERN: (connectionId: string, pattern: string) =>
-      `/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`,
     KEYS: (connectionId: string) => `/api/v1/storage/${connectionId}/keys`,
     KEY: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
     KEYSPACE: (connectionId: string) => `/api/v1/storage/${connectionId}/keyspace`,
     SLOWLOG: (id: string, count: number) => `/api/v1/storage/${id}/slowlog?count=${count}`,
     RENAME_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/rename`,
-    DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`,
-    BULK_TTL: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/bulk-ttl`,
-    IMPORT: (connectionId: string) => `/api/v1/storage/${connectionId}/import`,
-    EXPORT: (connectionId: string, pattern?: string, format?: string) => {
-      const params = new URLSearchParams();
-      if (pattern) params.set('pattern', pattern);
-      if (format) params.set('format', format);
-      const query = params.toString();
-      return `/api/v1/storage/${connectionId}/export${query ? `?${query}` : ''}`;
-    }
+    DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`
   },
 
   /**

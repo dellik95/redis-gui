@@ -16,18 +16,6 @@ export interface RedisKeyValuePair {
   timeToLive: number | null;
 }
 
-// Bulk delete types
-export interface DeleteKeysByPatternResponse {
-  deletedCount: number;
-  pattern: string;
-}
-
-export interface DeleteMultipleKeysResponse {
-  deletedCount: number;
-  totalRequested: number;
-  failedKeys: string[];
-}
-
 // Health monitoring types
 export enum ConnectionHealthStatus {
   Unknown = 0,

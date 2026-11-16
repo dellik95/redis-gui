@@ -19,12 +19,6 @@ interface KeyScanPage {
   nextCursor: string | null;
 }
 
-export interface BulkTtlResult {
-  updatedCount: number;
-  unchangedCount: number;
-  failedKeys: string[];
-}
-
 /**
  * Redis key with value data
  */
@@ -537,46 +531,6 @@ export const RedisKeysStore = signalStore(
                       error.error?.message ||
                       error.message ||
                       'Failed to duplicate key',
-                    isLoading: false
-                  });
-                  return of(null);
-                })
-              )
-          )
-        )
-      ),
-
-      /**
-       * Bulk update TTL or persist
-       */
-      bulkUpdateTtl: rxMethod<{
-        connectionId: string;
-        keys: string[];
-        ttlSeconds: number | null;
-        database?: number;
-        onSuccess?: (result: BulkTtlResult) => void;
-      }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, keys, ttlSeconds, database, onSuccess }) =>
-            httpClient
-              .post<BulkTtlResult>(API_ROUTES.STORAGE.BULK_TTL(connectionId), {
-                keys,
-                ttlSeconds,
-                database
-              })
-              .pipe(
-                tap(res => {
-                  patchState(store, { isLoading: false, lastFetched: null });
-                  onSuccess?.(res);
-                }),
-                catchError(error => {
-                  patchState(store, {
-                    error:
-                      error.error?.detail ||
-                      error.error?.message ||
-                      error.message ||
-                      'Failed to update TTL',
                     isLoading: false
                   });
                   return of(null);
