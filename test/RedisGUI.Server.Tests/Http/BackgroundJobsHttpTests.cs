@@ -182,8 +182,9 @@ public class BackgroundJobsHttpTests
 		var failedJob = await failureStarted.Content.ReadFromJsonAsync<BackgroundJobSnapshot>();
 		while (manager.Get(failedJob!.JobId, owner)?.Status != "Failed") await Task.Delay(10, deadline.Token);
 		Assert.That(manager.Get(failedJob.JobId, owner)!.Error, Is.EqualTo("Expected failure."));
-		using var missingResult = await client.SendAsync(Request(HttpMethod.Get, $"/jobs/{failedJob.JobId}/result", owner));
-		Assert.That(missingResult.StatusCode, Is.EqualTo(HttpStatusCode.Conflict));
+		using var partialResult = await client.SendAsync(Request(HttpMethod.Get, $"/jobs/{failedJob.JobId}/result", owner));
+		Assert.That(partialResult.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+		Assert.That(await partialResult.Content.ReadAsStringAsync(), Does.Contain("\"processed\":2"));
 		await ownerHub.StopAsync();
 		await otherHub.StopAsync();
 		await app.StopAsync();
@@ -224,7 +225,7 @@ public class BackgroundJobsHttpTests
 		public bool RequiresWriteAccess => false;
 		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken token) => Task.FromResult(Result.Success());
 		public Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> progress, CancellationToken token) =>
-			Task.FromResult(Result.Failure<object?>(new Error("Job.TestFailure", "Expected failure.")));
+			Task.FromResult(Result.Success<object?>(new BackgroundJobOutcome(new { processed = 2 }, "Expected failure.")));
 	}
 
 	private sealed class TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)

@@ -20,3 +20,6 @@ public interface IBackgroundJobHandler
 
 /// <summary>A server-owned temporary file returned through the authorized job result endpoint.</summary>
 public sealed record BackgroundJobFile(string Path, string FileName, string ContentType);
+
+/// <summary>A partial result retained when an operation fails after making changes.</summary>
+public sealed record BackgroundJobOutcome(object? Result, string Error);

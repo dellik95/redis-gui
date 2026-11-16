@@ -126,8 +126,10 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 				{
 					if (!linked.IsCancellationRequested) await PublishAsync(job.Progress(percent, metrics));
 				}, linked.Token);
-				if (linked.IsCancellationRequested) await PublishAsync(job.Cancelled(result.IsSuccess ? result.Value : null));
+				if (linked.IsCancellationRequested) await PublishAsync(job.Cancelled(result.IsSuccess
+					? result.Value is BackgroundJobOutcome cancelledOutcome ? cancelledOutcome.Result : result.Value : null));
 				else if (result.IsFailure) await PublishAsync(job.Update("Failed", result.Error.Message));
+				else if (result.Value is BackgroundJobOutcome partial) await PublishAsync(job.Failed(partial.Error, partial.Result));
 				else await PublishAsync(job.Complete(result.Value));
 			}
 			catch (OperationCanceledException) when (linked.IsCancellationRequested) { await PublishAsync(job.Update("Cancelled")); }
@@ -191,6 +193,10 @@ public sealed class BackgroundJobManager(IServiceScopeFactory scopes, IHubContex
 		public BackgroundJobSnapshot Cancelled(object? value)
 		{
 			lock (gate) { result = value; status = "Cancelled"; revision++; updatedAt = DateTime.UtcNow; return Current(); }
+		}
+		public BackgroundJobSnapshot Failed(string failure, object? value)
+		{
+			lock (gate) { result = value; status = "Failed"; error = failure; revision++; updatedAt = DateTime.UtcNow; return Current(); }
 		}
 		public BackgroundJobSnapshot? Cancel()
 		{
