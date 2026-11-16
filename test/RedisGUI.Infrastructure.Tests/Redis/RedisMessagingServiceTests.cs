@@ -15,6 +15,48 @@ namespace RedisGUI.Infrastructure.Tests.Redis;
 public class RedisMessagingServiceTests
 {
     [Test]
+    public async Task StreamSnapshot_DoesNotIncludeEntriesBeyondItsLiveCursor()
+    {
+        var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+        if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+        using var redis = await ConnectionMultiplexer.ConnectAsync(configuration!);
+        var manager = new Mock<IRedisConnectionManager>();
+        manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(redis));
+        var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Messaging test"), new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
+        var service = new RedisMessagingService(manager.Object);
+        var key = "redisgui:test:" + Guid.NewGuid();
+        var db = redis.GetDatabase();
+        await db.StreamAddAsync(key, "event", "initial");
+        using var stop = new CancellationTokenSource();
+        var writer = Task.Run(async () =>
+        {
+            while (!stop.IsCancellationRequested) await db.StreamAddAsync(key, "event", "new");
+        });
+        try
+        {
+            for (int i = 0; i < 50; i++)
+            {
+                using var snapshot = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(await service.StreamAsync(connection, key, CancellationToken.None)));
+                var cursor = ParseId(snapshot.RootElement.GetProperty("lastGeneratedId").GetString()!);
+                foreach (var entry in snapshot.RootElement.GetProperty("entries").EnumerateArray())
+                    Assert.That(ParseId(entry.GetProperty("id").GetString()!).CompareTo(cursor), Is.LessThanOrEqualTo(0));
+            }
+        }
+        finally
+        {
+            stop.Cancel();
+            await writer;
+            await db.KeyDeleteAsync(key);
+        }
+    }
+
+    private static (long, long) ParseId(string value)
+    {
+        var parts = value.Split('-');
+        return (long.Parse(parts[0]), long.Parse(parts[1]));
+    }
+
+    [Test]
     public async Task PublishAndStreamSnapshot_UseTheConfiguredRedisConnection()
     {
         var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");

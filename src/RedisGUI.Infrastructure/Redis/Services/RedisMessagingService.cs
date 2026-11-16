@@ -26,7 +26,7 @@ public sealed class RedisMessagingService(IRedisConnectionManager connections)
         var redis = await ConnectAsync(connection, cancellationToken);
         var db = redis.GetDatabase(connection.DatabaseNumber.Value);
         var info = await db.StreamInfoAsync(key);
-        var entries = await db.StreamRangeAsync(key, count: 100, messageOrder: Order.Descending);
+        var entries = await db.StreamRangeAsync(key, maxId: info.LastGeneratedId, count: 100, messageOrder: Order.Descending);
         return new { length = info.Length, groups = (await db.StreamGroupInfoAsync(key)).Length, lastGeneratedId = info.LastGeneratedId.ToString(), entries = entries.Select(ToEntry) };
     }
 

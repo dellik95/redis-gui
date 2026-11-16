@@ -507,6 +507,26 @@ public class RedisConnectionManagerTests
 		ReferenceEquals(result1.Value, result2.Value).Should().BeFalse();
 	}
 
+	[Test]
+	public async Task ConfigurationChange_ReplacesPinnedConnectionWithoutClosingItUntilReleased()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+		var factory = new TestRedisConnectionFactory();
+		using var manager = CreateManager(factory, options => options.DrainTimeout = TimeSpan.Zero);
+		var first = await manager.GetConnection("pinned-change", configuration!);
+		first.IsSuccess.Should().BeTrue();
+		var lease = manager.PinConnection(first.Value);
+		lease.Should().NotBeNull();
+		var second = await manager.GetConnection("pinned-change", configuration + ",name=replacement");
+		second.IsSuccess.Should().BeTrue();
+		second.Value.Should().NotBeSameAs(first.Value);
+		await first.Value.GetDatabase().PingAsync();
+		lease!.Dispose();
+		await Task.Delay(250);
+		await Assert.ThrowsAsync<ObjectDisposedException>(async () => await first.Value.GetDatabase().PingAsync());
+	}
+
 	// 16. Fallback hostname працює лише у дозволених сценаріях.
 	[Test]
 	public async Task FallbackHostname_WorksOnlyWhenExplicitlyAllowed()
