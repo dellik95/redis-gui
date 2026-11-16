@@ -66,6 +66,7 @@ public static class DependencyInjection
 		services.AddSingleton<IRedisTypeHandlerFactory, RedisTypeHandlerFactory>();
 		services.AddScoped<IRedisConnectionService, RedisConnectionService>();
 		services.AddScoped<IRedisKeyService, RedisKeyService>();
+		services.AddScoped<IConnectionAccessService, Authorization.ConnectionAccessService>();
 		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
 		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
 		services.AddScoped<IRedisCliService, RedisCliService>();
