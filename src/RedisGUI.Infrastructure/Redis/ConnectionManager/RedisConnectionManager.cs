@@ -430,13 +430,17 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 	private void EvictAndRetire(ConnectionEntry entry, string reason)
 	{
-		if (connections.TryRemove(new KeyValuePair<string, ConnectionEntry>(entry.Key, entry)))
+		lock (entry)
 		{
-			entry.IsRetired = true;
-			entry.State = RedisConnectionState.Disposing;
-			Interlocked.Increment(ref evictionCount);
-			logger.LogInformation("Redis connection evicted for server {ServerKey}. Reason: {Reason}", entry.SanitizedKey, reason);
-			_ = RetireAndDisposeEntryAsync(entry);
+			if (entry.ActiveOperations > 0) return;
+			if (connections.TryRemove(new KeyValuePair<string, ConnectionEntry>(entry.Key, entry)))
+			{
+				entry.IsRetired = true;
+				entry.State = RedisConnectionState.Disposing;
+				Interlocked.Increment(ref evictionCount);
+				logger.LogInformation("Redis connection evicted for server {ServerKey}. Reason: {Reason}", entry.SanitizedKey, reason);
+				_ = RetireAndDisposeEntryAsync(entry);
+			}
 		}
 	}
 
@@ -473,6 +477,19 @@ public class RedisConnectionManager : IRedisConnectionManager
 		{
 			return 0;
 		}
+	}
+
+	/// <inheritdoc />
+	public IDisposable? PinConnection(ConnectionMultiplexer multiplexer)
+	{
+		foreach (ConnectionEntry entry in connections.Values)
+		{
+			lock (entry)
+			{
+				if (!entry.IsRetired && ReferenceEquals(entry.Multiplexer, multiplexer)) return entry.TrackOperation();
+			}
+		}
+		return null;
 	}
 
 	/// <summary>

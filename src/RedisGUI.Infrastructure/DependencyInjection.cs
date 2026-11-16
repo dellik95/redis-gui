@@ -71,6 +71,9 @@ public static class DependencyInjection
 		services.AddScoped<IRedisCliService, RedisCliService>();
 		services.AddScoped<IRedisDiagnosticsService, RedisDiagnosticsService>();
 		services.AddScoped<IRedisValueService, RedisValueService>();
+		services.AddScoped<RedisMessagingService>();
+		services.AddScoped<RedisMessagingMetricsCollector>();
+		services.AddSingleton<RedisGUI.Infrastructure.SignalR.Hubs.MessagingSubscriptions>();
 
 		AddAuthentication(services, configuration);
 
@@ -140,6 +143,15 @@ public static class DependencyInjection
 		})
 		.AddJwtBearer(options =>
 		{
+			options.Events = new JwtBearerEvents
+			{
+				OnMessageReceived = context =>
+				{
+					if (context.Request.Path.StartsWithSegments("/hub/messaging"))
+						context.Token = context.Request.Query["access_token"];
+					return Task.CompletedTask;
+				}
+			};
 			options.TokenValidationParameters = new TokenValidationParameters
 			{
 				ValidateIssuer = true,

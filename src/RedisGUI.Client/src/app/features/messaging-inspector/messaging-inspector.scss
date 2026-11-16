@@ -1,0 +1,15 @@
+.inspector { padding: 24px; }
+.tabs, .controls { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; }
+.tabs .active { border-color: var(--color-brand, #8b5cf6); }
+.panel, .notice { border: 1px solid color-mix(in srgb, currentColor 15%, transparent); border-radius: 12px; padding: 18px; }
+h2 { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+p { opacity: .7; margin: 8px 0 14px; font-size: 13px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+input:not([type=checkbox]), textarea { background: transparent; color: inherit; border: 1px solid color-mix(in srgb, currentColor 25%, transparent); border-radius: 6px; padding: 9px; min-width: 260px; }
+textarea { width: 100%; margin-bottom: 12px; }
+.check { flex-direction: row; align-items: center; padding-bottom: 10px; }
+article { border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent); padding: 12px 0; }
+small { opacity: .6; margin-left: 8px; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; margin: 8px 0 0; }
+.status { font-size: 13px; }
+.error { color: #e05252; }

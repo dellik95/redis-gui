@@ -73,3 +73,8 @@ The system uses the **Strategy Pattern** across both backend and frontend layers
 - Generates up to 10,000 keys across 6 data types in seconds.
 - Features pluggable naming strategies (`Simple`, `Hierarchical`, `UUID`).
 - Supports configurable payloads: plain text, complex JSON documents, numeric counters, and event streams.
+
+
+## Messaging Inspector
+
+Monitor literal and pattern pub/sub subscriptions, publish to channels, and inspect recent and live stream entries. SignalR delivers updates; pub/sub is ephemeral, while Redis streams persist entries. Publishing respects read-only roles and Safe Mode.

@@ -332,3 +332,10 @@ RedisGUI features a design system supporting dark and light themes:
 
 * **Color Palettes**: Slate Dark, Obsidian Purple, Midnight Emerald, Nordic Cyan, and Clean Light.
 * **Theme Toggle**: Instantly switch between dark and light modes via the sun/moon icon in the navigation bar.
+
+
+## Messaging Inspector
+
+Connect to a Redis instance and select **Messaging Inspector** in the sidebar. In **Pub/Sub**, enter a channel or pattern and start monitoring. Pattern subscriptions use Redis glob syntax; publishing always treats the channel as a literal name. Messages sent before monitoring begins or while disconnected are not retained by pub/sub. The display keeps the most recent 200 messages. Channel info reports direct subscribers for the literal channel and the server-wide pattern subscription count on the selected Redis server; pattern subscribers are not included in the direct count. Publishing is unavailable for read-only users and connections in Safe Mode.
+
+In **Streams**, enter an existing stream key and select **Inspect and monitor**. The inspector loads its length, consumer-group count, last generated ID and up to 100 recent entries, then displays new entries as they arrive. It retains up to 200 displayed entries. Stream monitoring reads the connection’s configured Redis database and resumes from the last received ID after a SignalR reconnect. Select Stop to end monitoring.

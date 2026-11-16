@@ -23,6 +23,9 @@ public interface IRedisConnectionManager : IDisposable, IAsyncDisposable
 		string configuration,
 		CancellationToken cancellationToken = default);
 
+	/// <summary>Pin a cached multiplexer against idle and capacity eviction until disposed.</summary>
+	IDisposable? PinConnection(ConnectionMultiplexer multiplexer);
+
 	/// <summary>
 	/// Explicitly invalidates and safely retires the connection associated with the specified server key.
 	/// </summary>

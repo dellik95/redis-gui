@@ -409,6 +409,27 @@ public class RedisConnectionManagerTests
 
 	// 13. Idle connections видаляються відповідно до налаштованої eviction policy.
 	[Test]
+	public async Task PinnedMultiplexer_IsNotEvictedUntilLeaseIsReleased()
+	{
+		var factory = new TestRedisConnectionFactory();
+		using var manager = CreateManager(factory, options =>
+		{
+			options.IdleTimeout = TimeSpan.FromMilliseconds(20);
+			options.DrainTimeout = TimeSpan.FromMilliseconds(10);
+		});
+		var result = await manager.GetConnection("pin-test", "127.0.0.1:6394,abortConnect=false");
+		result.IsSuccess.Should().BeTrue();
+		var lease = manager.PinConnection(result.Value);
+		lease.Should().NotBeNull();
+		await Task.Delay(60);
+		manager.RunEvictionCycle();
+		manager.GetStatistics().TotalCachedConnections.Should().Be(1);
+		lease!.Dispose();
+		manager.RunEvictionCycle();
+		manager.GetStatistics().TotalCachedConnections.Should().Be(0);
+	}
+
+	[Test]
 	public async Task IdleConnections_AreEvictedAccordingToPolicy()
 	{
 		var factory = new TestRedisConnectionFactory();
