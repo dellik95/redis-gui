@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using FluentValidation;
+using System.Linq;
 
 namespace RedisGUI.Application;
 
@@ -24,9 +26,12 @@ public static class DependencyInjection
 
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
-		// Register FluentValidation validators from assembly
-		// Note: AddValidatorsFromAssembly requires FluentValidation.DependencyInjectionExtensions package
-		// services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+		// Register concrete validators, including internal use-case validators.
+		foreach (var type in typeof(DependencyInjection).Assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false }))
+		{
+			foreach (var service in type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>)))
+				services.AddScoped(service, type);
+		}
 
 		// Register mediator with behaviors
 		services.AddApplicationMediator();

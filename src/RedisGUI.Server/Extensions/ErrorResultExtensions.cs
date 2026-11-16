@@ -13,6 +13,10 @@ public static class ErrorResultExtensions
 	/// </summary>
 	public static IResult ToProblemDetails(this Error error, HttpContext? httpContext = null)
 	{
+		if (error is ValidationFailureError validation)
+		{
+			return ValidationError(new Dictionary<string, string[]>(validation.Errors), httpContext);
+		}
 		int status = GetStatusCode(error);
 		return Results.Problem(
 			statusCode: status,
@@ -41,5 +45,11 @@ public static class ErrorResultExtensions
 	/// <summary>Creates a validation problem with field-level errors.</summary>
 	public static IResult ValidationError(Dictionary<string, string[]> errors, HttpContext? httpContext = null) =>
 		Results.ValidationProblem(errors, instance: httpContext?.Request.Path,
-			extensions: new Dictionary<string, object?> { ["code"] = "Validation.Failed", ["message"] = "One or more validation errors occurred" });
+			extensions: new Dictionary<string, object?>
+			{
+				["code"] = "Validation.Failed",
+				["message"] = "One or more validation errors occurred.",
+				["statusCode"] = StatusCodes.Status400BadRequest,
+				["timestamp"] = System.DateTime.UtcNow
+			});
 }

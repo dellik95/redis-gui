@@ -160,8 +160,16 @@ export class LoadTestDialogComponent {
       .stopLoadTest(this.data.connectionId, this.activeTestId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          // Progress stream will receive completed event and end gracefully
+        next: response => {
+          this.isStopping.set(false);
+          if (response.success) {
+            this.abortController?.abort();
+            this.abortController = null;
+            this.activeTestId = null;
+            this.isRunning.set(false);
+          } else {
+            this.errorMessage.set(response.message);
+          }
         },
         error: () => {
           this.isStopping.set(false);

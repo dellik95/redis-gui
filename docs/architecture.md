@@ -6,11 +6,11 @@
 
 Application `Error` results are mapped centrally to HTTP Problem Details by the server's `ToHttpResult` and `MatchHttp` helpers. Known not-found, authorization, and conflict codes map to 404, 401/403, and 409 respectively; unmapped codes default to 400. Responses use `application/problem+json` and include the error code and message as extensions for existing clients. Exceptions use the same status mapping, while unexpected exceptions return a generic 500 response outside development. Streaming responses use their own event protocol once the response has started.
 
-**RedisGUI** is an enterprise-grade, high-performance Redis management studio and diagnostics platform built on modern **.NET 10** and **Angular 22**.
+**RedisGUI** is an enterprise-grade, high-performance Redis management studio and diagnostics platform built on modern **.NET 11** and **Angular 22**.
 
 The solution strictly adheres to the following engineering paradigms:
 - **Clean Architecture & Onion Architecture**: Absolute separation of concerns where business rules (Domain) have zero dependencies on external frameworks or databases.
-- **CQRS (Command Query Responsibility Segregation)**: Read operations and write operations are modeled as distinct queries and commands via MediatR.
+- **CQRS (Command Query Responsibility Segregation)**: Read operations and write operations are modeled as distinct queries and commands through the in-process mediator.
 - **Strict Strong Typing & Enum Consistency**: Zero magic strings or loose integer constants. Data structures, Redis types, and role models are mapped to strongly-typed enums synchronized between backend and frontend contracts.
 - **Pure Dependency Injection (Inversion of Control)**: All strategies, factories, and type handlers are registered in the DI container and injected automatically without manual `new` instantiation.
 - **Reactive State & Streaming**: Angular Signals for reactive UI state management and WebSockets via ASP.NET Core SignalR for real-time live metrics and key space monitoring.
@@ -31,9 +31,9 @@ flowchart TD
         SignalStore --> SignalRClient
     end
 
-    subgraph API ["ASP.NET Core 10 Server"]
+    subgraph API ["ASP.NET Core 11 Server"]
         Endpoints["Minimal API Endpoints\n(/api/v1/storage, /connections, /audit)"]
-        Pipeline["MediatR Pipeline Behaviors\n(Logging, Validation, Auditing)"]
+        Pipeline["Mediator Pipeline Behaviors\n(Logging, Validation, Auditing)"]
         Hubs["SignalR Hubs\n(/hub/metrics, /hub/keys)"]
         Endpoints --> Pipeline
     end
@@ -79,7 +79,7 @@ The project is structured into clean layers according to Robert C. Martin's Clea
 | Project | Role & Responsibilities | Dependencies |
 | :--- | :--- | :--- |
 | **`RedisGUI.Domain`** | Enterprise domain models (`RedisConnection`, `User`, `AuditLog`), enums (`RedisDataType`, `UserRole`), abstractions and domain exceptions. | None (pure .NET standard) |
-| **`RedisGUI.Shared`** | Cross-cutting primitives: `Result<T>`, `Error`, custom MediatR pipeline contracts (`ICommand`, `IQuery`, `ICommandHandler`), JSON options. | None |
+| **`RedisGUI.Shared`** | Cross-cutting primitives: `Result<T>`, `Error`, in-process mediator pipeline contracts (`ICommand`, `IQuery`, `ICommandHandler`), JSON options. | None |
 | **`RedisGUI.Application`** | CQRS command & query handlers, FluentValidation rules, pipeline behaviors (`AuditingBehavior`, `ValidationBehavior`, `LoggingBehavior`). | `RedisGUI.Domain`, `RedisGUI.Shared` |
 | **`RedisGUI.Infrastructure`** | StackExchange.Redis integration, `IRedisConnectionManager`, type handler strategies, diagnostics, background telemetry jobs, EF Core persistence. | `RedisGUI.Application`, StackExchange.Redis, EF Core |
 | **`RedisGUI.Server`** | ASP.NET Core 10 Host, RESTful Minimal APIs, SignalR Hubs (`RedisMetricsHub`), JWT middleware, rate limiting, OpenAPI/Swagger. | `RedisGUI.Infrastructure` |
@@ -166,17 +166,17 @@ sequenceDiagram
     autonumber
     actor User as Angular Client
     participant API as AddRedisValueEndpoint (POST /keys)
-    participant MediatR as MediatR Pipeline (Audit & Validation)
+    participant Mediator as Mediator Pipeline (Audit & Validation)
     participant CmdHandler as AddRedisValueCommandHandler
     participant Factory as RedisTypeHandlerFactory
     participant Handler as StringTypeHandler / HashTypeHandler
     participant Redis as Redis Instance
 
     User->>API: POST /keys { key, type: "String", value: { value: "..." }, ttl: -1 }
-    API->>MediatR: Send(AddRedisValueCommand)
-    MediatR->>MediatR: Execute FluentValidation
-    MediatR->>MediatR: Record Audit Log Entry
-    MediatR->>CmdHandler: Handle(AddRedisValueCommand)
+    API->>Mediator: Send(AddRedisValueCommand)
+    Mediator->>Mediator: Execute FluentValidation
+    Mediator->>Mediator: Record Audit Log Entry
+    Mediator->>CmdHandler: Handle(AddRedisValueCommand)
     CmdHandler->>Factory: GetHandler(RedisType.String)
     Factory-->>CmdHandler: StringTypeHandler instance
     CmdHandler->>Handler: WriteAsync(db, key, value, ttl)
@@ -198,9 +198,9 @@ sequenceDiagram
 1. **JWT Bearer Authentication**: Short-lived access tokens with cryptographic signatures and automatic silent refresh cycles.
 2. **Role-Based Access Control (RBAC)**:
    - `Admin`: Full permissions (Connection configuration, Slowlog, Load testing, Data seeding, CLI).
-   - `Standard`: Read/Write access to keys and metrics.
-   - `ReadOnly`: Enforced safe mode; write, delete, and mutation commands are rejected at the MediatR command pipeline level.
+   - `User`: Read/write access where the endpoint policy permits it.
+   - `ReadOnly`: Write-protected endpoints require a role with write access.
 3. **Safe Mode Enforcement**:
-   - Connections can be toggled to "Read-Only" mode. Any `ICommand` executing write or delete commands against a read-only connection is intercepted and aborted before reaching Redis.
+   - Connections can be toggled to read-only mode. Individual write handlers and services must enforce the connection setting.
 4. **Audit Logging Pipeline**:
-   - All mutations, CLI commands, bulk operations, and seed runs are automatically logged to the audit repository with timestamp, user ID, IP address, connection ID, and operation status.
+   - Successful commands marked with `AuditableAttribute` are recorded by the auditing behavior.

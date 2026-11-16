@@ -121,14 +121,14 @@ RedisGUI follows **Clean Architecture** and **CQRS**:
 ```mermaid
 flowchart LR
     Client["Angular 22 (Signals)"] <-->|REST & SignalR| Server["ASP.NET Core 10 Minimal APIs"]
-    Server --> MediatR["MediatR CQRS Pipeline"]
-    MediatR --> App["Application Core"]
+    Server --> Mediator["In-process CQRS pipeline"]
+    Mediator --> App["Application Core"]
     App --> Domain["Domain (Pure Models & Contracts)"]
     App --> Infra["Infrastructure (StackExchange.Redis, EF Core)"]
     Infra <--> Redis[("Redis 7.x / 8.x")]
 ```
 
-- **Backend**: .NET 11, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
+- **Backend**: .NET 11, ASP.NET Core Minimal APIs, an in-process mediator, FluentValidation, StackExchange.Redis, Entity Framework Core.
 - **Frontend**: Angular 22 (Standalone Components, Signals, Signal Forms), Angular Material 22, Tailwind CSS, Monaco Editor.
 - **Architecture Highlights**:
   - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`) synced between client and server.

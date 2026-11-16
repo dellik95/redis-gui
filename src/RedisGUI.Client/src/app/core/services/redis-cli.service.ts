@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { TokenStorageService } from './auth/token-storage.service';
 
 export interface CliExecutionResponse {
   output: string;
@@ -81,6 +82,7 @@ export interface SeedDataResult {
 })
 export class RedisCliService {
   private readonly http = inject(HttpClient);
+  private readonly tokenStorage = inject(TokenStorageService);
   private readonly baseUrl = '/api/v1/storage';
 
   /**
@@ -134,9 +136,15 @@ export class RedisCliService {
     const controller = new AbortController();
     const url = `${this.baseUrl}/${connectionId}/load-test/stream?testId=${encodeURIComponent(testId)}`;
 
+    const token = this.tokenStorage.token();
     fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && !this.tokenStorage.isTokenExpired()
+          ? { Authorization: `Bearer ${token}` }
+          : {})
+      },
       body: JSON.stringify(request),
       signal: controller.signal
     })
@@ -216,10 +224,10 @@ export class RedisCliService {
   stopLoadTest(
     connectionId: string,
     testId: string
-  ): Observable<{ message: string; stopped: boolean }> {
-    return this.http.post<{ message: string; stopped: boolean }>(
-      `${this.baseUrl}/${connectionId}/load-test/stop?testId=${encodeURIComponent(testId)}`,
-      {}
+  ): Observable<{ message: string; success: boolean }> {
+    return this.http.post<{ message: string; success: boolean }>(
+      `${this.baseUrl}/${connectionId}/load-test/stop`,
+      { testId }
     );
   }
 

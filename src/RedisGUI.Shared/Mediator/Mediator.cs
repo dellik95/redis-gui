@@ -1,5 +1,7 @@
 #nullable enable
 using RedisGUI.Shared.Primitives;
+using System.Collections.Concurrent;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -7,6 +9,8 @@ namespace RedisGUI.Shared.Mediator
 {
 	public class Mediator : IMediator
 	{
+		private static readonly MethodInfo concreteExecutionMethod = typeof(Mediator).GetMethod(nameof(ExecuteConcrete), BindingFlags.Instance | BindingFlags.NonPublic)!;
+		private static readonly ConcurrentDictionary<(Type Request, Type Result), MethodInfo> concreteMethods = new();
 		private readonly HandlerRegistry handlerRegistry;
 		private readonly PipelineRegistry pipelineRegistry;
 		private readonly NotificationRegistry notificationRegistry;
@@ -49,12 +53,10 @@ namespace RedisGUI.Shared.Mediator
 				return FailureResult<TWrapped>("Handler factory produced null for " + request.GetType().Name, "Handler.Null");
 			}
 
-			var behaviors = pipelineRegistry.GetBehaviors<TRequest, TWrapped>().Reverse().ToList();
-			Func<Task<TWrapped>> handlerDelegate = async () =>
-			{
-				var result = await descriptor.Invoker(handlerInstance, request!, cancellationToken);
-				return (TWrapped)result;
-			};
+			var behaviors = pipelineRegistry.GetBehaviors<TRequest, TWrapped>(includeOpen: false).Reverse().ToList();
+			var method = concreteMethods.GetOrAdd((request.GetType(), typeof(TWrapped)),
+				static key => concreteExecutionMethod.MakeGenericMethod(key.Request, key.Result));
+			Func<Task<TWrapped>> handlerDelegate = () => (Task<TWrapped>)method.Invoke(this, [request, handlerInstance, descriptor, cancellationToken])!;
 
 			foreach (var behavior in behaviors)
 			{
@@ -66,15 +68,39 @@ namespace RedisGUI.Shared.Mediator
 			{
 				return await handlerDelegate();
 			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{
+				throw;
+			}
+			catch (Exception ex) when (ex is IResultErrorException)
+			{
+				return FailureResult<TWrapped>(((IResultErrorException)ex).Error);
+			}
 			catch (Exception ex)
 			{
 				return FailureResult<TWrapped>(ex.Message, "Handler.Exception");
 			}
 		}
 
+		private Task<TWrapped> ExecuteConcrete<TRequest, TWrapped>(TRequest request, object handlerInstance,
+			HandlerDescriptor descriptor, CancellationToken cancellationToken) where TRequest : IRequest<TWrapped>
+		{
+			Func<Task<TWrapped>> next = async () => (TWrapped)await descriptor.Invoker(handlerInstance, request!, cancellationToken);
+			foreach (var behavior in pipelineRegistry.GetBehaviors<TRequest, TWrapped>().Reverse())
+			{
+				var inner = next;
+				next = () => behavior.Handle(request, cancellationToken, inner);
+			}
+			return next();
+		}
+
 		private static TWrapped FailureResult<TWrapped>(string message, string code)
 		{
-			var error = new Error(code, message);
+			return FailureResult<TWrapped>(new Error(code, message));
+		}
+
+		private static TWrapped FailureResult<TWrapped>(Error error)
+		{
 			if (typeof(TWrapped) == typeof(Result))
 			{
 				return (TWrapped)(object)Result.Failure(error);

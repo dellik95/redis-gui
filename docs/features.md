@@ -19,7 +19,7 @@ RedisGUI is engineered as a modern, production-ready GUI client for Redis 7.x an
 | **Slowlog Diagnostics** | Inspects commands exceeding the execution threshold | `IRedisDiagnosticsService`, `SLOWLOG GET` parser | Sortable modal dialog with microsecond execution durations |
 | **Safe Mode (Read-Only)** | Protects production databases from accidental writes or deletes | Connection metadata `IsReadOnly`, command pipeline filter | Safety banner in header, disables mutation actions |
 | **Multi-Database Support** | Seamless switching across DB 0 through DB 15 | `IDatabase` parameter routing per command/query | Database dropdown selector in top navigation bar |
-| **Audit Logging** | Complete audit trail for compliance and tracking | MediatR `AuditingBehavior`, EF Core persistence | Audit logs table with search, filters, and JSON payload inspector |
+| **Audit Logging** | Complete audit trail for compliance and tracking | Mediator `AuditingBehavior`, EF Core persistence | Audit logs table with search, filters, and JSON payload inspector |
 | **Theme & Appearance** | 5 color schemes, Dark & Light modes, responsive layout | User preference persistence | Angular Material CSS variables, Tailwind theme engine |
 
 ---

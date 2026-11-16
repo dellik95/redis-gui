@@ -194,13 +194,15 @@ namespace RedisGUI.Shared.Mediator
 			openBehaviors.Add(new OpenPipelineRegistration(behaviorType, factory));
 		}
 
-		public IEnumerable<IPipelineBehavior<TRequest, TResult>> GetBehaviors<TRequest, TResult>()
+		public IEnumerable<IPipelineBehavior<TRequest, TResult>> GetBehaviors<TRequest, TResult>(bool includeOpen = true)
 			where TRequest : IRequest<TResult>
 		{
 			var interfaceType = typeof(IPipelineBehavior<TRequest, TResult>);
 			var resolved = behaviors
 				.Where(b => b.InterfaceType == interfaceType)
 				.Select(b => (IPipelineBehavior<TRequest, TResult>)b.Factory());
+
+			if (!includeOpen) return resolved;
 
 			var openResolved = openBehaviors
 				.Select(InstantiateOpenBehavior<TRequest, TResult>)

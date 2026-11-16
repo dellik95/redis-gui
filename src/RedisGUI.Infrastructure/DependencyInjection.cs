@@ -74,6 +74,7 @@ public static class DependencyInjection
 		services.AddScoped<IRedisValueService, RedisValueService>();
 		services.AddSingleton<RedisMessagingService>();
 		services.AddSingleton<RedisMessagingMetricsCollector>();
+		services.AddScoped<IRedisMessagingOperations, RedisMessagingOperations>();
 		services.AddSingleton<RedisGUI.Infrastructure.SignalR.Hubs.MessagingSubscriptions>();
 
 		AddAuthentication(services, configuration);

@@ -45,7 +45,7 @@ import { filter } from 'rxjs/operators';
 
 import { StorageManagementStore } from '../../stores/storage-management.store';
 import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
-import { RedisOperationsStore } from '../../../../core/stores/redis-operations.store';
+import { RedisOperationsStore } from '../../stores/redis-operations.store';
 import {
   RedisDataType,
   RedisKeyInfo,

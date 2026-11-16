@@ -49,8 +49,12 @@ public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TReques
 
 		var context = new ValidationContext<TRequest>(request);
 
-		var validationErrors = validators
-			.Select(x => x.Validate(context))
+		var validationResults = new List<FluentValidation.Results.ValidationResult>();
+		foreach (var validator in validators)
+		{
+			validationResults.Add(await validator.ValidateAsync(context, cancellationToken));
+		}
+		var validationErrors = validationResults
 			.Where(x => x.Errors.Count != 0)
 			.SelectMany(x => x.Errors)
 			.Select(x => new ValidationError(x.PropertyName, x.ErrorMessage))

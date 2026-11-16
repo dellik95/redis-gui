@@ -4,7 +4,6 @@ export * from './breadcrumb.store';
 export * from './connections.store';
 export * from './loading.store';
 export * from './redis-keys.store';
-export * from './redis-operations.store';
 export * from './section-actions.store';
 export * from './server-info.store';
 export * from './side-nav.store';

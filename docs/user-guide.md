@@ -40,7 +40,7 @@ This comprehensive guide walks you through getting started with **RedisGUI**, co
 
 ### Prerequisites
 Before running RedisGUI locally, ensure your machine has the following tools installed:
-* **.NET 10 SDK** (or later) — [Download .NET](https://dotnet.microsoft.com/download)
+* **.NET 11 SDK** (or later) — [Download .NET](https://dotnet.microsoft.com/download)
 * **Node.js 20+ & npm 10+** — [Download Node.js](https://nodejs.org)
 * **Docker & Docker Compose** (optional, recommended for quick start) — [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 * **Redis Server 7.x or 8.x** running locally on port 6379 or accessible over the network.

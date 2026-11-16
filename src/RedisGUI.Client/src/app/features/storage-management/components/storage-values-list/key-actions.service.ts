@@ -7,7 +7,7 @@ import { DestroyRef } from '@angular/core';
 
 import { ConfirmDialogComponent, PromptDialogComponent } from '../../../../shared/components';
 import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
-import { RedisOperationsStore } from '../../../../core/stores/redis-operations.store';
+import { RedisOperationsStore } from '../../stores/redis-operations.store';
 import { ValueEditorOutput } from '../storage-value-editor/storage-value-editor.component';
 
 /**

@@ -23,7 +23,7 @@ flowchart TD
     end
 
     subgraph AppLayer ["Business Logic Layer (Application)"]
-        MediatR["MediatR Pipeline"]
+        Mediator["Mediator Pipeline"]
         Behaviors["Pipeline Behaviors (Audit, Validation, Logging)"]
         Commands["Commands / Queries (CQRS)"]
         Validators["FluentValidation Rules"]
@@ -50,8 +50,8 @@ flowchart TD
     AngularApp <-->|RESTful JSON| Middlewares
     AngularApp <-->|WebSockets| SignalRHubs
     Middlewares --> ServerAPI
-    ServerAPI --> MediatR
-    MediatR --> Behaviors
+    ServerAPI --> Mediator
+    Mediator --> Behaviors
     Behaviors --> Validators
     Behaviors --> Commands
     Commands --> DomainContracts
@@ -116,14 +116,14 @@ erDiagram
 
 ---
 
-## 3. Sequence Diagram: CQRS MediatR Pipeline Execution
+## 3. Sequence Diagram: CQRS Mediator Pipeline Execution
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Client as Angular SPA
     participant Endpoint as Minimal API Endpoint
-    participant MediatR as IMediator
+    participant Mediator as IMediator
     participant LogPipe as LoggingBehavior
     participant ValPipe as ValidationBehavior
     participant AuditPipe as AuditingBehavior
@@ -131,9 +131,9 @@ sequenceDiagram
     participant Service as Domain / Infra Service
 
     Client->>Endpoint: HTTP POST /api/v1/storage/{id}/keys
-    Endpoint->>MediatR: Send(AddRedisValueCommand)
+    Endpoint->>Mediator: Send(AddRedisValueCommand)
     
-    MediatR->>LogPipe: Handle(request, next)
+    Mediator->>LogPipe: Handle(request, next)
     LogPipe->>LogPipe: Log execution start with correlation ID
 
     LogPipe->>ValPipe: next()
