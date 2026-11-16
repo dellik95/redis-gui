@@ -1,0 +1,40 @@
+<div class="inspector flex flex-col gap-4 h-full overflow-y-auto box-border">
+  <app-page-header icon="forum" title="Messaging Inspector" subtitle="Observe Redis pub/sub and stream messages in real time">
+    <div actions><span class="status" aria-live="polite">{{ status() }}</span></div>
+  </app-page-header>
+  <div class="tabs" role="group" aria-label="Message type">
+    <button class="btn-secondary" [class.active]="mode() === 'channel'" (click)="stop(); mode.set('channel')">Pub/Sub</button>
+    <button class="btn-secondary" [class.active]="mode() === 'stream'" (click)="stop(); mode.set('stream')">Streams</button>
+  </div>
+  @if (error()) { <div class="notice error" role="alert">{{ error() }}</div> }
+  @if (result()) { <div class="notice" role="status">{{ result() }}</div> }
+  @if (mode() === 'channel') {
+    <section class="panel">
+      <h2>Subscribe to messages</h2>
+      <p>Pub/sub messages are transient. Only messages received while monitoring are shown.</p>
+      <div class="controls"><label>Channel or pattern <input [(ngModel)]="channel" placeholder="orders.created" /></label>
+        <label class="check"><input type="checkbox" [(ngModel)]="pattern" /> Pattern subscription</label>
+        <button class="btn-primary" (click)="start()">Start monitoring</button><button class="btn-secondary" (click)="stop()">Stop</button><button class="btn-secondary" (click)="refreshChannelInfo()">Channel info</button></div>
+      @if (channelInfo(); as info) { <p>Direct subscribers: {{ info.subscribers }} - Server pattern subscriptions: {{ info.patterns }}</p> }
+    </section>
+    <section class="panel"><h2>Publish a message</h2><p>Publishes to the channel above as a literal channel name.</p>
+      <label>Message <textarea [(ngModel)]="payload" rows="3" placeholder="Message payload"></textarea></label>
+      <button class="btn-primary" (click)="publish()" [disabled]="!canPublish()">Publish</button>
+      @if (!canPublish()) { <p>Publishing is disabled for read-only connections and users.</p> }
+    </section>
+    <section class="panel"><h2>Received messages ({{ messages().length }})</h2>
+      @for (message of messages(); track $index) { <article><strong>{{ message.channel }}</strong> <small>{{ message.receivedAt | date:'medium' }}</small><pre>{{ message.payload }}</pre></article> }
+      @empty { <p>No messages received yet.</p> }
+    </section>
+  } @else {
+    <section class="panel"><h2>Stream monitor</h2><p>Loads the latest 100 entries, then watches for new entries. The list retains up to 200 entries.</p>
+      <div class="controls"><label>Stream key <input [(ngModel)]="streamKey" placeholder="orders:events" /></label>
+        <button class="btn-primary" (click)="start()">Inspect and monitor</button><button class="btn-secondary" (click)="stop()">Stop</button></div>
+      @if (snapshot(); as info) { <p>Length: {{ info.length }} - Consumer groups: {{ info.groups }} - Last generated ID: {{ info.lastGeneratedId }}</p> }
+    </section>
+    <section class="panel"><h2>Stream entries ({{ entries().length }})</h2>
+      @for (entry of entries(); track entry.id) { <article><strong>{{ entry.id }}</strong><pre>{{ entry.fields | json }}</pre></article> }
+      @empty { <p>No entries loaded yet.</p> }
+    </section>
+  }
+</div>

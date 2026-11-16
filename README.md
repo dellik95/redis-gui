@@ -29,6 +29,11 @@ Full visual inspection and editing across all native Redis types using the **Str
 - **Sets & Sorted Sets**: Set member management and score-based ranking.
 - **Streams**: Append-only log inspector with entry IDs, field-value maps, and dual Visual/JSON modes.
 
+### Messaging Inspector
+- Subscribe to literal pub/sub channels or patterns and publish messages. Pub/sub messages are transient and only appear while monitoring.
+- Inspect stream length, consumer-group count, last generated ID, and recent entries; new entries arrive over SignalR.
+- Publishing respects user write access and connection Safe Mode.
+
 ### ⚡ Real-Time Live Telemetry
 - Sub-second live metrics streamed over **SignalR WebSockets**: Ops/sec, Memory RSS, CPU usage, and network bandwidth.
 - Live status pills in the Storage Manager header with pulsing indicators.

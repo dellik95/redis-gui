@@ -101,6 +101,12 @@ export const SideNavStore = signalStore(
           title: connectionName,
           description: 'Storage management',
           badge: 'active'
+        },
+        {
+          href: `/messaging/${connectionId}`,
+          icon: 'forum',
+          title: 'Messaging Inspector',
+          description: 'Pub/sub and streams'
         }
       ];
 

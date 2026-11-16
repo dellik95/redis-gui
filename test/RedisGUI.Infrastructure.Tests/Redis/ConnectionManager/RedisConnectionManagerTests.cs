@@ -409,6 +409,27 @@ public class RedisConnectionManagerTests
 
 	// 13. Idle connections видаляються відповідно до налаштованої eviction policy.
 	[Test]
+	public async Task PinnedMultiplexer_IsNotEvictedUntilLeaseIsReleased()
+	{
+		var factory = new TestRedisConnectionFactory();
+		using var manager = CreateManager(factory, options =>
+		{
+			options.IdleTimeout = TimeSpan.FromMilliseconds(20);
+			options.DrainTimeout = TimeSpan.FromMilliseconds(10);
+		});
+		var result = await manager.GetConnection("pin-test", "127.0.0.1:6394,abortConnect=false");
+		result.IsSuccess.Should().BeTrue();
+		var lease = manager.PinConnection(result.Value);
+		lease.Should().NotBeNull();
+		await Task.Delay(60);
+		manager.RunEvictionCycle();
+		manager.GetStatistics().TotalCachedConnections.Should().Be(1);
+		lease!.Dispose();
+		manager.RunEvictionCycle();
+		manager.GetStatistics().TotalCachedConnections.Should().Be(0);
+	}
+
+	[Test]
 	public async Task IdleConnections_AreEvictedAccordingToPolicy()
 	{
 		var factory = new TestRedisConnectionFactory();
@@ -484,6 +505,26 @@ public class RedisConnectionManagerTests
 		// A new multiplexer must have been created to replace the old one
 		factory.CreationCount.Should().Be(2);
 		ReferenceEquals(result1.Value, result2.Value).Should().BeFalse();
+	}
+
+	[Test]
+	public async Task ConfigurationChange_ReplacesPinnedConnectionWithoutClosingItUntilReleased()
+	{
+		var configuration = Environment.GetEnvironmentVariable("REDISGUI_TEST_REDIS");
+		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
+		var factory = new TestRedisConnectionFactory();
+		using var manager = CreateManager(factory, options => options.DrainTimeout = TimeSpan.Zero);
+		var first = await manager.GetConnection("pinned-change", configuration!);
+		first.IsSuccess.Should().BeTrue();
+		var lease = manager.PinConnection(first.Value);
+		lease.Should().NotBeNull();
+		var second = await manager.GetConnection("pinned-change", configuration + ",name=replacement");
+		second.IsSuccess.Should().BeTrue();
+		second.Value.Should().NotBeSameAs(first.Value);
+		await first.Value.GetDatabase().PingAsync();
+		lease!.Dispose();
+		await Task.Delay(250);
+		await Assert.ThrowsAsync<ObjectDisposedException>(async () => await first.Value.GetDatabase().PingAsync());
 	}
 
 	// 16. Fallback hostname працює лише у дозволених сценаріях.

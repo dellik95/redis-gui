@@ -135,6 +135,7 @@ public class Program
 		// SignalR hubs
 		app.MapHub<RedisMetricsHub>("/hub/metrics");
 		app.MapHub<KeyChangeHub>("/hub/keychange");
+		app.MapHub<MessagingHub>("/hub/messaging");
 
 		app.MapHealthChecks("/health");
 		app.MapHealthChecks("/health/ready");

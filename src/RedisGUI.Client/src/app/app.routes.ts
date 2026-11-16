@@ -53,6 +53,12 @@ export const routes: Routes = [
     }
   },
   {
+    path: 'messaging/:id',
+    loadComponent: () => import('./features/messaging-inspector/messaging-inspector').then(x => x.MessagingInspector),
+    canActivate: [authGuard],
+    data: { breadcrumb: 'Messaging Inspector' }
+  },
+  {
     path: 'health',
     loadComponent: () =>
       import('./features/health-monitoring/health-monitoring.component').then(
