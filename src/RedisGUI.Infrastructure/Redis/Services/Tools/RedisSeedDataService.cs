@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Redis;
+using RedisGUI.Domain.Errors;
 using RedisGUI.Infrastructure.Redis.Seeding;
 using StackExchange.Redis;
 using System.Linq;
@@ -17,8 +18,10 @@ public class RedisSeedDataService(
 	public async Task<Result<SeedDataResult>> SeedSampleDataAsync(
 		RedisConnection connection,
 		SeedSampleDataOptions? options = null,
-		CancellationToken cancellationToken = default)
+		CancellationToken cancellationToken = default,
+		Func<int, int, Task>? onProgress = null)
 	{
+		if (connection.IsReadOnly) return Result.Failure<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
@@ -51,11 +54,14 @@ public class RedisSeedDataService(
 
 		var rng = new Random();
 		int totalSeeded = 0;
+		bool cancelled = false;
+		string? failure = null;
 
 		var namingStrategy = KeyNamingStrategyFactory.GetStrategy(optionsActual.KeyComplexity);
 
 		for (int i = 0; i < totalKeys; i++)
 		{
+			if (cancellationToken.IsCancellationRequested) { cancelled = true; break; }
 			int dbIndex = targetDbs[i % targetDbs.Count];
 			var db = multiplexer.GetDatabase(dbIndex);
 			string type = enabledTypes[i % enabledTypes.Count];
@@ -70,10 +76,17 @@ public class RedisSeedDataService(
 			};
 
 			var seedStrategy = SeedDataStrategyFactory.GetStrategy(type);
-			await seedStrategy.SeedAsync(db, keyName, optionsActual.PayloadComplexity, i, ttl, rng);
+			try { await seedStrategy.SeedAsync(db, keyName, optionsActual.PayloadComplexity, i, ttl, rng); }
+			catch (Exception ex)
+			{
+				logger.LogWarning(ex, "Sample data seeding stopped after {Count} confirmed keys", totalSeeded);
+				failure = "Seeding stopped while writing a key. Some changes may be unconfirmed.";
+				break;
+			}
 
 			countsByType[type] = countsByType.GetValueOrDefault(type) + 1;
 			totalSeeded++;
+			if (onProgress is not null) await onProgress(totalSeeded, totalKeys);
 		}
 
 		var result = new SeedDataResult
@@ -81,10 +94,13 @@ public class RedisSeedDataService(
 			TotalKeysSeeded = totalSeeded,
 			CountByType = countsByType,
 			DatabasesAffected = targetDbs,
-			Message = $"Successfully seeded {totalSeeded} keys across DB {string.Join(", DB ", targetDbs)}"
+			Cancelled = cancelled,
+			MayHaveUnconfirmedChanges = failure is not null,
+			Error = failure,
+			Message = $"Seeded {totalSeeded} keys across DB {string.Join(", DB ", targetDbs)}"
 		};
 
-		logger.LogInformation("Successfully seeded demo data: {Count} keys across DBs: {Dbs}", totalSeeded, string.Join(", ", targetDbs));
+		logger.LogInformation("Seeded demo data: {Count} keys across DBs: {Dbs}", totalSeeded, string.Join(", ", targetDbs));
 		return Result.Success(result);
 	}
 
@@ -92,7 +108,7 @@ public class RedisSeedDataService(
 	{
 		if (options.RandomizeDatabases)
 		{
-			int count = Math.Clamp(options.RandomDatabasesCount, 1, 8);
+			int count = Math.Clamp(options.RandomDatabasesCount, 1, 16);
 			var rnd = new Random();
 			return Enumerable.Range(0, 16).OrderBy(_ => rnd.Next()).Take(count).OrderBy(x => x).ToList();
 		}

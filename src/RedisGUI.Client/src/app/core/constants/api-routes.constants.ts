@@ -69,7 +69,6 @@ export const API_ROUTES = {
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
     KEYSPACE: (connectionId: string) => `/api/v1/storage/${connectionId}/keyspace`,
     SLOWLOG: (id: string, count: number) => `/api/v1/storage/${id}/slowlog?count=${count}`,
-    SEED: (connectionId: string) => `/api/v1/storage/${connectionId}/seed`,
     RENAME_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/rename`,
     DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`,
     BULK_TTL: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/bulk-ttl`,

@@ -74,6 +74,9 @@ export interface SeedDataResult {
   targetDatabases: number[];
   keyCountPerType: Record<string, number>;
   summary: string;
+  cancelled: boolean;
+  mayHaveUnconfirmedChanges: boolean;
+  error: string | null;
 }
 
 @Injectable({
@@ -113,16 +116,4 @@ export class RedisCliService {
     );
   }
 
-  /**
-   * Seeds customizable sample data
-   */
-  seedSampleData(
-    connectionId: string,
-    options?: SeedSampleDataOptions
-  ): Observable<SeedDataResult> {
-    return this.http.post<SeedDataResult>(
-      `${this.baseUrl}/${connectionId}/seed-sample-data`,
-      options ?? {}
-    );
-  }
 }

@@ -10,7 +10,6 @@ import {
   GetRedisValueResponse,
   REDIS_TTL,
   toRedisDataType,
-  SeedRedisDataResponse,
   RedisKeyMutationResponse
 } from '../../models/redis-keys.types';
 import { API_ROUTES } from '../constants/api-routes.constants';
@@ -456,34 +455,6 @@ export const RedisKeysStore = signalStore(
                 })
               );
           })
-        )
-      ),
-
-      /**
-       * Seed demo sample data across DB 0, DB 1, DB 2
-       */
-      seedDemoData: rxMethod<{ connectionId: string; onSuccess?: () => void }>(
-        pipe(
-          tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, onSuccess }) =>
-            httpClient.post<SeedRedisDataResponse>(API_ROUTES.STORAGE.SEED(connectionId), {}).pipe(
-              tap(() => {
-                patchState(store, { isLoading: false, lastFetched: null });
-                onSuccess?.();
-              }),
-              catchError(error => {
-                patchState(store, {
-                  error:
-                    error.error?.detail ||
-                    error.error?.message ||
-                    error.message ||
-                    'Failed to seed sample data',
-                  isLoading: false
-                });
-                return of(null);
-              })
-            )
-          )
         )
       ),
 

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Moq;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Redis.Commands.SeedSampleData;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -23,7 +24,9 @@ public class SeedSampleDataCommandHandlerTests
 	{
 		_repositoryMock = new Mock<IRedisConnectionRepository>();
 		_seedDataServiceMock = new Mock<IRedisSeedDataService>();
-		_handler = new SeedSampleDataCommandHandler(_repositoryMock.Object, _seedDataServiceMock.Object);
+		var access = new Mock<IConnectionAccessService>();
+		access.Setup(x => x.CanAccessAsync(It.IsAny<RedisConnection>())).ReturnsAsync(true);
+		_handler = new SeedSampleDataCommandHandler(_repositoryMock.Object, _seedDataServiceMock.Object, access.Object);
 	}
 
 	[Test]

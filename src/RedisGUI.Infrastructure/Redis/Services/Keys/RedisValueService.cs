@@ -47,8 +47,9 @@ public class RedisValueService(
 	public Task<Result<SeedDataResult>> SeedSampleDataAsync(
 		RedisConnection connection,
 		SeedSampleDataOptions? options = null,
-		CancellationToken cancellationToken = default) =>
-		seedDataService.SeedSampleDataAsync(connection, options, cancellationToken);
+		CancellationToken cancellationToken = default,
+		Func<int, int, Task>? onProgress = null) =>
+		seedDataService.SeedSampleDataAsync(connection, options, cancellationToken, onProgress);
 
 	#endregion
 

@@ -305,6 +305,8 @@ Populate empty or test databases with synthetic data structures in seconds:
 * **Data Types**: Choose any combination of Strings, Hashes, Lists, Sets, Sorted Sets, and Streams.
 * **TTL Strategy**: Persistent keys, randomized expirations, or mixed lifetimes.
 
+Seeding runs as a background job with live progress and a Stop action. Stopping finishes the current key and reports the confirmed count; a write failure may leave unconfirmed changes. Jobs continue if the dialog closes and can be reopened in the same browser session. Use a test database and a suitable prefix: generated names can overlap existing keys.
+
 ---
 
 ## 9. Diagnostics & Slowlog Analyzer

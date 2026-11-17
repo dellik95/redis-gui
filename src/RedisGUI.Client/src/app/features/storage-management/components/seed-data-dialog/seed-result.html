@@ -3,8 +3,9 @@
   <div class="summary-top flex items-start gap-3.5">
     <mat-icon class="success-icon text-[32px] w-8 h-8">check_circle</mat-icon>
     <div class="summary-headings">
-      <h3>Successfully Seeded Sample Data!</h3>
+      <h3>{{ res.error ? 'Seeding stopped with an error' : res.cancelled ? 'Seeding stopped' : 'Sample data created' }}</h3>
       <p>{{ res.summary }}</p>
+      @if (res.mayHaveUnconfirmedChanges) { <p>Some changes may be unconfirmed. Refresh the keys before retrying.</p> }
     </div>
   </div>
 

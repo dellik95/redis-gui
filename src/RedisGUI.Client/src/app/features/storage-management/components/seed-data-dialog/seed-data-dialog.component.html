@@ -15,7 +15,7 @@
     mat-dialog-close
     matTooltip="Close"
     class="close-btn text-canvas-muted"
-    [disabled]="isSeeding()"
+    [disabled]="isSeeding() && !jobId()"
   >
     <mat-icon>close</mat-icon>
   </button>
@@ -294,6 +294,10 @@
   }
 
   <!-- Loading State during Seeding -->
+  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the operation.</p> }
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+  }
   @if (isSeeding()) {
     <div
       class="seeding-state flex flex-col items-center justify-center py-12 px-6 text-center gap-4"
@@ -301,8 +305,7 @@
       <mat-spinner diameter="52"></mat-spinner>
       <h3>Generating & Populating Sample Data...</h3>
       <p class="seeding-desc text-canvas-muted m-0">
-        Generating {{ keyCount() }} keys across {{ getTargetDbDescription() }} with
-        {{ payloadComplexity() }} payload complexity.
+        {{ jobStatus() || 'Starting' }} · {{ created() }} of {{ total() }} keys confirmed.
       </p>
     </div>
   }
@@ -330,5 +333,8 @@
 
   @if (!isSeeding() && result()) {
     <button mat-flat-button color="primary" [mat-dialog-close]="true">Close & Refresh Keys</button>
+  }
+  @if (isSeeding() && jobId()) {
+    <button mat-button (click)="stopSeed()" [disabled]="stopping()">{{ stopping() ? 'Stopping…' : 'Stop' }}</button>
   }
 </div>

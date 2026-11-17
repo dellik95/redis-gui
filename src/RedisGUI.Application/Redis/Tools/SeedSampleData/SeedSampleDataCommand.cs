@@ -1,4 +1,6 @@
 using RedisGUI.Domain.Redis;
+using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System;
 using RedisGUI.Domain.Connection;
@@ -12,21 +14,26 @@ namespace RedisGUI.Application.Redis.Commands.SeedSampleData;
 /// <summary>
 /// Command to populate Redis with rich configurable demo/sample data across multiple databases
 /// </summary>
+[Auditable(AuditAction.Create, "Redis")]
 public sealed record SeedSampleDataCommand(
 	Guid ConnectionId,
-	SeedSampleDataOptions? Options = null) : ICommand<SeedDataResult>;
+	SeedSampleDataOptions? Options = null,
+	Func<int, int, Task>? OnProgress = null,
+	CancellationToken? OperationCancellation = null) : ICommand<SeedDataResult>;
 
 internal sealed class SeedSampleDataCommandHandler : ICommandHandler<SeedSampleDataCommand, SeedDataResult>
 {
 	private readonly IRedisConnectionRepository connectionRepository;
 	private readonly IRedisSeedDataService seedDataService;
+	private readonly IConnectionAccessService access;
 
 	public SeedSampleDataCommandHandler(
 		IRedisConnectionRepository connectionRepository,
-		IRedisSeedDataService seedDataService)
+		IRedisSeedDataService seedDataService, IConnectionAccessService access)
 	{
 		this.connectionRepository = connectionRepository;
 		this.seedDataService = seedDataService;
+		this.access = access;
 	}
 
 	public async Task<Result<SeedDataResult>> Handle(SeedSampleDataCommand request, CancellationToken cancellationToken)
@@ -37,11 +44,15 @@ internal sealed class SeedSampleDataCommandHandler : ICommandHandler<SeedSampleD
 			return Result.Failure<SeedDataResult>(connectionResult.Error);
 		}
 
+		if (!await access.CanAccessAsync(connectionResult.Value))
+			return Result.Failure<SeedDataResult>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+
 		if (connectionResult.Value.IsReadOnly)
 		{
 			return Result.Failure<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
-		return await seedDataService.SeedSampleDataAsync(connectionResult.Value, request.Options, cancellationToken);
+		return await seedDataService.SeedSampleDataAsync(connectionResult.Value, request.Options,
+			request.OperationCancellation ?? cancellationToken, request.OnProgress);
 	}
 }

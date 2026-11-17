@@ -1,17 +1,15 @@
 import { SeedResult } from './seed-result';
 import { Component, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  RedisCliService,
-  SeedSampleDataOptions,
-  SeedDataResult
-} from '../../../../core/services/redis-cli.service';
+import { SeedSampleDataOptions, SeedDataResult } from '../../../../core/services/redis-cli.service';
+import { BackgroundJob, BackgroundJobsService } from '../../../../core/services/background-jobs.service';
+import { Subscription } from 'rxjs';
 import { NumberPresetOption, NumberPresetPickerComponent } from '../../../../shared/components';
 
 const KEY_COUNT_PRESETS: readonly NumberPresetOption[] = [
@@ -53,7 +51,8 @@ export interface SeedDataDialogData {
 })
 export class SeedDataDialogComponent {
   readonly data: SeedDataDialogData = inject(MAT_DIALOG_DATA);
-  private readonly cliService = inject(RedisCliService);
+  private readonly jobs = inject(BackgroundJobsService);
+  private readonly dialogRef = inject(MatDialogRef<SeedDataDialogComponent>);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly availableDbs = Array.from({ length: 16 }, (_, i) => i);
@@ -76,6 +75,21 @@ export class SeedDataDialogComponent {
   readonly isSeeding = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
   readonly result = signal<SeedDataResult | null>(null);
+  readonly jobId = signal<string | null>(null);
+  readonly jobStatus = signal<string | null>(null);
+  readonly connectionStatus = signal<string | null>(null);
+  readonly created = signal(0);
+  readonly total = signal(0);
+  readonly stopping = signal(false);
+  private watchSubscription?: Subscription;
+  private resultRequested = false;
+  private lastRevision = -1;
+
+  constructor() {
+    const saved = sessionStorage.getItem(this.storageKey());
+    if (saved) { this.jobId.set(saved); this.isSeeding.set(true); this.watch(saved); }
+    this.destroyRef.onDestroy(() => this.watchSubscription?.unsubscribe());
+  }
 
   isDbSelected(db: number): boolean {
     return this.selectedDbs().includes(db);
@@ -158,7 +172,17 @@ export class SeedDataDialogComponent {
   }
 
   startSeed(): void {
+    this.watchSubscription?.unsubscribe();
+    this.jobId.set(null);
+    this.jobStatus.set(null);
+    this.connectionStatus.set(null);
+    this.created.set(0);
+    this.total.set(0);
+    this.lastRevision = -1;
+    this.resultRequested = false;
+    sessionStorage.removeItem(this.storageKey());
     this.isSeeding.set(true);
+    this.dialogRef.disableClose = true;
     this.errorMessage.set(null);
     this.result.set(null);
 
@@ -185,18 +209,71 @@ export class SeedDataDialogComponent {
       keyPrefix: this.seedModel().keyPrefix.trim() || 'demo'
     };
 
-    this.cliService
-      .seedSampleData(this.data.connectionId, options)
+    this.jobs
+      .start('seed-data', this.data.connectionId, options)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: res => {
-          this.isSeeding.set(false);
-          this.result.set(res);
+        next: job => {
+          this.dialogRef.disableClose = false;
+          this.jobId.set(job.jobId);
+          sessionStorage.setItem(this.storageKey(), job.jobId);
+          this.watch(job.jobId);
         },
         error: err => {
+          this.dialogRef.disableClose = false;
           this.isSeeding.set(false);
           this.errorMessage.set(err.error?.message || err.message || 'Failed to seed sample data');
         }
       });
   }
+
+  stopSeed(): void {
+    const id = this.jobId();
+    if (!id) return;
+    this.stopping.set(true);
+    this.jobs.cancel(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: job => this.applyJob(job),
+      error: () => { this.stopping.set(false); this.errorMessage.set('Could not request cancellation.'); }
+    });
+  }
+
+  refreshStatus(): void {
+    const id = this.jobId();
+    if (id) this.jobs.status(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: job => this.applyJob(job),
+      error: () => { this.isSeeding.set(false); this.errorMessage.set('Job status is unavailable or has expired.'); }
+    });
+  }
+
+  private watch(id: string): void {
+    this.watchSubscription?.unsubscribe();
+    this.watchSubscription = this.jobs.watch(id).subscribe(event => {
+      this.connectionStatus.set(event.connected ? null : (event.error || 'Reconnecting live updates…'));
+      if (event.job) this.applyJob(event.job);
+    });
+  }
+
+  private applyJob(job: BackgroundJob): void {
+    if (job.revision < this.lastRevision) return;
+    this.lastRevision = job.revision;
+    this.jobStatus.set(job.status);
+    this.isSeeding.set(['Queued', 'Running', 'Cancelling'].includes(job.status));
+    this.stopping.set(job.status === 'Cancelling');
+    if (job.metrics) {
+      const metrics = job.metrics as { created: number; total: number };
+      this.created.set(metrics.created);
+      this.total.set(metrics.total);
+    }
+    if (job.status === 'Failed') this.errorMessage.set(job.error || 'Seeding failed.');
+    if (job.status === 'Cancelled' && !job.hasResult) this.errorMessage.set('Seeding was cancelled before a result was available.');
+    if (job.hasResult && !this.resultRequested) {
+      this.resultRequested = true;
+      this.jobs.result<SeedDataResult>(job.jobId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+        next: result => { if (this.jobId() === job.jobId) this.result.set(result); },
+        error: () => { if (this.jobId() === job.jobId) { this.resultRequested = false; this.errorMessage.set('Could not retrieve the job result.'); } }
+      });
+    }
+  }
+
+  private storageKey(): string { return `redisgui:seed:${this.data.connectionId}:${this.data.database}`; }
 }

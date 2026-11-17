@@ -31,6 +31,9 @@ public sealed class SeedSampleDataOptions
 /// </summary>
 public sealed class SeedDataResult
 {
+	public bool Cancelled { get; set; }
+	public bool MayHaveUnconfirmedChanges { get; set; }
+	public string? Error { get; set; }
 	public int TotalKeysSeeded { get; set; }
 	public int TotalKeysCreated { get => TotalKeysSeeded; set => TotalKeysSeeded = value; }
 

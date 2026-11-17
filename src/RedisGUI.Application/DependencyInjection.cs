@@ -3,6 +3,7 @@ using FluentValidation;
 using System.Linq;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Redis.Commands.RunLoadTest;
+using RedisGUI.Application.Redis.Commands.SeedSampleData;
 
 namespace RedisGUI.Application;
 
@@ -29,6 +30,7 @@ public static class DependencyInjection
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
 		services.AddScoped<IBackgroundJobHandler, LoadTestJobHandler>();
+		services.AddScoped<IBackgroundJobHandler, SeedSampleDataJobHandler>();
 		// Register concrete validators, including internal use-case validators.
 		foreach (var type in typeof(DependencyInjection).Assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false }))
 		{

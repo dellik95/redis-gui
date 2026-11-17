@@ -731,15 +731,15 @@ export class StorageValuesListComponent {
       .open(SeedDataDialogComponent, {
         width: '740px',
         maxWidth: '92vw',
+        closeOnNavigation: false,
         data: {
           connectionId: this.connectionId(),
           database: this.selectedDb()
         }
       })
       .afterClosed()
-      .pipe(filter((seeded): seeded is boolean => seeded === true))
-      .subscribe(() => {
-        this.snackBar.open('Demo data successfully seeded!', 'Close', { duration: 3000 });
+      .subscribe(seeded => {
+        if (seeded) this.snackBar.open('Sample-data job finished. Keys refreshed.', 'Close', { duration: 3000 });
         this.loadKeys();
       });
   }

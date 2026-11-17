@@ -1,6 +1,7 @@
 using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Users.Commands.LoginUser;
+using RedisGUI.Domain.Redis;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Shared.Mediator;
@@ -80,9 +81,13 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 		}
 
 		// Create audit metadata
+		string? outcome = response is Result<SeedDataResult> seed && seed.IsSuccess
+			? $"Seeded {seed.Value.TotalKeysSeeded}; cancelled: {seed.Value.Cancelled}; unconfirmed changes: {seed.Value.MayHaveUnconfirmedChanges}."
+			: null;
 		var metadata = AuditMetadata.Create(
 			ipAddress: currentUserService.IpAddress,
-			userAgent: currentUserService.UserAgent);
+			userAgent: currentUserService.UserAgent,
+			newValue: outcome);
 
 		// Create audit log
 		var auditLog = AuditLog.Create(
