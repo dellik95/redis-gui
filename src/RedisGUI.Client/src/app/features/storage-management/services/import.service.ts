@@ -42,14 +42,14 @@ export class ImportService {
    * @param file - File to import (JSON or CSV format)
    * @returns Observable that completes when import is done
    */
-  importData(connectionId: string, file: File, database: number): Observable<BackgroundJob> {
+  importData(connectionId: string, file: File, database: number, overwrite = false): Observable<BackgroundJob> {
     if (file.size > 10 * 1024 * 1024) {
       return throwError(() => new Error('Import files must not exceed 10 MB.'));
     }
     const format = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'json';
     return from(file.text()).pipe(
       switchMap(data => this.jobs.start('redis-import', connectionId, {
-        data, format, overwrite: false, database
+        data, format, overwrite, database
       })),
       catchError(error => {
         return throwError(

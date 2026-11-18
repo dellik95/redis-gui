@@ -12,7 +12,10 @@ public sealed class SetTypeHandler : IRedisTypeHandler
 {
 	public RedisType Type => RedisType.Set;
 
-	public async Task<Result<object?>> ReadRawAsync(IDatabase database, string key)
+	public Task<Result<object?>> ReadRawAsync(IDatabase database, string key) =>
+		ReadRawAsync(database, (RedisKey)key);
+
+	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		StackExchange.Redis.RedisValue[] members = await database.SetMembersAsync(key);
 		return Result.Success<object?>(members);
@@ -27,7 +30,10 @@ public sealed class SetTypeHandler : IRedisTypeHandler
 		return JsonSerializer.Serialize(new { members = setMembers });
 	}
 
-	public async Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl)
+	public Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl) =>
+		WriteAsync(database, (RedisKey)key, value, ttl);
+
+	public async Task<Result> WriteAsync(IDatabase database, RedisKey key, object value, TimeSpan? ttl)
 	{
 		if (value is not IEnumerable<string> setValues)
 		{

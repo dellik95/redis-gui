@@ -5,21 +5,13 @@ using System.Linq;
 namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>
-/// Service for managing Redis key operations
+/// Service for managing Redis key operations across standalone and Redis Cluster deployments.
 /// </summary>
-public class RedisKeyService : IRedisKeyService
+public class RedisKeyService(
+	IRedisConnectionManager connectionManager,
+	ILogger<RedisKeyService> logger,
+	IRedisTopologyRegistry? topology = null) : IRedisKeyService
 {
-	private readonly IRedisConnectionManager connectionManager;
-	private readonly ILogger<RedisKeyService> logger;
-
-	public RedisKeyService(
-		IRedisConnectionManager connectionManager,
-		ILogger<RedisKeyService> logger)
-	{
-		this.connectionManager = connectionManager;
-		this.logger = logger;
-	}
-
 	/// <inheritdoc />
 	public async Task<Result<RedisKeyScanPage>> ScanKeysAsync(RedisConnection connection, string pattern, int database,
 		string? cursor, int count, CancellationToken cancellationToken = default)
@@ -40,6 +32,7 @@ public class RedisKeyService : IRedisKeyService
 	{
 		try
 		{
+			topology?.SetMode(connection.Id, multiplexer.DetectServerMode());
 			var context = await RedisKeyScan.CreateContextAsync(multiplexer, connection.Id, pattern, database, cursor, cancellationToken);
 			return await context.BindAsync(scan => RedisKeyScan.ReadPageAsync(multiplexer, scan, count, cancellationToken));
 		}
@@ -55,10 +48,10 @@ public class RedisKeyService : IRedisKeyService
 	}
 
 	private Task<Result<ConnectionMultiplexer>> GetConnectionAsync(RedisConnection connection, CancellationToken cancellationToken) =>
-		connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
+		connectionManager.GetConnectionAsync(connection, topology, cancellationToken);
 
 	/// <summary>
-	/// Retrieves all keys from the Redis database
+	/// Retrieves all keys from the Redis database across primary nodes.
 	/// </summary>
 	public async ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default, int? database = null)
 	{
@@ -70,21 +63,42 @@ public class RedisKeyService : IRedisKeyService
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
-		IEnumerable<IServer> servers = multiplexer.GetServers().Where(s => s is { IsConnected: true, Features.Scan: true });
-		List<string> keys = [];
+		int targetDb = database ?? connection.DatabaseNumber.Value;
+		var dbValidation = multiplexer.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure)
+		{
+			return Result.Failure<IEnumerable<string>>(dbValidation.Error);
+		}
 
-		var result = servers
-			.Select(server => server.Keys(database ?? connection.DatabaseNumber.Value).Select(x => x.ToString()))
-			.Aggregate(keys, (current, serverKeys) => current.Union(serverKeys).ToList());
+		IServer[] servers = multiplexer.GetConnectedPrimaryServers();
+		if (servers.Length == 0)
+		{
+			servers = multiplexer.GetServers().Where(s => s is { IsConnected: true, Features.Scan: true }).ToArray();
+		}
 
-		return Result.Success<IEnumerable<string>>(result);
+		var distinctKeys = new HashSet<string>(StringComparer.Ordinal);
+		foreach (var server in servers.Where(s => s.Features.Scan))
+		{
+			await foreach (var k in server.KeysAsync(targetDb).WithCancellation(cancellationToken))
+			{
+				distinctKeys.Add(k.ToString());
+			}
+		}
+
+		return Result.Success<IEnumerable<string>>(distinctKeys);
 	}
 
-	/// <summary>
-	/// Deletes a specific key from Redis
-	/// </summary>
-	public async Task<Result<bool>> DeleteKeyAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
+	/// <inheritdoc />
+	public Task<Result<bool>> DeleteKeyAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null) =>
+		DeleteKeyByIdentityAsync(connection, key, null, cancellationToken, database);
+
+	/// <inheritdoc />
+	public async Task<Result<bool>> DeleteKeyByIdentityAsync(RedisConnection connection, string key, string? keyBase64,
+		CancellationToken cancellationToken = default, int? database = null)
 	{
+		var resolvedKey = RedisServerResolver.ResolveKey(key, keyBase64);
+		if (resolvedKey.IsFailure) return Result.Failure<bool>(resolvedKey.Error);
+
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
 		if (multiplexerResult.IsFailure)
 		{
@@ -92,14 +106,17 @@ public class RedisKeyService : IRedisKeyService
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
+		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure) return Result.Failure<bool>(dbValidation.Error);
+
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
-		bool deleted = await db.KeyDeleteAsync(key);
+		bool deleted = await db.KeyDeleteAsync(resolvedKey.Value).WaitAsync(cancellationToken);
 
 		return Result.Success(deleted);
 	}
 
 	/// <summary>
-	/// Deletes multiple keys from the Redis database
+	/// Deletes multiple keys from the Redis database (slot-grouped on Cluster to avoid CROSSSLOT errors).
 	/// </summary>
 	public async Task<Result<long>> DeleteKeysAsync(RedisConnection connection, string[] keys, CancellationToken cancellationToken = default, int? database = null)
 	{
@@ -110,20 +127,46 @@ public class RedisKeyService : IRedisKeyService
 			return Result.Failure<long>(multiplexerResult.Error);
 		}
 
+		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		int targetDb = database ?? connection.DatabaseNumber.Value;
-		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
-		RedisKey[] redisKeys = keys.Select(x => new RedisKey(x)).ToArray();
-		long deletedCount = await db.KeyDeleteAsync(redisKeys);
+		var dbValidation = multiplexer.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure) return Result.Failure<long>(dbValidation.Error);
 
+		IDatabase db = multiplexer.GetDatabase(targetDb);
+		RedisKey[] redisKeys = keys.Select(x => new RedisKey(x)).ToArray();
+		if (redisKeys.Length == 0)
+		{
+			return Result.Success(0L);
+		}
+
+		if (multiplexer.IsCluster())
+		{
+			long totalDeleted = 0;
+			foreach (var slotGroup in redisKeys.GroupBy(k => multiplexer.GetHashSlot(k)))
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				totalDeleted += await db.KeyDeleteAsync(slotGroup.ToArray()).WaitAsync(cancellationToken);
+			}
+			return Result.Success(totalDeleted);
+		}
+
+		long deletedCount = await db.KeyDeleteAsync(redisKeys).WaitAsync(cancellationToken);
 		return Result.Success(deletedCount);
 	}
 
-	/// <summary>
-	/// Delete multiple keys from redis by their exact names with detailed results
-	/// </summary>
-	public async Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysAsync(
+	/// <inheritdoc />
+	public Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysAsync(
 		RedisConnection connection,
 		IReadOnlyList<string> keys,
+		CancellationToken cancellationToken = default,
+		int? database = null) =>
+		DeleteMultipleKeysByIdentityAsync(connection, keys, null, cancellationToken, database);
+
+	/// <inheritdoc />
+	public async Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysByIdentityAsync(
+		RedisConnection connection,
+		IReadOnlyList<string> keys,
+		IReadOnlyList<string?>? keysBase64 = null,
 		CancellationToken cancellationToken = default,
 		int? database = null)
 	{
@@ -134,29 +177,45 @@ public class RedisKeyService : IRedisKeyService
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
+		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure) return Result.Failure<(int, IReadOnlyList<string>)>(dbValidation.Error);
+
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		List<string> failedKeys = [];
 		int deletedCount = 0;
 
-		foreach (string key in keys)
+		for (int i = 0; i < keys.Count; i++)
 		{
 			cancellationToken.ThrowIfCancellationRequested();
+			string displayKey = keys[i];
+			string? rawB64 = keysBase64 is not null && i < keysBase64.Count ? keysBase64[i] : null;
+			var resolved = RedisServerResolver.ResolveKey(displayKey, rawB64);
+			if (resolved.IsFailure)
+			{
+				failedKeys.Add(displayKey);
+				continue;
+			}
+
 			try
 			{
-				bool deleted = await db.KeyDeleteAsync(key);
+				bool deleted = await db.KeyDeleteAsync(resolved.Value).WaitAsync(cancellationToken);
 				if (deleted)
 				{
 					deletedCount++;
 				}
 				else
 				{
-					failedKeys.Add(key);
+					failedKeys.Add(displayKey);
 				}
+			}
+			catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+			{
+				throw;
 			}
 			catch (Exception ex)
 			{
-				logger.LogError(ex, "Failed to delete key {Key}", key);
-				failedKeys.Add(key);
+				logger.LogError(ex, "Failed to delete key {Key}", displayKey);
+				failedKeys.Add(displayKey);
 			}
 		}
 
@@ -164,7 +223,7 @@ public class RedisKeyService : IRedisKeyService
 	}
 
 	/// <summary>
-	/// Delete keys from redis matching a pattern
+	/// Delete keys from redis matching a pattern.
 	/// </summary>
 	public async Task<Result<int>> DeleteKeysByPatternAsync(RedisConnection connection, string pattern, CancellationToken cancellationToken = default,
 		int? database = null, Func<int, Task>? onProgress = null)
@@ -177,6 +236,9 @@ public class RedisKeyService : IRedisKeyService
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
+		var dbValidation = multiplexer.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure) return Result.Failure<int>(dbValidation.Error);
+
 		IDatabase db = multiplexer.GetDatabase(targetDb);
 		int deletedCount = 0;
 		try
@@ -211,7 +273,7 @@ public class RedisKeyService : IRedisKeyService
 	}
 
 	/// <summary>
-	/// Gets the type of value stored at a specific key
+	/// Gets the type of value stored at a specific key.
 	/// </summary>
 	public async Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
@@ -222,8 +284,11 @@ public class RedisKeyService : IRedisKeyService
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
+		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure) return Result.Failure<string>(dbValidation.Error);
+
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
-		RedisType type = await db.KeyTypeAsync(key);
+		RedisType type = await db.KeyTypeAsync(key).WaitAsync(cancellationToken);
 
 		return Result.Success(type.ToString());
 	}

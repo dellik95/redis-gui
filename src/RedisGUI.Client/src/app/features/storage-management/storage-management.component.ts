@@ -55,16 +55,38 @@ export class StorageManagementComponent {
     this.connectionsStore.connections().find(c => c.id === this.id())
   );
   readonly isReadOnly = computed(() => !!this.currentConnection()?.isReadOnly);
+  readonly isCluster = computed(
+    () => this.redisKeysStore.serverMode() === 'Cluster' || this.currentConnection()?.serverMode === 'Cluster'
+  );
 
   readonly error = computed(() => this.storageStore.error());
   readonly hasValidConnection = computed(() => !!this.id());
+
+  private lastActiveDb: number | null = null;
 
   constructor() {
     if (this.connectionsStore.needsRefresh()) this.connectionsStore.loadConnections();
     effect(() => {
       const connectionId = this.id();
       if (connectionId) {
+        this.selectedKey.set(null);
         this.storageStore.initialize(connectionId);
+      }
+    });
+
+    effect(() => {
+      const db = this.activeDb();
+      if (this.lastActiveDb !== null && this.lastActiveDb !== db) {
+        this.selectedKey.set(null);
+      }
+      this.lastActiveDb = db;
+    });
+
+    effect(() => {
+      const mode = this.redisKeysStore.serverMode();
+      const connId = this.id();
+      if (connId && (mode === 'Cluster' || mode === 'Standalone' || mode === 'Sentinel')) {
+        this.connectionsStore.updateServerMode(connId, mode);
       }
     });
 
@@ -73,7 +95,7 @@ export class StorageManagementComponent {
       if (errorMsg) {
         this.snackBar.open(errorMsg, 'Close', {
           duration: 5000,
-          horizontalPosition: 'end',
+          horizontalPosition: 'center',
           verticalPosition: 'bottom',
           panelClass: ['error-snackbar']
         });

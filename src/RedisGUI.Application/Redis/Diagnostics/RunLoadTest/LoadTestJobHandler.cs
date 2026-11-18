@@ -1,11 +1,9 @@
 using System;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
@@ -13,51 +11,41 @@ using RedisGUI.Shared.Primitives;
 namespace RedisGUI.Application.Redis.Commands.RunLoadTest;
 
 /// <summary>Validates and executes load tests in an independent background scope.</summary>
-public sealed class LoadTestJobHandler(IRedisConnectionRepository repository, IConnectionAccessService access, IMediator mediator)
-	: IBackgroundJobHandler
+public sealed class LoadTestJobHandler(
+	IRedisConnectionRepository repository,
+	IConnectionAccessService access,
+	IMediator mediator,
+	IValidator<RedisLoadTestRequest>? validator = null)
+	: BackgroundJobHandler<RedisLoadTestRequest, RedisLoadTestProgress, RedisLoadTestResult>(repository, access, validator)
 {
-	private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-	public string Kind => "load-test";
-	public bool RequiresWriteAccess => true;
+	public override string Kind => "load-test";
+	public override string DisplayName => "Redis Load Test";
+	public override bool RequiresWriteAccess => true;
 
-	public async Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken cancellationToken)
-	{
-		var request = Parse(parameters);
-		if (request is null) return Result.Failure(new Error("Job.InvalidParameters", "A valid load test request is required."));
-		var validation = await new LoadTestJobParametersValidator().ValidateAsync(request, cancellationToken);
-		if (!validation.IsValid) return Result.Failure(new Error("Job.InvalidParameters", string.Join(" ", validation.Errors)));
-		var connection = await repository.GetConnectionByIdAsync(connectionId, cancellationToken);
-		if (connection.IsFailure) return Result.Failure(connection.Error);
-		if (!await access.CanAccessAsync(connection.Value)) return Result.Failure(new Error("Connection.Forbidden", "Access to the connection is denied."));
-		if (connection.Value.IsReadOnly) return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
-		return Result.Success();
-	}
+	protected override IValidator<RedisLoadTestRequest> CreateFallbackValidator() => new LoadTestJobParametersValidator();
 
-	public async Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> reportProgress,
+	protected override async Task<Result<JobExecutionOutcome<RedisLoadTestResult>>> ExecuteTypedAsync(
+		Guid connectionId,
+		RedisLoadTestRequest request,
+		IJobProgressReporter<RedisLoadTestProgress> progress,
 		CancellationToken cancellationToken)
 	{
-		var request = Parse(parameters);
-		if (request is null) return Result.Failure<object?>(new Error("Job.InvalidParameters", "A valid load test request is required."));
-		var command = new RunStreamingLoadTestCommand(connectionId, request, progress =>
+		var command = new RunStreamingLoadTestCommand(connectionId, request, itemProgress =>
 		{
-			double? percent = progress.TotalDurationSeconds > 0
-				? progress.ElapsedSeconds / progress.TotalDurationSeconds * 100
-				: progress.TotalOperations > 0 ? (double)progress.CompletedOperations / progress.TotalOperations * 100 : null;
-			return reportProgress(percent, progress);
+			double? percent = itemProgress.TotalDurationSeconds > 0
+				? itemProgress.ElapsedSeconds / itemProgress.TotalDurationSeconds * 100
+				: itemProgress.TotalOperations > 0 ? (double)itemProgress.CompletedOperations / itemProgress.TotalOperations * 100 : null;
+			return progress.ReportAsync(percent, itemProgress);
 		});
-		var result = await mediator.Send<RedisLoadTestResult>(command, cancellationToken);
-		return result.IsSuccess ? Result.Success<object?>(result.Value) : Result.Failure<object?>(result.Error);
-	}
 
-	private static RedisLoadTestRequest? Parse(JsonElement parameters)
-	{
-		if (parameters.ValueKind != JsonValueKind.Object) return null;
-		try { return parameters.Deserialize<RedisLoadTestRequest>(JsonOptions); }
-		catch (JsonException) { return null; }
+		var result = await mediator.Send<RedisLoadTestResult>(command, cancellationToken);
+		return result.IsSuccess
+			? Result.Success(JobExecutionOutcome<RedisLoadTestResult>.Completed(result.Value))
+			: Result.Failure<JobExecutionOutcome<RedisLoadTestResult>>(result.Error);
 	}
 }
 
-internal sealed class LoadTestJobParametersValidator : AbstractValidator<RedisLoadTestRequest>
+public sealed class LoadTestJobParametersValidator : AbstractValidator<RedisLoadTestRequest>
 {
 	public LoadTestJobParametersValidator()
 	{

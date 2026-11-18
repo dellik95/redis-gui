@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using System;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Connection;
@@ -20,38 +21,26 @@ public sealed record AddRedisValueCommand(
 	Guid ConnectionId,
 	string Key,
 	string Value,
-	TimeSpan? Ttl = null) : ICommand;
+	TimeSpan? Ttl = null) : ICommand, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+}
 
 /// <summary>
 /// Handles the command to set a Redis key-value pair.
 /// </summary>
-internal sealed class AddRedisValueCommandHandler : ICommandHandler<AddRedisValueCommand>
+internal sealed class AddRedisValueCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService? access = null) : ICommandHandler<AddRedisValueCommand>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
-
-	/// <summary>
-	/// Initializes a new instance of the AddRedisValueCommandHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections.</param>
-	/// <param name="valueService">Service for Redis value operations.</param>
-	public AddRedisValueCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
-
-	/// <summary>
-	/// Handles the command to set a Redis value.
-	/// </summary>
-	/// <param name="request">The command request containing the key, value, and optional TTL.</param>
-	/// <param name="cancellationToken">Cancellation token.</param>
-	/// <returns>A Result indicating success or failure.</returns>
 	public async Task<Result> Handle(AddRedisValueCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
+			request.ConnectionId,
+			access,
+			cancellationToken,
+			requireWritable: true);
 
 		if (connectionResult.IsFailure)
 		{

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.ToggleReadOnly;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using System;
@@ -25,6 +26,7 @@ public class ToggleReadOnlyEndpoint : IEndpoint
 				isReadOnly => Results.Ok(new { ConnectionId = connectionId, IsReadOnly = isReadOnly }),
 				error => error.ToProblemDetails());
 		})
+		.RequireAuthorization(Policies.WriteAccess)
 		.WithName("ToggleReadOnly")
 		.WithSummary("Toggle connection Safe Read-Only mode")
 		.WithTags("Connections")

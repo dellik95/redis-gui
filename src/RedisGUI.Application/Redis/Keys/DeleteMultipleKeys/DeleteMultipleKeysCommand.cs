@@ -17,56 +17,52 @@ namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 /// <param name="ConnectionId">The Redis connection identifier.</param>
 /// <param name="Keys">List of keys to delete.</param>
 /// <param name="Database">Optional database index.</param>
+/// <param name="KeysBase64">Optional parallel list of Base64-encoded raw Redis keys.</param>
 [Auditable(AuditAction.Delete, "Redis")]
 public sealed record DeleteMultipleKeysCommand(
 	Guid ConnectionId,
 	IReadOnlyList<string> Keys,
-	int? Database = null) : ICommand<DeleteMultipleKeysResponse>;
+	int? Database = null,
+	IReadOnlyList<string?>? KeysBase64 = null) : ICommand<DeleteMultipleKeysResponse>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+}
 
 /// <summary>
 /// Handles the command to delete multiple Redis keys.
 /// </summary>
-internal sealed class DeleteMultipleKeysCommandHandler : ICommandHandler<DeleteMultipleKeysCommand, DeleteMultipleKeysResponse>
+internal sealed class DeleteMultipleKeysCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisKeyService keyService,
+	IConnectionAccessService access) : ICommandHandler<DeleteMultipleKeysCommand, DeleteMultipleKeysResponse>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisKeyService keyService;
-	private readonly IConnectionAccessService access;
-
-	public DeleteMultipleKeysCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisKeyService keyService, IConnectionAccessService access)
-	{
-		this.connectionRepository = connectionRepository;
-		this.keyService = keyService;
-		this.access = access;
-	}
-
 	public async Task<Result<DeleteMultipleKeysResponse>> Handle(
 		DeleteMultipleKeysCommand request,
 		CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
 			request.ConnectionId,
-			cancellationToken);
+			access,
+			cancellationToken,
+			requireWritable: true);
 
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<DeleteMultipleKeysResponse>(connectionResult.Error);
 		}
 
-		if (!await access.CanAccessAsync(connectionResult.Value))
-			return Result.Failure<DeleteMultipleKeysResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
-
-		if (connectionResult.Value.IsReadOnly)
-		{
-			return Result.Failure<DeleteMultipleKeysResponse>(DomainErrors.Connection.ReadOnlyMode);
-		}
-
-		var deleteResult = await keyService.DeleteMultipleKeysAsync(
-			connectionResult.Value,
-			request.Keys,
-			cancellationToken,
-			request.Database);
+		var deleteResult = request.KeysBase64 is null || request.KeysBase64.Count == 0
+			? await keyService.DeleteMultipleKeysAsync(
+				connectionResult.Value,
+				request.Keys,
+				cancellationToken,
+				request.Database)
+			: await keyService.DeleteMultipleKeysByIdentityAsync(
+				connectionResult.Value,
+				request.Keys,
+				request.KeysBase64,
+				cancellationToken,
+				request.Database);
 
 		if (deleteResult.IsFailure)
 		{

@@ -99,10 +99,17 @@ public class Result
 	}
 }
 
+/// <summary>Exposes the boxed value of a typed result without reflection.</summary>
+public interface IValueResult
+{
+	bool IsSuccess { get; }
+	object? UntypedValue { get; }
+}
+
 /// <summary>
 ///     Represent Success/Failed result with value
 /// </summary>
-public class Result<TValue> : Result
+public class Result<TValue> : Result, IValueResult
 {
 	private readonly TValue value;
 
@@ -123,6 +130,8 @@ public class Result<TValue> : Result
 	public TValue Value => (IsSuccess
 		? value
 		: throw new InvalidOperationException("The value of a failure result can not be accessed."))!;
+
+	object? IValueResult.UntypedValue => IsSuccess ? value : null;
 
 
 	/// <summary>

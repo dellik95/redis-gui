@@ -55,6 +55,7 @@ public static class DependencyInjection
 
 		services.AddSingleton<IRedisConnectionFactory, DefaultRedisConnectionFactory>();
 		services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
+		services.AddSingleton<IRedisTopologyRegistry, RedisTopologyRegistry>();
 
 		// Register specialized Redis services
 		services.AddSingleton<IRedisTypeHandler, StringTypeHandler>();
@@ -90,7 +91,7 @@ public static class DependencyInjection
 
 		AddApiVersioning(services);
 
-		AddBackgroundJobs(services);
+		AddBackgroundJobs(services, configuration);
 
 		AddSignalR(services);
 
@@ -297,8 +298,14 @@ public static class DependencyInjection
 			});
 	}
 
-	private static void AddBackgroundJobs(IServiceCollection services)
+	private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
 	{
+		services.AddOptions<BackgroundJobOptions>()
+			.Bind(configuration.GetSection(BackgroundJobOptions.SectionName))
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+		services.AddSingleton(TimeProvider.System);
+		services.AddSingleton<BackgroundJobSubscriptionRegistry>();
 		services.AddSingleton<BackgroundJobManager>();
 		services.AddHostedService(provider => provider.GetRequiredService<BackgroundJobManager>());
 		services.AddHostedService<RedisMetricsBackgroundJob>();

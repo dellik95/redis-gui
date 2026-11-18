@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetRedisValue;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Extensions;
@@ -21,7 +23,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 		/// </summary>
 		/// <param name="routerBuilder">The router builder used to configure the endpoint.</param>
 		/// <remarks>
-		/// GET /storage/{connectionId}/{key}
+		/// GET /storage/{connectionId}/key?key=...&amp;keyBase64=... or GET /storage/{connectionId}/{key}
 		/// Returns structured error response on failure.
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
@@ -31,15 +33,46 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,
+				string? keyBase64,
 				int? database)
 			{
-				var query = new GetRedisValueQuery(connectionId, key, database);
+				var query = new GetRedisValueQuery(connectionId, key, database, keyBase64);
 				var result = await sender.Send<GetRedisValueResponse>(query);
 				return result.MatchHttp(Results.Ok, httpContext);
 			}
 
-			routerBuilder.MapGet("storage/{connectionId:guid}/{*key}", HandleGet).WithOpenApi();
-			routerBuilder.MapGet("storage/{connectionId:guid}/keys/{*key}", HandleGet).WithOpenApi();
+			routerBuilder.MapGet("storage/{connectionId:guid}/key", (
+				IMediator sender,
+				HttpContext httpContext,
+				Guid connectionId,
+				[FromQuery] string? key = null,
+				[FromQuery] string? keyBase64 = null,
+				[FromQuery] int? database = null) =>
+			{
+				if (string.IsNullOrEmpty(key) && string.IsNullOrEmpty(keyBase64))
+					return Task.FromResult(new Error("RedisValue.EmptyKey", "Redis key cannot be empty.").ToProblemDetails(httpContext));
+				return HandleGet(sender, httpContext, connectionId, key ?? string.Empty, keyBase64, database);
+			}).RequireAuthorization(Policies.Authenticated).WithName("GetRedisValueByQuery").WithOpenApi();
+
+			routerBuilder.MapGet("storage/{connectionId:guid}/{*key}", (
+				IMediator sender,
+				HttpContext httpContext,
+				Guid connectionId,
+				string key,
+				[FromQuery] string? keyBase64 = null,
+				[FromQuery] int? database = null) =>
+				HandleGet(sender, httpContext, connectionId, key, keyBase64, database))
+				.RequireAuthorization(Policies.Authenticated).WithOpenApi();
+
+			routerBuilder.MapGet("storage/{connectionId:guid}/keys/{*key}", (
+				IMediator sender,
+				HttpContext httpContext,
+				Guid connectionId,
+				string key,
+				[FromQuery] string? keyBase64 = null,
+				[FromQuery] int? database = null) =>
+				HandleGet(sender, httpContext, connectionId, key, keyBase64, database))
+				.RequireAuthorization(Policies.Authenticated).WithOpenApi();
 		}
 	}
 

@@ -55,6 +55,23 @@ export const API_ROUTES = {
     },
     GET_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
+    KEY_BY_QUERY: (
+      connectionId: string,
+      key: string,
+      keyBase64?: string | null,
+      database?: number | null
+    ) => {
+      const params = new URLSearchParams();
+      if (keyBase64) {
+        params.set('keyBase64', keyBase64);
+      } else {
+        params.set('key', key);
+      }
+      if (database !== undefined && database !== null) {
+        params.set('database', String(database));
+      }
+      return `/api/v1/storage/${connectionId}/key?${params.toString()}`;
+    },
     ADD_VALUE: (connectionId: string) => `/api/v1/storage/${connectionId}`,
     UPDATE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
@@ -67,6 +84,24 @@ export const API_ROUTES = {
     SLOWLOG: (id: string, count: number) => `/api/v1/storage/${id}/slowlog?count=${count}`,
     RENAME_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/rename`,
     DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`
+  },
+
+  /**
+   * Background jobs endpoints
+   */
+  JOBS: {
+    BASE: '/api/v1/jobs',
+    KINDS: '/api/v1/jobs/kinds',
+    LIST: (connectionId?: string, status?: string) => {
+      const params = new URLSearchParams();
+      if (connectionId) params.set('connectionId', connectionId);
+      if (status) params.set('status', status);
+      const query = params.toString();
+      return `/api/v1/jobs${query ? `?${query}` : ''}`;
+    },
+    GET: (jobId: string) => `/api/v1/jobs/${jobId}`,
+    CANCEL: (jobId: string) => `/api/v1/jobs/${jobId}/cancel`,
+    RESULT: (jobId: string) => `/api/v1/jobs/${jobId}/result`
   },
 
   /**
@@ -120,7 +155,12 @@ export const SIGNALR_HUBS = {
   /**
    * Metrics hub for Redis metrics broadcasting
    */
-  METRICS: '/hub/metrics'
+  METRICS: '/hub/metrics',
+
+  /**
+   * Background jobs hub
+   */
+  JOBS: '/hub/jobs'
 } as const;
 
 /**

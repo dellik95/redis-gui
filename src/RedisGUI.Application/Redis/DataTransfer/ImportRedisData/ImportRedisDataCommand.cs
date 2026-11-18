@@ -33,7 +33,11 @@ public sealed record ImportRedisDataCommand(
 	bool Overwrite = false,
 	int? Database = null,
 	Func<ImportRedisDataProgress, Task>? OnProgress = null,
-	CancellationToken? OperationCancellation = null) : ICommand<ImportRedisDataResponse>;
+	CancellationToken? OperationCancellation = null) : ICommand<ImportRedisDataResponse>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+	public bool PersistAuditOnCancellation => true;
+}
 
 public sealed record ImportRedisDataProgress(int Processed, int Total, int Imported, int Skipped, int Failed);
 

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetSlowlog;
 using RedisGUI.Domain.Redis;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 using System;
@@ -22,6 +23,7 @@ public class GetSlowlogEndpoint : IEndpoint
 			var query = new GetSlowlogQuery(connectionId, count);
 			return await sender.Send<List<SlowlogEntryInfo>>(query).Match(Results.Ok, error => error.ToProblemDetails());
 		})
+		.RequireAuthorization(Policies.Authenticated)
 		.WithName("GetSlowlog")
 		.WithSummary("Get Redis slowlog entries")
 		.WithDescription("Retrieves the execution slowlog of operations exceeding the slowlog threshold")

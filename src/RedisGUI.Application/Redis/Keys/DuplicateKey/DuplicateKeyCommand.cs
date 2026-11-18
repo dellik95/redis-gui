@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System;
 using RedisGUI.Domain.Connection;
@@ -17,40 +18,45 @@ public sealed record DuplicateKeyCommand(
 	Guid ConnectionId,
 	string SourceKey,
 	string TargetKey,
-	int? Database = null
-) : ICommand;
-
-internal sealed class DuplicateKeyCommandHandler : ICommandHandler<DuplicateKeyCommand>
+	int? Database = null,
+	string? SourceKeyBase64 = null,
+	string? TargetKeyBase64 = null
+) : ICommand, IAuditEntityRequest
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
+	public Guid? AuditEntityId => ConnectionId;
+}
 
-	public DuplicateKeyCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
-
+internal sealed class DuplicateKeyCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService? access = null) : ICommandHandler<DuplicateKeyCommand>
+{
 	public async Task<Result> Handle(DuplicateKeyCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
+			request.ConnectionId,
+			access,
+			cancellationToken,
+			requireWritable: true);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure(connectionResult.Error);
 		}
 
-		if (connectionResult.Value.IsReadOnly)
-		{
-			return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
-		}
-
-		return await valueService.DuplicateKeyAsync(
-			connectionResult.Value,
-			request.SourceKey,
-			request.TargetKey,
-			request.Database,
-			cancellationToken);
+		return string.IsNullOrEmpty(request.SourceKeyBase64) && string.IsNullOrEmpty(request.TargetKeyBase64)
+			? await valueService.DuplicateKeyAsync(
+				connectionResult.Value,
+				request.SourceKey,
+				request.TargetKey,
+				request.Database,
+				cancellationToken)
+			: await valueService.DuplicateKeyByIdentityAsync(
+				connectionResult.Value,
+				request.SourceKey,
+				request.SourceKeyBase64,
+				request.TargetKey,
+				request.TargetKeyBase64,
+				request.Database,
+				cancellationToken);
 	}
 }

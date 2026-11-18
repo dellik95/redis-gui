@@ -1,22 +1,33 @@
 <h2 mat-dialog-title>Export Redis Data</h2>
 <mat-dialog-content>
-  <p class="export-hint">Export database {{ data.database }}, pattern <code>{{ data.pattern }}</code>.</p>
-  <p class="export-hint">The file contains Redis-native snapshots. Restore requires a compatible Redis version and RESTORE permission. Keys can change while the scan runs.</p>
+  @if (selectedKeysCount() > 0) {
+    <p class="export-hint">
+      Export <strong>{{ selectedKeysCount() }}</strong> selected key(s) from database {{ data.database }}.
+    </p>
+  } @else {
+    <p class="export-hint">Export database {{ data.database }}, pattern <code>{{ data.pattern || '*' }}</code>.</p>
+  }
+  <p class="export-hint">The file contains Redis-native snapshots. Restore requires a compatible Redis version and RESTORE permission.</p>
 
   <ui-radio-group [formField]="exportForm.format" [options]="formatOptions" />
 
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-      <span>{{ jobStatus() || 'Starting' }} · {{ exportedCount() }} keys exported</span>
+      <span>
+        {{ jobStatus() || 'Starting' }} · {{ exportedCount() }}
+        @if (selectedKeysCount() > 0) {
+          / {{ selectedKeysCount() }}
+        }
+        keys exported
+      </span>
     </div>
   }
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
-  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the export.</p> }
   @if (connectionStatus()) {
-    <p role="status">{{ connectionStatus() }} <button type="button" (click)="refreshStatus()">Refresh status</button></p>
+    <p role="status">{{ connectionStatus() }}</p>
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end" class="dialog-actions">

@@ -13,9 +13,15 @@ using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
 
-/// <summary>Exports matching keys from a selected Redis database.</summary>
-public sealed record ExportRedisDataQuery(Guid ConnectionId, string Pattern = "*", ExportFormat Format = ExportFormat.Json,
-	int? Database = null, Func<int, Task>? OnProgress = null) : IQuery<ExportRedisDataResponse>;
+/// <summary>Exports matching or explicitly selected keys from a Redis database.</summary>
+public sealed record ExportRedisDataQuery(
+	Guid ConnectionId,
+	string Pattern = "*",
+	ExportFormat Format = ExportFormat.Json,
+	int? Database = null,
+	Func<int, Task>? OnProgress = null,
+	string[]? Keys = null,
+	string?[]? KeysBase64 = null) : IQuery<ExportRedisDataResponse>;
 
 internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository repository, IConnectionAccessService access,
 	IRedisKeyService keys, IRedisSnapshotService snapshots, IExportSessionFactory sessions)
@@ -35,43 +41,81 @@ internal sealed class ExportRedisDataQueryHandler(IRedisConnectionRepository rep
 		writer.NewLine = "\r\n";
 		bool json = request.Format == ExportFormat.Json;
 		await writer.WriteAsync(json ? "[\n" : "KeyBase64,DumpBase64,Type,TtlMilliseconds\r\n");
-		string? cursor = null;
 		bool first = true;
 		int exported = 0;
-		do
+
+		async Task<Error?> WriteKeyAsync(byte[] key)
 		{
-			cancellationToken.ThrowIfCancellationRequested();
-			var page = await keys.ScanKeysAsync(connection, request.Pattern, database, cursor, 100, cancellationToken);
-			if (page.IsFailure) return Result.Failure<ExportRedisDataResponse>(page.Error);
-			if (page.Value.MissingCount > 0)
-				return Result.Failure<ExportRedisDataResponse>(new Error("Export.KeyReadFailed", "Export stopped because a scanned key disappeared. Retry the export."));
-			foreach (var item in page.Value.Keys)
+			if (!await session.AddKeyAsync(key, cancellationToken)) return null;
+			var value = await snapshots.CaptureAsync(connection, key, database, cancellationToken);
+			if (value.IsFailure)
+				return new Error("Export.KeyReadFailed", $"Export stopped because a key could not be read: {value.Error.Message}");
+			string keyBase64 = Convert.ToBase64String(key);
+			string dumpBase64 = Convert.ToBase64String(value.Value.Payload);
+			if (json)
+			{
+				if (!first) await writer.WriteAsync(",\n");
+				var serialized = JsonSerializer.Serialize(new ExportItem(keyBase64, dumpBase64, value.Value.Type, value.Value.TtlMilliseconds));
+				await writer.WriteAsync(serialized.AsMemory(), cancellationToken);
+			}
+			else
+			{
+				var ttl = value.Value.TtlMilliseconds?.ToString(CultureInfo.InvariantCulture) ?? "";
+				await writer.WriteLineAsync($"{Csv(keyBase64)},{Csv(dumpBase64)},{Csv(value.Value.Type)},{Csv(ttl)}".AsMemory(), cancellationToken);
+			}
+			first = false;
+			exported++;
+			if (request.OnProgress is not null) await request.OnProgress(exported);
+			return null;
+		}
+
+		if (request.Keys is { Length: > 0 })
+		{
+			for (int i = 0; i < request.Keys.Length; i++)
 			{
 				cancellationToken.ThrowIfCancellationRequested();
-				byte[] key = item.RawKey ?? Encoding.UTF8.GetBytes(item.Key);
-				if (!await session.AddKeyAsync(key, cancellationToken)) continue;
-				var value = await snapshots.CaptureAsync(connection, key, database, cancellationToken);
-				if (value.IsFailure)
-					return Result.Failure<ExportRedisDataResponse>(new Error("Export.KeyReadFailed", $"Export stopped because a key could not be read: {value.Error.Message}"));
-				string keyBase64 = Convert.ToBase64String(key);
-				string dumpBase64 = Convert.ToBase64String(value.Value.Payload);
-				if (json)
+				byte[] rawKey;
+				if (request.KeysBase64 is not null && i < request.KeysBase64.Length && !string.IsNullOrWhiteSpace(request.KeysBase64[i]))
 				{
-					if (!first) await writer.WriteAsync(",\n");
-					var serialized = JsonSerializer.Serialize(new ExportItem(keyBase64, dumpBase64, value.Value.Type, value.Value.TtlMilliseconds));
-					await writer.WriteAsync(serialized.AsMemory(), cancellationToken);
+					try
+					{
+						rawKey = Convert.FromBase64String(request.KeysBase64[i]!);
+					}
+					catch (FormatException)
+					{
+						return Result.Failure<ExportRedisDataResponse>(new Error("Export.InvalidKeyBase64", "Invalid Base64 key supplied for export."));
+					}
 				}
 				else
 				{
-					var ttl = value.Value.TtlMilliseconds?.ToString(CultureInfo.InvariantCulture) ?? "";
-					await writer.WriteLineAsync($"{Csv(keyBase64)},{Csv(dumpBase64)},{Csv(value.Value.Type)},{Csv(ttl)}".AsMemory(), cancellationToken);
+					rawKey = Encoding.UTF8.GetBytes(request.Keys[i]);
 				}
-				first = false;
-				exported++;
-				if (request.OnProgress is not null) await request.OnProgress(exported);
+
+				var err = await WriteKeyAsync(rawKey);
+				if (err is not null) return Result.Failure<ExportRedisDataResponse>(err);
 			}
-			cursor = page.Value.NextCursor;
-		} while (cursor is not null);
+		}
+		else
+		{
+			string? cursor = null;
+			do
+			{
+				cancellationToken.ThrowIfCancellationRequested();
+				var page = await keys.ScanKeysAsync(connection, request.Pattern, database, cursor, 100, cancellationToken);
+				if (page.IsFailure) return Result.Failure<ExportRedisDataResponse>(page.Error);
+				if (page.Value.MissingCount > 0)
+					return Result.Failure<ExportRedisDataResponse>(new Error("Export.KeyReadFailed", "Export stopped because a scanned key disappeared. Retry the export."));
+				foreach (var item in page.Value.Keys)
+				{
+					cancellationToken.ThrowIfCancellationRequested();
+					byte[] key = item.RawKey ?? Encoding.UTF8.GetBytes(item.Key);
+					var err = await WriteKeyAsync(key);
+					if (err is not null) return Result.Failure<ExportRedisDataResponse>(err);
+				}
+				cursor = page.Value.NextCursor;
+			} while (cursor is not null);
+		}
+
 		if (json) await writer.WriteAsync("\n]");
 		await writer.FlushAsync(cancellationToken);
 		session.Output.Position = 0;

@@ -87,7 +87,8 @@ export class StorageConnectionsListComponent {
    */
   rowClick(connection: ConnectionType): void {
     // Update navigation with connection-specific routes using store
-    this.sideNavStore.addConnectionRoutes(connection.id, connection.name);
+    this.connectionsStore.selectConnection(connection);
+    this.sideNavStore.addConnectionRoutes(connection.id, connection.name, connection.serverMode);
     this.router.navigate(['/storage', connection.id]);
   }
 }

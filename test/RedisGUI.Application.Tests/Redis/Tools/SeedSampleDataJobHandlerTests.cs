@@ -24,7 +24,10 @@ public class SeedSampleDataJobHandlerTests
 		var access = new Mock<IConnectionAccessService>();
 		var handler = new SeedSampleDataJobHandler(repository.Object, access.Object, Mock.Of<IMediator>());
 		var invalid = JsonSerializer.SerializeToElement(new { keyCount = 10001 });
-		Assert.That((await handler.ValidateAsync(connection.Id, invalid, CancellationToken.None)).Error.Code, Is.EqualTo("Job.InvalidParameters"));
+		var invalidResult = await handler.ValidateAsync(connection.Id, invalid, CancellationToken.None);
+		Assert.That(invalidResult.IsFailure, Is.True);
+		Assert.That(invalidResult.Error, Is.InstanceOf<ValidationFailureError>());
+		Assert.That(invalidResult.Error.Code, Is.EqualTo("Validation.Failed"));
 		var valid = JsonSerializer.SerializeToElement(new { keyCount = 20, targetDatabases = new[] { 1 } });
 		Assert.That((await handler.ValidateAsync(connection.Id, valid, CancellationToken.None)).Error.Code, Is.EqualTo("Connection.Forbidden"));
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);

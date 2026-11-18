@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using System;
 using System.Collections.Generic;
 using RedisGUI.Shared.Mediator;
@@ -22,7 +23,11 @@ public sealed record UpdateRedisValueCommand(
 	RedisDataType Type,
 	RedisValueData Value,
 	TimeSpan? Ttl = null,
-	int? Database = null) : ICommand;
+	int? Database = null,
+	string? KeyBase64 = null) : ICommand, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+}
 
 /// <summary>
 /// Redis data types.
@@ -94,24 +99,18 @@ public sealed record StreamEntry(string Id, Dictionary<string, string> Fields);
 /// <summary>
 /// Handles the command to update a Redis value with type-specific handling
 /// </summary>
-internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRedisValueCommand>
+internal sealed class UpdateRedisValueCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService? access = null) : ICommandHandler<UpdateRedisValueCommand>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
-
-	public UpdateRedisValueCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
-
 	public async Task<Result> Handle(UpdateRedisValueCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
 			request.ConnectionId,
-			cancellationToken);
+			access,
+			cancellationToken,
+			requireWritable: true);
 
 		if (connectionResult.IsFailure)
 		{
@@ -119,11 +118,6 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
 		}
 
 		var connection = connectionResult.Value;
-
-		if (connection.IsReadOnly)
-		{
-			return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
-		}
 
 		object? valueToSet = request.Type switch
 		{
@@ -141,13 +135,23 @@ internal sealed class UpdateRedisValueCommandHandler : ICommandHandler<UpdateRed
 			return Result.Failure(new Error("RedisValue.InvalidData", "Invalid value data for the specified type"));
 		}
 
-		return await valueService.UpdateValueAsync(
-			connection,
-			request.Key,
-			valueToSet,
-			request.Type.ToString(),
-			request.Ttl,
-			cancellationToken,
-			request.Database);
+		return string.IsNullOrEmpty(request.KeyBase64)
+			? await valueService.UpdateValueAsync(
+				connection,
+				request.Key,
+				valueToSet,
+				request.Type.ToString(),
+				request.Ttl,
+				cancellationToken,
+				request.Database)
+			: await valueService.UpdateValueByIdentityAsync(
+				connection,
+				request.Key,
+				request.KeyBase64,
+				valueToSet,
+				request.Type.ToString(),
+				request.Ttl,
+				cancellationToken,
+				request.Database);
 	}
 }

@@ -23,6 +23,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { RedisCliService } from '../../../../core/services/redis-cli.service';
+import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
 
 import { JsonEditorComponent } from '../../../../shared/components/json-editor/json-editor.component';
 import {
@@ -107,6 +108,7 @@ export class StorageValueEditorComponent {
     { optional: true }
   );
   private readonly cliService = inject(RedisCliService);
+  private readonly redisKeysStore = inject(RedisKeysStore);
   private readonly destroyRef = inject(DestroyRef);
 
   /** Signal form model */
@@ -288,7 +290,7 @@ export class StorageValueEditorComponent {
 
     this.isCheckingMemory.set(true);
     this.cliService
-      .getKeyMemoryUsage(connId, key)
+      .getKeyMemoryUsage(connId, key, this.redisKeysStore.activeDatabase())
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: res => {

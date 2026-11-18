@@ -1,5 +1,6 @@
 using System;
 using RedisGUI.Application.Connections.Shared;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
@@ -18,31 +19,19 @@ public sealed record GetConnectionByIdQuery(Guid Id) : IQuery<GetConnectionRespo
 /// <summary>
 /// Handles the retrieval of Redis connections by their unique identifier.
 /// </summary>
-internal sealed class GetConnectionByIdQueryHandler : IQueryHandler<GetConnectionByIdQuery, GetConnectionResponse>
+internal sealed class GetConnectionByIdQueryHandler(
+	IRedisConnectionRepository connectionRepository,
+	IPasswordDecrypt passwordDecrypt,
+	IRedisTopologyRegistry? topology = null,
+	IConnectionAccessService? access = null) : IQueryHandler<GetConnectionByIdQuery, GetConnectionResponse>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IPasswordDecrypt passwordDecrypt;
-
-	/// <summary>
-	/// Initializes a new instance of the GetConnectionByIdQueryHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="passwordDecrypt">Service for password decryption</param>
-	public GetConnectionByIdQueryHandler(IRedisConnectionRepository connectionRepository, IPasswordDecrypt passwordDecrypt)
-	{
-		this.connectionRepository = connectionRepository;
-		this.passwordDecrypt = passwordDecrypt;
-	}
-
-	/// <summary>
-	/// Retrieves a Redis connection by its ID and returns it as a response object.
-	/// </summary>
-	/// <param name="request">The connection retrieval query</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>Result containing the connection details if found</returns>
 	public async Task<Result<GetConnectionResponse>> Handle(GetConnectionByIdQuery request, CancellationToken cancellationToken)
 	{
-		var connection = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
-		return connection.Map(x => GetConnectionResponse.FromRedisConnection(x, passwordDecrypt));
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.Id, access, cancellationToken);
+		if (connectionResult.IsFailure)
+			return Result.Failure<GetConnectionResponse>(connectionResult.Error);
+
+		var serverMode = topology?.GetMode(request.Id) ?? RedisServerMode.Unknown;
+		return Result.Success(GetConnectionResponse.FromRedisConnection(connectionResult.Value, passwordDecrypt, serverMode));
 	}
 }

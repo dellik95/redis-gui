@@ -1,5 +1,6 @@
 using RedisGUI.Infrastructure.Configuration;
 using System.Data.Common;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -33,7 +34,7 @@ public class CacheKeyProvider : ICacheKeyProvider
 
 		var cacheDbContextType = context.GetType();
 		var tables = string.Join(";", tableNames);
-		var sqlHash = ComputeHash(command.CommandText.Trim());
+		var sqlHash = ComputeHash(BuildCommandFingerprint(command));
 
 		var keyBuilder = new StringBuilder(this.config.KeyPrefix);
 		keyBuilder.Append("|SQL_hash:").Append(sqlHash);
@@ -43,10 +44,45 @@ public class CacheKeyProvider : ICacheKeyProvider
 		return keyBuilder.ToString();
 	}
 
-	private static string ComputeHash(string input, int hashLength = 15)
+	private static string BuildCommandFingerprint(DbCommand command)
 	{
-		using var sha256 = SHA256.Create();
-		var hashBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(input));
-		return BitConverter.ToString(hashBytes).Replace("-", "").ToLower()[..hashLength];
+		var commandText = command.CommandText.Trim();
+		if (command.Parameters.Count == 0)
+		{
+			return commandText;
+		}
+
+		var builder = new StringBuilder(commandText.Length + command.Parameters.Count * 32);
+		builder.Append(commandText.Length).Append(':').Append(commandText);
+
+		for (int i = 0; i < command.Parameters.Count; i++)
+		{
+			DbParameter parameter = command.Parameters[i];
+			string formattedValue = FormatParameterValue(parameter.Value);
+			builder.Append('|')
+				.Append(parameter.ParameterName)
+				.Append('#').Append((int)parameter.DbType)
+				.Append('#').Append((int)parameter.Direction)
+				.Append('#').Append(formattedValue.Length)
+				.Append(':').Append(formattedValue);
+		}
+
+		return builder.ToString();
+	}
+
+	private static string FormatParameterValue(object? value) => value switch
+	{
+		null or DBNull => "<null>",
+		byte[] bytes => "hex:" + Convert.ToHexString(bytes),
+		DateTime dt => dt.ToString("O", CultureInfo.InvariantCulture) + ":" + (int)dt.Kind,
+		DateTimeOffset dto => dto.ToString("O", CultureInfo.InvariantCulture),
+		IFormattable formattable => formattable.ToString(null, CultureInfo.InvariantCulture),
+		_ => value.ToString() ?? string.Empty
+	};
+
+	private static string ComputeHash(string input, int hashLength = 32)
+	{
+		var hashBytes = SHA256.HashData(Encoding.UTF8.GetBytes(input));
+		return Convert.ToHexStringLower(hashBytes)[..hashLength];
 	}
 }

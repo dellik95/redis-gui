@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using RedisGUI.Domain.RedisMetrics.Attributes;
 
 namespace RedisGUI.Domain.RedisMetrics;
@@ -12,6 +13,8 @@ public class RedisMetrics
 
 	[RedisMetric("Keyspace", valuePattern: @"keys=(\d+)")]
 	public long KeyCount { get; set; }
+
+	public Dictionary<int, long> DatabaseKeyCounts { get; set; } = [];
 
 	[RedisMetric("Memory", "used_memory")]
 	public double MemoryUsage { get; set; }

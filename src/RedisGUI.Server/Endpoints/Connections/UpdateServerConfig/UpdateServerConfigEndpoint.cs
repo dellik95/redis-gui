@@ -31,6 +31,6 @@ public class UpdateServerConfigEndpoint : IEndpoint
 		.WithTags("Connections")
 		.Produces<RedisSetConfigResponseDto>(StatusCodes.Status200OK)
 		.Produces(StatusCodes.Status400BadRequest)
-		.RequireAuthorization(Policies.Authenticated);
+		.RequireAuthorization(Policies.WriteAccess);
 	}
 }

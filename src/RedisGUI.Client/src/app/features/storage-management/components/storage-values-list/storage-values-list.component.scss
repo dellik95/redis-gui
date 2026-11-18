@@ -178,46 +178,9 @@
   }
 }
 
-.chunk-loading-spinner {
-  color: var(--mat-sys-on-surface-variant, #666666);
-}
-
-.paginator-container {
-  border-top: 1px solid var(--mat-sys-outline-variant, #e0e0e0);
-  background: var(--mat-sys-surface, #ffffff);
-}
-
-/* Tree container */
 .tree-container {
   border: 1px solid var(--color-border, #1e293b);
   border-radius: 14px;
-}
-
-.loading-label {
-  color: var(--mat-sys-on-surface-variant, #666666);
-}
-
-.empty-icon-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-  .empty-icon {
-    opacity: 0.7;
-  }
-}
-
-.empty-title {
-  margin: 0 0 8px 0;
-}
-
-.empty-desc {
-  margin: 0 0 20px 0;
-  code {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--color-accent, #6366f1);
-    font-size: 13px;
-  }
 }
 
 .data-row {
@@ -236,5 +199,57 @@
     .copy-key-btn {
       opacity: 1;
     }
+  }
+}
+
+.vtable-header,
+.vtable-row {
+  display: grid;
+  grid-template-columns: 48px 120px minmax(240px, 1fr) 140px 168px;
+  align-items: center;
+  min-width: 760px;
+}
+
+.vtable-header {
+  height: 44px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted, #94a3b8);
+  border-bottom: 1px solid var(--color-border, #1e293b);
+  background: var(--color-card, #0f172a);
+}
+
+.vtable-row {
+  height: 52px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--color-border, rgba(148, 163, 184, 0.12));
+  box-sizing: border-box;
+}
+
+.vtable-cell {
+  padding: 0 6px;
+  overflow: hidden;
+}
+
+.sortable-col {
+  cursor: pointer;
+  user-select: none;
+}
+
+.col-header-content {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sort-icon {
+  font-size: 16px;
+  width: 16px;
+  height: 16px;
+  opacity: 0.45;
+  &.sort-icon-active {
+    opacity: 1;
+    color: var(--color-accent, #6366f1);
   }
 }

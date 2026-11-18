@@ -61,12 +61,17 @@ public sealed class ConnectionHealth
 	/// </summary>
 	public int ConsecutiveFailures { get; init; }
 
+	/// <summary>
+	/// Confirmed server deployment topology (Standalone, Cluster, Sentinel, or Unknown).
+	/// </summary>
+	public string ServerMode { get; init; } = nameof(RedisServerMode.Unknown);
+
 	private ConnectionHealth() { }
 
 	/// <summary>
 	/// Create a healthy status
 	/// </summary>
-	public static ConnectionHealth Healthy(Guid connectionId, double responseTimeMs)
+	public static ConnectionHealth Healthy(Guid connectionId, double responseTimeMs, string serverMode = nameof(RedisServerMode.Unknown))
 	{
 		return new ConnectionHealth
 		{
@@ -75,14 +80,15 @@ public sealed class ConnectionHealth
 			LastChecked = DateTime.UtcNow,
 			ResponseTimeMs = responseTimeMs,
 			ErrorMessage = null,
-			ConsecutiveFailures = 0
+			ConsecutiveFailures = 0,
+			ServerMode = serverMode
 		};
 	}
 
 	/// <summary>
 	/// Create an unhealthy status
 	/// </summary>
-	public static ConnectionHealth Unhealthy(Guid connectionId, string errorMessage, int consecutiveFailures)
+	public static ConnectionHealth Unhealthy(Guid connectionId, string errorMessage, int consecutiveFailures, string serverMode = nameof(RedisServerMode.Unknown))
 	{
 		return new ConnectionHealth
 		{
@@ -91,14 +97,15 @@ public sealed class ConnectionHealth
 			LastChecked = DateTime.UtcNow,
 			ResponseTimeMs = 0,
 			ErrorMessage = errorMessage,
-			ConsecutiveFailures = consecutiveFailures
+			ConsecutiveFailures = consecutiveFailures,
+			ServerMode = serverMode
 		};
 	}
 
 	/// <summary>
 	/// Create a degraded status
 	/// </summary>
-	public static ConnectionHealth Degraded(Guid connectionId, double responseTimeMs, string reason)
+	public static ConnectionHealth Degraded(Guid connectionId, double responseTimeMs, string reason, string serverMode = nameof(RedisServerMode.Unknown))
 	{
 		return new ConnectionHealth
 		{
@@ -107,7 +114,8 @@ public sealed class ConnectionHealth
 			LastChecked = DateTime.UtcNow,
 			ResponseTimeMs = responseTimeMs,
 			ErrorMessage = reason,
-			ConsecutiveFailures = 0
+			ConsecutiveFailures = 0,
+			ServerMode = serverMode
 		};
 	}
 }

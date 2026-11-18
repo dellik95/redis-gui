@@ -1,5 +1,6 @@
 import {
   Component,
+  ElementRef,
   input,
   model,
   inject,
@@ -108,8 +109,12 @@ export class TreeViewListComponent {
     keys: string[];
   }>();
 
+  /** Emitted when the user scrolls near the bottom of the tree viewport */
+  readonly loadMoreRequested = output<void>();
+
   // 4. View children
   readonly tree = viewChild(MatTree);
+  readonly treeWrapper = viewChild<ElementRef<HTMLElement>>('treeWrapper');
 
   // 5. State signals
   /** Tree data source for Material Tree */
@@ -174,7 +179,8 @@ export class TreeViewListComponent {
               }
             }
           }
-        }, 50);
+          this.checkWrapperScroll();
+        }, 0);
       } else {
         this.dataSource.set([]);
       }
@@ -231,6 +237,8 @@ export class TreeViewListComponent {
 
       this.keySelected.emit({
         key: node.keyInfo.key,
+        keyBase64: node.keyInfo.keyBase64 ?? null,
+        isBinary: node.keyInfo.isBinary ?? false,
         type: toRedisDataType(node.keyInfo.type),
         ttl: node.keyInfo.ttl ?? -1
       });
@@ -353,6 +361,7 @@ export class TreeViewListComponent {
         matTree.expandDescendants(n);
       }
     }
+    setTimeout(() => this.checkWrapperScroll(), 0);
   }
 
   /**
@@ -365,6 +374,22 @@ export class TreeViewListComponent {
       for (const n of this.dataSource()) {
         matTree.collapseDescendants(n);
       }
+    }
+  }
+
+  onTreeScroll(event: Event): void {
+    const el = event.target as HTMLElement | null;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= 160) {
+      this.loadMoreRequested.emit();
+    }
+  }
+
+  private checkWrapperScroll(): void {
+    const el = this.treeWrapper()?.nativeElement;
+    if (!el) return;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight <= 160) {
+      this.loadMoreRequested.emit();
     }
   }
 
@@ -386,6 +411,7 @@ export class TreeViewListComponent {
     if (matTree) {
       if (!isCurrentlyExpanded) {
         matTree.expand(node);
+        setTimeout(() => this.checkWrapperScroll(), 0);
       } else {
         matTree.collapse(node);
       }

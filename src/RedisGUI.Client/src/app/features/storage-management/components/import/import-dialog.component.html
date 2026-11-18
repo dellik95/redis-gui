@@ -1,6 +1,8 @@
 <h2 mat-dialog-title>Import Redis Data</h2>
 <mat-dialog-content>
-  <p class="import-hint">Import into database {{ data.database }}. Existing keys are skipped. Files are limited to 10 MB.</p>
+  <p class="import-hint">
+    Import into database {{ data.database }}. Existing keys are skipped unless overwrite is enabled. Files are limited to 10 MB.
+  </p>
   <p class="import-hint">Snapshots require a compatible Redis version and RESTORE permission. Legacy files support string keys only.</p>
   <div class="file-input-wrapper">
     <input
@@ -12,6 +14,11 @@
       aria-label="Select file to import"
     />
   </div>
+  <ui-checkbox
+    [(checked)]="overwrite"
+    [disabled]="isLoading()"
+    label="Overwrite existing keys"
+  />
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
@@ -21,9 +28,8 @@
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
-  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the import.</p> }
   @if (connectionStatus()) {
-    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+    <p role="status">{{ connectionStatus() }}</p>
   }
   @if (result(); as outcome) {
     <p>Imported {{ outcome.importedCount }}, skipped {{ outcome.skippedCount }}, failed {{ outcome.failedCount }}.</p>
@@ -32,10 +38,14 @@
     @if (outcome.failedCount > 0) { <p>Failed keys (Base64 for snapshots): {{ outcome.failedKeys.slice(0, 10).join(', ') }}</p> }
   }
 </mat-dialog-content>
-<mat-dialog-actions align="end">
-  <button mat-button (click)="close()" [disabled]="isLoading() && !jobId()">Close</button>
-  @if (isLoading() && jobId()) { <button mat-button (click)="cancel()" [disabled]="stopping()">{{ stopping() ? 'Stopping…' : 'Stop' }}</button> }
-  <button mat-flat-button color="primary" [disabled]="!canImport()" (click)="onImport()">
+<mat-dialog-actions align="end" class="gap-2">
+  <ui-button variant="ghost" (click)="close()" [disabled]="isLoading() && !jobId()">Close</ui-button>
+  @if (isLoading() && jobId()) {
+    <ui-button variant="ghost" (click)="cancel()" [disabled]="stopping()">
+      {{ stopping() ? 'Stopping…' : 'Stop' }}
+    </ui-button>
+  }
+  <ui-button variant="primary" [disabled]="!canImport()" (click)="onImport()">
     Start import
-  </button>
+  </ui-button>
 </mat-dialog-actions>

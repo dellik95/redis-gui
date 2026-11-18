@@ -10,7 +10,7 @@ internal static class RedisKeyScan
 {
 	internal sealed record Cursor(Guid ConnectionId, int Database, string Pattern, string[] Nodes, int NodeIndex,
 		[property: JsonPropertyName("Cursor")] string Position);
-	internal sealed record Context(IServer[] Servers, Cursor State);
+	internal sealed record Context(IServer[] Servers, Cursor State, RedisServerMode ServerMode);
 
 	internal static Result ValidateParameters(string pattern, int database, string? cursor, int count) =>
 		database is < 0 or > 15 || count is < 1 or > 500 || string.IsNullOrEmpty(pattern) || pattern.Length > 1024 || cursor?.Length > 8192
@@ -50,11 +50,12 @@ internal static class RedisKeyScan
 			return Result.Failure<Context>(new Error("Redis.ScanUnavailable", "Multiple standalone primaries cannot be scanned reliably through one connection."));
 		}
 
+		var serverMode = cluster ? RedisServerMode.Cluster : RedisServerMode.Standalone;
 		string[] nodes = servers.Select(server => server.EndPoint.ToString()!).ToArray();
 		return ParseCursor(cursor, connectionId, database, pattern, nodes)
 			.Bind(state => servers[state.NodeIndex].ServerType == ServerType.Cluster && database != 0
 				? Result.Failure<Context>(new Error("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."))
-				: Result.Success(new Context(servers, state)));
+				: Result.Success(new Context(servers, state, serverMode)));
 	}
 
 	private static Result<Cursor> ParseCursor(string? encoded, Guid connectionId, int database, string pattern, string[] nodes)
@@ -99,8 +100,11 @@ internal static class RedisKeyScan
 		RedisKeyScanItem?[] metadata = await Task.WhenAll(keys.Select(key => ReadMetadataAsync(database, (byte[])key!, cancellationToken)));
 		int node = state.NodeIndex + (next == "0" ? 1 : 0);
 		string? nextCursor = node >= context.Servers.Length ? null : EncodeCursor(state, node, next);
-		return Result.Success(new RedisKeyScanPage(metadata.OfType<RedisKeyScanItem>().ToArray(), nextCursor,
-			metadata.Count(item => item is null)));
+		return Result.Success(new RedisKeyScanPage(
+			metadata.OfType<RedisKeyScanItem>().ToArray(),
+			nextCursor,
+			metadata.Count(item => item is null),
+			context.ServerMode.ToString()));
 	}
 
 	private static async Task<RedisKeyScanItem?> ReadMetadataAsync(IDatabase database, byte[] rawKey, CancellationToken cancellationToken)
@@ -109,7 +113,19 @@ internal static class RedisKeyScan
 		Task<RedisType> typeTask = database.KeyTypeAsync(key);
 		Task<TimeSpan?> ttlTask = database.KeyTimeToLiveAsync(key);
 		await Task.WhenAll(typeTask, ttlTask).WaitAsync(cancellationToken);
-		return typeTask.Result == RedisType.None ? null : new RedisKeyScanItem(key.ToString(), typeTask.Result.ToString(), ttlTask.Result?.TotalSeconds, rawKey);
+		if (typeTask.Result == RedisType.None)
+		{
+			return null;
+		}
+
+		bool isBinary = !RedisServerResolver.IsLosslessUtf8(rawKey);
+		return new RedisKeyScanItem(
+			key.ToString(),
+			typeTask.Result.ToString(),
+			ttlTask.Result?.TotalSeconds,
+			rawKey,
+			Convert.ToBase64String(rawKey),
+			isBinary);
 	}
 
 	private static string EncodeCursor(Cursor state, int node, string next) => Convert.ToBase64String(JsonSerializer.SerializeToUtf8Bytes(

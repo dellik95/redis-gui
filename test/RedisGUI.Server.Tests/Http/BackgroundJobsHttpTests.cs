@@ -190,6 +190,164 @@ public class BackgroundJobsHttpTests
 		await app.StopAsync();
 	}
 
+	[Test]
+	public async Task ListJobsKinds_CustomTypedHandler_AndLiveAccessRevocation_WorkEndToEnd()
+	{
+		var owner = Guid.NewGuid();
+		var stranger = Guid.NewGuid();
+		var ownedConnection = RedisConnection.Create(new ConnectionName("Primary"), new ConnectionHost("localhost"),
+			new ConnectionPort(6379), new DatabaseNumber(0), new ConnectionOwnerId(owner)).Value;
+		var revokedConnection = RedisConnection.Create(new ConnectionName("Primary"), new ConnectionHost("localhost"),
+			new ConnectionPort(6379), new DatabaseNumber(0), new ConnectionOwnerId(stranger)).Value;
+
+		var activeConnection = ownedConnection;
+		var repository = new Mock<IRedisConnectionRepository>();
+		repository.Setup(x => x.GetConnectionByIdAsync(ownedConnection.Id, It.IsAny<CancellationToken>()))
+			.ReturnsAsync(() => Result.Success(activeConnection));
+
+		var access = new Mock<IConnectionAccessService>();
+		access.Setup(x => x.CanAccessAsync(It.IsAny<RedisConnection>()))
+			.ReturnsAsync((RedisConnection c) => c.OwnerId.Value == owner);
+
+		var gates = new CustomEchoGates();
+
+		var builder = WebApplication.CreateBuilder();
+		builder.WebHost.UseUrls("http://127.0.0.1:0");
+		builder.Services.AddApplication();
+		builder.Services.AddSingleton(gates);
+		builder.Services.AddBackgroundJobHandler<CustomEchoJobHandler>();
+		builder.Services.AddProblemDetails();
+		builder.Services.AddHttpContextAccessor();
+		builder.Services.AddSignalR();
+		builder.Services.AddRateLimiter(options => options.AddFixedWindowLimiter("sensitive", limiter =>
+		{
+			limiter.PermitLimit = 100;
+			limiter.Window = TimeSpan.FromMinutes(1);
+		}));
+		builder.Services.AddAuthentication("Test").AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>("Test", _ => { });
+		builder.Services.AddAuthorization(options =>
+		{
+			options.AddPolicy(Policies.Authenticated, policy => policy.RequireAuthenticatedUser());
+			options.AddPolicy(Policies.WriteAccess, policy => policy.RequireRole("Admin", "User"));
+		});
+		builder.Services.AddScoped<IAuthorizationHandler, ConnectionOwnershipHandler>();
+		builder.Services.AddSingleton(repository.Object);
+		builder.Services.AddSingleton(access.Object);
+		builder.Services.AddSingleton(Mock.Of<IRedisLoadTestService>());
+		builder.Services.AddSingleton(Mock.Of<IAuditLogRepository>());
+		builder.Services.AddSingleton(Mock.Of<IUnitOfWork>());
+		builder.Services.AddScoped<ICurrentUserService, TestCurrentUser>();
+		builder.Services.AddSingleton<BackgroundJobSubscriptionRegistry>();
+		builder.Services.AddScoped(typeof(BackgroundJobManager).Assembly.GetType("RedisGUI.Infrastructure.BackgroundJobs.JobIdentity")!);
+		builder.Services.AddSingleton<BackgroundJobManager>();
+		builder.Services.AddHostedService(provider => provider.GetRequiredService<BackgroundJobManager>());
+
+		await using var app = builder.Build();
+		app.UseAuthentication();
+		app.UseAuthorization();
+		app.UseRateLimiter();
+		new BackgroundJobsEndpoint().MapEndpoint(app);
+		app.MapHub<BackgroundJobsHub>("/hub/jobs");
+		await app.StartAsync();
+
+		var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
+		using var client = new HttpClient { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(10) };
+
+		using var kindsResp = await client.SendAsync(Request(HttpMethod.Get, "/jobs/kinds", owner));
+		Assert.That(kindsResp.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+		var kindsJson = await kindsResp.Content.ReadFromJsonAsync<JsonElement>();
+		Assert.That(kindsJson.EnumerateArray().Any(k =>
+			k.GetProperty("kind").GetString() == "custom-echo" &&
+			k.GetProperty("displayName").GetString() == "Custom Echo"), Is.True);
+
+		using var invalidStart = Request(HttpMethod.Post, "/jobs", owner);
+		invalidStart.Content = JsonContent.Create(new { kind = "custom-echo", connectionId = ownedConnection.Id, parameters = new { label = "" } });
+		using var invalidResp = await client.SendAsync(invalidStart);
+		Assert.That(invalidResp.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
+
+		using var startReq = Request(HttpMethod.Post, "/jobs", owner);
+		startReq.Content = JsonContent.Create(new { kind = "custom-echo", connectionId = ownedConnection.Id, parameters = new { label = "hello" } });
+		using var startResp = await client.SendAsync(startReq);
+		Assert.That(startResp.StatusCode, Is.EqualTo(HttpStatusCode.Accepted));
+		var started = await startResp.Content.ReadFromJsonAsync<BackgroundJobSnapshot>();
+
+		using var listOwnerResp = await client.SendAsync(Request(HttpMethod.Get, $"/jobs?connectionId={ownedConnection.Id}", owner));
+		Assert.That(listOwnerResp.StatusCode, Is.EqualTo(HttpStatusCode.OK));
+		var listOwnerJson = await listOwnerResp.Content.ReadFromJsonAsync<JsonElement>();
+		Assert.That(listOwnerJson.GetArrayLength(), Is.EqualTo(1));
+		Assert.That(listOwnerJson[0].GetProperty("connectionName").GetString(), Is.EqualTo("Primary"));
+
+		using var listStrangerResp = await client.SendAsync(Request(HttpMethod.Get, "/jobs", stranger));
+		Assert.That((await listStrangerResp.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength(), Is.EqualTo(0));
+
+		await using var hub = new HubConnectionBuilder().WithUrl(address + "/hub/jobs", options =>
+		{
+			options.Headers.Add("X-Test-User", owner.ToString());
+			options.Headers.Add("X-Test-Role", "User");
+		}).Build();
+
+		var progressTcs = new TaskCompletionSource<BackgroundJobSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
+		var revokedTcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
+		hub.On<BackgroundJobSnapshot>("JobUpdated", snapshot => progressTcs.TrySetResult(snapshot));
+		hub.On<Guid>("AccessRevoked", id => revokedTcs.TrySetResult(id));
+
+		await hub.StartAsync();
+		await hub.InvokeAsync("Subscribe", started!.JobId);
+
+		gates.First.TrySetResult();
+		var firstUpdate = await progressTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		Assert.That(firstUpdate.ProgressPercent, Is.EqualTo(40).Within(0.01));
+
+		activeConnection = revokedConnection;
+		gates.Second.TrySetResult();
+		var revokedId = await revokedTcs.Task.WaitAsync(TimeSpan.FromSeconds(5));
+		Assert.That(revokedId, Is.EqualTo(started.JobId));
+
+		using var listAfterRevoke = await client.SendAsync(Request(HttpMethod.Get, "/jobs", owner));
+		Assert.That((await listAfterRevoke.Content.ReadFromJsonAsync<JsonElement>()).GetArrayLength(), Is.EqualTo(0));
+
+		await hub.StopAsync();
+		await app.StopAsync();
+	}
+
+	private sealed class CustomEchoGates
+	{
+		public TaskCompletionSource First { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+		public TaskCompletionSource Second { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+	}
+
+	private sealed record CustomEchoParameters(string Label);
+	private sealed record CustomEchoProgress(string Message);
+	private sealed record CustomEchoResult(string Echoed);
+
+	private sealed class CustomEchoValidator : FluentValidation.AbstractValidator<CustomEchoParameters>
+	{
+		public CustomEchoValidator() => FluentValidation.DefaultValidatorExtensions.NotEmpty(RuleFor(x => x.Label));
+	}
+
+	private sealed class CustomEchoJobHandler(
+		IRedisConnectionRepository repository,
+		IConnectionAccessService access,
+		CustomEchoGates gates)
+		: BackgroundJobHandler<CustomEchoParameters, CustomEchoProgress, CustomEchoResult>(repository, access, new CustomEchoValidator())
+	{
+		public override string Kind => "custom-echo";
+		public override string DisplayName => "Custom Echo";
+		public override bool RequiresWriteAccess => false;
+
+		protected override async Task<Result<JobExecutionOutcome<CustomEchoResult>>> ExecuteTypedAsync(
+			Guid connectionId,
+			CustomEchoParameters parameters,
+			IJobProgressReporter<CustomEchoProgress> progress,
+			CancellationToken cancellationToken)
+		{
+			await gates.First.Task.WaitAsync(cancellationToken);
+			await progress.ReportAsync(40, new CustomEchoProgress(parameters.Label));
+			await gates.Second.Task.WaitAsync(cancellationToken);
+			return Result.Success(JobExecutionOutcome<CustomEchoResult>.Completed(new CustomEchoResult(parameters.Label.ToUpperInvariant())));
+		}
+	}
+
 	private static HttpRequestMessage Request(HttpMethod method, string path, Guid user, string role = "User")
 	{
 		var request = new HttpRequestMessage(method, path);

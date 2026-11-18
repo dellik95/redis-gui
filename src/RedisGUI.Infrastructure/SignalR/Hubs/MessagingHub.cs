@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using RedisGUI.Infrastructure.Authorization;
+using RedisGUI.Infrastructure.Redis;
 using RedisGUI.Infrastructure.Redis.Services;
 using StackExchange.Redis;
 using System.Collections.Concurrent;
@@ -35,7 +36,7 @@ public sealed class MessagingHub(IRedisConnectionRepository repository, IAuthori
         var connection = await GetConnection(connectionId);
         var redis = await messaging.ConnectAsync(connection, Context.ConnectionAborted);
         var lease = messaging.Pin(redis) ?? throw new HubException("Connection was retired. Please retry.");
-        await subscriptions.WatchStreamAsync(Context.ConnectionId, redis.GetDatabase(connection.DatabaseNumber.Value), key, afterId, Clients.Caller, lease);
+        await subscriptions.WatchStreamAsync(Context.ConnectionId, redis.GetDatabase(redis.IsCluster() ? 0 : connection.DatabaseNumber.Value), key, afterId, Clients.Caller, lease);
     }
 
     public Task StopWatching() => subscriptions.RemoveAsync(Context.ConnectionId);

@@ -11,6 +11,7 @@ public sealed class UpdateRedisValueRequest
 {
 	public Guid ConnectionId { get; set; }
 	public string Key { get; set; } = string.Empty;
+	public string? KeyBase64 { get; set; }
 
 	[JsonConverter(typeof(JsonStringEnumConverter))]
 	public RedisDataType Type { get; set; }

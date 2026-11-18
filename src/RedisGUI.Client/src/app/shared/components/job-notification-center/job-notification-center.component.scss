@@ -1,0 +1,46 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
+.job-menu-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--mat-divider-color, rgba(128, 128, 128, 0.2));
+}
+
+.job-menu-list {
+  max-height: calc(100vh - 130px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.job-card {
+  overflow-wrap: anywhere;
+}
+
+.status-pill {
+  background: rgba(128, 128, 128, 0.14);
+}
+
+.status-running {
+  background: rgba(59, 130, 246, 0.16);
+  color: rgb(37, 99, 235);
+}
+
+.status-completed {
+  background: rgba(16, 185, 129, 0.16);
+  color: rgb(5, 150, 105);
+}
+
+.status-failed {
+  background: rgba(239, 68, 68, 0.16);
+  color: rgb(220, 38, 38);
+}
+
+.status-cancelled {
+  background: rgba(245, 158, 11, 0.18);
+  color: rgb(217, 119, 6);
+}

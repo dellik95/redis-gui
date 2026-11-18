@@ -32,13 +32,39 @@ public static class ErrorResultExtensions
 			});
 	}
 
-	/// <summary>Maps known application errors to HTTP statuses; other errors are client errors.</summary>
+	/// <summary>Maps known application errors to HTTP statuses; unmatched codes default to client error (400).</summary>
 	public static int GetStatusCode(Error error) => error.Code switch
 	{
-		"Connection.Forbidden" or "Connection.ReadOnlyMode" => StatusCodes.Status403Forbidden,
-		"User.InvalidCredentials" or "User.Unauthorized" => StatusCodes.Status401Unauthorized,
-		"Storage.ConcurrencyConflict" or "Email.AlreadyExists" or "User.EmailAlreadyExists" => StatusCodes.Status409Conflict,
-		var code when code.EndsWith("NotFound", System.StringComparison.Ordinal) => StatusCodes.Status404NotFound,
+		"Connection.Forbidden" or "Connection.ReadOnlyMode" or "User.Deactivated"
+			=> StatusCodes.Status403Forbidden,
+		var code when code.EndsWith("Forbidden", System.StringComparison.Ordinal)
+			=> StatusCodes.Status403Forbidden,
+		"User.InvalidCredentials" or "User.Unauthorized"
+			=> StatusCodes.Status401Unauthorized,
+		"ConnectionManager.Cancelled"
+			=> StatusCodes.Status408RequestTimeout,
+		"Storage.ConcurrencyConflict" or "Email.AlreadyExists" or "User.EmailAlreadyExists" or "Storage.KeyAlreadyExists"
+			=> StatusCodes.Status409Conflict,
+		var code when code.EndsWith("NotFound", System.StringComparison.Ordinal)
+			=> StatusCodes.Status404NotFound,
+		var code when code is "Redis.ScanUnavailable" or "Connection.NotEstablished"
+			|| code.EndsWith("Unavailable", System.StringComparison.Ordinal)
+			=> StatusCodes.Status503ServiceUnavailable,
+		var code when code is "Redis.ScanFailed" or "Redis.DeleteByPatternFailed"
+			or "Export.CaptureFailed" or "Import.RestoreFailed" or "Config.UpdateFailed"
+			|| (code.StartsWith("Redis.", System.StringComparison.Ordinal)
+				&& code.EndsWith("Failed", System.StringComparison.Ordinal))
+			=> StatusCodes.Status502BadGateway,
+		var code when code is "ConnectionManager.UnexpectedError" or "MetricsCollection.Exception"
+			|| code.StartsWith("Handler.", System.StringComparison.Ordinal)
+			=> StatusCodes.Status500InternalServerError,
+		var code when code.StartsWith("Validation.", System.StringComparison.Ordinal)
+			|| code.StartsWith("Redis.Unsupported", System.StringComparison.Ordinal)
+			|| code.Contains("Invalid", System.StringComparison.Ordinal)
+			|| code.Contains("Empty", System.StringComparison.Ordinal)
+			|| code.EndsWith("Required", System.StringComparison.Ordinal)
+			|| code is "Import.ParseError" or "Cli.EmptyCommand"
+			=> StatusCodes.Status400BadRequest,
 		_ => StatusCodes.Status400BadRequest
 	};
 

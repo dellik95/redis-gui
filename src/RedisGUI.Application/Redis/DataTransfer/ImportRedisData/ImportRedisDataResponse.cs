@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RedisGUI.Domain.Audit;
 
 namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
 
@@ -17,4 +18,8 @@ public sealed record ImportRedisDataResponse(
 	int FailedCount,
 	IReadOnlyList<string> FailedKeys,
 	bool Cancelled = false,
-	bool MayHaveUnconfirmedChanges = false);
+	bool MayHaveUnconfirmedChanges = false) : IAuditOutcome
+{
+	public string FormatAuditOutcome() =>
+		$"Imported {ImportedCount}; skipped {SkippedCount}; failed {FailedCount}; cancelled: {Cancelled}; unconfirmed changes: {MayHaveUnconfirmedChanges}.";
+}

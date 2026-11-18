@@ -294,9 +294,8 @@
   }
 
   <!-- Loading State during Seeding -->
-  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the operation.</p> }
   @if (connectionStatus()) {
-    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+    <p role="status">{{ connectionStatus() }}</p>
   }
   @if (isSeeding()) {
     <div
@@ -318,23 +317,24 @@
 
 <div class="dialog-actions flex justify-end items-center gap-3 py-3.5 px-6 bg-canvas-card">
   @if (!isSeeding() && !result()) {
-    <button mat-stroked-button mat-dialog-close>Cancel</button>
-    <button
-      mat-flat-button
-      color="primary"
+    <ui-button variant="outline" (click)="dialogRef.close()">Cancel</ui-button>
+    <ui-button
+      variant="primary"
+      icon="cloud_upload"
       class="seed-btn font-semibold"
       (click)="startSeed()"
       [disabled]="selectedTypes().length === 0"
     >
-      <mat-icon>cloud_upload</mat-icon>
-      <span>Seed {{ keyCount() }} Keys</span>
-    </button>
+      Seed {{ keyCount() }} Keys
+    </ui-button>
   }
 
   @if (!isSeeding() && result()) {
-    <button mat-flat-button color="primary" [mat-dialog-close]="true">Close & Refresh Keys</button>
+    <ui-button variant="primary" (click)="dialogRef.close(true)">Close & Refresh Keys</ui-button>
   }
   @if (isSeeding() && jobId()) {
-    <button mat-button (click)="stopSeed()" [disabled]="stopping()">{{ stopping() ? 'Stopping…' : 'Stop' }}</button>
+    <ui-button variant="danger" (click)="stopSeed()" [disabled]="stopping()">
+      {{ stopping() ? 'Stopping…' : 'Stop' }}
+    </ui-button>
   }
 </div>

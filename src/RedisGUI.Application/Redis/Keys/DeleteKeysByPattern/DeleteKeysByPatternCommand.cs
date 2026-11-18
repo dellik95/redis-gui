@@ -20,45 +20,32 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 public sealed record DeleteKeysByPatternCommand(
 	Guid ConnectionId,
 	string Pattern,
-	int? Database = null) : ICommand<DeleteKeysByPatternResponse>;
+	int? Database = null) : ICommand<DeleteKeysByPatternResponse>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+}
 
 /// <summary>
 /// Handles the command to delete keys matching a pattern.
 /// </summary>
-internal sealed class DeleteKeysByPatternCommandHandler : ICommandHandler<DeleteKeysByPatternCommand, DeleteKeysByPatternResponse>
+internal sealed class DeleteKeysByPatternCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisKeyService keyService,
+	IConnectionAccessService access) : ICommandHandler<DeleteKeysByPatternCommand, DeleteKeysByPatternResponse>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisKeyService keyService;
-	private readonly IConnectionAccessService access;
-
-	public DeleteKeysByPatternCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisKeyService keyService, IConnectionAccessService access)
-	{
-		this.connectionRepository = connectionRepository;
-		this.keyService = keyService;
-		this.access = access;
-	}
-
 	public async Task<Result<DeleteKeysByPatternResponse>> Handle(
 		DeleteKeysByPatternCommand request,
 		CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
 			request.ConnectionId,
-			cancellationToken);
+			access,
+			cancellationToken,
+			requireWritable: true);
 
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<DeleteKeysByPatternResponse>(connectionResult.Error);
-		}
-
-		if (!await access.CanAccessAsync(connectionResult.Value))
-			return Result.Failure<DeleteKeysByPatternResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
-
-		if (connectionResult.Value.IsReadOnly)
-		{
-			return Result.Failure<DeleteKeysByPatternResponse>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
 		var deleteResult = await keyService.DeleteKeysByPatternAsync(

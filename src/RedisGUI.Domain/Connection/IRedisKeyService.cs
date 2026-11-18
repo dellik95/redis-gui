@@ -73,4 +73,18 @@ public interface IRedisKeyService
 	/// <param name="database">Target database index</param>
 	/// <returns>Type name (String, List, Set, Hash, SortedSet, Stream)</returns>
 	Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null);
+
+	/// <summary>Deletes a key identified by raw key bytes or UTF-8 string.</summary>
+	Task<Result<bool>> DeleteKeyByIdentityAsync(RedisConnection connection, string key, string? keyBase64,
+		CancellationToken cancellationToken = default, int? database = null) =>
+		DeleteKeyAsync(connection, key, cancellationToken, database);
+
+	/// <summary>Deletes multiple keys identified by raw key bytes or UTF-8 strings.</summary>
+	Task<Result<(int DeletedCount, IReadOnlyList<string> FailedKeys)>> DeleteMultipleKeysByIdentityAsync(
+		RedisConnection connection,
+		IReadOnlyList<string> keys,
+		IReadOnlyList<string?>? keysBase64 = null,
+		CancellationToken cancellationToken = default,
+		int? database = null) =>
+		DeleteMultipleKeysAsync(connection, keys, cancellationToken, database);
 }

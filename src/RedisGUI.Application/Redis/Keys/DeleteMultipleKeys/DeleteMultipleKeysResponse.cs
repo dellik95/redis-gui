@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using RedisGUI.Domain.Audit;
 
 namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 
@@ -11,4 +12,8 @@ namespace RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 public sealed record DeleteMultipleKeysResponse(
 	int DeletedCount,
 	int TotalRequested,
-	IReadOnlyList<string> FailedKeys);
+	IReadOnlyList<string> FailedKeys) : IAuditOutcome
+{
+	public string FormatAuditOutcome() =>
+		$"Deleted {DeletedCount} of {TotalRequested}; failed or missing: {FailedKeys.Count}.";
+}

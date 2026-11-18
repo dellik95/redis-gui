@@ -10,9 +10,13 @@ namespace RedisGUI.Application.Redis.Queries.GetRedisValue;
 /// <param name="Type">The Redis data type.</param>
 /// <param name="TimeToLive">Time until the key expires (null if no expiration).</param>
 /// <param name="Ttl">TTL in seconds (-1 if no expiration).</param>
+/// <param name="KeyBase64">Canonical Base64-encoded raw Redis key bytes.</param>
+/// <param name="IsBinary">True when raw key bytes are not valid lossless UTF-8.</param>
 public sealed record GetRedisValueResponse(
 	string Key,
 	object Value,
 	string Type,
 	TimeSpan? TimeToLive,
-	long? Ttl = null);
+	long? Ttl = null,
+	string? KeyBase64 = null,
+	bool IsBinary = false);

@@ -1,4 +1,5 @@
 using System;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,11 +19,12 @@ public sealed record GetKeyspaceInfoQuery(Guid ConnectionId) : IQuery<GetKeyspac
 /// </summary>
 internal sealed class GetKeyspaceInfoQueryHandler(
 	IRedisConnectionRepository connectionRepository,
-	IRedisDiagnosticsService diagnosticsService) : IQueryHandler<GetKeyspaceInfoQuery, GetKeyspaceInfoResponse>
+	IRedisDiagnosticsService diagnosticsService,
+	IConnectionAccessService? access = null) : IQueryHandler<GetKeyspaceInfoQuery, GetKeyspaceInfoResponse>
 {
 	public async Task<Result<GetKeyspaceInfoResponse>> Handle(GetKeyspaceInfoQuery request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<GetKeyspaceInfoResponse>(connectionResult.Error);

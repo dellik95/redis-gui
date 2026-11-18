@@ -34,7 +34,7 @@
       "url": "https://dellik95.github.io/redis-gui/",
       "name": "RedisGUI (RedisStudio V2.2) — Enterprise Redis Observability & Management Platform",
       "description": "RedisGUI (RedisStudio V2.2) — Enterprise-grade Redis management studio & real-time SignalR observability platform built on .NET 11, ASP.NET Core Minimal APIs, Clean Architecture (CQRS / MediatR), and Angular 22 Signals.",
-      "dateModified": "2026-11-14",
+      "dateModified": "2026-11-18",
       "mainEntity": {
         "@id": "https://dellik95.github.io/redis-gui/#app"
       }
@@ -58,10 +58,12 @@
         "Angular 22"
       ],
       "featureList": [
-        "Visual Strategy-based editors for Strings, Hashes, Lists, Sets, ZSets & Streams",
-        "Sub-second SignalR telemetry (Ops/sec, Memory RSS, CPU) & Slowlog diagnostics",
-        "Built-in multi-DB CLI drawer, Synthetic Load Tester (p50/p95/p99) & 10k Key Seeder",
-        "Enterprise RBAC, JWT Auth, Audit Logging & Production Safe Mode"
+        "Non-blocking virtualized key explorer (*cdkVirtualFor) with auto-pagination, Binary-Safe Base64 keys (BIN), & Delimiter Trees",
+        "Redis Cluster topology detection (Cluster badges, DB 0 lock), multi-primary SCAN & failover-safe HMAC cursors",
+        "Extensible Typed Background Jobs & live SignalR Notification Center (Bulk Ops, Export/Import, 10k Seeder, Load Tester)",
+        "Visual Strategy-based editors for Strings, Hashes, Lists, Sets, ZSets & Streams plus Messaging Inspector (Pub/Sub & Streams)",
+        "Sub-second SignalR telemetry (Ops/sec, Memory RSS, CPU), Lock-Free Connection Pool & Slowlog diagnostics",
+        "Enterprise RBAC, Ownership Authorization with live AccessRevoked enforcement, RFC 9457 Problem Details, Audit Logs & Safe Mode"
       ],
       "screenshot": [
         "https://dellik95.github.io/redis-gui/assets/redis-gui/02_dashboard.png",
@@ -1663,7 +1665,7 @@
           </div>
           <h1 class="hero-title" data-i18n="hero_title">Command Your Redis Clusters With Sub-Millisecond Clarity.</h1>
           <p class="hero-sub" data-i18n="hero_sub">
-            Eliminate production blind spots, prevent costly cache outages, and ship faster. RedisStudio V2.2 unifies real-time cluster telemetry, visual data modeling, role-based access control, and safe load testing in one enterprise console.
+            Eliminate production blind spots, prevent costly cache outages, and ship faster. Built on .NET 11 &amp; Angular 22 Signals with a lock-free core, RedisStudio V2.2 unifies Cluster topology awareness, binary-safe key browsing, live SignalR Background Jobs, RBAC, and safe load testing.
           </p>
           <div class="hero-cta-row">
             <a href="#visual-tour" class="btn-hero glow" data-i18n="hero_cta_tour">Explore All 4 Screens &amp; Features ↓</a>
@@ -1818,16 +1820,16 @@
             </div>
           </div>
           <div class="tour-card">
-            <span class="tour-badge" data-i18n="s2_badge">SCREEN 02 • STORAGE MANAGER</span>
-            <h3 data-i18n="s2_title">Browse keys incrementally with Redis SCAN</h3>
-            <p data-i18n="s2_desc">Load key metadata one cursor page at a time, then explore the loaded results in a table or namespace tree.</p>
+            <span class="tour-badge" data-i18n="s2_badge">SCREEN 02 • VIRTUALIZED STORAGE MANAGER</span>
+            <h3 data-i18n="s2_title">Browse Standalone &amp; Cluster Keys with Zero UI Lag</h3>
+            <p data-i18n="s2_desc">Stream cursor SCAN pages smoothly into an Angular CDK virtualized viewport, track Cluster topology and binary BIN keys cleanly, or switch to a delimiter namespace tree.</p>
             <ul class="tour-list">
-              <li data-i18n="s2_f1">Switch effortlessly between flat Virtualized Table mode and Hierarchical Tree grouped by custom delimiters (:).</li>
-              <li data-i18n="s2_f2">Search with Redis patterns and filter loaded keys by type; continue scanning with Load more.</li>
-              <li data-i18n="s2_f3">Preview bulk key actions and use the toolbar for import/export, sample data, Slowlog, and load testing.</li>
+              <li data-i18n="s2_f1">Switch between CDK virtualized tables (auto-paginating on scroll) and Hierarchical Folder Trees grouped by custom delimiters (:).</li>
+              <li data-i18n="s2_f2">Full Binary-Safe Base64 key identity (BIN badge), automatic Redis Cluster DB 0 locking, and failover-safe cluster cursors.</li>
+              <li data-i18n="s2_f3">Manage long-running export, import, bulk delete, 10k seeding &amp; load tests from the live SignalR Notification Center.</li>
             </ul>
             <div class="tech-mini-pills">
-              <span>Cursor SCAN</span><span>Delimiter Tree</span><span>TTL</span><span>Bulk Actions</span>
+              <span>CDK Virtual Scroll</span><span>Binary Keys</span><span>Cluster Topology</span><span>Notification Center</span>
             </div>
           </div>
         </article>
@@ -2008,24 +2010,24 @@
           <div class="arch-stack reveal">
             <div class="arch-layer">
               <div class="arch-layer-head">
-                <span class="arch-layer-title" data-i18n="arch_t1">01. Eliminate Production Outages</span>
+                <span class="arch-layer-title" data-i18n="arch_t1">01. Lock-Free Engine &amp; Cluster Failover Safety</span>
                 <span class="arch-layer-tag">99.99% Uptime Safe</span>
               </div>
-              <p data-i18n="arch_l1">Interactive key browsing runs strictly via non-blocking cursor SCAN, keeping latency flat even during peak customer checkout traffic.</p>
+              <p data-i18n="arch_l1">.NET 11 lock-free connection pooling and non-blocking SCAN traverse Cluster primaries using HMAC cursor tokens that detect failovers cleanly.</p>
             </div>
             <div class="arch-layer">
               <div class="arch-layer-head">
-                <span class="arch-layer-title" data-i18n="arch_t2">02. Enterprise Security, RBAC &amp; Audit Compliance</span>
+                <span class="arch-layer-title" data-i18n="arch_t2">02. Enterprise Security, RBAC &amp; Live Revocation</span>
                 <span class="arch-layer-tag">SOC2 / Audit Ready</span>
               </div>
-              <p data-i18n="arch_l2">Production Read-Only Safe Mode, dry-run pattern delete checks, Role-Based Access Control (Admin / Viewer), and full team audit trails.</p>
+              <p data-i18n="arch_l2">Connection ownership checks, RFC 9457 Problem Details, Read-Only Safe Mode, live SignalR AccessRevoked guards, and full team audit trails.</p>
             </div>
             <div class="arch-layer">
               <div class="arch-layer-head">
-                <span class="arch-layer-title" data-i18n="arch_t3">03. Validate Capacity Before Peak Launches</span>
+                <span class="arch-layer-title" data-i18n="arch_t3">03. Extensible Background Jobs &amp; Notification Center</span>
                 <span class="arch-layer-tag">Predictable SLA</span>
               </div>
-              <p data-i18n="arch_l3">Run load tests as background jobs and follow live progress and latency metrics while they execute.</p>
+              <p data-i18n="arch_l3">Run exports, imports, bulk ops, 10k seeding, and load tests via Channel&lt;T&gt; workers with live SignalR progress and persistent workspace reloads.</p>
             </div>
             <div class="arch-layer">
               <div class="arch-layer-head">
@@ -2111,7 +2113,7 @@
         nav_arch: 'Business Value',
         hero_pill: 'REAL-TIME REDIS OPERATIONS • ZERO-DOWNTIME OBSERVABILITY',
         hero_title: 'Command Your Redis Clusters With Sub-Millisecond Clarity.',
-        hero_sub: 'Eliminate production blind spots, prevent costly cache outages, and ship faster. RedisStudio V2.2 unifies real-time cluster telemetry, visual data modeling, role-based access control, and safe load testing in one enterprise console.',
+        hero_sub: 'Eliminate production blind spots, prevent costly cache outages, and ship faster. Built on .NET 11 & Angular 22 Signals with a lock-free core, RedisStudio V2.2 unifies Cluster topology awareness, binary-safe key browsing, live SignalR Background Jobs, RBAC, and safe load testing.',
         hero_cta_tour: 'Explore Workflows & Features ↓',
         hero_cta_try: 'Inside the App (Real Modules)',
         float_stream_title: '03. Stream Visual Drawer',
@@ -2133,14 +2135,14 @@
         s1_title: 'Spot Memory Spikes & Bottlenecks Before Users Notice',
         s1_desc: 'Monitor memory peaks, realtime ops/sec throughput, CPU load, and connected client traffic continuously so teams catch anomalies early instead of reacting to incidents.',
         s1_f1: '4 live health panels: Memory Usage (RSS & Peak), Operations/sec, CPU %, and Client Traffic (KB/s in & out).',
-        s1_f2: 'Centralized environment cards displaying host:port, active DB, security badges, and 1-click switch across Staging & Prod.',
+        s1_f2: 'Centralized environment cards displaying host:port, active DB or Cluster badge, security pills, and 1-click switch.',
         s1_f3: 'Governance-ready navigation (Dashboard, Health Monitoring, Audit Logs [ADMIN]) plus instant Ctrl+K Quick Search.',
-        s2_badge: 'SCREEN 02 • STORAGE MANAGER',
-        s2_title: 'Browse keys incrementally with Redis SCAN',
-        s2_desc: 'Load key metadata one cursor page at a time, then explore loaded results in a table or namespace tree.',
-        s2_f1: 'Switch seamlessly between flat sortable Tables and domain-grouped Folder Trees divided by namespace delimiter (:).',
-        s2_f2: 'Search with Redis patterns and filter loaded keys by type; continue scanning with Load more.',
-        s2_f3: 'Preview bulk key actions and use the toolbar for import/export, sample data, Slowlog, and load testing.',
+        s2_badge: 'SCREEN 02 • VIRTUALIZED STORAGE MANAGER',
+        s2_title: 'Browse Standalone & Cluster Keys with Zero UI Lag',
+        s2_desc: 'Stream cursor SCAN pages into an Angular CDK virtualized grid, track Cluster shards and binary BIN keys safely, or explore a delimiter tree.',
+        s2_f1: 'Switch seamlessly between CDK virtualized scrolling tables (with auto-pagination) and domain-grouped Folder Trees (:).',
+        s2_f2: 'Full Binary-Safe Base64 key identity (BIN badge), automatic Redis Cluster DB 0 locking, and failover-safe cursor validation.',
+        s2_f3: 'Monitor export, import, bulk key ops, 10k data seeding, and load tests live from the header Job Notification Center.',
         tt_kicker: 'INTERACTIVE STORAGE MODE • LIVE VISUALIZER',
         tt_title: 'Switch Between Flat Sortable Tables & Domain Folder Trees',
         tt_sub: 'Click between Table and Tree modes, switch namespace delimiters (: / .), sort columns, or expand production domains — identical to Storage Manager inside RedisStudio V2.2.',
@@ -2185,12 +2187,12 @@
         arch_kicker: 'BUSINESS IMPACT & ROI',
         arch_title: 'Cut Troubleshooting Time by 80% & Protect Production Uptime',
         arch_desc: 'Built for high-stakes SaaS, FinTech, Healthcare, and e-commerce teams where every millisecond of downtime impacts revenue.',
-        arch_t1: '01. Eliminate Production Outages',
-        arch_l1: 'Interactive key browsing runs strictly via non-blocking cursor SCAN, keeping latency flat even during peak customer checkout traffic.',
-        arch_t2: '02. Enterprise Security, RBAC & Audit Compliance',
-        arch_l2: 'Production Read-Only Safe Mode, dry-run pattern delete checks, Role-Based Access Control (Admin / Viewer), and full team audit trails.',
-        arch_t3: '03. Validate Capacity Before Peak Launches',
-        arch_l3: 'Run load tests as background jobs and follow live progress and latency metrics while they execute.',
+        arch_t1: '01. Lock-Free Engine & Cluster Failover Safety',
+        arch_l1: '.NET 11 lock-free connection pooling and non-blocking SCAN traverse Cluster primaries using HMAC cursor tokens that detect failovers cleanly.',
+        arch_t2: '02. Enterprise Security, RBAC & Live Revocation',
+        arch_l2: 'Connection ownership checks, RFC 9457 Problem Details, Read-Only Safe Mode, live SignalR AccessRevoked guards, and full team audit trails.',
+        arch_t3: '03. Extensible Background Jobs & Notification Center',
+        arch_l3: 'Run exports, imports, bulk ops, 10k seeding, and load tests via Channel<T> workers with live SignalR progress and persistent workspace reloads.',
         arch_t4: '04. Accelerate Onboarding & Save DevOps Hours',
         arch_l4: 'Replace fragile one-off shell scripts with intuitive visual data editors, portable JSON snapshots, and single-command Docker deployment.',
         bench_title: 'Predictable SLA Performance Under Load',
@@ -2208,7 +2210,7 @@
         nav_arch: 'Бізнес-цінність',
         hero_pill: 'КЕРУВАННЯ REDIS БЕЗ ДАУНТАЙМУ • LIVE-ДІАГНОСТИКА ТА МОНІТОРИНГ',
         hero_title: 'Керуйте Redis-кластерами з точністю до мілісекунди.',
-        hero_sub: 'Приберіть «сліпі зони» в продакшені, уникайте дорогих збоїв кешу та прискорюйте роботу команди. RedisStudio V2.2 об’єднує live-телеметрію, візуальне управління даними, рольову безпеку (RBAC) та перевірку навантаження в одній консолі.',
+        hero_sub: 'Приберіть «сліпі зони» в продакшені, уникайте збоїв кешу та прискорюйте роботу команди. На базі .NET 11 та Angular 22 Signals з lock-free ядром: RedisStudio V2.2 об’єднує підтримку Redis Cluster, binary-safe ключі, фонові завдання (Notification Center), RBAC і безпечні навантажувальні тести.',
         hero_cta_tour: 'Огляд ключових можливостей ↓',
         hero_cta_try: 'Реальні модулі програми',
         float_stream_title: '03. Візуальний редактор Streams',
@@ -2230,14 +2232,14 @@
         s1_title: 'Виявляйте піки пам’яті та вузькі місця раніше за користувачів',
         s1_desc: 'Безперервно відстежуйте пікове споживання пам’яті, ops/sec, навантаження CPU та мережевий трафік — реагуйте на відхилення до виникнення інциденту.',
         s1_f1: '4 наочні панелі здоров’я кластера: Memory Usage (RSS і Peak), Operations/sec, CPU (%) та Client Traffic (KB/s).',
-        s1_f2: 'Централізовані картки середовищ із хостом, активною БД, TLS-статусом та перемиканням між Dev, Staging і Prod у 1 клік.',
+        s1_f2: 'Централізовані картки середовищ із хостом, активною БД або бейджем Cluster, статусом безпеки та перемиканням у 1 клік.',
         s1_f3: 'Корпоративна навігація (Dashboard, Health Monitoring, Audit Logs [ADMIN]) та миттєвий глобальний пошук Ctrl+K.',
-        s2_badge: 'ЕКРАН 02 • STORAGE MANAGER',
-        s2_title: 'Поступовий перегляд ключів за допомогою Redis SCAN',
-        s2_desc: 'Завантажуйте метадані ключів сторінками та переглядайте результати в таблиці або дереві просторів імен.',
-        s2_f1: 'Зручне перемикання між таблицею та ієрархічним деревом бізнес-доменів за роздільником (:).',
-        s2_f2: 'Шукайте за шаблоном Redis, фільтруйте завантажені ключі за типом і продовжуйте сканування кнопкою Load more.',
-        s2_f3: 'Панель інструментів: імпорт і експорт, видалення за шаблоном, тестові дані, Slowlog та Load Test.',
+        s2_badge: 'ЕКРАН 02 • ВІРТУАЛІЗОВАНИЙ STORAGE MANAGER',
+        s2_title: 'Перегляд Standalone та Cluster-ключів без затримок інтерфейсу',
+        s2_desc: 'Підвантажуйте сторінки Redis SCAN у віртуалізовану таблицю Angular CDK (*cdkVirtualFor), працюйте з binary BIN-ключами або перемикайтеся на дерево доменів.',
+        s2_f1: 'Віртуалізована таблиця з автопідвантаженням при прокрутці та ієрархічне дерево бізнес-доменів за роздільником (:).',
+        s2_f2: 'Повна підтримка Binary-Safe Base64 ключів (бейдж BIN), автоблокування DB 0 у Redis Cluster та контроль курсора при failover.',
+        s2_f3: 'Єдиний центр сповіщень (Notification Center) для відстеження експорту, імпорту, масового видалення, генератора даних і Load Test.',
         tt_kicker: 'ІНТЕРАКТИВНИЙ РЕЖИМ ПЕРЕГЛЯДУ • STORAGE MANAGER',
         tt_title: 'Миттєве перемикання між плоскою таблицею та деревом доменів',
         tt_sub: 'Перемикайте Table / Tree, змінюйте роздільник простору імен (: / .), сортуйте колонки або розгортайте папки доменів — точно як у RedisStudio V2.2.',
@@ -2282,12 +2284,12 @@
         arch_kicker: 'БІЗНЕС-ЦІННІСТЬ ТА ГОТОВНІСТЬ ДО ENTERPRISE',
         arch_title: 'Скоротіть час діагностики інцидентів на 80% і захистіть продакшн',
         arch_desc: 'Створено для SaaS-платформ, FinTech, Healthcare та e-commerce, де кожна хвилина простою безпосередньо впливає на прибуток.',
-        arch_t1: '01. Захист продакшну від зупинок (Zero Downtime)',
-        arch_l1: 'Усі операції перегляду працюють через неблокуючий SCAN — сервіси клієнтів не гальмують навіть під час пікового навантаження.',
-        arch_t2: '02. Корпоративна безпека, RBAC і журнал аудиту',
-        arch_l2: 'Режим Read-Only для продакшну, сухе підтвердження видалень, розмежування ролей (Admin / Viewer) та незмінний аудит усіх змін.',
-        arch_t3: '03. Прогнозованість SLA перед великими релізами',
-        arch_l3: 'Тестуйте сценарії на 10,000+ ключів та контролюйте реальні затримки p50/p95/p99 до виходу нової версії до користувачів.',
+        arch_t1: '01. Lock-Free ядро та безпека Redis Cluster',
+        arch_l1: 'Безблокувальний пул з’єднань (.NET 11) і курсорний SCAN проходять усі master-вузли кластера з HMAC-захистом курсора при failover.',
+        arch_t2: '02. Корпоративна безпека, RBAC і Live-відкликання прав',
+        arch_l2: 'Перевірка власника підключення, RFC 9457 Problem Details, Read-Only Safe Mode, миттєве AccessRevoked у SignalR та незмінний журнал аудиту.',
+        arch_t3: '03. Фонові завдання, Notification Center та збереження стану',
+        arch_l3: 'Експорт/імпорт, масові операції, генератор і Load Test у Channel<T> воркерах із live-прогресом та відновленням робочого простору після перезавантаження.',
         arch_t4: '04. Економія годин команди DevOps і розробників',
         arch_l4: 'Замініть розрізнені консольні скрипти єдиною студією з бекапами JSON та розгортанням однією командою через Docker.',
         bench_title: 'Передбачувана швидкодія під навантаженням (SLA)',
@@ -2310,56 +2312,56 @@
       {
         tone: ['rgba(99, 102, 241, 0.16)', 'rgba(99, 102, 241, 0.4)', '#818cf8'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6v5H4z" fill="currentColor" opacity="0.22"/><path d="M14 4h6v4h-6zM14 14h6v4h-6z"/><path d="M7 10v6h7M7 6v0M10 7.5h4" opacity="0.85"/></svg>`,
-        en: ['Table & Delimiter Tree Views', 'Group loaded keys by custom separator (:) into collapsible namespace trees or sort inside a virtualized grid.'],
-        uk: ['Таблиця та Дерево (Delimiter :)', 'Автоматичне групування 100k+ ключів за роздільником (:) у зручні папки або сортування у віртуалізованій таблиці.']
+        en: ['CDK Virtual Scroll & Delimiter Tree', 'Render huge keysets smoothly with *cdkVirtualFor auto-pagination, BIN binary badges, or collapsible domain trees (:).'],
+        uk: ['Віртуальний скрол CDK і Дерево (:)', 'Плавний рендеринг великих списків через *cdkVirtualFor з автопагінацією, бейджами BIN або ієрархічним деревом доменів.']
       },
       {
         tone: ['rgba(168, 85, 247, 0.16)', 'rgba(168, 85, 247, 0.4)', '#c084fc'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 3 21 7.5 12 12 3 7.5 12 3" fill="currentColor" opacity="0.24"/><path d="M3 12l9 4.5 9-4.5"/><path d="M3 16.5L12 21l9-4.5"/></svg>`,
-        en: ['Visual Editors for Every Redis Type', 'Structured, human-friendly drawers for JSON/Strings, Hashes, Lists, Sets, ZSets, and Event Streams with safe validation.'],
-        uk: ['Візуальні редактори всіх типів', 'Зручні структуровані форми для JSON/Strings, Hashes, Lists, Sets, ZSets та Streams із валідацією змін перед записом.']
+        en: ['Binary-Safe Editors for Every Type', 'Structured visual & Monaco JSON drawers for Strings, Hashes, Lists, Sets, ZSets & Streams supporting UTF-8 and Base64 keys.'],
+        uk: ['Binary-Safe редактори всіх типів', 'Зручні форми та Monaco JSON для Strings, Hashes, Lists, Sets, ZSets і Streams із підтримкою UTF-8 та Base64 ключів.']
       },
       {
         tone: ['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.38)', '#34d399'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="3" fill="currentColor" opacity="0.14"/><polyline points="7 10 10.5 13 7 16"/><line x1="13" y1="16" x2="17" y2="16"/></svg>`,
-        en: ['Interactive DB-Scoped CLI Drawer', 'Persistent bottom console supporting raw Redis commands alongside 1-click PING, INFO, SLOWLOG & MEMORY STATS chips.'],
-        uk: ['Вбудований Redis CLI термінал', 'Нижня консоль із контекстом обраної БД, історією команд і швидкими пресетами PING, INFO, SLOWLOG, MEMORY STATS.']
+        en: ['Interactive CLI & Messaging Inspector', 'Execute scoped CLI commands or monitor live Pub/Sub channels & Streams with 1Hz SignalR throughput and subscriber charts.'],
+        uk: ['CLI-термінал та Messaging Inspector', 'Виконуйте команди CLI у контексті БД або відстежуйте Pub/Sub-канали й Streams із живими 1Hz-графіками в SignalR.']
       },
       {
         tone: ['rgba(245, 158, 11, 0.15)', 'rgba(245, 158, 11, 0.38)', '#fbbf24'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 4 14 11 14 10 22 20 10 13 10 13 2" fill="currentColor" opacity="0.22"/></svg>`,
-        en: ['Non-Blocking Cursor SCAN', 'Never runs dangerous KEYS * in production — streams batches via SCAN cursors keeping P99 latency flat.'],
-        uk: ['Безпечний курсорний SCAN', 'Ніколи не блокує продакшн через KEYS * — використовує батчовий курсорний SCAN зі стабільною затримкою.']
+        en: ['Cluster Topology & Failover SCAN', 'Auto-detects Redis Cluster nodes, locks DB 0 safely, traverses all primaries, and guards continuation cursors against failover.'],
+        uk: ['Redis Cluster і захищений SCAN', 'Автоматично визначає Redis Cluster, фіксує DB 0, сканує всі primary-шарди та захищає курсор при failover вузлів.']
       },
       {
         tone: ['rgba(56, 189, 248, 0.15)', 'rgba(56, 189, 248, 0.38)', '#38bdf8'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 14l4-4"/><circle cx="12" cy="14" r="1.5" fill="currentColor"/><path d="M4.6 17A8.5 8.5 0 1119.4 17"/><path d="M5 20h14" opacity="0.45"/></svg>`,
-        en: ['Synthetic Load Benchmark', 'Built-in traffic generator executing concurrent GET/SET workloads and charting real p50 / p95 / p99 latencies.'],
-        uk: ['Вбудований Load Benchmark', 'Синтетичний генератор навантаження з побудовою гістограми затримок p50, p95 та p99 у реальному часі.']
+        en: ['Synthetic Load Benchmark', 'Built-in typed background job executing concurrent GET/SET workloads and charting real p50 / p95 / p99 latencies.'],
+        uk: ['Вбудований Load Benchmark', 'Синтетичний генератор навантаження у фоні з побудовою гістограми затримок p50, p95 та p99 у реальному часі.']
       },
       {
         tone: ['rgba(239, 68, 68, 0.15)', 'rgba(239, 68, 68, 0.38)', '#f87171'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3" fill="currentColor" opacity="0.24"/><path d="M4 6v6c0 1.66 3.58 3 8 3s8-1.34 8-3V6"/><path d="M4 12v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>`,
-        en: ['10,000-Key Stress Seeder', 'Generate sample Redis data as a background job with live progress and cancellation.'],
-        uk: ['Seeder на 10,000+ ключів', 'Миттєве наповнення БД реалістичними даними (фінанси, сенсори, сесії) в один клік для тестів та демо.']
+        en: ['Typed Jobs & Notification Center', 'Unified SignalR /hub/jobs center for bulk ops, export/import, 10k Seeder & Load Tests with cancellation and download leases.'],
+        uk: ['Фонові завдання і Notification Center', 'Єдиний центр SignalR /hub/jobs для масових операцій, експорту/імпорту, Seeder та Load Test зі скасуванням і лізингом файлів.']
       },
       {
         tone: ['rgba(249, 115, 22, 0.15)', 'rgba(249, 115, 22, 0.38)', '#fb923c'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13" r="8" fill="currentColor" opacity="0.16"/><path d="M12 9v4l2.8 1.8M9 2.5h6M12 2.5v2.5"/></svg>`,
-        en: ['Slowlog & Memory Profiler', 'Spot heavy O(N) commands in Redis SLOWLOG and inspect per-key exact byte footprint + TTL state.'],
-        uk: ['Аналізатор Slowlog і пам’яті', 'Швидкий пошук важких команд у SLOWLOG та точний профайлер розміру кожного ключа в байтах і TTL.']
+        en: ['Lock-Free Core & Slowlog Profiler', '.NET 11 CAS connection pool & Mediator paired with Slowlog µs profiling, Cluster topology diagnostics, and memory stats.'],
+        uk: ['Lock-Free ядро й Slowlog-профайлер', 'Lock-free пул з’єднань .NET 11 та Mediator у поєднанні зі Slowlog (µs), діагностикою CLUSTER NODES і профілем пам’яті.']
       },
       {
         tone: ['rgba(16, 185, 129, 0.15)', 'rgba(16, 185, 129, 0.38)', '#34d399'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l7 3.2v5.6c0 5-3 9.2-7 11-4-1.8-7-6-7-11V5.2L12 2z" fill="currentColor" opacity="0.18"/><path d="M9.2 12.2l2 2 4-4"/></svg>`,
-        en: ['Production Safe Mode (Read-Only)', 'Lock instances against accidental writes or Delete by Pattern mutations using dry-run confirmation dialogs.'],
-        uk: ['Безпечний режим для Production', 'Захист від випадкового запису чи масового видалення за патерном із обов’язковим dry-run підтвердженням.']
+        en: ['Production Safe Mode (Read-Only)', 'Lock instances against accidental writes or Delete by Pattern mutations using dry-run confirmation and server-enforced guards.'],
+        uk: ['Безпечний режим для Production', 'Захист від випадкового запису чи масового видалення за патерном із dry-run підтвердженням і перевірками на сервері.']
       },
       {
         tone: ['rgba(99, 102, 241, 0.16)', 'rgba(99, 102, 241, 0.4)', '#818cf8'],
         icon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5" fill="currentColor" opacity="0.18"/><path d="M8 10V7a4 4 0 118 0v3"/><circle cx="12" cy="15.5" r="1.4" fill="currentColor"/></svg>`,
-        en: ['Enterprise JWT Auth & RBAC', 'Role-based authorization (Admin / Viewer) paired with immutable Audit Logs tracking every critical operation.'],
-        uk: ['JWT авторизація, RBAC і Audit Logs', 'Розмежування прав доступу (Admin / Viewer) та незмінний журнал аудиту кожної дії користувачів.']
+        en: ['RBAC, Problem Details & AccessRevoked', 'Strict ownership authorization, RFC 9457 Problem Details, live AccessRevoked hub cutoff, and immutable Audit Logs.'],
+        uk: ['RBAC, Problem Details і AccessRevoked', 'Перевірка прав власника, RFC 9457 Problem Details, миттєве AccessRevoked у SignalR та незмінний журнал аудиту.']
       },
       {
         tone: ['rgba(6, 182, 212, 0.15)', 'rgba(6, 182, 212, 0.38)', '#22d3ee'],

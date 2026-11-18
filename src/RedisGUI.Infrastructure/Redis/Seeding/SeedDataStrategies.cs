@@ -77,8 +77,22 @@ public sealed class HashSeedStrategy : ISeedDataStrategy
 			]
 		};
 
-		await db.HashSetAsync(key, hashEntries);
-		if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		var batch = db.CreateBatch();
+		if (batch is not null)
+		{
+			var delTask = batch.KeyDeleteAsync(key);
+			var setTask = batch.HashSetAsync(key, hashEntries);
+			Task? expTask = (ttl.HasValue && ttl.Value.TotalSeconds > 0) ? batch.KeyExpireAsync(key, ttl.Value) : null;
+			batch.Execute();
+			if (expTask is not null) await Task.WhenAll(delTask, setTask, expTask);
+			else await Task.WhenAll(delTask, setTask);
+		}
+		else
+		{
+			await db.KeyDeleteAsync(key);
+			await db.HashSetAsync(key, hashEntries);
+			if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		}
 	}
 }
 
@@ -91,7 +105,6 @@ public sealed class ListSeedStrategy : ISeedDataStrategy
 
 	public async Task SeedAsync(IDatabase db, string key, string payloadComplexity, int index, TimeSpan? ttl, Random rng)
 	{
-		await db.KeyDeleteAsync(key);
 		StackExchange.Redis.RedisValue[] listItems = (payloadComplexity ?? "json").ToLowerInvariant() switch
 		{
 			"simple" => ["item_alpha", "item_beta", "item_gamma"],
@@ -107,8 +120,22 @@ public sealed class ListSeedStrategy : ISeedDataStrategy
 			]
 		};
 
-		await db.ListRightPushAsync(key, listItems);
-		if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		var batch = db.CreateBatch();
+		if (batch is not null)
+		{
+			var delTask = batch.KeyDeleteAsync(key);
+			var pushTask = batch.ListRightPushAsync(key, listItems);
+			Task? expTask = (ttl.HasValue && ttl.Value.TotalSeconds > 0) ? batch.KeyExpireAsync(key, ttl.Value) : null;
+			batch.Execute();
+			if (expTask is not null) await Task.WhenAll(delTask, pushTask, expTask);
+			else await Task.WhenAll(delTask, pushTask);
+		}
+		else
+		{
+			await db.KeyDeleteAsync(key);
+			await db.ListRightPushAsync(key, listItems);
+			if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		}
 	}
 }
 
@@ -121,7 +148,6 @@ public sealed class SetSeedStrategy : ISeedDataStrategy
 
 	public async Task SeedAsync(IDatabase db, string key, string payloadComplexity, int index, TimeSpan? ttl, Random rng)
 	{
-		await db.KeyDeleteAsync(key);
 		StackExchange.Redis.RedisValue[] setMembers = (payloadComplexity ?? "json").ToLowerInvariant() switch
 		{
 			"simple" => ["tag:alpha", "tag:beta", "tag:gamma", "tag:delta"],
@@ -129,8 +155,22 @@ public sealed class SetSeedStrategy : ISeedDataStrategy
 			_ => ["feature:dark_mode", "feature:biometrics", "feature:cloud_sync", "feature:fast_checkout"]
 		};
 
-		await db.SetAddAsync(key, setMembers);
-		if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		var batch = db.CreateBatch();
+		if (batch is not null)
+		{
+			var delTask = batch.KeyDeleteAsync(key);
+			var addTask = batch.SetAddAsync(key, setMembers);
+			Task? expTask = (ttl.HasValue && ttl.Value.TotalSeconds > 0) ? batch.KeyExpireAsync(key, ttl.Value) : null;
+			batch.Execute();
+			if (expTask is not null) await Task.WhenAll(delTask, addTask, expTask);
+			else await Task.WhenAll(delTask, addTask);
+		}
+		else
+		{
+			await db.KeyDeleteAsync(key);
+			await db.SetAddAsync(key, setMembers);
+			if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		}
 	}
 }
 
@@ -143,7 +183,6 @@ public sealed class SortedSetSeedStrategy : ISeedDataStrategy
 
 	public async Task SeedAsync(IDatabase db, string key, string payloadComplexity, int index, TimeSpan? ttl, Random rng)
 	{
-		await db.KeyDeleteAsync(key);
 		SortedSetEntry[] zEntries = [
 			new SortedSetEntry($"player_{index}_pro", 8500 + rng.Next(100, 1500)),
 			new SortedSetEntry($"player_{index}_elite", 7000 + rng.Next(100, 1000)),
@@ -151,8 +190,22 @@ public sealed class SortedSetSeedStrategy : ISeedDataStrategy
 			new SortedSetEntry($"player_{index}_rookie", 3000 + rng.Next(100, 500))
 		];
 
-		await db.SortedSetAddAsync(key, zEntries);
-		if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		var batch = db.CreateBatch();
+		if (batch is not null)
+		{
+			var delTask = batch.KeyDeleteAsync(key);
+			var addTask = batch.SortedSetAddAsync(key, zEntries);
+			Task? expTask = (ttl.HasValue && ttl.Value.TotalSeconds > 0) ? batch.KeyExpireAsync(key, ttl.Value) : null;
+			batch.Execute();
+			if (expTask is not null) await Task.WhenAll(delTask, addTask, expTask);
+			else await Task.WhenAll(delTask, addTask);
+		}
+		else
+		{
+			await db.KeyDeleteAsync(key);
+			await db.SortedSetAddAsync(key, zEntries);
+			if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		}
 	}
 }
 
@@ -173,8 +226,22 @@ public sealed class StreamSeedStrategy : ISeedDataStrategy
 			new NameValueEntry("status", "nominal")
 		];
 
-		await db.StreamAddAsync(key, streamFields);
-		if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		var batch = db.CreateBatch();
+		if (batch is not null)
+		{
+			var delTask = batch.KeyDeleteAsync(key);
+			var addTask = batch.StreamAddAsync(key, streamFields);
+			Task? expTask = (ttl.HasValue && ttl.Value.TotalSeconds > 0) ? batch.KeyExpireAsync(key, ttl.Value) : null;
+			batch.Execute();
+			if (expTask is not null) await Task.WhenAll(delTask, addTask, expTask);
+			else await Task.WhenAll(delTask, addTask);
+		}
+		else
+		{
+			await db.KeyDeleteAsync(key);
+			await db.StreamAddAsync(key, streamFields);
+			if (ttl.HasValue && ttl.Value.TotalSeconds > 0) await db.KeyExpireAsync(key, ttl.Value);
+		}
 	}
 }
 

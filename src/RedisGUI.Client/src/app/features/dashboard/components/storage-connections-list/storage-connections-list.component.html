@@ -78,12 +78,22 @@
 
           <div class="card-body mb-4">
             <div class="meta-tags flex items-center gap-2 flex-wrap">
-              <span
-                class="meta-tag tag-db inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"
-              >
-                <mat-icon>dataset</mat-icon>
-                <span>DB {{ conn.database }}</span>
-              </span>
+              @if (conn.serverMode === 'Cluster') {
+                <span
+                  class="meta-tag tag-cluster inline-flex items-center gap-[5px] text-[11.5px] font-semibold py-[3px] px-2 rounded-md bg-brand/15 text-brand"
+                  matTooltip="Redis Cluster topology (DB 0)"
+                >
+                  <mat-icon>hub</mat-icon>
+                  <span>Cluster</span>
+                </span>
+              } @else {
+                <span
+                  class="meta-tag tag-db inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"
+                >
+                  <mat-icon>dataset</mat-icon>
+                  <span>DB {{ conn.database }}</span>
+                </span>
+              }
               @if (conn.password) {
                 <span
                   class="meta-tag tag-auth inline-flex items-center gap-[5px] text-[11.5px] font-medium py-[3px] px-2 rounded-md"

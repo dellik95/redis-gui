@@ -10,7 +10,11 @@ namespace RedisGUI.Shared.Mediator
 	public class Mediator : IMediator
 	{
 		private static readonly MethodInfo concreteExecutionMethod = typeof(Mediator).GetMethod(nameof(ExecuteConcrete), BindingFlags.Instance | BindingFlags.NonPublic)!;
+		private static readonly MethodInfo genericFailureMethod = typeof(Result)
+			.GetMethods(BindingFlags.Public | BindingFlags.Static)
+			.First(m => m.Name == nameof(Result.Failure) && m.IsGenericMethodDefinition && m.GetParameters().Length == 1);
 		private static readonly ConcurrentDictionary<(Type Request, Type Result), MethodInfo> concreteMethods = new();
+		private static readonly ConcurrentDictionary<Type, Func<Error, object>> failureFactories = new();
 		private readonly HandlerRegistry handlerRegistry;
 		private readonly PipelineRegistry pipelineRegistry;
 		private readonly NotificationRegistry notificationRegistry;
@@ -53,7 +57,7 @@ namespace RedisGUI.Shared.Mediator
 				return FailureResult<TWrapped>("Handler factory produced null for " + request.GetType().Name, "Handler.Null");
 			}
 
-			var behaviors = pipelineRegistry.GetBehaviors<TRequest, TWrapped>(includeOpen: false).Reverse().ToList();
+			var behaviors = pipelineRegistry.GetBehaviors<TRequest, TWrapped>(includeOpen: false);
 			var method = concreteMethods.GetOrAdd((request.GetType(), typeof(TWrapped)),
 				static key => concreteExecutionMethod.MakeGenericMethod(key.Request, key.Result));
 			Func<Task<TWrapped>> handlerDelegate = () => (Task<TWrapped>)method.Invoke(this, [request, handlerInstance, descriptor, cancellationToken])!;
@@ -86,7 +90,7 @@ namespace RedisGUI.Shared.Mediator
 			HandlerDescriptor descriptor, CancellationToken cancellationToken) where TRequest : IRequest<TWrapped>
 		{
 			Func<Task<TWrapped>> next = async () => (TWrapped)await descriptor.Invoker(handlerInstance, request!, cancellationToken);
-			foreach (var behavior in pipelineRegistry.GetBehaviors<TRequest, TWrapped>().Reverse())
+			foreach (var behavior in pipelineRegistry.GetBehaviors<TRequest, TWrapped>())
 			{
 				var inner = next;
 				next = () => behavior.Handle(request, cancellationToken, inner);
@@ -107,12 +111,13 @@ namespace RedisGUI.Shared.Mediator
 			}
 			if (typeof(TWrapped).IsGenericType && typeof(TWrapped).GetGenericTypeDefinition() == typeof(Result<>))
 			{
-				var innerType = typeof(TWrapped).GetGenericArguments()[0];
-				var failureGeneric = typeof(Result)
-					.GetMethods(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
-					.First(m => m.Name == nameof(Result.Failure) && m.IsGenericMethodDefinition && m.GetParameters().Length == 1)
-					.MakeGenericMethod(innerType);
-				return (TWrapped)failureGeneric.Invoke(null, [error])!;
+				var factory = failureFactories.GetOrAdd(typeof(TWrapped), static wrappedType =>
+				{
+					var innerType = wrappedType.GetGenericArguments()[0];
+					var closed = genericFailureMethod.MakeGenericMethod(innerType);
+					return closed.CreateDelegate<Func<Error, object>>();
+				});
+				return (TWrapped)factory(error);
 			}
 			throw new InvalidOperationException("Wrapped result type must be Result or Result<T>.");
 		}

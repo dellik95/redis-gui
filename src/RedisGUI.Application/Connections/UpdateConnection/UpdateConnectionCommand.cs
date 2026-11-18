@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using System;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Abstraction;
@@ -22,33 +23,24 @@ public sealed record UpdateConnectionCommand(
 	int Database,
 	string? UserName = null,
 	string? Password = null,
-	bool IsReadOnly = false) : ICommand;
+	bool IsReadOnly = false) : ICommand, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => Id;
+}
 
 /// <summary>
 /// Handles the updating of existing Redis connections, including validation and persistence.
 /// </summary>
-internal sealed class UpdateConnectionCommandHandler : ICommandHandler<UpdateConnectionCommand>
+internal sealed class UpdateConnectionCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IPasswordEncryptor passwordEncryptor,
+	IUnitOfWork unitOfWork,
+	IRedisConnectionService connectionService,
+	IConnectionAccessService? access = null) : ICommandHandler<UpdateConnectionCommand>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IPasswordEncryptor passwordEncryptor;
-	private readonly IUnitOfWork unitOfWork;
-	private readonly IRedisConnectionService connectionService;
-
-	public UpdateConnectionCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IPasswordEncryptor passwordEncryptor,
-		IUnitOfWork unitOfWork,
-		IRedisConnectionService connectionService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.passwordEncryptor = passwordEncryptor;
-		this.unitOfWork = unitOfWork;
-		this.connectionService = connectionService;
-	}
-
 	public async Task<Result> Handle(UpdateConnectionCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.Id, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.Id, access, cancellationToken);
 
 		if (connectionResult.IsFailure)
 		{

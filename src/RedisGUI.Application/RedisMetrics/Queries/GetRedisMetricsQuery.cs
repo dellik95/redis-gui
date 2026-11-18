@@ -1,4 +1,5 @@
 using System;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,23 +9,16 @@ using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.RedisMetrics.Queries;
 
-public record GetRedisMetricsQuery(Guid ConnectionId) : IQuery<Domain.RedisMetrics.RedisMetrics>;
+public sealed record GetRedisMetricsQuery(Guid ConnectionId) : IQuery<Domain.RedisMetrics.RedisMetrics>;
 
-internal class GetRedisMetricsQueryHandler : IQueryHandler<GetRedisMetricsQuery, Domain.RedisMetrics.RedisMetrics>
+internal sealed class GetRedisMetricsQueryHandler(
+	IRedisConnectionRepository connectionRepository,
+	IMetricsCollector metricsCollector,
+	IConnectionAccessService? access = null) : IQueryHandler<GetRedisMetricsQuery, Domain.RedisMetrics.RedisMetrics>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IMetricsCollector metricsCollector;
-
-	public GetRedisMetricsQueryHandler(IRedisConnectionRepository connectionRepository, IMetricsCollector metricsCollector)
-	{
-		this.metricsCollector = metricsCollector;
-		this.connectionRepository = connectionRepository;
-	}
-
 	public async Task<Result<Domain.RedisMetrics.RedisMetrics>> Handle(GetRedisMetricsQuery request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
-
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<Domain.RedisMetrics.RedisMetrics>(connectionResult.Error);

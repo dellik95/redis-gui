@@ -13,7 +13,8 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// </summary>
 public class RedisLoadTestService(
 	IRedisConnectionManager connectionManager,
-	ILogger<RedisLoadTestService> logger) : IRedisLoadTestService
+	ILogger<RedisLoadTestService> logger,
+	IRedisTopologyRegistry? topology = null) : IRedisLoadTestService
 {
 	/// <inheritdoc />
 	public Task<Result<RedisLoadTestResult>> RunLoadTestAsync(
@@ -41,7 +42,13 @@ public class RedisLoadTestService(
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
+		topology?.SetMode(connection.Id, multiplexer.DetectServerMode());
 		int targetDb = request.Database ?? connection.DatabaseNumber.Value;
+		var dbValidation = multiplexer.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure)
+		{
+			return Result.Failure<RedisLoadTestResult>(dbValidation.Error);
+		}
 		IDatabase db = multiplexer.GetDatabase(targetDb);
 
 		int concurrency = Math.Clamp(request.Concurrency, 1, 50);
@@ -55,7 +62,8 @@ public class RedisLoadTestService(
 		const int prePopulatedKeysCount = 25;
 
 		var operationStrategy = LoadTestOperationFactory.GetOperation(opType);
-		var latencies = new ConcurrentBag<double>();
+		var latencies = new ConcurrentQueue<double>();
+		long totalLatencyTicks = 0;
 		int successfulOps = 0;
 		int failedOps = 0;
 		int opCounter = 0;
@@ -133,7 +141,8 @@ public class RedisLoadTestService(
 
 						long elapsed = System.Diagnostics.Stopwatch.GetTimestamp() - start;
 						double latencyMs = (double)elapsed / System.Diagnostics.Stopwatch.Frequency * 1000.0;
-						latencies.Add(latencyMs);
+						latencies.Enqueue(latencyMs);
+						Interlocked.Add(ref totalLatencyTicks, elapsed);
 
 						if (ok) Interlocked.Increment(ref successfulOps);
 						else Interlocked.Increment(ref failedOps);
@@ -161,7 +170,8 @@ public class RedisLoadTestService(
 					lastTimestamp = now;
 
 					double overallOps = stopwatch.Elapsed.TotalSeconds > 0 ? currentCompleted / stopwatch.Elapsed.TotalSeconds : 0;
-					double currentAvgLat = latencies.Count > 0 ? latencies.Average() : 0;
+					double totalMs = (double)Volatile.Read(ref totalLatencyTicks) / System.Diagnostics.Stopwatch.Frequency * 1000.0;
+					double currentAvgLat = currentCompleted > 0 ? totalMs / currentCompleted : 0;
 					double succRate = currentCompleted > 0 ? (double)successfulOps / currentCompleted * 100.0 : 100.0;
 
 					try
@@ -217,7 +227,12 @@ public class RedisLoadTestService(
 		int cleanedCount = 0;
 		try
 		{
-			var servers = multiplexer.GetServers().Where(s => s is { IsConnected: true, Features.Scan: true });
+			var servers = multiplexer.GetConnectedPrimaryServers().Where(s => s.Features.Scan).ToArray();
+			if (servers.Length == 0)
+			{
+				servers = multiplexer.GetServers().Where(s => s is { IsConnected: true, Features.Scan: true }).ToArray();
+			}
+
 			var keysToDelete = new List<RedisKey>();
 			var db = multiplexer.GetDatabase(targetDb);
 
@@ -232,10 +247,25 @@ public class RedisLoadTestService(
 			if (keysToDelete.Count > 0)
 			{
 				const int batchSize = 1000;
-				for (int i = 0; i < keysToDelete.Count; i += batchSize)
+				if (multiplexer.IsCluster())
 				{
-					var chunk = keysToDelete.Skip(i).Take(batchSize).ToArray();
-					cleanedCount += (int)await db.KeyDeleteAsync(chunk);
+					foreach (var slotGroup in keysToDelete.GroupBy(k => multiplexer.GetHashSlot(k)))
+					{
+						var slotKeys = slotGroup.ToArray();
+						for (int i = 0; i < slotKeys.Length; i += batchSize)
+						{
+							var chunk = slotKeys.Skip(i).Take(batchSize).ToArray();
+							cleanedCount += (int)await db.KeyDeleteAsync(chunk);
+						}
+					}
+				}
+				else
+				{
+					for (int i = 0; i < keysToDelete.Count; i += batchSize)
+					{
+						var chunk = keysToDelete.Skip(i).Take(batchSize).ToArray();
+						cleanedCount += (int)await db.KeyDeleteAsync(chunk);
+					}
 				}
 			}
 		}

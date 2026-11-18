@@ -1,4 +1,4 @@
-import { Component, inject, signal, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, signal, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import {
   MAT_DIALOG_DATA,
   MatDialogRef,
@@ -10,8 +10,8 @@ import { form, FormField } from '@angular/forms/signals';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ExportService } from '../../services/export.service';
-import { BackgroundJob, BackgroundJobsService } from '../../../../core/services/background-jobs.service';
-import { Subscription } from 'rxjs';
+import { BackgroundJobsStore } from '../../../../core/stores/background-jobs.store';
+import { ExportJobProgress, isJobActive } from '../../../../core/models/background-jobs.types';
 import { UiRadioGroupComponent, UiRadioOption, UiButtonComponent } from '../../../../shared/ui';
 
 /**
@@ -36,12 +36,20 @@ import { UiRadioGroupComponent, UiRadioOption, UiButtonComponent } from '../../.
 })
 export class ExportDialogComponent {
   private readonly exportService = inject(ExportService);
-  private readonly jobs = inject(BackgroundJobsService);
+  private readonly jobsStore = inject(BackgroundJobsStore);
   private readonly destroyRef = inject(DestroyRef);
   readonly dialogRef = inject(MatDialogRef<ExportDialogComponent>);
-  readonly data = inject<{ connectionId: string; format?: 'json' | 'csv'; database: number; pattern: string }>(
-    MAT_DIALOG_DATA
-  );
+  readonly data = inject<{
+    connectionId: string;
+    jobId?: string | undefined;
+    format?: 'json' | 'csv' | undefined;
+    database: number;
+    pattern?: string | undefined;
+    keys?: string[] | undefined;
+    keysBase64?: (string | null)[] | undefined;
+  }>(MAT_DIALOG_DATA);
+
+  readonly selectedKeysCount = computed(() => this.data.keys?.length ?? 0);
 
   /** Signal form model */
   readonly exportModel = signal({ format: this.data.format ?? 'json' });
@@ -60,103 +68,101 @@ export class ExportDialogComponent {
     }
   ];
 
-  readonly isLoading = signal<boolean>(false);
-  readonly error = signal<string | null>(null);
-  readonly jobId = signal<string | null>(null);
-  readonly jobStatus = signal<string | null>(null);
-  readonly connectionStatus = signal<string | null>(null);
-  readonly exportedCount = signal(0);
-  readonly canDownload = signal(false);
-  readonly stopping = signal(false);
-  private jobFormat: 'json' | 'csv' = 'json';
-  private lastRevision = -1;
-  private watchSubscription?: Subscription;
+  readonly jobId = signal<string | null>(
+    this.data.jobId ??
+      this.jobsStore
+        .activeJobs()
+        .find(e => e.job.kind === 'redis-export' && e.job.connectionId === this.data.connectionId)?.job
+        .jobId ??
+      null
+  );
+  private readonly starting = signal(false);
+  private readonly localError = signal<string | null>(null);
+  private jobFormat: 'json' | 'csv' = this.data.format ?? 'json';
+
+  private readonly entry = computed(() => {
+    const id = this.jobId();
+    return id ? (this.jobsStore.jobsById()[id] ?? null) : null;
+  });
+
+  readonly jobStatus = computed(() => this.entry()?.job.status ?? null);
+  readonly isLoading = computed(() => {
+    if (this.starting()) return true;
+    const status = this.entry()?.job.status;
+    return status ? isJobActive(status) : false;
+  });
+  readonly stopping = computed(() => this.entry()?.job.status === 'Cancelling');
+  readonly canDownload = computed(() => this.entry()?.job.hasResult ?? false);
+  readonly exportedCount = computed(() => {
+    const metrics = this.entry()?.job.metrics as ExportJobProgress | null;
+    return metrics?.exportedCount ?? 0;
+  });
+  readonly error = computed(
+    () => this.localError() ?? this.entry()?.expiredReason ?? this.entry()?.job.error ?? null
+  );
+  readonly connectionStatus = computed(() =>
+    this.jobsStore.liveConnected() ? null : (this.jobsStore.connectionNotice() || 'Reconnecting live updates…')
+  );
 
   constructor() {
-    const saved = sessionStorage.getItem(this.storageKey());
-    if (saved) {
-      try {
-        const job = JSON.parse(saved) as { id: string; format: 'json' | 'csv' };
-        this.jobId.set(job.id);
-        this.jobFormat = job.format;
-        this.isLoading.set(true);
-        this.watch(job.id);
-      } catch { sessionStorage.removeItem(this.storageKey()); }
+    const initialId = this.jobId();
+    if (initialId && !this.entry()) {
+      this.jobsStore.refreshJob(initialId);
+    } else if (initialId) {
+      this.jobFormat = this.jobsStore.findExportFormat(initialId);
     }
-    this.destroyRef.onDestroy(() => this.watchSubscription?.unsubscribe());
   }
 
   onExport(): void {
-    this.watchSubscription?.unsubscribe();
     this.jobId.set(null);
-    this.jobStatus.set(null);
-    this.exportedCount.set(0);
-    this.connectionStatus.set(null);
-    sessionStorage.removeItem(this.storageKey());
-    this.error.set(null);
-    this.isLoading.set(true);
+    this.localError.set(null);
+    this.starting.set(true);
     this.dialogRef.disableClose = true;
-    this.canDownload.set(false);
-    this.lastRevision = -1;
     this.jobFormat = this.exportModel().format as 'json' | 'csv';
-    this.jobs.start('redis-export', this.data.connectionId, {
-      format: this.jobFormat, pattern: this.data.pattern, database: this.data.database
-    }).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: job => {
-        this.dialogRef.disableClose = false;
-        this.jobId.set(job.jobId);
-        sessionStorage.setItem(this.storageKey(), JSON.stringify({ id: job.jobId, format: this.jobFormat }));
-        this.watch(job.jobId);
-      },
-      error: err => { this.dialogRef.disableClose = false; this.isLoading.set(false); this.error.set(err.error?.detail || err.message || 'Could not start export.'); }
-    });
+
+    this.jobsStore
+      .startJob(
+        'redis-export',
+        this.data.connectionId,
+        {
+          format: this.jobFormat,
+          pattern: this.data.pattern || '*',
+          database: this.data.database,
+          ...(this.data.keys?.length ? { keys: this.data.keys } : {}),
+          ...(this.data.keysBase64?.length ? { keysBase64: this.data.keysBase64 } : {})
+        },
+        { format: this.jobFormat, database: this.data.database, markSeen: true }
+      )
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: job => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.jobId.set(job.jobId);
+        },
+        error: err => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.localError.set(err?.error?.detail || err?.message || 'Could not start export.');
+        }
+      });
   }
 
   cancel(): void {
     const id = this.jobId();
     if (!id) return;
-    this.stopping.set(true);
-    this.jobs.cancel(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: job => this.applyJob(job),
-      error: () => { this.stopping.set(false); this.error.set('Could not request cancellation.'); }
+    this.jobsStore.cancelJob(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      error: () => this.localError.set('Could not request cancellation.')
     });
   }
 
   download(): void {
     const id = this.jobId();
     if (!id) return;
-    this.exportService.downloadExport(id, this.jobFormat).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+    const format = this.entry()?.format ?? this.jobFormat;
+    this.exportService.downloadExport(id, format).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: () => this.dialogRef.close(true),
-      error: () => this.error.set('Could not download the export. Refresh status and try again.')
+      error: () => this.localError.set('Could not download the export. Please try again.')
     });
   }
-
-  refreshStatus(): void {
-    const id = this.jobId();
-    if (id) this.jobs.status(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: job => this.applyJob(job),
-      error: () => { this.isLoading.set(false); this.error.set('Job status is unavailable or has expired.'); }
-    });
-  }
-
-  private watch(id: string): void {
-    this.watchSubscription?.unsubscribe();
-    this.watchSubscription = this.jobs.watch(id).subscribe(event => {
-      this.connectionStatus.set(event.connected ? null : (event.error || 'Reconnecting live updates…'));
-      if (event.job) this.applyJob(event.job);
-    });
-  }
-
-  private applyJob(job: BackgroundJob): void {
-    if (job.revision < this.lastRevision) return;
-    this.lastRevision = job.revision;
-    this.jobStatus.set(job.status);
-    this.isLoading.set(['Queued', 'Running', 'Cancelling'].includes(job.status));
-    this.stopping.set(job.status === 'Cancelling');
-    this.canDownload.set(job.hasResult);
-    if (job.metrics) this.exportedCount.set((job.metrics as { exportedCount: number }).exportedCount ?? 0);
-    if (job.status === 'Failed') this.error.set(job.error || 'Export failed.');
-  }
-
-  private storageKey(): string { return `redisgui:export:${this.data.connectionId}:${this.data.database}:${this.data.pattern}`; }
 }

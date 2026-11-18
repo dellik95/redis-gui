@@ -9,7 +9,8 @@ namespace RedisGUI.Infrastructure.Redis.Services;
 /// </summary>
 public class RedisCliService(
 	IRedisConnectionManager connectionManager,
-	ILogger<RedisCliService> logger) : IRedisCliService
+	ILogger<RedisCliService> logger,
+	IRedisTopologyRegistry? topology = null) : IRedisCliService
 {
 	/// <inheritdoc />
 	public async Task<Result<string>> ExecuteCliCommandAsync(
@@ -30,8 +31,17 @@ public class RedisCliService(
 			return Result.Failure<string>(multiplexerResult.Error);
 		}
 
+		var multiplexer = multiplexerResult.Value;
+		topology?.SetMode(connection.Id, multiplexer.DetectServerMode());
+
 		int targetDb = database ?? connection.DatabaseNumber.Value;
-		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
+		var dbValidation = multiplexer.ValidateDatabase(targetDb);
+		if (dbValidation.IsFailure)
+		{
+			return Result.Success($"(error) {dbValidation.Error.Message}");
+		}
+
+		IDatabase db = multiplexer.GetDatabase(targetDb);
 
 		string[] parts = CommandLineTokenizer.Tokenize(rawCommand);
 		if (parts.Length == 0)
@@ -44,8 +54,12 @@ public class RedisCliService(
 
 		try
 		{
-			RedisResult result = await db.ExecuteAsync(command, args);
+			RedisResult result = await db.ExecuteAsync(command, args).WaitAsync(cancellationToken);
 			return Result.Success(RedisRespFormatter.Format(result));
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+		{
+			throw;
 		}
 		catch (Exception ex)
 		{

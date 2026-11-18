@@ -19,7 +19,11 @@ public sealed record SeedSampleDataCommand(
 	Guid ConnectionId,
 	SeedSampleDataOptions? Options = null,
 	Func<int, int, Task>? OnProgress = null,
-	CancellationToken? OperationCancellation = null) : ICommand<SeedDataResult>;
+	CancellationToken? OperationCancellation = null) : ICommand<SeedDataResult>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+	public bool PersistAuditOnCancellation => true;
+}
 
 internal sealed class SeedSampleDataCommandHandler : ICommandHandler<SeedSampleDataCommand, SeedDataResult>
 {

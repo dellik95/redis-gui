@@ -1,12 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
 using FluentValidation;
-using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Application.Redis.Commands.RunLoadTest;
-using RedisGUI.Application.Redis.Commands.SeedSampleData;
-using RedisGUI.Application.Redis.Queries.ExportRedisData;
-using RedisGUI.Application.Redis.Commands.ImportRedisData;
-using RedisGUI.Application.Redis.Commands.BulkOperations;
+using System.Linq;
 
 namespace RedisGUI.Application;
 
@@ -30,18 +26,34 @@ public static class DependencyInjection
 		return services;
 	}
 
+	/// <summary>Registers a background job handler without modifying central registries or switch statements.</summary>
+	public static IServiceCollection AddBackgroundJobHandler<THandler>(this IServiceCollection services)
+		where THandler : class, IBackgroundJobHandler
+	{
+		services.TryAddEnumerable(ServiceDescriptor.Scoped<IBackgroundJobHandler, THandler>());
+		return services;
+	}
+
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
-		services.AddScoped<IBackgroundJobHandler, LoadTestJobHandler>();
-		services.AddScoped<IBackgroundJobHandler, SeedSampleDataJobHandler>();
-		services.AddScoped<IBackgroundJobHandler, ExportRedisDataJobHandler>();
-		services.AddScoped<IBackgroundJobHandler, ImportRedisDataJobHandler>();
-		services.AddScoped<IBackgroundJobHandler, BulkKeyJobHandler>();
+		var assembly = typeof(DependencyInjection).Assembly;
+		var concreteTypes = assembly.GetTypes()
+			.Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
+			.ToArray();
+
+		// Register all IBackgroundJobHandler implementations discovered in the Application assembly.
+		foreach (var type in concreteTypes.Where(t => typeof(IBackgroundJobHandler).IsAssignableFrom(t)))
+		{
+			services.TryAddEnumerable(ServiceDescriptor.Scoped(typeof(IBackgroundJobHandler), type));
+		}
+
 		// Register concrete validators, including internal use-case validators.
-		foreach (var type in typeof(DependencyInjection).Assembly.GetTypes().Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false }))
+		foreach (var type in concreteTypes)
 		{
 			foreach (var service in type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>)))
+			{
 				services.AddScoped(service, type);
+			}
 		}
 
 		// Register mediator with behaviors

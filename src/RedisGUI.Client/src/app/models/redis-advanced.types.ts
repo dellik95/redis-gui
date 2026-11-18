@@ -33,4 +33,5 @@ export interface GetConnectionHealthResponse {
   consecutiveFailures: number;
   failureStreak?: number;
   checkedAt?: Date;
+  serverMode?: 'Unknown' | 'Standalone' | 'Cluster' | 'Sentinel' | undefined;
 }

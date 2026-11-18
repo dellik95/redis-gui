@@ -1,5 +1,4 @@
-using RedisGUI.Application.Core.Behaviors;
-using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using System;
 using RedisGUI.Shared.Mediator;
 using System.Threading;
@@ -14,33 +13,32 @@ namespace RedisGUI.Application.Connections.DeleteConnection;
 /// Command to delete connection by specified Id
 /// </summary>
 /// <param name="Id">Connection identifier</param>
-public record DeleteConnectionCommand(Guid Id) : ICommand;
+public sealed record DeleteConnectionCommand(Guid Id) : ICommand;
 
 /// <summary>
 /// Handles redis connection deletion
 /// </summary>
-internal class DeleteConnectionCommandHandler : ICommandHandler<DeleteConnectionCommand>
+internal sealed class DeleteConnectionCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IUnitOfWork unitOfWork,
+	IConnectionAccessService? access = null) : ICommandHandler<DeleteConnectionCommand>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IUnitOfWork unitOfWork;
-
-	/// <summary>
-	/// Handles redis connection deletion
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections</param>
-	/// <param name="unitOfWork">Unit of work for transaction management</param>
-	public DeleteConnectionCommandHandler(IRedisConnectionRepository connectionRepository, IUnitOfWork unitOfWork)
-	{
-		this.connectionRepository = connectionRepository;
-		this.unitOfWork = unitOfWork;
-	}
 	public async Task<Result> Handle(DeleteConnectionCommand command, CancellationToken cancellationToken)
 	{
-		var result = await this.connectionRepository.DeleteAsync(command.Id, cancellationToken);
+		if (access is not null)
+		{
+			var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(command.Id, access, cancellationToken);
+			if (connectionResult.IsFailure)
+			{
+				return Result.Failure(connectionResult.Error);
+			}
+		}
+
+		var result = await connectionRepository.DeleteAsync(command.Id, cancellationToken);
 
 		if (result.IsSuccess)
 		{
-			await this.unitOfWork.SaveChangesAsync(cancellationToken);
+			await unitOfWork.SaveChangesAsync(cancellationToken);
 		}
 
 		return result;

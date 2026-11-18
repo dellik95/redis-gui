@@ -128,7 +128,7 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		if (connections.TryRemove(key, out ConnectionEntry? entry))
 		{
-			entry.IsRetired = true;
+			entry.TryRetire(allowActive: true);
 			entry.State = RedisConnectionState.Disposing;
 			logger.LogInformation("Connection explicitly invalidated for server {ServerKey}", entry.SanitizedKey);
 			await RetireAndDisposeEntryAsync(entry);
@@ -419,17 +419,17 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 	private void EvictAndRetire(ConnectionEntry entry, string reason, bool allowActive = false)
 	{
-		lock (entry)
+		if (!entry.TryRetire(allowActive))
 		{
-			if (!allowActive && entry.ActiveOperations > 0) return;
-			if (connections.TryRemove(new KeyValuePair<string, ConnectionEntry>(entry.Key, entry)))
-			{
-				entry.IsRetired = true;
-				entry.State = RedisConnectionState.Disposing;
-				Interlocked.Increment(ref evictionCount);
-				logger.LogInformation("Redis connection evicted for server {ServerKey}. Reason: {Reason}", entry.SanitizedKey, reason);
-				_ = RetireAndDisposeEntryAsync(entry);
-			}
+			return;
+		}
+
+		if (connections.TryRemove(new KeyValuePair<string, ConnectionEntry>(entry.Key, entry)))
+		{
+			entry.State = RedisConnectionState.Disposing;
+			Interlocked.Increment(ref evictionCount);
+			logger.LogInformation("Redis connection evicted for server {ServerKey}. Reason: {Reason}", entry.SanitizedKey, reason);
+			_ = RetireAndDisposeEntryAsync(entry);
 		}
 	}
 
@@ -474,9 +474,17 @@ public class RedisConnectionManager : IRedisConnectionManager
 	{
 		foreach (ConnectionEntry entry in connections.Values)
 		{
-			lock (entry)
+			if (ReferenceEquals(entry.Multiplexer, multiplexer))
 			{
-				if (!entry.IsRetired && ReferenceEquals(entry.Multiplexer, multiplexer)) return entry.TrackOperation();
+				var scope = entry.TryAcquireOperation();
+				if (scope is not null)
+				{
+					if (ReferenceEquals(entry.Multiplexer, multiplexer))
+					{
+						return scope;
+					}
+					scope.Dispose();
+				}
 			}
 		}
 		return null;
@@ -485,17 +493,8 @@ public class RedisConnectionManager : IRedisConnectionManager
 	/// <summary>
 	/// Tracks an active in-flight operation on the connection with the given key to prevent eviction during execution.
 	/// </summary>
-	internal IDisposable? TrackActiveOperation(string key)
-	{
-		if (connections.TryGetValue(key, out ConnectionEntry? entry))
-		{
-			lock (entry)
-			{
-				return entry.IsRetired ? null : entry.TrackOperation();
-			}
-		}
-		return null;
-	}
+	internal IDisposable? TrackActiveOperation(string key) =>
+		connections.TryGetValue(key, out ConnectionEntry? entry) ? entry.TryAcquireOperation() : null;
 
 	/// <inheritdoc />
 	public async ValueTask DisposeAsync()
@@ -517,14 +516,14 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		foreach (ConnectionEntry entry in entries)
 		{
-			entry.IsRetired = true;
+			entry.TryRetire(allowActive: true);
 			entry.State = RedisConnectionState.Disposing;
 			await entry.DisposeMultiplexerAsync();
 			logger.LogDebug("Redis connection disposed for server {ServerKey}", entry.SanitizedKey);
 		}
 
 		shutdownCts.Dispose();
-		disposeState = 2;
+		Volatile.Write(ref disposeState, 2);
 	}
 
 	/// <inheritdoc />
@@ -543,14 +542,14 @@ public class RedisConnectionManager : IRedisConnectionManager
 
 		foreach (ConnectionEntry entry in entries)
 		{
-			entry.IsRetired = true;
+			entry.TryRetire(allowActive: true);
 			entry.State = RedisConnectionState.Disposing;
 			entry.DisposeMultiplexerSync();
 			logger.LogDebug("Redis connection disposed for server {ServerKey}", entry.SanitizedKey);
 		}
 
 		shutdownCts.Dispose();
-		disposeState = 2;
+		Volatile.Write(ref disposeState, 2);
 	}
 
 	/// <summary>
@@ -558,20 +557,44 @@ public class RedisConnectionManager : IRedisConnectionManager
 	/// </summary>
 	internal sealed class ConnectionEntry
 	{
+		private const long RetiredFlag = long.MinValue;
+		private const long CountMask = long.MaxValue;
+
 		public string Key { get; }
 		public string SanitizedKey { get; }
 		public string Configuration { get; }
 		public string ConfigurationFingerprint { get; }
-		public RedisConnectionState State { get; set; }
+
+		private int state;
+		public RedisConnectionState State
+		{
+			get => (RedisConnectionState)Volatile.Read(ref state);
+			set => Volatile.Write(ref state, (int)value);
+		}
+
 		public DateTimeOffset? LastConnectedAt { get; set; }
 		public DateTimeOffset? LastDisconnectedAt { get; set; }
-		public DateTimeOffset LastUsedAt { get; set; }
+
+		private long lastUsedUtcTicks = DateTimeOffset.UtcNow.UtcTicks;
+		public DateTimeOffset LastUsedAt
+		{
+			get => new(Volatile.Read(ref lastUsedUtcTicks), TimeSpan.Zero);
+			set => Volatile.Write(ref lastUsedUtcTicks, value.UtcTicks);
+		}
+
 		public TimeSpan? InitializationDuration { get; set; }
 		public string? LastFailure { get; set; }
-		public int ActiveOperations;
-		public volatile bool IsRetired;
 
-		public ConnectionMultiplexer? Multiplexer { get; set; }
+		private long operationState;
+		public int ActiveOperations => (int)(Volatile.Read(ref operationState) & CountMask);
+		public bool IsRetired => (Volatile.Read(ref operationState) & RetiredFlag) != 0;
+
+		private ConnectionMultiplexer? multiplexer;
+		public ConnectionMultiplexer? Multiplexer
+		{
+			get => Volatile.Read(ref multiplexer);
+			set => Volatile.Write(ref multiplexer, value);
+		}
 
 		private readonly Lazy<Task<ConnectionMultiplexer>> lazyMultiplexer;
 		private readonly RedisConnectionManager manager;
@@ -592,22 +615,85 @@ public class RedisConnectionManager : IRedisConnectionManager
 			Configuration = configuration;
 			ConfigurationFingerprint = configurationFingerprint;
 			this.manager = manager;
-			State = RedisConnectionState.Connecting;
-			LastUsedAt = DateTimeOffset.UtcNow;
+			Volatile.Write(ref state, (int)RedisConnectionState.Connecting);
 
 			lazyMultiplexer = new Lazy<Task<ConnectionMultiplexer>>(
 				() => manager.InitializeMultiplexerAsync(this, configuration),
 				LazyThreadSafetyMode.ExecutionAndPublication);
 		}
 
-		public IDisposable TrackOperation() => new OperationScope(this);
+		public IDisposable? TryAcquireOperation()
+		{
+			while (true)
+			{
+				long current = Volatile.Read(ref operationState);
+				if ((current & RetiredFlag) != 0)
+				{
+					return null;
+				}
+
+				if (Interlocked.CompareExchange(ref operationState, current + 1, current) == current)
+				{
+					return new OperationScope(this);
+				}
+			}
+		}
+
+		public bool TryRetire(bool allowActive)
+		{
+			while (true)
+			{
+				long current = Volatile.Read(ref operationState);
+				if ((current & RetiredFlag) != 0)
+				{
+					return false;
+				}
+
+				if (!allowActive && (current & CountMask) > 0)
+				{
+					return false;
+				}
+
+				if (Interlocked.CompareExchange(ref operationState, current | RetiredFlag, current) == current)
+				{
+					if ((current & CountMask) == 0)
+					{
+						Volatile.Read(ref operationsDrained)?.TrySetResult();
+					}
+					return true;
+				}
+			}
+		}
 
 		public Task WaitForOperationsAsync()
 		{
-			lock (this)
+			if ((Volatile.Read(ref operationState) & CountMask) == 0)
 			{
-				if (ActiveOperations == 0) return Task.CompletedTask;
-				return (operationsDrained ??= new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously)).Task;
+				return Task.CompletedTask;
+			}
+
+			var tcs = Volatile.Read(ref operationsDrained);
+			if (tcs is null)
+			{
+				var created = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+				tcs = Interlocked.CompareExchange(ref operationsDrained, created, null) ?? created;
+			}
+
+			// Re-verify after publishing TCS to eliminate lost-wakeup races.
+			if ((Volatile.Read(ref operationState) & CountMask) == 0)
+			{
+				tcs.TrySetResult();
+			}
+
+			return tcs.Task;
+		}
+
+		private void ReleaseOperation()
+		{
+			long updated = Interlocked.Decrement(ref operationState);
+			if ((updated & RetiredFlag) != 0 && (updated & CountMask) == 0)
+			{
+				Volatile.Read(ref operationsDrained)?.TrySetResult();
 			}
 		}
 
@@ -720,26 +806,15 @@ public class RedisConnectionManager : IRedisConnectionManager
 			}
 		}
 
-		private sealed class OperationScope : IDisposable
+		private sealed class OperationScope(ConnectionEntry entry) : IDisposable
 		{
-			private readonly ConnectionEntry entry;
 			private int disposed;
-
-			public OperationScope(ConnectionEntry entry)
-			{
-				this.entry = entry;
-				Interlocked.Increment(ref this.entry.ActiveOperations);
-			}
 
 			public void Dispose()
 			{
 				if (Interlocked.CompareExchange(ref disposed, 1, 0) == 0)
 				{
-					lock (entry)
-					{
-						if (Interlocked.Decrement(ref entry.ActiveOperations) == 0)
-							entry.operationsDrained?.TrySetResult();
-					}
+					entry.ReleaseOperation();
 				}
 			}
 		}

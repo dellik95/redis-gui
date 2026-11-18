@@ -1,4 +1,5 @@
 using System;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Errors;
 using System.Threading;
@@ -17,24 +18,33 @@ public sealed record GetConnectionHealthQuery(Guid ConnectionId) : IQuery<GetCon
 /// <summary>
 /// Handler for getting connection health status
 /// </summary>
-public sealed class GetConnectionHealthQueryHandler : IQueryHandler<GetConnectionHealthQuery, GetConnectionHealthResponse>
+public sealed class GetConnectionHealthQueryHandler(
+	IConnectionHealthMonitor healthMonitor,
+	IRedisConnectionRepository? connectionRepository = null,
+	IConnectionAccessService? access = null,
+	IRedisTopologyRegistry? topology = null) : IQueryHandler<GetConnectionHealthQuery, GetConnectionHealthResponse>
 {
-	private readonly IConnectionHealthMonitor healthMonitor;
-
-	public GetConnectionHealthQueryHandler(IConnectionHealthMonitor healthMonitor)
+	public async Task<Result<GetConnectionHealthResponse>> Handle(GetConnectionHealthQuery request, CancellationToken cancellationToken)
 	{
-		this.healthMonitor = healthMonitor;
-	}
+		if (connectionRepository is not null && access is not null)
+		{
+			var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
+			if (connectionResult.IsFailure)
+				return Result.Failure<GetConnectionHealthResponse>(connectionResult.Error);
+		}
 
-	public Task<Result<GetConnectionHealthResponse>> Handle(GetConnectionHealthQuery request, CancellationToken cancellationToken)
-	{
 		var health = healthMonitor.GetHealth(request.ConnectionId);
 
 		if (health == null)
 		{
-			return Task.FromResult(Result.Failure<GetConnectionHealthResponse>(
-				DomainErrors.Health.NotFound));
+			return Result.Failure<GetConnectionHealthResponse>(
+				DomainErrors.Health.NotFound);
 		}
+
+		var mode = topology?.GetMode(request.ConnectionId) ?? RedisServerMode.Unknown;
+		string serverMode = mode != RedisServerMode.Unknown
+			? mode.ToString()
+			: health.ServerMode;
 
 		var response = new GetConnectionHealthResponse(
 			health.ConnectionId,
@@ -42,8 +52,9 @@ public sealed class GetConnectionHealthQueryHandler : IQueryHandler<GetConnectio
 			health.LastChecked,
 			health.ResponseTimeMs,
 			health.ErrorMessage,
-			health.ConsecutiveFailures);
+			health.ConsecutiveFailures,
+			serverMode);
 
-		return Task.FromResult(Result.Success(response));
+		return Result.Success(response);
 	}
 }

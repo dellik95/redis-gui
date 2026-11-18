@@ -119,13 +119,18 @@ export const ConnectionsStore = signalStore(
           switchMap(() =>
             httpClient.get<Connection[]>(API_ROUTES.CONNECTIONS.LIST).pipe(
               takeUntil(sessionEnded),
-              tap(connections =>
+              tap(connections => {
+                const currentSelected = store.selectedConnection();
+                const refreshedSelected = currentSelected
+                  ? (connections.find(c => c.id === currentSelected.id) ?? null)
+                  : null;
                 patchState(store, {
                   connections,
+                  selectedConnection: refreshedSelected,
                   isLoading: false,
                   lastFetched: Date.now()
-                })
-              ),
+                });
+              }),
               catchError(error => {
                 patchState(store, {
                   error: error.message || 'Failed to load connections',
@@ -292,6 +297,44 @@ export const ConnectionsStore = signalStore(
        */
       selectConnection(connection: Connection | null): void {
         patchState(store, { selectedConnection: connection });
+      },
+
+      /**
+       * Updates discovered server topology mode for a connection
+       */
+      updateServerMode(
+        connectionId: string,
+        serverMode: NonNullable<Connection['serverMode']>
+      ): void {
+        const connections = store.connections();
+        const idx = connections.findIndex(c => c.id === connectionId);
+        const currentSelected = store.selectedConnection();
+        let changed = false;
+
+        const nextConnections =
+          idx >= 0 && connections[idx]!.serverMode !== serverMode
+            ? connections.map(c => {
+                if (c.id === connectionId) {
+                  changed = true;
+                  return { ...c, serverMode };
+                }
+                return c;
+              })
+            : connections;
+
+        const nextSelected =
+          currentSelected &&
+          currentSelected.id === connectionId &&
+          currentSelected.serverMode !== serverMode
+            ? ((changed = true), { ...currentSelected, serverMode })
+            : currentSelected;
+
+        if (changed) {
+          patchState(store, {
+            connections: nextConnections,
+            selectedConnection: nextSelected
+          });
+        }
       },
 
       /**

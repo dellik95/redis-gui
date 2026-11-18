@@ -1,3 +1,4 @@
+using System.Linq;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
@@ -19,47 +20,49 @@ public sealed record BulkUpdateTtlCommand(
 	Guid ConnectionId,
 	IEnumerable<string> Keys,
 	long? TtlSeconds,
-	int? Database = null
-) : ICommand<RedisBulkTtlResult>;
-
-internal sealed class BulkUpdateTtlCommandHandler : ICommandHandler<BulkUpdateTtlCommand, RedisBulkTtlResult>
+	int? Database = null,
+	IReadOnlyList<string?>? KeysBase64 = null
+) : ICommand<RedisBulkTtlResult>, IAuditEntityRequest
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
-	private readonly IConnectionAccessService access;
+	public Guid? AuditEntityId => ConnectionId;
+}
 
-	public BulkUpdateTtlCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService, IConnectionAccessService access)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-		this.access = access;
-	}
-
+internal sealed class BulkUpdateTtlCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService access) : ICommandHandler<BulkUpdateTtlCommand, RedisBulkTtlResult>
+{
 	public async Task<Result<RedisBulkTtlResult>> Handle(BulkUpdateTtlCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
+			request.ConnectionId,
+			access,
+			cancellationToken,
+			requireWritable: true);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<RedisBulkTtlResult>(connectionResult.Error);
-		}
-
-		if (!await access.CanAccessAsync(connectionResult.Value))
-			return Result.Failure<RedisBulkTtlResult>(new Error("Connection.Forbidden", "Access to the connection is denied."));
-
-		if (connectionResult.Value.IsReadOnly)
-		{
-			return Result.Failure<RedisBulkTtlResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
 		TimeSpan? ttl = request.TtlSeconds.HasValue && request.TtlSeconds.Value > 0
 			? TimeSpan.FromSeconds(request.TtlSeconds.Value)
 			: null;
 
-		return await valueService.BulkUpdateTtlAsync(
+		if (request.KeysBase64 is null || request.KeysBase64.Count == 0)
+		{
+			return await valueService.BulkUpdateTtlAsync(
+				connectionResult.Value,
+				request.Keys,
+				ttl,
+				request.Database,
+				cancellationToken);
+		}
+
+		var keys = request.Keys as IReadOnlyList<string> ?? request.Keys.ToArray();
+		return await valueService.BulkUpdateTtlByIdentityAsync(
 			connectionResult.Value,
-			request.Keys,
+			keys,
+			request.KeysBase64,
 			ttl,
 			request.Database,
 			cancellationToken);

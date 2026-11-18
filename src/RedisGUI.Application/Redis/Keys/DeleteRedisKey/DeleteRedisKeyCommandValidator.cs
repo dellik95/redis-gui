@@ -20,6 +20,12 @@ internal sealed class DeleteRedisKeyCommandValidator : AbstractValidator<DeleteR
 			.NotEmpty()
 			.WithMessage("Key is required")
 			.MaximumLength(512)
-			.WithMessage("Key cannot exceed 512 characters");
+			.WithMessage("Key cannot exceed 512 characters")
+			.When(x => string.IsNullOrEmpty(x.KeyBase64));
+
+		RuleFor(x => x.KeyBase64)
+			.MaximumLength(1024)
+			.WithMessage("KeyBase64 cannot exceed 1024 characters")
+			.When(x => !string.IsNullOrEmpty(x.KeyBase64));
 	}
 }

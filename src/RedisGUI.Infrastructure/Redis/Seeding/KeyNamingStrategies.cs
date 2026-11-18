@@ -43,12 +43,12 @@ public sealed class HierarchicalKeyNamingStrategy : IKeyNamingStrategy
 	public string GenerateKeyName(string prefix, string type, int index, Random rng) =>
 		type.ToLowerInvariant() switch
 		{
-			"string" => $"{prefix}:corp:finance:accounts:acc_{1000 + index}:balance",
-			"hash" => $"{prefix}:ecommerce:customers:cust_{2000 + index}:profile",
-			"list" => $"{prefix}:infra:cluster:node_{index % 8 + 1}:activity_log",
-			"set" => $"{prefix}:security:roles:role_{index % 10 + 1}:permissions",
-			"zset" => $"{prefix}:gaming:leaderboard:season_{index % 4 + 1}:rankings",
-			"stream" => $"{prefix}:telemetry:sensors:probe_{index % 6 + 1}:events",
+			"string" => $"{prefix}:corp:finance:accounts:acc_{1000 + index + 1}:balance",
+			"hash" => $"{prefix}:ecommerce:customers:cust_{2000 + index + 1}:profile",
+			"list" => $"{prefix}:infra:cluster:node_{index % 8 + 1}:activity_log:{index + 1}",
+			"set" => $"{prefix}:security:roles:role_{index % 10 + 1}:permissions:{index + 1}",
+			"zset" => $"{prefix}:gaming:leaderboard:season_{index % 4 + 1}:rankings:{index + 1}",
+			"stream" => $"{prefix}:telemetry:sensors:probe_{index % 6 + 1}:events:{index + 1}",
 			_ => $"{prefix}:app:service:module_{index % 5 + 1}:{type.ToLowerInvariant()}:{index + 1}"
 		};
 }

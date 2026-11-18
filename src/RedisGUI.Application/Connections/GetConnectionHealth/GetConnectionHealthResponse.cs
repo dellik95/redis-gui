@@ -11,10 +11,12 @@ namespace RedisGUI.Application.Connections.GetConnectionHealth;
 /// <param name="ResponseTimeMs">Response time in milliseconds</param>
 /// <param name="ErrorMessage">Error message if unhealthy</param>
 /// <param name="ConsecutiveFailures">Number of consecutive failures</param>
+/// <param name="ServerMode">Confirmed Redis deployment topology</param>
 public sealed record GetConnectionHealthResponse(
 	Guid ConnectionId,
 	string Status,
 	DateTime LastChecked,
 	double ResponseTimeMs,
 	string? ErrorMessage,
-	int ConsecutiveFailures);
+	int ConsecutiveFailures,
+	string ServerMode = "Unknown");

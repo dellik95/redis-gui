@@ -8,22 +8,15 @@ namespace RedisGUI.Infrastructure.BackgroundJobs;
 /// <summary>
 /// Background service that monitors Redis connection health
 /// </summary>
-public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHealthMonitor
+public sealed class ConnectionHealthMonitor(
+	IServiceProvider serviceProvider,
+	ILogger<ConnectionHealthMonitor> logger,
+	IRedisTopologyRegistry? topology = null) : BackgroundService, IConnectionHealthMonitor
 {
-	private readonly IServiceProvider serviceProvider;
-	private readonly ILogger<ConnectionHealthMonitor> logger;
 	private readonly ConcurrentDictionary<Guid, ConnectionHealth> healthStatuses = new();
 	private readonly TimeSpan checkInterval = TimeSpan.FromSeconds(30);
 	private readonly int failureThreshold = 3;
 	private readonly double degradedThresholdMs = 1000;
-
-	public ConnectionHealthMonitor(
-		IServiceProvider serviceProvider,
-		ILogger<ConnectionHealthMonitor> logger)
-	{
-		this.serviceProvider = serviceProvider;
-		this.logger = logger;
-	}
 
 	/// <summary>
 	/// Get the current health status for a connection
@@ -98,6 +91,7 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 			sw.Stop();
 
 			var responseTimeMs = sw.Elapsed.TotalMilliseconds;
+			string serverMode = (topology?.GetMode(connection.Id) ?? RedisServerMode.Unknown).ToString();
 
 			if (result.IsSuccess)
 			{
@@ -108,7 +102,8 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 					health = ConnectionHealth.Degraded(
 						connection.Id,
 						responseTimeMs,
-						$"Slow response time: {responseTimeMs:F0}ms");
+						$"Slow response time: {responseTimeMs:F0}ms",
+						serverMode);
 
 					logger.LogWarning(
 						"Connection {ConnectionId} is degraded (response time: {ResponseTime}ms)",
@@ -117,7 +112,7 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 				}
 				else
 				{
-					health = ConnectionHealth.Healthy(connection.Id, responseTimeMs);
+					health = ConnectionHealth.Healthy(connection.Id, responseTimeMs, serverMode);
 					logger.LogDebug(
 						"Connection {ConnectionId} is healthy (response time: {ResponseTime}ms)",
 						connection.Id,
@@ -135,7 +130,8 @@ public sealed class ConnectionHealthMonitor : BackgroundService, IConnectionHeal
 				var health = ConnectionHealth.Unhealthy(
 					connection.Id,
 					result.Error.Message,
-					previousFailures);
+					previousFailures,
+					serverMode);
 
 				healthStatuses.AddOrUpdate(connection.Id, health, (_, _) => health);
 

@@ -1,3 +1,5 @@
+using RedisGUI.Domain.Audit;
+
 namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 
 /// <summary>
@@ -7,4 +9,7 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// <param name="Pattern">Pattern used for deletion.</param>
 public sealed record DeleteKeysByPatternResponse(
 	int DeletedCount,
-	string Pattern);
+	string Pattern) : IAuditOutcome
+{
+	public string FormatAuditOutcome() => $"Deleted {DeletedCount} matching keys.";
+}

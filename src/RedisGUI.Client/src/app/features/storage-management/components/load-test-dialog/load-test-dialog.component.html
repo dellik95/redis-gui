@@ -208,11 +208,8 @@
   }
 
   <!-- Real-Time Live Streaming State -->
-  @if (activeJobId()) {
-    <p class="text-canvas-muted">Job {{ activeJobId() }} · The job continues if this dialog closes.</p>
-  }
   @if (connectionStatus()) {
-    <p role="status">{{ connectionStatus() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p>
+    <p role="status">{{ connectionStatus() }}</p>
   }
   @if (isRunning()) {
     <app-load-test-progress
@@ -234,30 +231,27 @@
 
 <div class="dialog-actions flex justify-end items-center gap-3 py-3.5 px-6 bg-canvas-card">
   @if (!isRunning() && !result()) {
-    <button mat-stroked-button mat-dialog-close>Cancel</button>
-    <button
-      mat-flat-button
-      color="primary"
-      class="start-btn bg-brand font-semibold"
+    <ui-button variant="outline" mat-dialog-close>Cancel</ui-button>
+    <ui-button
+      variant="primary"
+      icon="play_arrow"
+      class="start-btn font-semibold"
       (click)="startLoadTest()"
     >
-      <mat-icon>play_arrow</mat-icon>
-      <span>Run Load Test</span>
-    </button>
+      Run Load Test
+    </ui-button>
   }
 
   @if (isRunning()) {
-    <button mat-flat-button color="warn" (click)="stopLoadTest()" [disabled]="isStopping()">
-      <mat-icon>stop</mat-icon>
-      <span>{{ isStopping() ? 'Stopping & Purging...' : 'Stop Benchmark' }}</span>
-    </button>
+    <ui-button variant="danger" icon="stop" (click)="stopLoadTest()" [disabled]="isStopping()">
+      {{ isStopping() ? 'Stopping & Purging...' : 'Stop Benchmark' }}
+    </ui-button>
   }
 
   @if (!isRunning() && result()) {
-    <button mat-stroked-button (click)="reset()">
-      <mat-icon>tune</mat-icon>
-      <span>Configure & Run Again</span>
-    </button>
-    <button mat-flat-button color="primary" mat-dialog-close>Done</button>
+    <ui-button variant="outline" icon="tune" (click)="reset()">
+      Configure & Run Again
+    </ui-button>
+    <ui-button variant="primary" mat-dialog-close>Done</ui-button>
   }
 </div>

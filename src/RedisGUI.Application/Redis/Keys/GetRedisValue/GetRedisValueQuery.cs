@@ -1,4 +1,6 @@
 using System;
+using System.Text;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
@@ -14,45 +16,42 @@ namespace RedisGUI.Application.Redis.Queries.GetRedisValue;
 /// <param name="ConnectionId">The Redis connection identifier.</param>
 /// <param name="Key">The key to retrieve.</param>
 /// <param name="Database">Optional database index.</param>
-public sealed record GetRedisValueQuery(Guid ConnectionId, string Key, int? Database = null) : IQuery<GetRedisValueResponse>;
+/// <param name="KeyBase64">Optional Base64-encoded raw Redis key bytes.</param>
+public sealed record GetRedisValueQuery(Guid ConnectionId, string Key, int? Database = null, string? KeyBase64 = null) : IQuery<GetRedisValueResponse>;
 
 /// <summary>
 /// Handles the query to retrieve a single Redis value.
 /// </summary>
-internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQuery, GetRedisValueResponse>
+internal sealed class GetRedisValueQueryHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService? access = null) : IQueryHandler<GetRedisValueQuery, GetRedisValueResponse>
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
+	private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
-	/// <summary>
-	/// Initializes a new instance of the GetRedisValueQueryHandler.
-	/// </summary>
-	/// <param name="connectionRepository">Repository for Redis connections.</param>
-	/// <param name="valueService">Service for Redis value operations.</param>
-	public GetRedisValueQueryHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
-
-	/// <summary>
-	/// Handles the query to retrieve a Redis value by key.
-	/// </summary>
-	/// <param name="request">The query request containing the key to retrieve.</param>
-	/// <param name="cancellationToken">Cancellation token.</param>
-	/// <returns>A Result containing the Redis value response or an error.</returns>
 	public async Task<Result<GetRedisValueResponse>> Handle(GetRedisValueQuery request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<GetRedisValueResponse>(connectionResult.Error);
 		}
 
-		var result = await valueService.GetValueAsync(connectionResult.Value, request.Key, cancellationToken, request.Database);
+		var (displayKey, keyBase64, isBinary) = DescribeIdentity(request.Key, request.KeyBase64);
+
+		var result = string.IsNullOrEmpty(request.KeyBase64)
+			? await valueService.GetValueAsync(
+				connectionResult.Value,
+				displayKey,
+				cancellationToken,
+				request.Database)
+			: await valueService.GetValueByIdentityAsync(
+				connectionResult.Value,
+				displayKey,
+				request.KeyBase64,
+				cancellationToken,
+				request.Database);
 
 		if (result.IsFailure)
 		{
@@ -83,10 +82,41 @@ internal sealed class GetRedisValueQueryHandler : IQueryHandler<GetRedisValueQue
 			: null;
 
 		return Result.Success(new GetRedisValueResponse(
-			request.Key,
+			displayKey,
 			parsedValue,
 			result.Value.Type,
 			result.Value.TimeToLive,
-			ttlSeconds));
+			ttlSeconds,
+			keyBase64,
+			isBinary));
+	}
+
+	private static (string Key, string? KeyBase64, bool IsBinary) DescribeIdentity(string key, string? keyBase64)
+	{
+		if (!string.IsNullOrEmpty(keyBase64))
+		{
+			try
+			{
+				byte[] raw = Convert.FromBase64String(keyBase64);
+				try
+				{
+					string decoded = StrictUtf8.GetString(raw);
+					return (decoded, keyBase64, false);
+				}
+				catch (DecoderFallbackException)
+				{
+					string fallback = !string.IsNullOrEmpty(key) ? key : Encoding.UTF8.GetString(raw);
+					return (fallback, keyBase64, true);
+				}
+			}
+			catch (FormatException)
+			{
+				return (key, keyBase64, false);
+			}
+		}
+
+		return string.IsNullOrEmpty(key)
+			? (key, null, false)
+			: (key, Convert.ToBase64String(Encoding.UTF8.GetBytes(key)), false);
 	}
 }

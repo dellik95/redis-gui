@@ -197,9 +197,9 @@ export class CommandPaletteComponent implements AfterViewInit {
       }
     }
 
-    // Current loaded keys (top 30)
+    // All loaded keys (filtered by searchQuery in filteredCommands)
     const currentKeys = this.redisKeysStore.keys();
-    for (const keyInfo of currentKeys.slice(0, 30)) {
+    for (const keyInfo of currentKeys) {
       items.push({
         id: `key-${keyInfo.key}`,
         title: keyInfo.key,
@@ -219,15 +219,20 @@ export class CommandPaletteComponent implements AfterViewInit {
 
   readonly filteredCommands = computed<CommandItem[]>(() => {
     const query = this.searchQuery().trim().toLowerCase();
-    if (!query) {
-      return this.allCommands();
-    }
-    return this.allCommands().filter(
-      c =>
-        c.title.toLowerCase().includes(query) ||
-        (c.subtitle && c.subtitle.toLowerCase().includes(query)) ||
-        (c.badge && c.badge.toLowerCase().includes(query))
-    );
+    const list = !query
+      ? this.allCommands()
+      : this.allCommands().filter(
+          c =>
+            c.title.toLowerCase().includes(query) ||
+            (c.subtitle && c.subtitle.toLowerCase().includes(query)) ||
+            (c.badge && c.badge.toLowerCase().includes(query))
+        );
+    let keyCount = 0;
+    return list.filter(c => {
+      if (c.category !== 'key') return true;
+      keyCount++;
+      return keyCount <= 30;
+    });
   });
 
   ngAfterViewInit(): void {

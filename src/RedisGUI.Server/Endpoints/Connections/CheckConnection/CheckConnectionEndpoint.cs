@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.CheckConnection;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 
@@ -34,6 +35,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CheckConnection
 					return await sender.Send(createConnectionCommand)
 						.Match(() => Results.Ok(), error => error.ToProblemDetails());
 				})
+				.RequireAuthorization(Policies.Authenticated)
 				.WithOpenApi();
 		}
 	}

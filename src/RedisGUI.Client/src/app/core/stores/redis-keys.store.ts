@@ -1,7 +1,20 @@
 import { computed, inject } from '@angular/core';
 import { signalStore, withState, withMethods, withComputed, patchState } from '@ngrx/signals';
 import { rxMethod } from '@ngrx/signals/rxjs-interop';
-import { pipe, tap, catchError, of, switchMap, concatMap } from 'rxjs';
+import {
+  Subject,
+  catchError,
+  concatMap,
+  EMPTY,
+  expand,
+  exhaustMap,
+  merge,
+  of,
+  pipe,
+  switchMap,
+  takeUntil,
+  tap
+} from 'rxjs';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import {
   RedisDataType,
@@ -14,74 +27,57 @@ import {
 } from '../../models/redis-keys.types';
 import { API_ROUTES } from '../constants/api-routes.constants';
 
-interface KeyScanPage {
-  keys: { key: string; type: string; ttlSeconds: number | null }[];
+export const MAX_RETAINED_KEYS = 10_000;
+const MAX_EMPTY_CONTINUATION_HOPS = 5;
+
+export interface KeyScanPage {
+  keys: {
+    key: string;
+    type: string;
+    ttlSeconds: number | null;
+    keyBase64?: string | null | undefined;
+    isBinary?: boolean | undefined;
+  }[];
   nextCursor: string | null;
+  serverMode?: string | undefined;
 }
 
-/**
- * Redis key with value data
- */
+export interface LoadKeysRequest {
+  connectionId: string;
+  pattern?: string | undefined;
+  database?: number | undefined;
+  append?: boolean | undefined;
+  autoContinueEmptyPages?: boolean | undefined;
+}
+
 export interface RedisKeyValue {
   key: string;
+  keyBase64?: string | null | undefined;
+  isBinary?: boolean | undefined;
   value: unknown;
   type: RedisDataType;
   ttl?: number;
 }
 
-/**
- * Redis keys state interface
- */
 interface RedisKeysState {
-  /**
-   * Raw Redis keys (not grouped - components handle grouping)
-   */
   keys: RedisKeyInfo[];
-
-  /**
-   * Currently selected key
-   */
   selectedKey: RedisKeyValue | null;
-
-  /**
-   * Loading state
-   */
   isLoading: boolean;
-
-  /**
-   * Error message
-   */
   error: string | null;
-
-  /**
-   * Last fetch parameters for cache validation
-   */
   lastFetchParams: {
     connectionId: string;
     pattern: string;
     database?: number;
   } | null;
-
-  /**
-   * Active database index (DB 0-15)
-   */
   activeDatabase: number;
-
-  /**
-   * Keyspace stats (DB -> count)
-   */
   keyspace: Record<number, number>;
-
-  /**
-   * Last fetch timestamp
-   */
   lastFetched: number | null;
   nextCursor: string | null;
+  serverMode: string;
+  retentionLimitReached: boolean;
+  scanEpoch: number;
 }
 
-/**
- * Initial state
- */
 const initialState: RedisKeysState = {
   keys: [],
   selectedKey: null,
@@ -91,63 +87,197 @@ const initialState: RedisKeysState = {
   activeDatabase: 0,
   keyspace: {},
   lastFetched: null,
-  nextCursor: null
+  nextCursor: null,
+  serverMode: 'Unknown',
+  retentionLimitReached: false,
+  scanEpoch: 0
 };
 
-/**
- * Global Redis keys store using NgRx SignalStore
- */
+export function redisKeyIdentity(item: { key: string; keyBase64?: string | null | undefined }): string {
+  return item.keyBase64 ? `b64:${item.keyBase64}` : `txt:${item.key}`;
+}
+
+export function requiresQueryKeyRoute(key: string, keyBase64?: string | null): boolean {
+  return !!keyBase64 && key.length >= 0;
+}
+
 export const RedisKeysStore = signalStore(
   { providedIn: 'root' },
 
-  // Define state
   withState(initialState),
 
-  // Define computed signals
   withComputed(store => ({
-    /**
-     * Whether cache needs refresh (older than 5 seconds)
-     */
     needsRefresh: computed(() => {
       const lastFetched = store.lastFetched();
       if (!lastFetched) return true;
-      return Date.now() - lastFetched > 5000; // 5 seconds
+      return Date.now() - lastFetched > 5000;
     }),
 
-    /**
-     * Total number of keys
-     */
-    totalKeys: computed(() => {
-      return store.keys().length;
-    }),
+    totalKeys: computed(() => store.keys().length),
 
-    /**
-     * Whether there are any keys
-     */
-    hasKeys: computed(() => {
-      return store.keys().length > 0;
-    })
+    hasKeys: computed(() => store.keys().length > 0),
+
+    isClusterMode: computed(() => store.serverMode() === 'Cluster')
   })),
 
-  // Define methods
   withMethods((store, httpClient = inject(HttpClient)) => {
+    const resetScan$ = new Subject<void>();
+    const sessionEnded$ = new Subject<void>();
+
+    const fetchScanPage = (
+      connectionId: string,
+      pattern: string,
+      database: number,
+      cursor: string | null
+    ) => {
+      let params = new HttpParams()
+        .set('pattern', pattern)
+        .set('database', database)
+        .set('count', 100);
+      if (cursor) {
+        params = params.set('cursor', cursor);
+      }
+      return httpClient.get<KeyScanPage>(API_ROUTES.STORAGE.SCAN(connectionId), { params });
+    };
+
+    const executeScan = (
+      req: LoadKeysRequest,
+      epoch: number,
+      append: boolean
+    ) => {
+      const pattern = req.pattern ?? '*';
+      const targetDb = req.database ?? store.activeDatabase();
+      const initialCursor = append ? store.nextCursor() : null;
+
+      if (append && (!initialCursor || store.keys().length >= MAX_RETAINED_KEYS)) {
+        if (append && store.keys().length >= MAX_RETAINED_KEYS) {
+          patchState(store, { retentionLimitReached: true, isLoading: false });
+        }
+        return EMPTY;
+      }
+
+      patchState(store, {
+        isLoading: true,
+        error: null,
+        ...(!append
+          ? { keys: [], nextCursor: null, retentionLimitReached: false }
+          : {})
+      });
+
+      const autoContinue = req.autoContinueEmptyPages === true;
+      let hops = 0;
+
+      const cancelSignal$ = merge(resetScan$, sessionEnded$);
+
+      const stream$ = fetchScanPage(req.connectionId, pattern, targetDb, initialCursor).pipe(
+        expand(response => {
+          if (
+            !autoContinue ||
+            response.keys.length > 0 ||
+            !response.nextCursor ||
+            hops >= MAX_EMPTY_CONTINUATION_HOPS
+          ) {
+            return EMPTY;
+          }
+          hops++;
+          return fetchScanPage(req.connectionId, pattern, targetDb, response.nextCursor);
+        }),
+        takeUntil(cancelSignal$),
+        tap(response => {
+          if (store.scanEpoch() !== epoch) return;
+
+          const fetchedAt = Date.now();
+          const incoming: RedisKeyInfo[] = response.keys.map(item => ({
+            key: item.key,
+            keyBase64: item.keyBase64 ?? null,
+            isBinary: item.isBinary ?? false,
+            type: item.type,
+            ttl: item.ttlSeconds === null ? null : Math.ceil(item.ttlSeconds),
+            size: 0,
+            memoryUsage: null,
+            fetchedAt
+          }));
+
+          const existing = store.keys();
+          const merged = new Map<string, RedisKeyInfo>(
+            existing.map(k => [redisKeyIdentity(k), k])
+          );
+          let limitReached = existing.length >= MAX_RETAINED_KEYS;
+
+          for (const item of incoming) {
+            const id = redisKeyIdentity(item);
+            if (!merged.has(id) && merged.size >= MAX_RETAINED_KEYS) {
+              limitReached = true;
+              break;
+            }
+            merged.set(id, item);
+          }
+
+          const hasMore =
+            autoContinue && response.keys.length === 0 && response.nextCursor !== null && hops < MAX_EMPTY_CONTINUATION_HOPS;
+
+          patchState(store, {
+            keys: [...merged.values()],
+            nextCursor: limitReached ? response.nextCursor : response.nextCursor,
+            isLoading: hasMore,
+            activeDatabase: targetDb,
+            serverMode: response.serverMode ?? store.serverMode(),
+            retentionLimitReached: limitReached,
+            lastFetchParams: {
+              connectionId: req.connectionId,
+              pattern,
+              database: targetDb
+            },
+            lastFetched: fetchedAt
+          });
+        }),
+        catchError(error => {
+          if (store.scanEpoch() === epoch) {
+            patchState(store, {
+              error: error?.error?.detail || error?.error?.message || error?.message || 'Failed to load keys',
+              isLoading: false
+            });
+          }
+          return of(null);
+        })
+      );
+
+      return stream$;
+    };
+
+    const resetQueue = rxMethod<LoadKeysRequest>(
+      pipe(
+        switchMap(req => {
+          resetScan$.next();
+          const nextEpoch = store.scanEpoch() + 1;
+          patchState(store, { scanEpoch: nextEpoch });
+          return executeScan(req, nextEpoch, false);
+        })
+      )
+    );
+
+    const appendQueue = rxMethod<LoadKeysRequest>(
+      pipe(
+        exhaustMap(req => executeScan(req, store.scanEpoch(), true))
+      )
+    );
+
     return {
-      /**
-       * Set active database
-       */
       setActiveDatabase(db: number) {
         patchState(store, { activeDatabase: db, lastFetched: null });
       },
 
-      /**
-       * Load keyspace info
-       */
+      syncKeyspace(databases: Record<number, number>) {
+        patchState(store, { keyspace: databases });
+      },
+
       loadKeyspace: rxMethod<{ connectionId: string }>(
         pipe(
           switchMap(({ connectionId }) =>
             httpClient
               .get<{ databases: Record<number, number> }>(API_ROUTES.STORAGE.KEYSPACE(connectionId))
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(res => {
                   if (res?.databases) {
                     patchState(store, { keyspace: res.databases });
@@ -159,89 +289,41 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Start a new scan or load the next cursor page.
-       */
-      loadKeys: rxMethod<{
+      loadKeys(req: LoadKeysRequest): void {
+        if (req.append) {
+          if (store.isLoading() || !store.nextCursor()) {
+            return;
+          }
+          appendQueue(req);
+        } else {
+          resetQueue(req);
+        }
+      },
+
+      loadValue: rxMethod<{
         connectionId: string;
-        pattern?: string | undefined;
-        database?: number | undefined;
-        append?: boolean;
+        key: string;
+        keyBase64?: string | null | undefined;
+        database?: number;
       }>(
         pipe(
-          switchMap(({ connectionId, pattern = '*', database, append = false }) => {
-            const targetDb = database ?? store.activeDatabase();
-            const continuation = append ? store.nextCursor() : null;
-            if (append && !continuation) return of(null);
-            patchState(store, {
-              isLoading: true,
-              error: null,
-              ...(!append ? { keys: [], nextCursor: null } : {})
-            });
-            let params = new HttpParams()
-              .set('pattern', pattern)
-              .set('database', targetDb)
-              .set('count', 100);
-            if (continuation) params = params.set('cursor', continuation);
-
-            return httpClient
-              .get<KeyScanPage>(API_ROUTES.STORAGE.SCAN(connectionId), { params })
-              .pipe(
-                tap(response => {
-                  const fetchedAt = Date.now();
-                  const keys: RedisKeyInfo[] = response.keys.map(item => ({
-                    key: item.key,
-                    type: item.type,
-                    ttl: item.ttlSeconds === null ? null : Math.ceil(item.ttlSeconds),
-                    size: 0,
-                    memoryUsage: null,
-                    fetchedAt
-                  }));
-                  const merged = new Map((append ? store.keys() : []).map(key => [key.key, key]));
-                  for (const key of keys) merged.set(key.key, key);
-                  patchState(store, {
-                    keys: [...merged.values()],
-                    nextCursor: response.nextCursor,
-                    isLoading: false,
-                    activeDatabase: targetDb,
-                    lastFetchParams: {
-                      connectionId,
-                      pattern,
-                      database: targetDb
-                    },
-                    lastFetched: fetchedAt
-                  });
-                }),
-                catchError(error => {
-                  patchState(store, {
-                    error: error.error?.message || error.message || 'Failed to load keys',
-                    isLoading: false
-                  });
-                  return of(null);
-                })
-              );
-          })
-        )
-      ),
-
-      /**
-       * Load a single Redis value by key
-       */
-      loadValue: rxMethod<{ connectionId: string; key: string; database?: number }>(
-        pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, key, database }) => {
+          switchMap(({ connectionId, key, keyBase64, database }) => {
             const targetDb = database ?? store.activeDatabase();
+            const useQuery = requiresQueryKeyRoute(key, keyBase64);
+            const url = useQuery
+              ? API_ROUTES.STORAGE.KEY_BY_QUERY(connectionId, key, keyBase64, targetDb)
+              : API_ROUTES.STORAGE.GET_VALUE(connectionId, key);
+
             let params = new HttpParams();
-            if (targetDb !== undefined && targetDb !== null) {
+            if (!useQuery && targetDb !== undefined && targetDb !== null) {
               params = params.set('database', targetDb.toString());
             }
 
             return httpClient
-              .get<GetRedisValueResponse>(API_ROUTES.STORAGE.GET_VALUE(connectionId, key), {
-                params
-              })
+              .get<GetRedisValueResponse>(url, useQuery ? {} : { params })
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(response => {
                   let ttlVal = response.ttl ?? REDIS_TTL.Persistent;
                   if (response.timeToLive && ttlVal === REDIS_TTL.Persistent) {
@@ -255,12 +337,12 @@ export const RedisKeysStore = signalStore(
                     }
                   }
 
-                  const mappedType = toRedisDataType(response.type);
-
                   const value: RedisKeyValue = {
                     key: response.key,
+                    keyBase64: response.keyBase64 ?? keyBase64 ?? null,
+                    isBinary: response.isBinary ?? false,
                     value: response.value,
-                    type: mappedType,
+                    type: toRedisDataType(response.type),
                     ttl: ttlVal
                   };
                   patchState(store, {
@@ -280,12 +362,10 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Update a Redis value
-       */
       updateValue: rxMethod<{
         connectionId: string;
         key: string;
+        keyBase64?: string | null | undefined;
         type: RedisDataType;
         value: RedisValueData;
         ttl?: number;
@@ -295,32 +375,36 @@ export const RedisKeysStore = signalStore(
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          concatMap(({ connectionId, key, type, value, ttl, database, onSuccess, onError }) => {
+          concatMap(({ connectionId, key, keyBase64, type, value, ttl, database, onSuccess, onError }) => {
             const targetDb = database ?? store.activeDatabase();
+            const useQuery = requiresQueryKeyRoute(key, keyBase64);
+            const url = useQuery
+              ? API_ROUTES.STORAGE.KEY_BY_QUERY(connectionId, key, keyBase64, targetDb)
+              : API_ROUTES.STORAGE.UPDATE_VALUE(connectionId, key);
 
             const requestBody = {
               connectionId,
               key,
+              ...(keyBase64 ? { keyBase64 } : {}),
               type,
               value,
-              ttl: ttl,
+              ttl,
               database: targetDb
             };
 
             let params = new HttpParams();
-            if (targetDb !== undefined && targetDb !== null) {
+            if (!useQuery && targetDb !== undefined && targetDb !== null) {
               params = params.set('database', targetDb.toString());
             }
 
             return httpClient
-              .put<void>(API_ROUTES.STORAGE.UPDATE_VALUE(connectionId, key), requestBody, {
-                params
-              })
+              .put<void>(url, requestBody, useQuery ? {} : { params })
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(() => {
                   patchState(store, {
                     isLoading: false,
-                    lastFetched: null // Invalidate cache
+                    lastFetched: null
                   });
                   onSuccess?.();
                 }),
@@ -337,12 +421,10 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Add a new Redis key-value pair
-       */
       addValue: rxMethod<{
         connectionId: string;
         key: string;
+        keyBase64?: string | null | undefined;
         type?: RedisDataType;
         value: RedisValueData | string;
         ttl?: number;
@@ -355,6 +437,7 @@ export const RedisKeysStore = signalStore(
             ({
               connectionId,
               key,
+              keyBase64,
               type = RedisDataType.String,
               value,
               ttl,
@@ -379,18 +462,20 @@ export const RedisKeysStore = signalStore(
                   {
                     connectionId,
                     key,
+                    ...(keyBase64 ? { keyBase64 } : {}),
                     type,
                     value: valObj,
-                    ttl: ttl,
+                    ttl,
                     database: targetDb
                   },
                   { params }
                 )
                 .pipe(
+                  takeUntil(sessionEnded$),
                   tap(() => {
                     patchState(store, {
                       isLoading: false,
-                      lastFetched: null // Invalidate cache
+                      lastFetched: null
                     });
                     onSuccess?.();
                   }),
@@ -407,37 +492,43 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Delete a Redis key
-       */
       deleteKey: rxMethod<{
         connectionId: string;
         key: string;
+        keyBase64?: string | null | undefined;
         database?: number;
         onSuccess?: () => void;
       }>(
         pipe(
-          tap(({ key }) => {
-            const currentKeys = store.keys();
+          tap(({ key, keyBase64 }) => {
+            const targetId = redisKeyIdentity({ key, keyBase64 });
+            const selected = store.selectedKey();
+            const selectedMatches = selected ? redisKeyIdentity(selected) === targetId : false;
             patchState(store, {
-              keys: currentKeys.filter(k => k.key !== key),
-              selectedKey: store.selectedKey()?.key === key ? null : store.selectedKey(),
+              keys: store.keys().filter(k => redisKeyIdentity(k) !== targetId),
+              selectedKey: selectedMatches ? null : selected,
               isLoading: true,
               error: null,
               lastFetched: null,
               lastFetchParams: null
             });
           }),
-          switchMap(({ connectionId, key, database, onSuccess }) => {
+          switchMap(({ connectionId, key, keyBase64, database, onSuccess }) => {
             const targetDb = database ?? store.activeDatabase();
+            const useQuery = requiresQueryKeyRoute(key, keyBase64);
+            const url = useQuery
+              ? API_ROUTES.STORAGE.KEY_BY_QUERY(connectionId, key, keyBase64, targetDb)
+              : API_ROUTES.STORAGE.KEY(connectionId, key);
+
             let params = new HttpParams();
-            if (targetDb !== undefined && targetDb !== null) {
+            if (!useQuery && targetDb !== undefined && targetDb !== null) {
               params = params.set('database', targetDb.toString());
             }
 
             return httpClient
-              .delete<boolean>(API_ROUTES.STORAGE.KEY(connectionId, key), { params })
+              .delete<boolean>(url, useQuery ? {} : { params })
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(() => {
                   patchState(store, {
                     isLoading: false,
@@ -458,28 +549,30 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Rename a key
-       */
       renameKey: rxMethod<{
         connectionId: string;
         oldKey: string;
+        oldKeyBase64?: string | null | undefined;
         newKey: string;
+        newKeyBase64?: string | null | undefined;
         overwrite?: boolean;
         database?: number;
         onSuccess?: () => void;
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, oldKey, newKey, overwrite = false, database, onSuccess }) =>
+          switchMap(({ connectionId, oldKey, oldKeyBase64, newKey, newKeyBase64, overwrite = false, database, onSuccess }) =>
             httpClient
               .post<RedisKeyMutationResponse>(API_ROUTES.STORAGE.RENAME_KEY(connectionId), {
                 oldKey,
+                ...(oldKeyBase64 ? { oldKeyBase64 } : {}),
                 newKey,
+                ...(newKeyBase64 ? { newKeyBase64 } : {}),
                 overwrite,
                 database
               })
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(() => {
                   patchState(store, { isLoading: false, lastFetched: null });
                   onSuccess?.();
@@ -500,26 +593,28 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Duplicate a key
-       */
       duplicateKey: rxMethod<{
         connectionId: string;
         sourceKey: string;
+        sourceKeyBase64?: string | null | undefined;
         targetKey: string;
+        targetKeyBase64?: string | null | undefined;
         database?: number;
         onSuccess?: () => void;
       }>(
         pipe(
           tap(() => patchState(store, { isLoading: true, error: null })),
-          switchMap(({ connectionId, sourceKey, targetKey, database, onSuccess }) =>
+          switchMap(({ connectionId, sourceKey, sourceKeyBase64, targetKey, targetKeyBase64, database, onSuccess }) =>
             httpClient
               .post<RedisKeyMutationResponse>(API_ROUTES.STORAGE.DUPLICATE_KEY(connectionId), {
                 sourceKey,
+                ...(sourceKeyBase64 ? { sourceKeyBase64 } : {}),
                 targetKey,
+                ...(targetKeyBase64 ? { targetKeyBase64 } : {}),
                 database
               })
               .pipe(
+                takeUntil(sessionEnded$),
                 tap(() => {
                   patchState(store, { isLoading: false, lastFetched: null });
                   onSuccess?.();
@@ -540,23 +635,14 @@ export const RedisKeysStore = signalStore(
         )
       ),
 
-      /**
-       * Select a key for editing
-       */
       selectKey(key: RedisKeyValue | null): void {
         patchState(store, { selectedKey: key });
       },
 
-      /**
-       * Clear error state
-       */
       clearError(): void {
         patchState(store, { error: null });
       },
 
-      /**
-       * Clear cache and force refresh on next load
-       */
       clearCache(): void {
         patchState(store, {
           lastFetched: null,
@@ -564,10 +650,14 @@ export const RedisKeysStore = signalStore(
         });
       },
 
-      /**
-       * Reset store to initial state
-       */
       reset(): void {
+        resetScan$.next();
+        patchState(store, initialState);
+      },
+
+      resetSession(): void {
+        resetScan$.next();
+        sessionEnded$.next();
         patchState(store, initialState);
       }
     };

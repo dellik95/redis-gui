@@ -71,6 +71,8 @@ export class EditKeyComponent {
   // 5. Angular 22 Resource API for declarative key loading
   readonly keyResource = httpResource<{
     key: string;
+    keyBase64?: string | null;
+    isBinary?: boolean;
     value: RedisValue;
     type: string;
     ttl?: number;
@@ -78,9 +80,15 @@ export class EditKeyComponent {
   }>(() => {
     const key = this.selectedKey();
     if (!key || !this.connectionId()) return undefined;
+    const db = this.redisKeysStore.activeDatabase();
+    if (key.keyBase64) {
+      return {
+        url: API_ROUTES.STORAGE.KEY_BY_QUERY(this.connectionId(), key.key, key.keyBase64, db)
+      };
+    }
     return {
       url: API_ROUTES.STORAGE.GET_VALUE(this.connectionId(), key.key),
-      params: { database: String(this.redisKeysStore.activeDatabase()) }
+      params: { database: String(db) }
     };
   });
 
@@ -110,11 +118,15 @@ export class EditKeyComponent {
   }
 
   copyKeyName(): void {
-    const key = this.selectedKey()?.key;
-    if (key) {
-      navigator.clipboard.writeText(key);
-      this.snackBar.open(`Copied "${key}" to clipboard`, 'Close', { duration: 2000 });
+    const selected = this.selectedKey();
+    if (!selected) return;
+    if (selected.isBinary && selected.keyBase64) {
+      navigator.clipboard.writeText(selected.keyBase64);
+      this.snackBar.open('Binary key copied as Base64', 'Close', { duration: 2500 });
+      return;
     }
+    navigator.clipboard.writeText(selected.key);
+    this.snackBar.open(`Copied "${selected.key}" to clipboard`, 'Close', { duration: 2000 });
   }
 
   onSave(data: ValueEditorOutput): void {
@@ -123,6 +135,7 @@ export class EditKeyComponent {
     this.redisKeysStore.updateValue({
       connectionId: this.connectionId(),
       key: data.key,
+      keyBase64: this.selectedKey()?.keyBase64 ?? null,
       type: data.type,
       value: data.value,
       ...(data.ttl !== undefined ? { ttl: data.ttl } : {}),

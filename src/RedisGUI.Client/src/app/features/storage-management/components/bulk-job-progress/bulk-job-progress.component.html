@@ -1,13 +1,16 @@
 <h2 mat-dialog-title>Bulk key operation</h2>
 <mat-dialog-content>
-  <p>Database {{ data.database }} · {{ data.operation }} @if (data.pattern) { · {{ data.pattern }} }</p>
-  @if (jobId()) { <p>Job {{ jobId() }} · Closing this dialog does not stop the operation.</p> }
+  <p>
+    @if (data.database !== undefined) { Database {{ data.database }} }
+    @if (data.operation) { · {{ data.operation }} }
+    @if (data.pattern) { · {{ data.pattern }} }
+  </p>
   <p role="status">{{ status() }}</p>
   @if (running()) {
     <mat-progress-bar [mode]="progress() === null ? 'indeterminate' : 'determinate'" [value]="progress() ?? 0" />
   }
   <p>Processed: {{ processed() }} @if (data.keys) { of {{ data.keys.length }} } · Changed: {{ changed() }} · Unchanged or missing: {{ unchanged() }} · Failed: {{ failed() }}</p>
-  @if (connectedMessage()) { <p>{{ connectedMessage() }} <button mat-button (click)="refreshStatus()">Refresh status</button></p> }
+  @if (connectedMessage()) { <p role="status">{{ connectedMessage() }}</p> }
   @if (error()) { <p role="alert">{{ error() }}</p> }
   @if (result(); as outcome) {
     @if (outcome.cancelled) { <p>Stopped before all requested keys were processed.</p> }
@@ -15,7 +18,11 @@
     @if (outcome.failedKeys.length > 0) { <p>Failed or missing keys (first five): {{ outcome.failedKeys.join(', ') }}</p> }
   }
 </mat-dialog-content>
-<mat-dialog-actions align="end">
-  @if (running() && jobId()) { <button mat-button (click)="stop()" [disabled]="stopping()">{{ stopping() ? 'Stopping…' : 'Stop' }}</button> }
-  <button mat-button (click)="close()" [disabled]="running() && !jobId()">Close</button>
+<mat-dialog-actions align="end" class="gap-2">
+  @if (running() && jobId()) {
+    <ui-button variant="danger" (click)="stop()" [disabled]="stopping()">
+      {{ stopping() ? 'Stopping…' : 'Stop' }}
+    </ui-button>
+  }
+  <ui-button variant="ghost" (click)="close()" [disabled]="running() && !jobId()">Close</ui-button>
 </mat-dialog-actions>

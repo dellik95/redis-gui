@@ -18,9 +18,10 @@ import {
   LoadTestResult,
   LoadTestProgress
 } from '../../../../core/services/redis-cli.service';
-import { BackgroundJob, BackgroundJobsService } from '../../../../core/services/background-jobs.service';
-import { Subscription } from 'rxjs';
+import { BackgroundJobsStore } from '../../../../core/stores/background-jobs.store';
+import { isJobActive } from '../../../../core/models/background-jobs.types';
 import { NumberPresetOption, NumberPresetPickerComponent } from '../../../../shared/components';
+import { UiButtonComponent } from '../../../../shared/ui';
 
 const DURATION_PRESETS: readonly NumberPresetOption[] = [
   { value: 5, label: '5 s' },
@@ -55,6 +56,7 @@ const PAYLOAD_PRESETS: readonly NumberPresetOption[] = [
 export interface LoadTestDialogData {
   connectionId: string;
   database: number;
+  jobId?: string | undefined;
 }
 
 @Component({
@@ -67,7 +69,8 @@ export interface LoadTestDialogData {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    NumberPresetPickerComponent
+    NumberPresetPickerComponent,
+    UiButtonComponent
   ],
   templateUrl: './load-test-dialog.component.html',
   styleUrl: './load-test-dialog.component.scss',
@@ -76,10 +79,9 @@ export interface LoadTestDialogData {
 export class LoadTestDialogComponent {
   readonly data: LoadTestDialogData = inject(MAT_DIALOG_DATA);
   private readonly dialogRef = inject(MatDialogRef<LoadTestDialogComponent>);
-  private readonly jobs = inject(BackgroundJobsService);
+  private readonly jobsStore = inject(BackgroundJobsStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Form options
   readonly benchmarkMode = signal<'duration' | 'count'>('duration');
   readonly durationSeconds = signal<number>(10);
   readonly operationsCount = signal<number>(1000);
@@ -91,36 +93,67 @@ export class LoadTestDialogComponent {
   readonly concurrencyPresets = CONCURRENCY_PRESETS;
   readonly payloadPresets = PAYLOAD_PRESETS;
 
-  // Execution state
-  readonly isRunning = signal<boolean>(false);
-  readonly isStopping = signal<boolean>(false);
-  readonly errorMessage = signal<string | null>(null);
-  readonly liveProgress = signal<LoadTestProgress | null>(null);
-  readonly result = signal<LoadTestResult | null>(null);
-  readonly connectionStatus = signal<string | null>(null);
-  readonly activeJobId = signal<string | null>(null);
-  private readonly jobProgress = signal(0);
+  readonly activeJobId = signal<string | null>(
+    this.data.jobId ??
+      this.jobsStore
+        .activeJobs()
+        .find(e => e.job.kind === 'load-test' && e.job.connectionId === this.data.connectionId)?.job
+        .jobId ??
+      null
+  );
+  private readonly starting = signal(false);
+  private readonly localError = signal<string | null>(null);
 
-  private watchSubscription?: Subscription;
-  private resultRequested = false;
-  private lastRevision = -1;
+  private readonly entry = computed(() => {
+    const id = this.activeJobId();
+    return id ? (this.jobsStore.jobsById()[id] ?? null) : null;
+  });
+
+  readonly isRunning = computed(() => {
+    if (this.starting()) return true;
+    const status = this.entry()?.job.status;
+    return status ? isJobActive(status) : false;
+  });
+
+  readonly isStopping = computed(() => this.entry()?.job.status === 'Cancelling');
+
+  readonly liveProgress = computed<LoadTestProgress | null>(
+    () => (this.entry()?.job.metrics as LoadTestProgress | null) ?? null
+  );
+
+  readonly result = computed<LoadTestResult | null>(
+    () => (this.entry()?.resultData as LoadTestResult | null) ?? null
+  );
+
+  readonly errorMessage = computed(() => {
+    if (this.localError()) return this.localError();
+    const current = this.entry();
+    if (!current) return null;
+    if (current.expiredReason) return current.expiredReason;
+    if (current.job.status === 'Cancelled' && !current.job.hasResult) {
+      return 'Load test cancelled.';
+    }
+    return current.job.error ?? current.resultError ?? null;
+  });
+
+  readonly connectionStatus = computed(() =>
+    this.jobsStore.liveConnected() ? null : (this.jobsStore.connectionNotice() || 'Reconnecting live updates…')
+  );
+
+  readonly progressPercent = computed(() => this.entry()?.job.progressPercent ?? 0);
 
   constructor() {
-    const saved = sessionStorage.getItem(this.storageKey());
-    if (saved) { this.activeJobId.set(saved); this.isRunning.set(true); this.watch(saved); }
-    this.destroyRef.onDestroy(() => this.watchSubscription?.unsubscribe());
+    const initialId = this.activeJobId();
+    if (initialId && !this.entry()) {
+      this.jobsStore.refreshJob(initialId);
+    }
   }
 
   startLoadTest(): void {
     this.dialogRef.disableClose = true;
-    this.watchSubscription?.unsubscribe();
     this.activeJobId.set(null);
-    sessionStorage.removeItem(this.storageKey());
-    this.isRunning.set(true);
-    this.isStopping.set(false);
-    this.errorMessage.set(null);
-    this.result.set(null);
-    this.liveProgress.set(null);
+    this.starting.set(true);
+    this.localError.set(null);
 
     const isDuration = this.benchmarkMode() === 'duration';
     const request: LoadTestRequest = {
@@ -133,82 +166,40 @@ export class LoadTestDialogComponent {
       keyPrefix: '__bench_'
     };
 
-    this.resultRequested = false;
-    this.lastRevision = -1;
-    this.jobs.start('load-test', this.data.connectionId, request).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: job => {
-        this.dialogRef.disableClose = false;
-        this.activeJobId.set(job.jobId);
-        sessionStorage.setItem(this.storageKey(), job.jobId);
-        this.watch(job.jobId);
-      },
-      error: error => { this.dialogRef.disableClose = false; this.isRunning.set(false); this.errorMessage.set(error.error?.detail || error.message || 'Could not start the job.'); }
-    });
+    this.jobsStore
+      .startJob('load-test', this.data.connectionId, request, {
+        database: this.data.database,
+        markSeen: true
+      })
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: job => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.activeJobId.set(job.jobId);
+        },
+        error: error => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.localError.set(error?.error?.detail || error?.message || 'Could not start the job.');
+        }
+      });
   }
 
   stopLoadTest(): void {
     const jobId = this.activeJobId();
     if (!jobId) return;
-    this.isStopping.set(true);
 
-    this.jobs
-      .cancel(jobId)
+    this.jobsStore
+      .cancelJob(jobId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: job => this.applyJob(job),
-        error: () => {
-          this.isStopping.set(false);
-          this.connectionStatus.set('Could not request cancellation. Refresh status and try again.');
-        }
+        error: () => this.localError.set('Could not request cancellation.')
       });
   }
 
   reset(): void {
-    this.watchSubscription?.unsubscribe();
     this.activeJobId.set(null);
-    sessionStorage.removeItem(this.storageKey());
-    this.resultRequested = false;
-    this.lastRevision = -1;
-    this.result.set(null);
-    this.liveProgress.set(null);
-    this.errorMessage.set(null);
-    this.isStopping.set(false);
+    this.localError.set(null);
   }
-
-  refreshStatus(): void {
-    const id = this.activeJobId();
-    if (id) this.jobs.status(id).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: job => this.applyJob(job),
-      error: () => { this.isRunning.set(false); this.errorMessage.set('Job status is unavailable or has expired.'); }
-    });
-  }
-
-  private watch(jobId: string): void {
-    this.watchSubscription?.unsubscribe();
-    this.watchSubscription = this.jobs.watch(jobId).subscribe(event => {
-      this.connectionStatus.set(event.connected ? null : (event.error || 'Reconnecting live updates…'));
-      if (event.job) this.applyJob(event.job);
-    });
-  }
-
-  private applyJob(job: BackgroundJob): void {
-    if (job.revision < this.lastRevision) return;
-    this.lastRevision = job.revision;
-    this.jobProgress.set(job.progressPercent ?? 0);
-    if (job.metrics) this.liveProgress.set(job.metrics as LoadTestProgress);
-    this.isStopping.set(job.status === 'Cancelling');
-    this.isRunning.set(job.status === 'Queued' || job.status === 'Running' || job.status === 'Cancelling');
-    if (job.status === 'Failed') this.errorMessage.set(job.error || 'Load test failed.');
-    if (job.status === 'Cancelled' && !job.hasResult) this.errorMessage.set('Load test cancelled.');
-    if (job.hasResult && !this.resultRequested) {
-      this.resultRequested = true;
-      this.jobs.result<LoadTestResult>(job.jobId).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-        next: result => this.result.set(result),
-        error: () => { this.resultRequested = false; this.errorMessage.set('Could not retrieve the job result.'); }
-      });
-    }
-  }
-
-  private storageKey(): string { return `redisgui:load-test:${this.data.connectionId}:${this.data.database}`; }
-  readonly progressPercent = computed(() => this.jobProgress());
 }

@@ -3,7 +3,10 @@ using StackExchange.Redis;
 namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>Captures and restores binary Redis DUMP payloads.</summary>
-internal sealed class RedisSnapshotService(IRedisConnectionManager connections, ILogger<RedisSnapshotService> logger) : IRedisSnapshotService
+internal sealed class RedisSnapshotService(
+	IRedisConnectionManager connections,
+	ILogger<RedisSnapshotService> logger,
+	IRedisTopologyRegistry? topology = null) : IRedisSnapshotService
 {
 	private const string CaptureScript = "local d=redis.call('DUMP',KEYS[1]); if not d then return nil end; return {redis.call('TYPE',KEYS[1]).ok,d,redis.call('PTTL',KEYS[1])}";
 
@@ -13,6 +16,11 @@ internal sealed class RedisSnapshotService(IRedisConnectionManager connections, 
 		if (connection.IsReadOnly) return Result.Failure<bool>(new Error("Connection.ReadOnlyMode", "Connection is in Safe Mode (Read-Only)."));
 		var connected = await connections.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (connected.IsFailure) return Result.Failure<bool>(connected.Error);
+		topology?.SetMode(connection.Id, connected.Value.DetectServerMode());
+
+		var dbValidation = connected.Value.ValidateDatabase(database);
+		if (dbValidation.IsFailure) return Result.Failure<bool>(dbValidation.Error);
+
 		try
 		{
 			return Result.Success(await connected.Value.GetDatabase(database)
@@ -30,9 +38,15 @@ internal sealed class RedisSnapshotService(IRedisConnectionManager connections, 
 	{
 		var connected = await connections.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (connected.IsFailure) return Result.Failure<RedisKeySnapshot>(connected.Error);
+		topology?.SetMode(connection.Id, connected.Value.DetectServerMode());
+
+		var dbValidation = connected.Value.ValidateDatabase(database);
+		if (dbValidation.IsFailure) return Result.Failure<RedisKeySnapshot>(dbValidation.Error);
+
+		var db = connected.Value.GetDatabase(database);
 		try
 		{
-			RedisResult result = await connected.Value.GetDatabase(database)
+			RedisResult result = await db
 				.ScriptEvaluateAsync(CaptureScript, [(RedisKey)key]).WaitAsync(cancellationToken);
 			if (result.IsNull) return Result.Failure<RedisKeySnapshot>(new Error("Redis.KeyNotFound", "A scanned key disappeared during export."));
 			var fields = (RedisResult[])result!;
@@ -40,10 +54,45 @@ internal sealed class RedisSnapshotService(IRedisConnectionManager connections, 
 			return Result.Success(new RedisKeySnapshot((byte[])fields[1]!, (string)fields[0]!, ttl < 0 ? null : Math.Max(1, ttl)));
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+		catch (RedisServerException ex) when (ex.Message.Contains("NOPERM", StringComparison.OrdinalIgnoreCase) ||
+			ex.Message.Contains("unknown command", StringComparison.OrdinalIgnoreCase))
+		{
+			// Fallback when EVAL is disabled by Redis ACLs or server config.
+			return await CaptureWithoutEvalAsync(db, key, cancellationToken);
+		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Failed to capture Redis snapshot");
 			return Result.Failure<RedisKeySnapshot>(new Error("Export.CaptureFailed", "Could not capture a key. Check Redis DUMP and EVAL permissions."));
+		}
+	}
+
+	private async Task<Result<RedisKeySnapshot>> CaptureWithoutEvalAsync(IDatabase db, byte[] key, CancellationToken cancellationToken)
+	{
+		try
+		{
+			RedisKey redisKey = key;
+			var type = await db.KeyTypeAsync(redisKey).WaitAsync(cancellationToken);
+			if (type == RedisType.None)
+			{
+				return Result.Failure<RedisKeySnapshot>(new Error("Redis.KeyNotFound", "A scanned key disappeared during export."));
+			}
+
+			var dumped = await db.KeyDumpAsync(redisKey).WaitAsync(cancellationToken);
+			if (dumped is null)
+			{
+				return Result.Failure<RedisKeySnapshot>(new Error("Redis.KeyNotFound", "A scanned key disappeared during export."));
+			}
+
+			var ttl = await db.KeyTimeToLiveAsync(redisKey).WaitAsync(cancellationToken);
+			long? ttlMs = ttl.HasValue ? Math.Max(1, (long)Math.Ceiling(ttl.Value.TotalMilliseconds)) : null;
+			return Result.Success(new RedisKeySnapshot(dumped, type.ToString().ToLowerInvariant(), ttlMs));
+		}
+		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
+		catch (Exception ex)
+		{
+			logger.LogWarning(ex, "Failed to capture Redis snapshot without EVAL");
+			return Result.Failure<RedisKeySnapshot>(new Error("Export.CaptureFailed", "Could not capture a key. Check Redis DUMP permissions."));
 		}
 	}
 
@@ -53,6 +102,11 @@ internal sealed class RedisSnapshotService(IRedisConnectionManager connections, 
 		if (connection.IsReadOnly) return Result.Failure<bool>(new Error("Connection.ReadOnlyMode", "Connection is in Safe Mode (Read-Only)."));
 		var connected = await connections.GetConnection(connection.BuildConnectionString(), cancellationToken);
 		if (connected.IsFailure) return Result.Failure<bool>(connected.Error);
+		topology?.SetMode(connection.Id, connected.Value.DetectServerMode());
+
+		var dbValidation = connected.Value.ValidateDatabase(database);
+		if (dbValidation.IsFailure) return Result.Failure<bool>(dbValidation.Error);
+
 		try
 		{
 			var db = connected.Value.GetDatabase(database);

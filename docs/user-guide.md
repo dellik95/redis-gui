@@ -73,7 +73,7 @@ dotnet run --project src/RedisGUI.Server/RedisGUI.Server.csproj -c Debug
 ```
 The server will start listening on:
 * **Web UI & API**: `http://localhost:5000`
-* **Scalar / OpenAPI Explorer**: `http://localhost:5000/scalar/v1`
+* **Swagger / OpenAPI Explorer** *(Development mode)*: `http://localhost:5000/swagger`
 
 #### Optional: Frontend Live Development
 If developing Angular components with instant hot reload:
@@ -93,9 +93,10 @@ To spin up RedisGUI and a persistent Redis 7 server with a single command:
 docker compose up -d --build
 ```
 
-This launches two interconnected containers:
-1. `redisgui-redis`: Redis 7 server on port `6379`.
-2. `redisgui-app`: ASP.NET Core 10 server + Angular client on port `5000`.
+This launches three interconnected containers:
+1. `redisgui-redis`: Redis 7.4 server on port `6379`.
+2. `redisgui-mysql`: MySQL 8.4 database on port `3306`.
+3. `redisgui-web`: ASP.NET Core 11 server + Angular 22 client on port `5000`.
 
 To stop the containers:
 ```bash
@@ -181,12 +182,13 @@ An export is a scan of a changing database, not a point-in-time backup: keys cre
   * **Memory**: Resident Set Size (RSS) memory consumed by Redis, formatted dynamically (e.g., `42.5 MB`).
   * **Network**: Real-time network throughput (Kb/s in and out).
   * **Keys**: Total number of keys in the currently active database.
-* **Database Selector**: Switch instantly between logical databases (`DB 0` through `DB 15`) with real-time key counts per database.
+* **Database Selector**: Switch between logical databases (`DB 0` through `DB 15`) with real-time key counts per database. When Redis Cluster topology is confirmed, connections display a **Cluster** badge in the sidebar, connection card, health card, and toolbar chip, and key browsing locks to **DB 0**.
 * **Data Type Chips**: Filter by key type (`All`, `String`, `Hash`, `List`, `Set`, `ZSet`, `Stream`) with badge counts.
 * **Pattern Search**: Search keys using glob patterns (e.g. `user:*`, `session:2026:*`).
-* **Incremental results**: The first scan returns a page of key metadata. Select **Load more** until the scan is complete; an empty page can still have more results. Changing the pattern or database starts a new scan.
+* **Virtual Scrolling & Incremental Continuation**: The key table renders rows via CDK virtual scrolling (`*cdkVirtualFor`) and automatically loads subsequent `SCAN` cursor pages as you scroll near the end (skipping empty cursor hops automatically while showing **Load more**, **Retry**, or **End of scan** states). Loaded keys in browser memory are capped at 10,000 entries—use the pattern filter for larger keyspaces. Non-UTF-8 keys show a **BIN** badge and preserve their Base64 raw-byte identity across view, edit, rename, duplicate, and bulk delete/TTL operations.
 * **Partial results**: Type counts, sorting, selection and the namespace tree apply to loaded keys. Redis scanning is not a snapshot, so keys can change during the scan. Refresh to restart, including after a topology change. The browser does not load values or report their sizes while scanning.
-* **Cluster requirements**: Each scan page checks node roles using `ROLE`. The Redis user must be allowed to run that command, and all discovered cluster nodes must be reachable. If the primary set changes, restart the scan; an unavailable node stops the scan instead of returning a potentially incomplete result.
+* **Cluster requirements**: Each scan page checks node roles using `ROLE`. The Redis user must be allowed to run that command, and all discovered cluster nodes must be reachable. If the primary set changes, restart the scan; an unavailable node stops the scan instead of returning a potentially incomplete result. Stream monitors (`WatchStream`) and server info (`ClusterNodes` section) also adapt to Cluster topology.
+* **Background Jobs Notification Center**: The top-bar bell shows running and unread completed/failed/cancelled jobs across reloads and navigations via a shared SignalR connection, letting you stop, refresh, inspect details, download exports, or see clear expiration reasons.
 
 ### Namespace Tree View & Full Management Controls
 
@@ -212,7 +214,7 @@ Switch from flat Table view to hierarchical **Tree View** using the toggle in th
 
 ### Column Sorting & Filters
 
-* Click any sortable column header (**Key**, **Type**, **TTL**, **Size**) to toggle ascending and descending order.
+* Click any sortable column header (**Key**, **Type**, **TTL**) to toggle ascending and descending order of the currently loaded keys.
 * The sort icon is aligned and centered with the column title for clear visibility.
 * TTL column includes real-time live countdown badges with color-coded urgency (red for `< 60s`, green for persistent).
 

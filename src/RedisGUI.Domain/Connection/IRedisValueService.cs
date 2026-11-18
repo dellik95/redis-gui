@@ -1,3 +1,4 @@
+using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Redis;
 
 namespace RedisGUI.Domain.Connection;
@@ -131,7 +132,65 @@ public interface IRedisValueService :
 		TimeSpan? ttl,
 		int? database = null,
 		CancellationToken cancellationToken = default);
+
+	/// <summary>Retrieves a value using a Base64-encoded raw key when present.</summary>
+	Task<Result<RedisValue>> GetValueByIdentityAsync(
+		RedisConnection connection,
+		string key,
+		string? keyBase64,
+		CancellationToken cancellationToken = default,
+		int? database = null) =>
+		GetValueAsync(connection, key, cancellationToken, database);
+
+	/// <summary>Updates a value using a Base64-encoded raw key when present.</summary>
+	Task<Result> UpdateValueByIdentityAsync(
+		RedisConnection connection,
+		string key,
+		string? keyBase64,
+		object value,
+		string type,
+		TimeSpan? ttl = null,
+		CancellationToken cancellationToken = default,
+		int? database = null) =>
+		UpdateValueAsync(connection, key, value, type, ttl, cancellationToken, database);
+
+	/// <summary>Renames a key using Base64-encoded raw keys when present.</summary>
+	Task<Result> RenameKeyByIdentityAsync(
+		RedisConnection connection,
+		string oldKey,
+		string? oldKeyBase64,
+		string newKey,
+		string? newKeyBase64 = null,
+		bool overwrite = false,
+		int? database = null,
+		CancellationToken cancellationToken = default) =>
+		RenameKeyAsync(connection, oldKey, newKey, overwrite, database, cancellationToken);
+
+	/// <summary>Duplicates a key using Base64-encoded raw keys when present.</summary>
+	Task<Result> DuplicateKeyByIdentityAsync(
+		RedisConnection connection,
+		string sourceKey,
+		string? sourceKeyBase64,
+		string targetKey,
+		string? targetKeyBase64 = null,
+		int? database = null,
+		CancellationToken cancellationToken = default) =>
+		DuplicateKeyAsync(connection, sourceKey, targetKey, database, cancellationToken);
+
+	/// <summary>Bulk updates TTL using Base64-encoded raw keys when present.</summary>
+	Task<Result<RedisBulkTtlResult>> BulkUpdateTtlByIdentityAsync(
+		RedisConnection connection,
+		IReadOnlyList<string> keys,
+		IReadOnlyList<string?>? keysBase64,
+		TimeSpan? ttl,
+		int? database = null,
+		CancellationToken cancellationToken = default) =>
+		BulkUpdateTtlAsync(connection, keys, ttl, database, cancellationToken);
 }
 
 /// <summary>Outcome of a bounded bulk TTL operation.</summary>
-public sealed record RedisBulkTtlResult(int UpdatedCount, int UnchangedCount, IReadOnlyList<string> FailedKeys);
+public sealed record RedisBulkTtlResult(int UpdatedCount, int UnchangedCount, IReadOnlyList<string> FailedKeys) : IAuditOutcome
+{
+	public string FormatAuditOutcome() =>
+		$"Updated TTL: {UpdatedCount}; unchanged or missing: {UnchangedCount}; failed: {FailedKeys.Count}.";
+}

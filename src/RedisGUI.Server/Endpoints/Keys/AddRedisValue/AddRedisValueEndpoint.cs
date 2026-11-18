@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Endpoints.RedisStorage.UpdateRedisValue;
 using RedisGUI.Shared.Mediator;
@@ -23,6 +24,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 		{
 			async Task<IResult> HandleAddKey(
 				IMediator sender,
+				HttpContext httpContext,
 				Guid connectionId,
 				UpdateRedisValueRequest request,
 				int? database = null)
@@ -37,20 +39,23 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 					request.Type,
 					request.Value,
 					ttl,
-					database ?? request.Database);
+					database ?? request.Database,
+					request.KeyBase64);
 
 				return await sender.Send(command).Match(
 					() => Results.Ok(),
-					error => error.ToProblemDetails());
+					error => error.ToProblemDetails(httpContext));
 			}
 
 			routerBuilder.MapPost("storage/{connectionId:guid}", HandleAddKey)
+				.RequireAuthorization(Policies.WriteAccess)
 				.WithName("AddRedisValue")
 				.WithSummary("Add a new Redis key-value pair")
 				.WithDescription("Creates a new Redis key with specified type and value")
 				.WithOpenApi();
 
 			routerBuilder.MapPost("storage/{connectionId:guid}/keys", HandleAddKey)
+				.RequireAuthorization(Policies.WriteAccess)
 				.WithName("AddRedisValueKeys")
 				.WithSummary("Add a new Redis key-value pair (keys subpath)")
 				.WithOpenApi();

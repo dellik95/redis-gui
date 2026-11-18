@@ -1,304 +1,270 @@
-# RedisGUI — Architectural Diagrams, Sequences & Flowcharts
+# RedisGUI — Architectural Diagrams & Operational Flowcharts
 
-This document provides a comprehensive collection of Mermaid diagrams detailing the architectural design, entity relationships, CQRS execution pipelines, and workflows within **RedisGUI**.
+All system diagrams in **Mermaid** format illustrating the **.NET 11 + Angular 22** RedisGUI architecture, lock-free subsystems, Cluster topology handling, SignalR streaming hubs, and background job pipelines.
 
 ---
 
-## 1. Overall System Architecture (Clean Architecture Flowchart)
+## 1. High-Level System Architecture
 
 ```mermaid
-flowchart TD
-    subgraph UI ["Presentation Layer (Client)"]
-        Browser["User Web Browser"]
-        AngularApp["Angular 22 SPA (Standalone & Signals)"]
-        SignalStore["Signal Stores (Auth, RedisKeys, Theme)"]
-        Browser <-->|DOM Events / Render| AngularApp
-        AngularApp --> SignalStore
+flowchart TB
+    subgraph ClientLayer["Frontend Layer (Angular 22 + Tailwind + Material 22)"]
+        UI["Standalone Components & Visual Editors"]
+        VScroll["Storage List (*cdkVirtualFor) & Delimiter Tree"]
+        Stores["NgRx Signal Stores (Keys, Jobs, Connections, Auth, SideNav)"]
+        Notif["Job Notification Center + Command Palette (Ctrl+K)"]
     end
 
-    subgraph Host ["API Hosting Layer (Server)"]
-        ServerAPI["ASP.NET Core 10 Minimal APIs"]
-        SignalRHubs["SignalR Hubs (/hub/metrics, /hub/keys)"]
-        Middlewares["Middlewares (Auth, ErrorHandling, RateLimiting)"]
+    subgraph WebLayer["Web & Real-Time API (ASP.NET Core 11)"]
+        API["Versioned Minimal APIs (api/v1/* + ProblemDetails)"]
+        HubMetrics["/hub/metrics (RedisMetricsHub)"]
+        HubKey["/hub/keychange (KeyChangeHub)"]
+        HubMsg["/hub/messaging (MessagingHub)"]
+        HubJobs["/hub/jobs (BackgroundJobsHub [Authorize])"]
     end
 
-    subgraph AppLayer ["Business Logic Layer (Application)"]
-        Mediator["Mediator Pipeline"]
-        Behaviors["Pipeline Behaviors (Audit, Validation, Logging)"]
-        Commands["Commands / Queries (CQRS)"]
-        Validators["FluentValidation Rules"]
+    subgraph CoreLayer["Application & Shared Core (Lock-Free CQRS)"]
+        Med["Lock-Free Mediator + PipelineRegistry (CAS Arrays)"]
+        Behav["Validation, Logging & Auditing Behaviors"]
+        Handlers["CQRS Handlers & IConnectionAccessService"]
+        Domain["Domain Core (Entities, Value Objects, Result, Errors, IRedisTopologyRegistry)"]
     end
 
-    subgraph DomainLayer ["Enterprise Domain Layer (Domain)"]
-        Entities["Entities (RedisConnection, User, AuditLog)"]
-        ValueObjects["Value Objects (ConnectionHost, KeyPath)"]
-        DomainContracts["Abstractions (IRedisValueService, IRedisConnectionManager)"]
+    subgraph InfraLayer["Infrastructure & Data Plane"]
+        Pool["Lock-Free RedisConnectionManager + TopologyRegistry"]
+        Jobs["BackgroundJobManager (Channel<QueuedJob> Pool + 5 IBackgroundJobHandlers)"]
+        EFCache["EF Core 11 + Parameter-Aware CacheKeyProvider (FusionCache)"]
+        RedisStandalone[("Redis 7/8 Standalone")]
+        RedisCluster[("Redis Cluster Primaries & Replicas")]
+        MySQL[("MySQL 8.4 / EF InMemory")]
     end
 
-    subgraph InfraLayer ["Infrastructure & Adapters Layer"]
-        ConnPool["IRedisConnectionManager (ConnectionMultiplexer Cache)"]
-        TypeFactory["IRedisTypeHandlerFactory (Strategy Pattern)"]
-        BgServices["Background Jobs (RedisMetricsJob, HealthMonitor)"]
-        EFCore["Entity Framework Core (InMemory / MySQL)"]
-    end
+    UI --> Stores
+    VScroll --> Stores
+    Notif --> Stores
+    Stores <-->|"HTTPS JSON / Query-Safe Key Routes"| API
+    Stores <-->|"SignalR WebSockets"| HubMetrics
+    Stores <-->|"SignalR WebSockets"| HubKey
+    Stores <-->|"SignalR WebSockets"| HubMsg
+    Stores <-->|"SignalR WebSockets (JWT)"| HubJobs
 
-    subgraph External ["External Infrastructure"]
-        RedisServer[("Redis Server 7.x / 8.x")]
-        RelationalDB[("MySQL / MariaDB")]
-    end
-
-    AngularApp <-->|RESTful JSON| Middlewares
-    AngularApp <-->|WebSockets| SignalRHubs
-    Middlewares --> ServerAPI
-    ServerAPI --> Mediator
-    Mediator --> Behaviors
-    Behaviors --> Validators
-    Behaviors --> Commands
-    Commands --> DomainContracts
-    DomainContracts --> TypeFactory
-    DomainContracts --> ConnPool
-    TypeFactory --> ConnPool
-    ConnPool <-->|RESP3 Protocol| RedisServer
-    BgServices <-->|INFO Polling| RedisServer
-    BgServices --> SignalRHubs
-    EFCore <--> RelationalDB
-    Commands --> EFCore
+    API --> Med
+    Med --> Behav --> Handlers --> Domain
+    Handlers --> Pool
+    Handlers --> Jobs
+    Handlers --> EFCache
+    Jobs --> HubJobs
+    Pool <--> RedisStandalone
+    Pool <--> RedisCluster
+    EFCache <--> MySQL
 ```
 
 ---
 
-## 2. Entity-Relationship Diagram (ERD)
+## 2. CQRS Request Lifecycle & RFC 9457 Problem Details
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant UI as Angular Client
+    participant EP as Minimal API Endpoint (api/v1)
+    participant MED as Lock-Free Mediator
+    participant VAL as ValidationBehavior
+    participant AUTH as IConnectionAccessService
+    participant HND as Command/Query Handler
+    participant AUD as AuditingBehavior
+    participant MAP as ErrorResultExtensions
+
+    UI->>EP: HTTP Request (e.g. GET /storage/{id}/key?keyBase64=...)
+    EP->>MED: Send(Query / Command)
+    MED->>VAL: Validate via FluentValidation
+    alt Validation Fails
+        VAL-->>EP: ValidationFailureError
+        EP-->>UI: 400 Bad Request + Field ValidationDetails
+    else Valid Request
+        VAL->>HND: Invoke Handler
+        HND->>AUTH: CanAccessAsync(connection)
+        alt Unauthorized / Not Owner
+            AUTH-->>HND: Denied
+            HND-->>MAP: Result.Failure("Connection.Forbidden")
+            MAP-->>UI: 403 Forbidden (RFC 9457 ProblemDetails)
+        else Authorized
+            HND->>HND: Execute Domain / Redis Operation
+            opt [Auditable] on Command
+                HND->>AUD: Record AuditLog Entry
+            end
+            HND-->>EP: Result<T> (Success or Domain Error)
+            EP-->>UI: 200 OK or Mapped HTTP Status (404 / 409 / 502 / 503)
+        end
+    end
+```
+
+---
+
+## 3. Domain & Persistence Entity Model
 
 ```mermaid
 erDiagram
-    User ||--o{ RedisConnection : "owns / manages"
-    User ||--o{ AuditLog : "initiates"
-    RedisConnection ||--o{ AuditLog : "target of action"
-
-    User {
-        guid Id PK
+    USER {
+        Guid Id PK
         string Email UK
         string PasswordHash
-        int Role "Enum (Admin=0, Standard=1, ReadOnly=2)"
-        boolean IsActive
-        datetime CreatedAtUtc
-        datetime LastLoginAtUtc
+        string FirstName
+        string LastName
+        enum Role "Admin | Standard | ReadOnly"
+        bool IsActive
+        DateTime CreatedAt
+        DateTime LastLoginAt
     }
 
-    RedisConnection {
-        guid Id PK
-        guid OwnerId FK
-        string Name
+    REDIS_CONNECTION {
+        Guid Id PK
+        string ConnectionName
         string ServerHost
         int ServerPort
-        string PasswordEncrypted
-        boolean Ssl
-        int DatabaseCount
-        int ConnectTimeout
-        boolean IsReadOnly "Safe Mode Flag"
-        datetime CreatedAtUtc
-        datetime UpdatedAtUtc
+        int DatabaseNumber
+        bool IsReadOnly
+        bool IsAvailable
+        Guid OwnerId FK "None for Public connections"
+        string Discriminator "Anonymous | WithCredentials"
+        string EncryptedUsername
+        string EncryptedPassword
     }
 
-    AuditLog {
-        guid Id PK
-        guid UserId FK
-        string UserEmail
+    AUDIT_LOG {
+        Guid Id PK
+        Guid UserId FK
+        enum Action
+        string EntityType
+        Guid EntityId
         string IpAddress
-        string ActionType "CreateKey, DeleteKey, LoadTest, SeedData, CLI"
-        string Resource
-        guid ConnectionId FK
-        string DetailsJson
-        boolean IsSuccess
-        datetime TimestampUtc
+        string OldValue
+        string NewValue
+        DateTime Timestamp
     }
+
+    USER ||--o{ REDIS_CONNECTION : "owns / manages"
+    USER ||--o{ AUDIT_LOG : "performs"
 ```
 
 ---
 
-## 3. Sequence Diagram: CQRS Mediator Pipeline Execution
+## 4. Extensible Background Jobs & Live SignalR Lifecycle
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Angular SPA
-    participant Endpoint as Minimal API Endpoint
-    participant Mediator as IMediator
-    participant LogPipe as LoggingBehavior
-    participant ValPipe as ValidationBehavior
-    participant AuditPipe as AuditingBehavior
-    participant Handler as CommandHandler
-    participant Service as Domain / Infra Service
+    participant UI as Feature Dialog / Notification Center
+    participant STORE as BackgroundJobsStore + BackgroundJobsService
+    participant API as BackgroundJobsEndpoint (/api/v1/jobs)
+    participant MGR as BackgroundJobManager (Channel Worker Pool)
+    participant HANDLER as Typed IBackgroundJobHandler
+    participant HUB as BackgroundJobsHub (/hub/jobs)
 
-    Client->>Endpoint: HTTP POST /api/v1/storage/{id}/keys
-    Endpoint->>Mediator: Send(AddRedisValueCommand)
-    
-    Mediator->>LogPipe: Handle(request, next)
-    LogPipe->>LogPipe: Log execution start with correlation ID
+    UI->>STORE: startJob(kind, connectionId, params)
+    STORE->>API: POST /api/v1/jobs
+    API->>MGR: TryEnqueue(ownerId, kind, payload, writeCheck)
+    MGR-->>API: 202 Accepted (JobId + Initial Snapshot)
+    API-->>STORE: Job Snapshot
 
-    LogPipe->>ValPipe: next()
-    ValPipe->>ValPipe: Validate request via FluentValidation
-    alt Validation Failed
-        ValPipe-->>Endpoint: ValidationException / Result.Failure
-        Endpoint-->>Client: 400 Bad Request (Validation Problem Details)
+    STORE->>HUB: EnsureConnected (with initial retry) & Subscribe(JobId)
+    HUB->>HUB: Authorize Owner + Register in BackgroundJobSubscriptionRegistry
+
+    MGR->>HANDLER: ExecuteAsync(context, progressCallback, ct)
+    loop Every Progress Checkpoint
+        HANDLER-->>MGR: Report Progress (processed / total, message)
+        MGR->>HUB: Broadcast Update -> Group("job:{jobId}")
+        HUB-->>UI: JobUpdated (Reactively Updates Bell + Dialog)
     end
 
-    ValPipe->>AuditPipe: next()
-    AuditPipe->>Handler: next()
-    Handler->>Service: Execute Redis mutation via TypeHandler
-    Service-->>Handler: Result.Success
-    Handler-->>AuditPipe: Result.Success
-
-    AuditPipe->>AuditPipe: Construct and persist AuditLog record
-    AuditPipe-->>LogPipe: Result.Success
-    LogPipe->>LogPipe: Log execution duration and completion
-    LogPipe-->>Endpoint: Result.Success
-    Endpoint-->>Client: 200 OK
+    alt Access Revoked While Job Active or Subscribed
+        MGR->>HUB: SendAsync("AccessRevoked", JobId)
+        HUB->>HUB: RemoveFromGroupAsync
+        HUB-->>STORE: Clear/Flag Restricted Job Access
+    else Job Completes With Export Result
+        HANDLER-->>MGR: Stored Result Artifact
+        MGR->>HUB: JobCompleted (HasResult = true)
+        UI->>API: GET /api/v1/jobs/{jobId}/result
+        API->>MGR: Acquire Download Lease (pins artifact) -> Stream File
+    end
 ```
 
 ---
 
-## 4. Strategy Pattern for Redis Data Types
+## 5. Redis Cluster Topology Detection & Failover-Safe Cursor `SCAN`
 
 ```mermaid
 flowchart TD
-    Req["Read / Write Key Request (Key, Type, Value, TTL)"]
-    Factory["RedisTypeHandlerFactory.GetHandler(RedisType)"]
-    Req --> Factory
+    UI["Storage List (*cdkVirtualFor) Scrolls Near Bottom"] -->|"auto-pagination"| API["GET /api/v1/connections/{id}/key-scan?cursor=..."]
+    API --> Query["ScanRedisKeysQueryHandler"]
+    Query --> Svc["RedisKeyService.ScanKeysAsync"]
+    Svc --> Reg["IRedisTopologyRegistry.SetMode(connectionId, mode)"]
+    Reg --> CheckMode{"Is Cluster?"}
 
-    Factory -->|Type == String| S_Str["StringTypeHandler\n- Raw text vs JSON detection\n- Check TTL > 0 => Expiration\n- StringSetAsync"]
-    Factory -->|Type == Hash| S_Hash["HashTypeHandler\n- HashEntry[] mapping\n- Inline field addition\n- HashSetAsync"]
-    Factory -->|Type == List| S_List["ListTypeHandler\n- Order preservation\n- Push / Pop\n- ListRangeAsync"]
-    Factory -->|Type == Set| S_Set["SetTypeHandler\n- Set uniqueness validation\n- SetMembersAsync\n- SetAddAsync"]
-    Factory -->|Type == SortedSet| S_ZSet["SortedSetTypeHandler\n- Score-value pairs\n- Rank sorting\n- SortedSetAddAsync"]
-    Factory -->|Type == Stream| S_Stream["StreamTypeHandler\n- Timestamped IDs\n- Event field-values\n- StreamReadAsync / StreamAddAsync"]
+    CheckMode -->|"Standalone"| Single["SCAN Active Primary DB 0..15 -> RedisKeyScanPage (Binary KeyBase64)"]
+    CheckMode -->|"Cluster (DB 0 Only)"| ValidateDB{"Requested DB == 0?"}
 
-    DB[("IDatabase (StackExchange.Redis)")]
-    S_Str --> DB
-    S_Hash --> DB
-    S_List --> DB
-    S_Set --> DB
-    S_ZSet --> DB
-    S_Stream --> DB
+    ValidateDB -->|"DB != 0"| RejectDB["Fail: Redis.InvalidDatabase (400)"]
+    ValidateDB -->|"DB == 0"| CursorCheck{"Continuation Cursor Provided?"}
+
+    CursorCheck -->|"Null (Page 1)"| EnumPrim["Enumerate Connected Cluster Primaries & Build Signed Epoch Token"]
+    CursorCheck -->|"Present"| VerifySig["Verify HMAC Token Signature & Primary Topology Snapshot"]
+
+    VerifySig -->|"Topology Changed / CLUSTER FAILOVER"| RejectCursor["Fail: Redis.InvalidCursor / Redis.ScanUnavailable"]
+    VerifySig -->|"Topology Valid"| NextShard["SCAN Next Primary Shard -> Collect Keys + Binary Flags"]
+
+    EnumPrim --> NextShard
+    NextShard --> PageOut["Return RedisKeyScanPage (Keys, NextCursor, ServerMode=Cluster)"]
 ```
 
 ---
 
-## 5. Sequence Diagram: Real-Time Telemetry Streaming (SignalR)
+## 6. Lock-Free `RedisConnectionManager` State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> Connecting : First GetConnection(stableKey, config)
+    Connecting --> Active : Multiplexer connected & healthy
+    Connecting --> Faulted : Connect timeout / DNS failure
+
+    state Active {
+        [*] --> Idle
+        Idle --> InUse : TryAcquireOperation() atomic increment
+        InUse --> Idle : Dispose operation handle atomic decrement
+    }
+
+    Active --> Retiring : Config fingerprint changed OR IdleTimeout expired
+    Retiring --> Disposed : DrainTimeout elapsed & active ops == 0
+    Faulted --> Disposed : Cleanup failed entry
+    Disposed --> [*]
+```
+
+---
+
+## 7. Real-Time Telemetry & Messaging Inspector Hubs
 
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Client as Angular Storage Component
-    participant Hub as RedisMetricsHub (/hub/metrics)
-    participant SubMgr as IHubSubscribersManager
-    participant BgJob as RedisMetricsBackgroundJob
-    participant Collector as RedisMetricsCollector
-    participant Redis as Redis Server Engine (TCP)
+    participant Client as Angular Dashboard / Messaging UI
+    participant MetricsHub as /hub/metrics (RedisMetricsHub)
+    participant MsgHub as /hub/messaging (MessagingHub)
+    participant MetricsJob as RedisMetricsBackgroundJob
+    participant MsgSvc as RedisMessagingService
+    participant Redis as Redis Server / Cluster
 
-    Client->>Hub: WebSocket Connect (?connectionId=Guid)
-    Hub->>SubMgr: AddConnection(clientId, redisConnectionId)
-    SubMgr-->>Hub: Registered
-
-    Note over BgJob,Collector: Background timer fires every 5 seconds
-    BgJob->>SubMgr: GetSubscribersMap()
-    SubMgr-->>BgJob: Active subscribers per connection ID
-
-    loop For Each Active RedisConnectionId
-        BgJob->>Collector: CollectMetrics(connection)
-        Collector->>Redis: INFO ALL
-        Redis-->>Collector: Raw INFO text (Server, Memory, Stats, CPU)
-        Collector->>Collector: Parse via CultureInfo.InvariantCulture
-        Collector-->>BgJob: RedisMetrics Model (CPU, RAM, Ops, Clients)
-        BgJob->>Hub: NotifyUser(clientId, metrics)
-        Hub-->>Client: WebSocket Push: NotifyUserAsync(metrics JSON)
-        Client->>Client: Update top telemetry pills reactively
-    end
-```
-
----
-
-## 6. Flowchart: Synthetic Benchmark & Load Testing Workflow
-
-```mermaid
-flowchart TD
-    Start["User configures benchmark (Requests, Workers, Read/Write Ratio)"] --> Validate["Parameter validation (Clamped: 10 - 100,000 requests)"]
-    Validate --> SafeCheck{"Is Safe Mode (Read-Only) active?"}
-    SafeCheck -->|Yes| Abort["Error 403: Write operations prohibited in Safe Mode"]
-    SafeCheck -->|No| Warmup["Connection warmup: generate bench:warmup:* keys"]
-    
-    Warmup --> Spawn["Spawn N concurrent Task workers"]
-    StopwatchStart["Start high-resolution Stopwatch"] --> Spawn
-
-    subgraph Workers ["Concurrent Execution"]
-        direction TB
-        W1["Worker 1: Random(Get / Set)"]
-        W2["Worker 2: Random(Get / Set)"]
-        W3["Worker N: Random(Get / Set)"]
-    end
-    Spawn --> Workers
-
-    Workers --> Collect["Aggregate individual operation durations"]
-    Collect --> Calc["Compute total duration, RPS, latency percentiles (p50, p95, p99), errors"]
-    Calc --> Cleanup["Asynchronously clean up temporary bench:* keys"]
-    Cleanup --> Response["Deliver LoadTestResult report to client"]
-```
-
----
-
-## 7. Flowchart: Realistic Sample Data Seeder Pipeline
-
-```mermaid
-flowchart LR
-    Opts["Seeder Options:\n- Total Keys\n- Target Databases\n- Key Complexity\n- Payload Complexity\n- TTL Strategy"] --> Naming["KeyNamingStrategyFactory"]
-    
-    Naming -->|Simple| N1["prefix:type:index"]
-    Naming -->|Hierarchical| N2["org:env:dept:service:index"]
-    Naming -->|UUID| N3["prefix:type:GUID"]
-
-    N1 & N2 & N3 --> TypeDistributor["Data Type Distribution\n(String, Hash, List, Set, ZSet, Stream)"]
-    
-    TypeDistributor --> SeedFactory["SeedDataStrategyFactory"]
-    
-    SeedFactory --> S1["String: Raw / JSON / Telemetry"]
-    SeedFactory --> S2["Hash: User Profiles / Permissions"]
-    SeedFactory --> S3["List: Task Queues / Event logs"]
-    SeedFactory --> S4["Set: Tags / Feature flags"]
-    SeedFactory --> S5["Sorted Set: Leaderboards / High Scores"]
-    SeedFactory --> S6["Stream: IoT Sensors / Telemetry Logs"]
-
-    S1 & S2 & S3 & S4 & S5 & S6 --> BatchWrite["Batch write into specified DBs (0..15)"]
-    BatchWrite --> Summary["Generate and return SeedDataResult summary"]
-```
-
----
-
-## 8. Sequence Diagram: Interactive Redis CLI Command Execution
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Dev as Developer (CLI Terminal Drawer)
-    participant Endpoint as ExecuteCliEndpoint (POST /execute-cli)
-    participant Handler as ExecuteCliCommandHandler
-    participant SafeMode as Safe Mode Policy
-    participant Pool as IRedisConnectionManager
-    participant Redis as Redis Server
-
-    Dev->>Endpoint: Submit command ("INFO memory", active DB: 0)
-    Endpoint->>Handler: Send(ExecuteCliCommand)
-    Handler->>SafeMode: Evaluate command permissions
-    
-    alt Destructive command (FLUSHALL, SHUTDOWN) in Safe Mode
-        SafeMode-->>Endpoint: Result.Failure("Command forbidden in Safe Mode")
-        Endpoint-->>Dev: Safety rejection message in terminal
-    else Command permitted
-        Handler->>Pool: GetConnection()
-        Pool-->>Handler: ConnectionMultiplexer
-        Handler->>Redis: ExecuteRawCommand(command, args)
-        Redis-->>Handler: Raw RESP Result (Bulk String / Array / Integer)
-        Handler->>Handler: Format output into terminal text representation
-        Handler-->>Endpoint: Result.Success(formattedOutput)
-        Endpoint-->>Dev: Print colored result to terminal with prompt
+    par Telemetry Broadcast
+        Client->>MetricsHub: Connect(?connectionId=...)
+        loop Every PoolingIntervalInSec
+            MetricsJob->>Redis: INFO Stats / Memory / CPU
+            MetricsJob-->>MetricsHub: NotifyUser(MetricsDto)
+            MetricsHub-->>Client: Update Signal Sparklines
+        end
+    and Live Messaging Inspector
+        Client->>MsgHub: WatchChannel(connId, pattern) / WatchStream(connId, key)
+        MsgHub->>MsgHub: CanAccessAsync + Enforce DB 0 if Cluster
+        MsgHub->>MsgSvc: SubscribeAsync / XREAD Polling
+        Redis-->>MsgSvc: Live Messages + Delivery Metrics (1Hz)
+        MsgSvc-->>Client: Stream Entries & Chart Samples
     end
 ```

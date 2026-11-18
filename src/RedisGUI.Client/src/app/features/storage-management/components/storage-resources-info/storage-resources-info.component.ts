@@ -2,6 +2,7 @@ import {
   Component,
   inject,
   signal,
+  computed,
   input,
   effect,
   DestroyRef,
@@ -11,6 +12,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatIconModule } from '@angular/material/icon';
 import { StorageResourceDetailsService } from '../../services/storage-resource-details.service';
 import { PORTAL_DATA } from '../../../../core/stores/section-actions.store';
+import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
 import { SystemMetrics } from '../../models/system-metrics.type';
 import { FormatBytesPipe } from '../../../../shared/pipes/format-bytes.pipe';
 import { DecimalPipe } from '@angular/common';
@@ -44,15 +46,30 @@ import { switchMap, catchError, EMPTY } from 'rxjs';
 export class StorageResourcesInfoComponent {
   // 1. Injected dependencies
   private readonly resourceDetailsService = inject(StorageResourceDetailsService);
+  private readonly redisKeysStore = inject(RedisKeysStore);
   private readonly data = inject<any>(PORTAL_DATA, { optional: true });
   private readonly destroyRef = inject(DestroyRef);
 
   // 2. Direct inputs
   readonly connectionId = input<string>();
+  readonly activeDatabase = input<number | null>(null);
 
   // 3. State signals
   /** Current system metrics from SignalR */
   readonly resourceInfo = signal<SystemMetrics | null>(null);
+
+  /** Key count for the currently selected database (when in Storage Manager), or total server keys */
+  readonly displayedKeyCount = computed<number>(() => {
+    const db = this.activeDatabase();
+    const info = this.resourceInfo();
+    if (db !== null && db !== undefined) {
+      const storeCount = this.redisKeysStore.keyspace()[db];
+      if (storeCount !== undefined) return storeCount;
+      const metricsCount = info?.databaseKeyCounts?.[db];
+      if (metricsCount !== undefined) return metricsCount;
+    }
+    return info?.keyCount ?? 0;
+  });
 
   constructor() {
     this.destroyRef.onDestroy(() => {
@@ -75,7 +92,12 @@ export class StorageResourcesInfoComponent {
           takeUntilDestroyed(this.destroyRef)
         )
         .subscribe(metrics => {
-          if (metrics) this.resourceInfo.set(metrics);
+          if (metrics) {
+            this.resourceInfo.set(metrics);
+            if (metrics.databaseKeyCounts && this.activeDatabase() !== null) {
+              this.redisKeysStore.syncKeyspace(metrics.databaseKeyCounts);
+            }
+          }
         });
 
       // Real-time live metrics via SignalR
@@ -91,6 +113,9 @@ export class StorageResourcesInfoComponent {
         )
         .subscribe(metrics => {
           this.resourceInfo.set(metrics);
+          if (metrics?.databaseKeyCounts && this.activeDatabase() !== null) {
+            this.redisKeysStore.syncKeyspace(metrics.databaseKeyCounts);
+          }
         });
     });
   }

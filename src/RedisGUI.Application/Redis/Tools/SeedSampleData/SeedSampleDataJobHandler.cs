@@ -1,67 +1,79 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.SeedSampleData;
 
+public sealed record SeedJobProgress(
+	int Created,
+	int Total,
+	int Requested = 0,
+	int Processed = 0,
+	int Persisted = 0,
+	int Failed = 0);
+
 /// <summary>Runs bounded sample-data seeding as a cancellable background job.</summary>
-public sealed class SeedSampleDataJobHandler(IRedisConnectionRepository repository, IConnectionAccessService access, IMediator mediator)
-	: IBackgroundJobHandler
+public sealed class SeedSampleDataJobHandler(
+	IRedisConnectionRepository repository,
+	IConnectionAccessService access,
+	IMediator mediator,
+	IValidator<SeedSampleDataOptions>? validator = null)
+	: BackgroundJobHandler<SeedSampleDataOptions, SeedJobProgress, SeedDataResult>(repository, access, validator)
 {
-	private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
-	public string Kind => "seed-data";
-	public bool RequiresWriteAccess => true;
+	public override string Kind => "seed-data";
+	public override string DisplayName => "Seed Sample Data";
+	public override bool RequiresWriteAccess => true;
 
-	public async Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken cancellationToken)
-	{
-		var request = Parse(parameters);
-		if (request is null) return Result.Failure(new Error("Job.InvalidParameters", "A valid seed request is required."));
-		var validation = await new SeedJobParametersValidator().ValidateAsync(request, cancellationToken);
-		if (!validation.IsValid) return Result.Failure(new Error("Job.InvalidParameters", string.Join(" ", validation.Errors)));
-		var connection = await repository.GetConnectionByIdAsync(connectionId, cancellationToken);
-		if (connection.IsFailure) return Result.Failure(connection.Error);
-		if (!await access.CanAccessAsync(connection.Value)) return Result.Failure(new Error("Connection.Forbidden", "Access to the connection is denied."));
-		if (connection.Value.IsReadOnly) return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
-		return Result.Success();
-	}
+	protected override IValidator<SeedSampleDataOptions> CreateFallbackValidator() => new SeedJobParametersValidator();
 
-	public async Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> reportProgress,
+	protected override async Task<Result<JobExecutionOutcome<SeedDataResult>>> ExecuteTypedAsync(
+		Guid connectionId,
+		SeedSampleDataOptions request,
+		IJobProgressReporter<SeedJobProgress> progress,
 		CancellationToken cancellationToken)
 	{
-		var request = Parse(parameters);
-		if (request is null) return Result.Failure<object?>(new Error("Job.InvalidParameters", "A valid seed request is required."));
 		var clock = Stopwatch.StartNew();
 		var command = new SeedSampleDataCommand(connectionId, request, async (count, total) =>
 		{
-			if (count != 1 && clock.ElapsedMilliseconds < 250) return;
+			if (count != 1 && count < total && clock.ElapsedMilliseconds < 250) return;
 			clock.Restart();
-			await reportProgress((double)count / total * 100, new { created = count, total });
+			await progress.ReportAsync(
+				total > 0 ? (double)count / total * 100 : 100,
+				new SeedJobProgress(count, total, total, count, count, 0));
 		}, cancellationToken);
+
 		// Allow a cancelled operation to return and audit its confirmed partial result.
 		var result = await mediator.Send(command, CancellationToken.None);
-		if (result.IsFailure) return Result.Failure<object?>(result.Error);
-		return Result.Success<object?>(result.Value.Error is null ? result.Value : new BackgroundJobOutcome(result.Value, result.Value.Error));
-	}
+		if (result.IsFailure)
+		{
+			return Result.Failure<JobExecutionOutcome<SeedDataResult>>(result.Error);
+		}
 
-	private static SeedSampleDataOptions? Parse(JsonElement parameters)
-	{
-		if (parameters.ValueKind != JsonValueKind.Object) return null;
-		try { return parameters.Deserialize<SeedSampleDataOptions>(JsonOptions); }
-		catch (JsonException) { return null; }
+		var outcome = result.Value;
+		var requested = outcome.RequestedKeys > 0 ? outcome.RequestedKeys : request.TotalKeys;
+		var processed = outcome.ProcessedKeys > 0 ? outcome.ProcessedKeys : outcome.TotalKeysSeeded + outcome.FailedKeys;
+		var persisted = outcome.TotalKeysSeeded;
+		var failed = outcome.FailedKeys;
+
+		await progress.ReportAsync(
+			requested > 0 ? (double)persisted / requested * 100 : 100,
+			new SeedJobProgress(persisted, requested, requested, processed, persisted, failed));
+
+		return Result.Success(outcome.Error is null
+			? JobExecutionOutcome<SeedDataResult>.Completed(outcome)
+			: JobExecutionOutcome<SeedDataResult>.Failed(outcome.Error, outcome, cancellationToken.IsCancellationRequested));
 	}
 }
 
-internal sealed class SeedJobParametersValidator : AbstractValidator<SeedSampleDataOptions>
+public sealed class SeedJobParametersValidator : AbstractValidator<SeedSampleDataOptions>
 {
 	public SeedJobParametersValidator()
 	{

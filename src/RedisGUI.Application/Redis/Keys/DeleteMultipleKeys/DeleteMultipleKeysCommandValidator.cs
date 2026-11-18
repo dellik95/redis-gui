@@ -24,10 +24,20 @@ public sealed class DeleteMultipleKeysCommandValidator : AbstractValidator<Delet
 			.Must(keys => keys == null || keys.Count <= 1000)
 			.WithMessage("Cannot delete more than 1000 keys at once.");
 
-		RuleForEach(x => x.Keys)
-			.NotEmpty()
-			.WithMessage("Key cannot be empty.")
-			.MaximumLength(512)
-			.WithMessage("Key must not exceed 512 characters.");
+		When(x => x.KeysBase64 == null || x.KeysBase64.Count == 0, () =>
+		{
+			RuleForEach(x => x.Keys)
+				.NotEmpty()
+				.WithMessage("Key cannot be empty.")
+				.MaximumLength(512)
+				.WithMessage("Key must not exceed 512 characters.");
+		});
+
+		When(x => x.KeysBase64 != null && x.KeysBase64.Count > 0, () =>
+		{
+			RuleFor(x => x.KeysBase64!)
+				.Must((cmd, b64) => cmd.Keys != null && b64.Count == cmd.Keys.Count)
+				.WithMessage("KeysBase64 count must match Keys count.");
+		});
 	}
 }

@@ -70,7 +70,13 @@ export interface SeedSampleDataOptions {
 }
 
 export interface SeedDataResult {
+  requestedKeys?: number | undefined;
+  processedKeys?: number | undefined;
+  persistedKeys?: number | undefined;
+  totalKeysSeeded?: number | undefined;
   totalKeysCreated: number;
+  failedKeys?: number | undefined;
+  failedCount?: number | undefined;
   targetDatabases: number[];
   keyCountPerType: Record<string, number>;
   summary: string;
@@ -110,9 +116,23 @@ export class RedisCliService {
   /**
    * Retrieves memory usage of a specific Redis key
    */
-  getKeyMemoryUsage(connectionId: string, key: string): Observable<KeyMemoryResponse> {
+  getKeyMemoryUsage(
+    connectionId: string,
+    key: string,
+    database?: number,
+    keyBase64?: string | null
+  ): Observable<KeyMemoryResponse> {
+    const params = new URLSearchParams();
+    if (keyBase64) {
+      params.set('keyBase64', keyBase64);
+    } else {
+      params.set('key', key);
+    }
+    if (database !== undefined && database !== null) {
+      params.set('database', String(database));
+    }
     return this.http.get<KeyMemoryResponse>(
-      `${this.baseUrl}/${connectionId}/keys/${encodeURIComponent(key)}/memory`
+      `${this.baseUrl}/${connectionId}/key/memory?${params.toString()}`
     );
   }
 

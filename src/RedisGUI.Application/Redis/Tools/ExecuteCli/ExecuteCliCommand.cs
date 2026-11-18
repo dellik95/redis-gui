@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using FluentValidation;
 using System;
 using RedisGUI.Shared.Mediator;
@@ -20,7 +21,10 @@ namespace RedisGUI.Application.Redis.Commands.ExecuteCli;
 public sealed record ExecuteCliCommand(
 	Guid ConnectionId,
 	string Command,
-	int? Database = null) : ICommand<ExecuteCliResponse>;
+	int? Database = null) : ICommand<ExecuteCliResponse>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+}
 
 internal sealed class ExecuteCliCommandValidator : AbstractValidator<ExecuteCliCommand>
 {
@@ -32,11 +36,12 @@ internal sealed class ExecuteCliCommandValidator : AbstractValidator<ExecuteCliC
 /// </summary>
 internal sealed class ExecuteCliCommandHandler(
 	IRedisConnectionRepository connectionRepository,
-	IRedisCliService cliService) : ICommandHandler<ExecuteCliCommand, ExecuteCliResponse>
+	IRedisCliService cliService,
+	IConnectionAccessService? access = null) : ICommandHandler<ExecuteCliCommand, ExecuteCliResponse>
 {
 	public async Task<Result<ExecuteCliResponse>> Handle(ExecuteCliCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<ExecuteCliResponse>(connectionResult.Error);

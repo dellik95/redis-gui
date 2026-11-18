@@ -4,23 +4,15 @@ using StackExchange.Redis;
 namespace RedisGUI.Infrastructure.Redis.Services;
 
 /// <summary>
-/// Service for managing Redis connection health and testing
+/// Service for managing Redis connection health, topology detection, and testing.
 /// </summary>
-public class RedisConnectionService : IRedisConnectionService
+public class RedisConnectionService(
+	IRedisConnectionManager connectionManager,
+	ILogger<RedisConnectionService> logger,
+	IRedisTopologyRegistry? topology = null) : IRedisConnectionService
 {
-	private readonly IRedisConnectionManager connectionManager;
-	private readonly ILogger<RedisConnectionService> logger;
-
-	public RedisConnectionService(
-		IRedisConnectionManager connectionManager,
-		ILogger<RedisConnectionService> logger)
-	{
-		this.connectionManager = connectionManager;
-		this.logger = logger;
-	}
-
 	/// <summary>
-	/// Verifies if a Redis connection can be established
+	/// Verifies if a Redis connection can be established.
 	/// </summary>
 	public async Task<Result> CheckConnectionAsync(RedisConnection connection, CancellationToken cancellationToken = default)
 	{
@@ -33,7 +25,10 @@ public class RedisConnectionService : IRedisConnectionService
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
-		TimeSpan result = multiplexer.GetDatabase(connection.DatabaseNumber.Value).Ping();
+		topology?.SetMode(connection.Id, multiplexer.DetectServerMode());
+
+		int targetDb = multiplexer.IsCluster() ? 0 : connection.DatabaseNumber.Value;
+		TimeSpan result = await multiplexer.GetDatabase(targetDb).PingAsync().WaitAsync(cancellationToken);
 
 		return result.CompareTo(TimeSpan.Zero) > 0
 			? Result.Success()

@@ -14,9 +14,17 @@ namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 /// <summary>Deletes a pattern while reporting confirmed changes.</summary>
 [Auditable(AuditAction.Delete, "Redis")]
 public sealed record StreamDeleteKeysByPatternCommand(Guid ConnectionId, string Pattern, int Database,
-	Func<int, Task> OnProgress) : ICommand<StreamDeleteKeysByPatternResult>;
+	Func<int, Task> OnProgress) : ICommand<StreamDeleteKeysByPatternResult>, IAuditEntityRequest
+{
+	public Guid? AuditEntityId => ConnectionId;
+	public bool PersistAuditOnCancellation => true;
+}
 
-public sealed record StreamDeleteKeysByPatternResult(int DeletedCount, bool Cancelled, string? Error);
+public sealed record StreamDeleteKeysByPatternResult(int DeletedCount, bool Cancelled, string? Error) : IAuditOutcome
+{
+	public string FormatAuditOutcome() =>
+		$"Deleted {DeletedCount} matching keys; cancelled: {Cancelled}; failed: {Error is not null}.";
+}
 
 public sealed class StreamDeleteKeysByPatternCommandValidator : AbstractValidator<StreamDeleteKeysByPatternCommand>
 {
@@ -34,11 +42,12 @@ internal sealed class StreamDeleteKeysByPatternCommandHandler(IRedisConnectionRe
 {
 	public async Task<Result<StreamDeleteKeysByPatternResult>> Handle(StreamDeleteKeysByPatternCommand request, CancellationToken cancellationToken)
 	{
-		var connection = await repository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connection = await repository.GetAuthorizedConnectionAsync(
+			request.ConnectionId,
+			access,
+			cancellationToken,
+			requireWritable: true);
 		if (connection.IsFailure) return Result.Failure<StreamDeleteKeysByPatternResult>(connection.Error);
-		if (!await access.CanAccessAsync(connection.Value))
-			return Result.Failure<StreamDeleteKeysByPatternResult>(new Error("Connection.Forbidden", "Access to the connection is denied."));
-		if (connection.Value.IsReadOnly) return Result.Failure<StreamDeleteKeysByPatternResult>(DomainErrors.Connection.ReadOnlyMode);
 		int deleted = 0;
 		try
 		{

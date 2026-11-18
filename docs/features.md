@@ -1,85 +1,44 @@
-# RedisGUI — Comprehensive Feature Catalog
+# RedisGUI — Comprehensive Feature Matrix & Capabilities
 
-RedisGUI is engineered as a modern, production-ready GUI client for Redis 7.x and 8.x, featuring rich data manipulation tools, real-time observability dashboards, and enterprise diagnostic utilities.
+This document catalogs the core engineering and user-facing capabilities of **RedisGUI** (built on **.NET 11**, **ASP.NET Core 11 Minimal APIs**, and **Angular 22 Signals**).
 
 ---
 
-## Feature Matrix
+## Core Feature Matrix
 
 | Feature Module | Capabilities | Backend Implementation | Frontend Implementation |
 | :--- | :--- | :--- | :--- |
-| **Key & Data Management** | CRUD operations across String, Hash, List, Set, Sorted Set, Stream | Strategy pattern via `IRedisTypeHandlerFactory` & `IRedisTypeHandler` | `RedisTypeHandlerRegistry`, visual editors + Monaco JSON |
-| **Namespace Tree Explorer** | Hierarchical browsing of loaded keys with custom delimiters (`:`, `/`, `.`) | Incremental Redis `SCAN` with continuation and server-side pattern matching | Angular Material Tree with persistent node expansion |
-| **Direct Subfolder Key Creation**| Create keys directly within a chosen namespace folder via `+` action | Strongly-typed prefix routing and automatic store refresh | Tree group hover action button + pre-filled modal badge |
-| **Table Column Sorting** | Sort loaded keys by Key, Type, or TTL | In-memory computed signal sorting and live TTL ticker | Sort headers in Angular Material table |
-| **Real-time Telemetry** | Instant ops/sec, memory RSS, CPU usage, bandwidth, key counters | Background timer service + SignalR `RedisMetricsHub` | Reactive Signal component with live pulsing pills |
-| **Interactive Redis CLI** | Full command prompt with multi-database support & history | `IRedisCliService`, command sanitizer, RESP executor | Draggable drawer terminal with history navigation (`↑`/`↓`) |
-| **Benchmarking & Load Testing** | Synthetic load runner with configurable concurrency & read/write ratios | `IRedisLoadTestService`, parallel Task workers, Stopwatch | Load test modal dialog with latency percentiles |
-| **Smart Data Seeding** | Generates realistic synthetic datasets (simple, complex, JSON) | `IRedisSeedDataService`, Strategy pattern for key naming & payloads | Seed modal with type selectors, count slider, TTL strategies |
-| **Slowlog Diagnostics** | Inspects commands exceeding the execution threshold | `IRedisDiagnosticsService`, `SLOWLOG GET` parser | Sortable modal dialog with microsecond execution durations |
-| **Safe Mode (Read-Only)** | Protects production databases from accidental writes or deletes | Connection metadata `IsReadOnly`, command pipeline filter | Safety banner in header, disables mutation actions |
-| **Multi-Database Support** | Seamless switching across DB 0 through DB 15 | `IDatabase` parameter routing per command/query | Database dropdown selector in top navigation bar |
-| **Audit Logging** | Complete audit trail for compliance and tracking | Mediator `AuditingBehavior`, EF Core persistence | Audit logs table with search, filters, and JSON payload inspector |
-| **Theme & Appearance** | 5 color schemes, Dark & Light modes, responsive layout | User preference persistence | Angular Material CSS variables, Tailwind theme engine |
+| **Virtualized Key Browser** | Smooth browsing of large loaded keysets with threshold auto-pagination and `BIN` indicators for binary keys | Cursor-based `RedisKeyService` + `RedisKeyScan` (`KeyBase64`, `IsBinary`) | Angular CDK `<cdk-virtual-scroll-viewport>` (`*cdkVirtualFor`) + `RedisKeysStore` |
+| **Redis Cluster Support** | Automatic Cluster discovery, multi-primary `SCAN`, failover-safe HMAC cursor tokens, DB 0 enforcement, `CLUSTER NODES` info | `IRedisTopologyRegistry`, `RedisDiagnosticsService`, Cluster DB 0 validation | `Cluster` topology pills in Dashboard & Storage Manager + locked DB 0 picker |
+| **Namespace Tree Explorer** | Hierarchical grouping of keys by customizable delimiters (`:`, `/`, `.`) with folder counts & `+` quick creation | Incremental cursor `SCAN` + server-side glob filtering | `TreeViewListComponent` with persistent expansion & direct path seeding |
+| **Binary-Safe Key CRUD & Editors** | Full create, read, update, rename, duplicate, TTL editing & delete across UTF-8 and raw binary Redis keys (`KeyBase64`) | `IRedisTypeHandler` / `IRedisTypeHandlerFactory` + query-safe `storage/{id}/key` routes | Strategy-based visual drawers (`String`/Monaco JSON, `Hash`, `List`, `Set`, `SortedSet`, `Stream`) |
+| **Typed Background Jobs & Notification Center** | Async queuing, real-time progress, cancellation, download leases & live `AccessRevoked` revocation notifications | `BackgroundJobManager` (`Channel<QueuedJob>`), 5 `IBackgroundJobHandler`s, `BackgroundJobsHub` (`/hub/jobs`) | `BackgroundJobsStore`, `BackgroundJobsService`, header `JobNotificationCenterComponent` |
+| **Messaging Inspector (Pub/Sub & Streams)** | Watch pattern/literal Pub/Sub channels, publish messages, monitor Streams (`XINFO`/`XREAD`), live 1Hz rate & subscriber charts | `MessagingHub` (`/hub/messaging`), `RedisMessagingService`, `RedisMessagingMetricsCollector` | `MessagingInspectorComponent` with live message buffer (200 items) & chart history |
+| **Real-Time Health Telemetry** | Instant ops/sec, Memory RSS/Peak, CPU usage, bandwidth, uptime, connected clients, and connection health matrix | `RedisMetricsBackgroundJob`, `ConnectionHealthMonitor`, `NotificationService` (`/hub/metrics`) | `DashboardMetricsComponent` & `StorageResourcesInfoComponent` with pulsing Signal pills |
+| **Data Transfer (Import & Export)** | Streamed JSON snapshots & CSV exports preserving data types, binary payloads/keys & TTLs via background jobs | `RedisSnapshotService`, `ExportRedisDataJobHandler`, `ImportRedisDataJobHandler`, download leases | `ExportDialogComponent` & `ImportDialogComponent` backed by `BackgroundJobsStore` |
+| **Synthetic Load Benchmark & Data Seeder** | Concurrent GET/SET/Mixed workers with latency percentiles (`p50`/`p95`/`p99`) + up to 10k realistic keys generator | `RedisLoadTestService` (`LoadTestOperations`), `RedisSeedDataService` (Strategy/Factory) | `LoadTestDialogComponent` & `SeedDataDialogComponent` |
+| **Interactive Redis CLI Drawer** | DB-scoped ad-hoc command terminal with 1-click diagnostic presets and RESP3 array/bulk formatting | `ExecuteCliCommand` + `RedisRespFormatter` + Safe Mode command blocking | `RedisCliDrawerComponent` docked bottom panel |
+| **Governance, RBAC, Safe Mode & Audit Logs** | JWT auth (`Admin`, `Standard`, `ReadOnly`), per-user connection ownership, Read-Only Safe Mode toggle, compliance trail | `IConnectionAccessService`, `AuditingBehavior`, RFC 9457 `ProblemDetails`, parameter-aware SQL cache | `AuthStore` (`logout()` clears all user stores), `AuditLogsComponent`, `EditConnectionComponent` |
+| **Reload Persistence & Design System** | Restores active Storage Manager workspace across full browser reloads; 6 color schemes + Dark/Light toggle; `Ctrl+K` palette | Invariant REST APIs + SPA `/index.html` fallback (preserving `/health` probes) | `SideNavStore`, `CommandPaletteComponent`, Material 22 + Tailwind theme system |
 
 ---
 
-## Detailed Module Specifications
+## Architectural Feature Highlights
 
-### 1. Key & Data Structure Strategy Handlers
-The system uses the **Strategy Pattern** across both backend and frontend layers:
-- **String Handler**: Auto-detects whether the string is raw text, valid JSON, or formatted number. Supports strict TTL (non-expiring vs expiring).
-- **Hash Handler**: Visual grid for editing key-value pairs with instant field addition, inline modification, and per-field deletion.
-- **List Handler**: Supports push (`LPUSH`/`RPUSH`), pop (`LPOP`/`RPOP`), item reordering, and sub-range inspection.
-- **Set Handler**: Unique member management with duplicate prevention.
-- **Sorted Set Handler**: Score adjustment, rank-based sorting, and range queries.
-- **Stream Handler**: Displays append-only log entries with millisecond timestamp IDs, field-value dictionaries, and real-time append capability.
+### 1. Virtualized Storage & Binary Key Fidelity
+- **Zero-LAG Rendering**: `StorageValuesListComponent` renders visible rows inside `<cdk-virtual-scroll-viewport itemSize="48">` (`*cdkVirtualFor`) and automatically fetches the next `SCAN` page as users scroll toward the bottom of loaded keys (`Load more` button remains available for manual control).
+- **Lossless Binary Identity**: Redis treats keys as binary-safe byte sequences. Whenever a scanned key contains non-UTF-8 sequences or control bytes, the backend sets `IsBinary = true` and populates `KeyBase64`. Query-based key endpoints (`api/v1/storage/{connectionId:guid}/key?key=&keyBase64=`) prevent URL path-encoding truncation or ambiguity across every read, edit, rename, duplicate, and delete operation.
 
-### 2. Namespace Tree View & Full Management Controls
-- The browser scans one Redis cursor page per request and provides **Load more**, including when a page contains no matching keys. Key type and TTL are fetched without reading the value. The scan checks the selected database and scans cluster primaries individually.
-- Results are not a point-in-time snapshot. Keys can be added, removed, or returned more than once while scanning; the UI deduplicates loaded names. The Redis `COUNT` value is a hint rather than a strict limit. Counts, filters, sorting and the tree describe loaded results only. A changed cluster topology requires a refresh.
-- Cluster scans check live node roles using `ROLE` on each page. All discovered nodes must be reachable and the Redis user must have permission to run `ROLE`; otherwise the scan fails rather than returning a potentially incomplete result.
-- Parses Redis keys using configurable delimiters (e.g. `users:profile:1001` becomes folder `users` -> folder `profile` -> key `1001`).
-- **Tree Toolbar**: Real-time summary stats badge with instant `Expand All` and `Collapse All` buttons.
-- **Folder / Namespace Actions**:
-  - `+` (Add Key): Opens the Add Key modal pre-populated with the folder prefix.
-  - Copy Path: Copies the complete namespace prefix to the clipboard.
-  - Delete Folder (`delete_sweep`): Prompts confirmation and deletes the loaded keys supplied by the tree; the dialog distinguishes this from a pattern-based deletion that may affect keys not yet loaded.
-- **Leaf Key Actions Bar**: Full management toolbar on hover (View/Edit, Copy Name, Rename, Duplicate, Delete) delivering 100% feature parity with the Table View controls.
-- Automatic cache invalidation and store refresh ensuring immediate updates upon key creation, rename, duplicate, or deletion.
+### 2. Extensible Typed Background Jobs
+Long-running tasks share a unified execution, authorization, and notification pipeline:
+- **Supported Kinds (`GET /api/v1/jobs/kinds`)**:
+  - `bulk-keys` — Bulk delete by list or pattern, and bulk TTL assignment.
+  - `load-test` — Multi-client benchmark with isolated `__bench_*: ` keys and automatic cleanup.
+  - `seed-data` — Configurable realistic/hierarchical/hashtag sample data generation.
+  - `redis-export` — JSON/CSV snapshot streaming protected by download leases.
+  - `redis-import` — JSON/CSV restoration preserving TTLs and binary keys across target DBs.
+- **Resilient Notifications**: `BackgroundJobsService` opens a shared authenticated `/hub/jobs` SignalR connection with automatic initial retry on startup races and surfaces live completion/failure/cancellation inside the header bell popover.
 
-### 3. Live Metrics Pipeline
-- Utilizes `StackExchange.Redis` `server.InfoAsync()` to extract live metrics.
-- Formats and parses metrics using `CultureInfo.InvariantCulture` to prevent culture-sensitive parsing exceptions on non-US host environments.
-- Streams telemetry over WebSockets via SignalR `RedisMetricsHub` every 5 seconds.
-- Provides immediate HTTP REST endpoint (`GET /connections/{id}/metrics`) for zero-delay initial load.
-
-### 4. Load Testing Engine
-- Runs concurrent workers using .NET `Task.WhenAll`.
-- Simulates realistic workloads:
-  - *Read-Heavy*: 80% `GET` operations, 20% `SET` operations.
-  - *Write-Heavy*: 80% `SET` operations, 20% `GET` operations.
-  - *Balanced*: 50% `GET`, 50% `SET`.
-- Computes comprehensive statistics:
-  - Total elapsed time
-  - Requests per second (RPS)
-  - `p50`, `p95`, `p99` latency in milliseconds
-  - Failure / error rates
-
-### 5. Interactive CLI Terminal
-- Executes commands against the currently selected Redis database context.
-- Sanitizes dangerous server commands (e.g. `FLUSHALL`, `SHUTDOWN`) when in Safe Mode or restricted user sessions.
-- Formats RESP array responses into clean terminal output.
-- Remembers last 50 executed commands in session history.
-
-### 6. Realistic Data Seeder
-- Generates up to 10,000 keys across 6 data types in seconds.
-- Features pluggable naming strategies (`Simple`, `Hierarchical`, `UUID`).
-- Supports configurable payloads: plain text, complex JSON documents, numeric counters, and event streams.
-
-
-## Messaging Inspector
-
-Monitor literal and pattern pub/sub subscriptions, publish to channels, and inspect recent and live stream entries. SignalR delivers updates; pub/sub is ephemeral, while Redis streams persist entries. Publishing respects read-only roles and Safe Mode.
-
-Live SignalR metrics include a rolling delivery-rate chart, a direct-subscriber or stream-length chart, and current counts for delivered messages and server pattern subscriptions or consumer groups. Delivery measures what this monitor receives, not server-wide publishing or ingestion. Redis counts are sampled once per second. Pattern subscriptions do not have a direct-subscriber count.
+### 3. Cluster Topology Safety
+- `RedisKeyScan` hashes connected Cluster primary node identities into continuation cursors so a mid-scan `CLUSTER FAILOVER` returns an explicit cursor invalidation error instead of silently scanning incomplete slots.
+- Whenever a connection is detected as `Cluster`, UI database selectors display **DB 0 · Cluster** and lock database switching, while `Seed`, `LoadTest`, `Export`, `Import`, and `MessagingHub` reject non-zero database targets server-side.

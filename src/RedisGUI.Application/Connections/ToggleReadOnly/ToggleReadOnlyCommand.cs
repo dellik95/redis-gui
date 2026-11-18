@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System;
 using RedisGUI.Domain.Abstraction;
@@ -13,24 +14,19 @@ namespace RedisGUI.Application.Connections.ToggleReadOnly;
 /// Command to toggle safe read-only mode for a connection
 /// </summary>
 [Auditable(AuditAction.Update, "Connection")]
-public sealed record ToggleReadOnlyCommand(Guid ConnectionId, bool IsReadOnly) : ICommand<bool>;
-
-internal sealed class ToggleReadOnlyCommandHandler : ICommandHandler<ToggleReadOnlyCommand, bool>
+public sealed record ToggleReadOnlyCommand(Guid ConnectionId, bool IsReadOnly) : ICommand<bool>, IAuditEntityRequest
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IUnitOfWork unitOfWork;
+	public Guid? AuditEntityId => ConnectionId;
+}
 
-	public ToggleReadOnlyCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IUnitOfWork unitOfWork)
-	{
-		this.connectionRepository = connectionRepository;
-		this.unitOfWork = unitOfWork;
-	}
-
+internal sealed class ToggleReadOnlyCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IUnitOfWork unitOfWork,
+	IConnectionAccessService? access = null) : ICommandHandler<ToggleReadOnlyCommand, bool>
+{
 	public async Task<Result<bool>> Handle(ToggleReadOnlyCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure<bool>(connectionResult.Error);

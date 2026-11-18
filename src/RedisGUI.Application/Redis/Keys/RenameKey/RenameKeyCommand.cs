@@ -1,4 +1,5 @@
 using RedisGUI.Domain.Audit;
+using RedisGUI.Application.Core.Services;
 using RedisGUI.Shared.Mediator;
 using System;
 using RedisGUI.Domain.Connection;
@@ -18,41 +19,47 @@ public sealed record RenameKeyCommand(
 	string OldKey,
 	string NewKey,
 	bool Overwrite = false,
-	int? Database = null
-) : ICommand;
-
-internal sealed class RenameKeyCommandHandler : ICommandHandler<RenameKeyCommand>
+	int? Database = null,
+	string? OldKeyBase64 = null,
+	string? NewKeyBase64 = null
+) : ICommand, IAuditEntityRequest
 {
-	private readonly IRedisConnectionRepository connectionRepository;
-	private readonly IRedisValueService valueService;
+	public Guid? AuditEntityId => ConnectionId;
+}
 
-	public RenameKeyCommandHandler(
-		IRedisConnectionRepository connectionRepository,
-		IRedisValueService valueService)
-	{
-		this.connectionRepository = connectionRepository;
-		this.valueService = valueService;
-	}
-
+internal sealed class RenameKeyCommandHandler(
+	IRedisConnectionRepository connectionRepository,
+	IRedisValueService valueService,
+	IConnectionAccessService? access = null) : ICommandHandler<RenameKeyCommand>
+{
 	public async Task<Result> Handle(RenameKeyCommand request, CancellationToken cancellationToken)
 	{
-		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
+		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(
+			request.ConnectionId,
+			access,
+			cancellationToken,
+			requireWritable: true);
 		if (connectionResult.IsFailure)
 		{
 			return Result.Failure(connectionResult.Error);
 		}
 
-		if (connectionResult.Value.IsReadOnly)
-		{
-			return Result.Failure(DomainErrors.Connection.ReadOnlyMode);
-		}
-
-		return await valueService.RenameKeyAsync(
-			connectionResult.Value,
-			request.OldKey,
-			request.NewKey,
-			request.Overwrite,
-			request.Database,
-			cancellationToken);
+		return string.IsNullOrEmpty(request.OldKeyBase64) && string.IsNullOrEmpty(request.NewKeyBase64)
+			? await valueService.RenameKeyAsync(
+				connectionResult.Value,
+				request.OldKey,
+				request.NewKey,
+				request.Overwrite,
+				request.Database,
+				cancellationToken)
+			: await valueService.RenameKeyByIdentityAsync(
+				connectionResult.Value,
+				request.OldKey,
+				request.OldKeyBase64,
+				request.NewKey,
+				request.NewKeyBase64,
+				request.Overwrite,
+				request.Database,
+				cancellationToken);
 	}
 }
