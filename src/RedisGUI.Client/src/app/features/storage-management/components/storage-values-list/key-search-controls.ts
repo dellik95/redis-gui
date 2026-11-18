@@ -18,6 +18,7 @@ export class KeySearchControls {
   readonly availableDatabases = input.required<readonly { index: number; count: number }[]>();
   readonly keyDelimiter = input.required<string>();
   readonly searchPattern = input.required<string>();
+  readonly isCluster = input<boolean>(false);
   readonly databaseChange = output<number>();
   readonly modeChange = output<string>();
   readonly cycleDelimiter = output<void>();

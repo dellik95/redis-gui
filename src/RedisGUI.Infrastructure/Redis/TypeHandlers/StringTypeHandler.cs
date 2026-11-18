@@ -9,7 +9,10 @@ public sealed class StringTypeHandler : IRedisTypeHandler
 {
 	public RedisType Type => RedisType.String;
 
-	public async Task<Result<object?>> ReadRawAsync(IDatabase database, string key)
+	public Task<Result<object?>> ReadRawAsync(IDatabase database, string key) =>
+		ReadRawAsync(database, (RedisKey)key);
+
+	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		StackExchange.Redis.RedisValue val = await database.StringGetAsync(key);
 		return Result.Success<object?>(val);
@@ -20,7 +23,10 @@ public sealed class StringTypeHandler : IRedisTypeHandler
 		return rawValue?.ToString() ?? string.Empty;
 	}
 
-	public async Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl)
+	public Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl) =>
+		WriteAsync(database, (RedisKey)key, value, ttl);
+
+	public async Task<Result> WriteAsync(IDatabase database, RedisKey key, object value, TimeSpan? ttl)
 	{
 		string stringValue = value?.ToString() ?? string.Empty;
 		bool ok = ttl.HasValue && ttl.Value.TotalSeconds > 0

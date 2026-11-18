@@ -36,6 +36,7 @@ public class Program
 
 		builder.Logging.ConfigureApplicationLogging();
 		builder.Services.AddApiOpenTelemetry();
+		builder.Services.AddProblemDetails();
 
 		builder.Services.ConfigureHttpJsonOptions(options =>
 		{
@@ -118,6 +119,11 @@ public class Program
 		app.UseMiddleware<CorrelationIdMiddleware>();
 		app.UseMiddleware<RequestLoggingMiddleware>();
 		app.UseMiddleware<GlobalExceptionHandlerMiddleware>();
+		app.UseStatusCodePages(async statusContext =>
+		{
+			var context = statusContext.HttpContext;
+			await Results.Problem(statusCode: context.Response.StatusCode, instance: context.Request.Path).ExecuteAsync(context);
+		});
 		app.UseOutputCache();
 		app.UseRateLimiter();
 
@@ -136,6 +142,7 @@ public class Program
 		app.MapHub<RedisMetricsHub>("/hub/metrics");
 		app.MapHub<KeyChangeHub>("/hub/keychange");
 		app.MapHub<MessagingHub>("/hub/messaging");
+		app.MapHub<BackgroundJobsHub>("/hub/jobs");
 
 		app.MapHealthChecks("/health");
 		app.MapHealthChecks("/health/ready");

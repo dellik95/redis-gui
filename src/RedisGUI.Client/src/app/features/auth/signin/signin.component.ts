@@ -104,8 +104,8 @@ export class SigninComponent {
           next: () => {
             this.snackBar.open('Login successful! Welcome to RedisGUI.', 'Close', {
               duration: 3000,
-              horizontalPosition: 'end',
-              verticalPosition: 'top',
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
               panelClass: ['success-snackbar']
             });
             this.router.navigate(['/home']);
@@ -116,8 +116,8 @@ export class SigninComponent {
               error.error?.message || error.error?.detail || 'Invalid email or password';
             this.snackBar.open(errorMessage, 'Close', {
               duration: 5000,
-              horizontalPosition: 'end',
-              verticalPosition: 'top',
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
               panelClass: ['error-snackbar']
             });
           },

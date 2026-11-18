@@ -1,4 +1,8 @@
+using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using RedisGUI.Application.Core.Services;
+using System.Linq;
 
 namespace RedisGUI.Application;
 
@@ -22,11 +26,35 @@ public static class DependencyInjection
 		return services;
 	}
 
+	/// <summary>Registers a background job handler without modifying central registries or switch statements.</summary>
+	public static IServiceCollection AddBackgroundJobHandler<THandler>(this IServiceCollection services)
+		where THandler : class, IBackgroundJobHandler
+	{
+		services.TryAddEnumerable(ServiceDescriptor.Scoped<IBackgroundJobHandler, THandler>());
+		return services;
+	}
+
 	public static IServiceCollection AddApplication(this IServiceCollection services)
 	{
-		// Register FluentValidation validators from assembly
-		// Note: AddValidatorsFromAssembly requires FluentValidation.DependencyInjectionExtensions package
-		// services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
+		var assembly = typeof(DependencyInjection).Assembly;
+		var concreteTypes = assembly.GetTypes()
+			.Where(t => t is { IsClass: true, IsAbstract: false, IsGenericTypeDefinition: false })
+			.ToArray();
+
+		// Register all IBackgroundJobHandler implementations discovered in the Application assembly.
+		foreach (var type in concreteTypes.Where(t => typeof(IBackgroundJobHandler).IsAssignableFrom(t)))
+		{
+			services.TryAddEnumerable(ServiceDescriptor.Scoped(typeof(IBackgroundJobHandler), type));
+		}
+
+		// Register concrete validators, including internal use-case validators.
+		foreach (var type in concreteTypes)
+		{
+			foreach (var service in type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IValidator<>)))
+			{
+				services.AddScoped(service, type);
+			}
+		}
 
 		// Register mediator with behaviors
 		services.AddApplicationMediator();

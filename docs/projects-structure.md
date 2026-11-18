@@ -1,164 +1,157 @@
-# RedisGUI — Solution Projects & Architecture Breakdown
+# RedisGUI — Solution & Projects Structure Breakdown
 
-The **RedisGUI** solution (`RedisGUI.slnx`) is engineered according to Robert C. Martin's **Clean Architecture** principles with strict separation of concerns across concentric layers. The solution contains 10 projects: 5 core .NET modules, an Angular 22 SPA client, and 4 xUnit/Moq test suites.
+The **RedisGUI** solution (`RedisGUI.slnx`) is organized into clean architectural layers, with source code under `src/` and automated NUnit unit and integration test suites under `test/`. All .NET projects target **.NET 11** (`net11.0`) with central package management (`Directory.Packages.props`) and shared analyzers (`Directory.Build.props`).
 
-```
+---
+
+## Solution Overview
+
+```text
 RedisGUI.slnx
 │
-├── 📂 src/
-│   ├── 📦 RedisGUI.Domain/           # Enterprise entities, value objects, domain contracts, and enums
-│   ├── 📦 RedisGUI.Shared/           # Functional primitives: Result<T>, Error, and in-process CQRS pipeline
-│   ├── 📦 RedisGUI.Application/      # CQRS Commands, Queries, FluentValidation rules, and MediatR behaviors
-│   ├── 📦 RedisGUI.Infrastructure/   # StackExchange.Redis adapters, Strategy type handlers, EF Core, and SignalR
-│   ├── 📦 RedisGUI.Server/           # ASP.NET Core 10 host, Minimal APIs, SignalR hubs, and OpenAPI/Scalar
-│   └── 📦 RedisGUI.Client/           # Angular 22 Standalone, Signals, Tailwind CSS, and Monaco Editor
+├── Directory.Build.props              # Shared .NET 11 compiler & StyleCop/Roslyn analyzer rules
+├── Directory.Packages.props           # Central Package Management (CPM) across all projects
+├── Dockerfile / docker-compose.yml    # Multi-stage Angular 22 + .NET 11 containerization & MySQL/Redis stack
 │
-└── 📂 test/
-    ├── 🧪 RedisGUI.Domain.Tests/
-    ├── 🧪 RedisGUI.Shared.Tests/
-    ├── 🧪 RedisGUI.Application.Tests/
-    └── 🧪 RedisGUI.Infrastructure.Tests/
+├── build/
+│   ├── Code Analysis/                 # Code Analysis Rules.ruleset, StyleCop.json, CustomDictionary.xml
+│   └── RedisGUI.Docker/               # Docker Compose Visual Studio project
+│
+├── docs/                              # Architecture, diagrams, features, configuration, landing site & screenshots
+│
+├── src/
+│   ├── RedisGUI.Domain/               # Pure DDD Entities, Value Objects, Domain Errors, Contracts
+│   ├── RedisGUI.Shared/               # Lock-free In-Process Mediator, Primitives (Result, Error, PagedResult)
+│   ├── RedisGUI.Application/          # CQRS Commands/Queries, FluentValidation, Behaviors, Job Handlers
+│   ├── RedisGUI.Infrastructure/       # Redis Engine (StackExchange.Redis), EF Core + FusionCache, Background Jobs, SignalR Hubs
+│   ├── RedisGUI.Server/               # ASP.NET Core 11 Minimal APIs, Problem Details Middleware, OpenTelemetry, SPA Host
+│   └── RedisGUI.Client/               # Angular 22 Frontend SPA (Signals, Signal Forms, CDK Virtual Scroll, Material 22, Tailwind)
+│
+└── test/
+    ├── RedisGUI.Shared.Tests/         # Unit tests for Result, ValueObject, PagedResult & Lock-free Mediator (NUnit)
+    ├── RedisGUI.Domain.Tests/         # Unit tests for Entities, Value Objects, Guards & Domain Errors (NUnit)
+    ├── RedisGUI.Application.Tests/    # CQRS Handler, Validator, Pipeline & Background Job Handler Tests (NUnit + Moq)
+    ├── RedisGUI.Infrastructure.Tests/ # Cryptography, EF/MySQL Cache, Connection Manager, Cluster & Binary-Key Integration Tests
+    └── RedisGUI.Server.Tests/         # WebApplicationFactory HTTP, Auth, Problem Details, Transfer & Background Job API Tests
 ```
 
 ---
 
-## 1. `RedisGUI.Domain` (Domain Layer)
+## Detailed Breakdown by Project
 
-The innermost layer of the system. It contains enterprise business logic and contracts with **zero external dependencies** on databases, Web frameworks, or serialization libraries.
-
-### Core Entities & Domain Models:
-* **`Connection/RedisConnection`**: Entity representing a stored connection profile to a Redis instance:
-  * `ServerHost` (Value Object), `ServerPort`, `DatabaseCount`, `Name`, `Password`, `Ssl`, `ConnectTimeout`.
-  * `IsReadOnly`: Safe Mode flag preventing write, update, and delete mutations.
-  * `OwnerId`: Foreign key to the user owning this connection.
-  * `BuildConnectionString()`: Domain method generating a safe, formatted `StackExchange.Redis` connection string.
-* **`Users/User`**: User identity entity with `Email`, `PasswordHash`, `Role` (`UserRole` enum), `IsActive`, and `LastLoginAt`.
-* **`Audit/AuditLog`**: Audit trail record capturing `Timestamp`, `UserId`, `UserEmail`, `IpAddress`, `ActionType`, `Resource`, `Details`, and `IsSuccess`.
-* **`RedisMetrics/RedisMetrics`**: Performance telemetry aggregate populated using `[RedisMetric]` attributes: Ops/sec, Used Memory, Peak Memory, System/User CPU, Connected Clients, Total Keys, and Network I/O.
-* **`Redis/RedisLoadTest`**: Models configuring and reporting stress tests: `LoadTestResult`, `LoadTestOptions`, latency percentiles (`p50`, `p95`, `p99`), RPS, and `ErrorCount`.
-* **`Redis/RedisSlowlogItem`**: High-latency command inspection model: `Id`, `Timestamp`, `DurationMicroseconds`, `Arguments`, and `ClientIp`.
-* **`Redis/SeedDataOptions`**: Configuration for demo data generation: `TotalKeys`, `KeyComplexity`, `PayloadComplexity`, `DataTypes`, and `TtlStrategy`.
-
-### Domain Contracts & Interfaces:
-* `IRedisConnectionRepository`: Abstraction for persisting and retrieving connection profiles.
-* `IUserRepository`: Abstraction for user account queries and credential verification.
-* `IAuditLogRepository`: Abstraction for appending and filtering audit events.
-* `IRedisValueService`: Abstraction for high-level read and write operations across Redis types.
-* `IRedisCliService`: Abstraction for executing raw CLI commands with database context.
-* `IRedisDiagnosticsService`: Abstraction for server diagnostics (`SLOWLOG`, server configurations).
-* `IRedisLoadTestService`: Abstraction for concurrent benchmark execution.
-* `IRedisSeedDataService`: Abstraction for synthetic dataset generation.
+### 1. `RedisGUI.Domain` (Inner Core — Zero External Dependencies)
+Contains pure domain knowledge, business invariants, and service/repository abstractions:
+- **Entities & Aggregates** (`Connection/`, `Users/`, `Audit/`):
+  - `RedisConnection` abstract aggregate with `AnonymousRedisConnection` and `RedisConnectionWithCredentials`, supporting ownership (`ConnectionOwnerId`), Safe Mode (`IsReadOnly`), and cluster-aware connection string construction.
+  - `User` aggregate with RBAC roles (`UserRole`: `Admin`, `Standard`, `ReadOnly`), activation state, and password updates.
+  - `AuditLog` entity with typed `AuditAction`, `AuditMetadata`, and auditable marker contracts (`IAuditableContracts`).
+- **Strongly-Typed Value Objects** (`Primitives/ValueObject`): `ConnectionHost`, `ConnectionPort`, `ConnectionName`, `DatabaseNumber`, `ConnectionCredentials`, `ConnectionHealth`, `ConnectionOwnerId`, `Email`, `PasswordHash`, `UserProfile`.
+- **Redis & Telemetry Contracts** (`Connection/`, `Redis/`, `RedisMetrics/`):
+  - `IRedisConnectionService`, `IRedisKeyService`, `IRedisValueService`, `IRedisCliService`, `IRedisDiagnosticsService`, `IRedisLoadTestService`, `IRedisSeedDataService`, `IRedisSnapshotService`, `IRedisTopologyRegistry` (`RedisServerMode`: `Unknown`, `Standalone`, `Cluster`, `Sentinel`).
+  - Cursor-based pagination & binary-safe key identity models (`RedisKeyScanPage`, `RedisKeyMetadata`, `RedisValue`, `RedisValueType`, `PagedRedisValues`).
+  - Domain exceptions and error catalog (`Errors/DomainErrors.cs`, `Exceptions/ErrorException.cs`, `Guards/Ensure.cs`).
+- **Domain Events**: `ConnectionCreatedDomainEvent`, `ConnectionEstablishedDomainEvent`, `ConnectionAvailabilityChanged`, `UserRegisteredDomainEvent`, `UserLoggedInDomainEvent`, `UserPasswordChangedDomainEvent`, `UserDeactivatedDomainEvent`.
 
 ---
 
-## 2. `RedisGUI.Shared` (Shared Kernel & Functional Primitives)
-
-Provides foundational primitives for robust, exception-safe code across the entire codebase.
-
-* **`Result<T>` & `Error`**: Railway-Oriented Programming (ROP) pattern. Eliminates unhandled `null` references and replaces exceptions for business rule violations with structured, strongly-typed error responses.
-* **In-Process CQRS & Mediator Pipeline**:
-  * Interfaces: `ICommand`, `ICommand<TResponse>`, `IQuery<TResponse>`, `ICommandHandler<TCommand, TResponse>`, `IQueryHandler<TQuery, TResponse>`, `IMediator`, and `IPipelineBehavior`.
-  * Enables lightweight, high-performance in-process messaging without third-party dependencies.
-
----
-
-## 3. `RedisGUI.Application` (Business Logic & CQRS Layer)
-
-Implements application business use cases using the CQRS pattern.
-
-### Key Use-Case Handlers:
-1. **`Connections/`**:
-   * `CreateConnectionCommand`, `UpdateConnectionCommand`, `DeleteConnectionCommand`, `CheckConnectionCommand`.
-   * `GetAllConnectionsQuery`, `GetConnectionByIdQuery`, `GetConnectionHealthQuery`, `ToggleReadOnlyCommand`.
-   * `GetServerInfoQuery`, `GetServerConfigQuery`, `UpdateServerConfigCommand`.
-2. **`Redis/` (Key & Data Structure Management)**:
-   * `GetAllRedisKeysQuery`: Cursor-based `SCAN` iteration with pattern and database filters.
-   * `GetRedisValueQuery`: Resolves and returns key data via the Strategy Pattern handler factory.
-   * `SaveRedisValueCommand`: Persists String, Hash, List, Set, Sorted Set, or Stream data.
-   * `DeleteRedisKeyCommand`, `DeleteMultipleKeysCommand`, `DeleteKeysByPatternCommand`.
-   * `DuplicateRedisKeyCommand`: Deep clones a key and its contents under a new name.
-   * `BulkUpdateTtlCommand`: Updates expiration for multiple keys simultaneously.
-3. **`Diagnostics/` & `Benchmarking/`**:
-   * `GetRedisSlowlogQuery`: Fetches recent slow operations with execution microsecond durations.
-   * `RunRedisLoadTestCommand`: Executes concurrent stress tests and computes RPS / percentiles.
-   * `SeedRedisSampleDataCommand`: Populates databases with synthetic data structures.
-4. **`Users/` & `Audit/`**:
-   * `SignInCommand`, `SignUpCommand`, `GetCurrentUserQuery`.
-   * `GetAuditLogsQuery`: Paginated and filtered retrieval of audit records.
-
-### Cross-Cutting Behaviors (`Behaviors/`):
-* `ValidationBehavior<TRequest, TResponse>`: Automatically executes FluentValidation validators before handler execution.
-* `LoggingBehavior<TRequest, TResponse>`: Structured execution duration and parameter logging.
-* `AuditingBehavior<TRequest, TResponse>`: Automatically creates audit entries for mutating commands.
+### 2. `RedisGUI.Shared` (Cross-Cutting Primitives & Lock-Free Mediator)
+Zero-bloat shared building blocks used across all application and infrastructure layers:
+- **Lock-Free In-Process Mediator** (`Mediator/`):
+  - `Mediator`, `MediatorBuilder`, `HandlerRegistry`, `PipelineRegistry`, `NotificationRegistry`.
+  - `PipelineRegistry` maintains registered open and closed pipeline behaviors using lock-free CAS array swaps (`Interlocked` / copy-on-write arrays) alongside `ConcurrentDictionary` type caches for allocation-light dispatch.
+  - `NotificationRegistry` supports configurable `Parallel` and `Sequential` domain event dispatching.
+- **Functional Primitives** (`Primitives/`, `Extensions/`):
+  - Discriminated `Result` / `Result<T>` railway-oriented monads (`BindAsync`, `Map`, `Ensure`).
+  - Structured `Error`, `ValidationFailureError`, `PagedResult<T>`, `ValueObject`, and async stream utilities (`AsyncEnumerableExtensions`).
 
 ---
 
-## 4. `RedisGUI.Infrastructure` (Adapters & External Services)
-
-Implements domain abstractions and manages external network connections.
-
-### Key Subsystems:
-* **`Redis/Handlers/` (Strategy Pattern for Redis Types)**:
-  * Handlers for each native Redis data type: `StringTypeHandler`, `HashTypeHandler`, `ListTypeHandler`, `SetTypeHandler`, `SortedSetTypeHandler`, and `StreamTypeHandler`.
-  * Managed by `RedisTypeHandlerFactory`, with all handlers registered directly into the ASP.NET Core DI container.
-* **`Redis/ConnectionManager/`**:
-  * Thread-safe cache of `ConnectionMultiplexer` instances with single-flight initialization and bounded capacity, preventing socket exhaustion.
-* **`Redis/Telemetry/`**:
-  * `RedisMetricsCollector`: Periodically collects telemetry via `server.InfoAsync()`, parsing numerical metrics using `CultureInfo.InvariantCulture` to prevent decimal formatting crashes.
-* **`Persistence/`**:
-  * Entity Framework Core `ApplicationDbContext` supporting both `InMemory` and `MySQL` / `MariaDB` providers.
-  * Automatic schema migrations and seeding of default administrator accounts and demo connection profiles.
-* **`Authentication/`**:
-  * Cryptographic password hashing and JWT token issuance via `IJwtTokenGenerator`.
+### 3. `RedisGUI.Application` (Use-Case & Business Orchestration Layer)
+Implements all application workflows grouped vertically by domain feature:
+- **Core Infrastructure & Abstractions** (`Core/`, `Exceptions/`):
+  - Pipeline Behaviors (`Behaviors/`): `ValidationBehavior` (`FluentValidation`), `LoggingBehavior`, and `AuditingBehavior` (driven by `[Auditable]` attribute).
+  - Application Service Contracts (`Core/Services/`): `IConnectionAccessService`, `ICurrentUserService`, `IBackgroundJobHandler`, `IExportSessionFactory`, `IRedisMessagingOperations`.
+- **Connections Feature** (`Connections/`):
+  - `CreateConnection`, `UpdateConnection`, `DeleteConnection`, `CheckConnection`, `ToggleReadOnly`, `GetAllConnections`, `GetConnectionById`, `GetConnectionHealth`, `GetServerConfig`, `UpdateServerConfig`, `GetServerInfo`. Every mutating and inspection query enforces connection ownership & authorization via `IConnectionAccessService`.
+- **Redis Operations & Data Transfer** (`Redis/`):
+  - `Keys/`: `ScanRedisKeys` (cursor pagination + cluster awareness), `GetAllRedisValues`, `GetRedisValue` & `SetRedisValue` / `UpdateRedisValue` / `DeleteRedisKey` / `RenameKey` / `DuplicateKey` / `GetKeyMemoryUsage` (all supporting UTF-8 strings AND binary-safe Base64 `KeyBase64` keys), `GetKeyspaceInfo`, `BulkUpdateTtl`, `DeleteMultipleKeys`, `DeleteKeysByPattern`, `BulkOperations/` (`BulkKeyJobHandler`).
+  - `DataTransfer/`: Streaming export/import (`ExportRedisDataQuery`, `ImportRedisDataCommand`) and background job handlers (`ExportRedisDataJobHandler`, `ImportRedisDataJobHandler`).
+  - `Diagnostics/`: `GetSlowlogQuery`, `RunLoadTestCommand`, `RunStreamingLoadTestCommand`, `LoadTestJobHandler`.
+  - `Tools/`: `ExecuteCliCommand`, `SeedSampleDataCommand`, `SeedSampleDataJobHandler`.
+  - `Messaging/`: `GetChannelQuery`, `GetStreamQuery`, `PublishMessageCommand`, `MessagingConnectionAccess`.
+- **Identity, Audit & Telemetry** (`Users/`, `Audit/`, `RedisMetrics/`):
+  - `LoginUserCommand`, `RegisterUserCommand`, `GetAuditLogsQuery`, `GetRedisMetricsQuery`.
 
 ---
 
-## 5. `RedisGUI.Server` (API Host & Presentation Layer)
-
-The ASP.NET Core 10 Web host serving RESTful APIs, SignalR WebSockets, and static client assets.
-
-### Features & Configuration:
-* **Minimal APIs & Carter**: Modular endpoint definitions organized under `Endpoints/`.
-* **SignalR Real-Time Hubs**:
-  * `/hub/metrics`: Streams ops/sec, memory RSS, and CPU utilization every 5 seconds.
-  * `/hub/keys`: Broadcasts key modifications and invalidation events.
-* **Static File Hosting**: Serves the compiled Angular 22 SPA from `wwwroot/browser` with HTML5 fallback routing.
-* **Security & Middleware**:
-  * JWT Bearer token authentication and role authorization policies.
-  * Global exception handling and RFC 7807 ProblemDetails middleware.
-  * CORS headers for cross-origin local development.
-* **OpenAPI / Scalar**: Interactive API documentation explorer available at `/scalar/v1`.
-
----
-
-## 6. `RedisGUI.Client` (Angular 22 SPA Frontend)
-
-Modern, high-performance single-page application built on Angular 22 with zoneless Signals.
-
-### Architecture Highlights:
-* **Signals & Signal Stores**: Reactive state management with zero RxJS memory leak risks (`AuthStore`, `RedisKeysStore`, `ThemeService`).
-* **Dual Key Exploration**:
-  * **Table View**: Virtual-scrolled table with live TTL countdowns, size formatting, and custom sort headers.
-  * **Namespace Tree View**: Delimiter-based hierarchical folder browser (`:`, `/`, etc.) with direct subfolder key creation.
-* **Data Structure Visual Editors**:
-  * String: Plain text and Monaco JSON editor.
-  * Hash: Interactive key-value attribute grid.
-  * List, Set, Sorted Set: Element inspectors with push, pop, and score modifiers.
-  * Stream: Append-only log inspector with Entry IDs and dual Visual/JSON modes.
-* **Diagnostics & Utilities**:
-  * Slide-out interactive Redis CLI terminal drawer with command history (`↑` / `↓`).
-  * Command Palette (`Ctrl+K` / `Cmd+K`) for keyboard-driven navigation.
-  * Slowlog inspector, synthetic load test runner, and sample data generator.
-* **Design System**:
-  * 6 custom color schemes, Dark/Light mode toggle, and Tailwind CSS utility classes.
+### 4. `RedisGUI.Infrastructure` (Data Persistence, Redis Engine, Background Jobs & SignalR)
+Houses concrete implementations and runtime infrastructure:
+- **Entity Framework Core + L2 Query Cache** (`Persistence/`):
+  - `ApplicationDbContext` supporting both **MySQL 8.4** migrations (`Migrations/`) and **EF InMemory**.
+  - Transparent SQL interceptor caching (`CachingInterceptor`, `DbCommandInterceptorProcessor`, parameter-aware `CacheKeyProvider` using SHA-256 over SQL text + typed `DbParameter` values, and `InMemoryTableRowsDataReader`) powered by **FusionCache**.
+  - Domain event dispatch interceptor (`DomainEventsDispatcherInterceptor`), repositories (`RedisConnectionRepository`, `UserRepository`, `AuditLogRepository`, `UnitOfWork`).
+- **Lock-Free Connection Pooling & Topology Registry** (`Redis/ConnectionManager/`, `Redis/`):
+  - `RedisConnectionManager`: Lock-free `ConnectionEntry` state machine (`Volatile`, `Interlocked.CompareExchange`, `LockFreeCounter`) managing pooled `ConnectionMultiplexer` instances, dynamic config fingerprint invalidation (`RedisConfigurationSanitizer`), idle eviction, and drain timers.
+  - `RedisTopologyRegistry`: `ConcurrentDictionary<Guid, RedisServerMode>` tracking runtime Standalone/Cluster/Sentinel detection.
+  - `RedisServerResolver`: Primary/replica node resolution across standalone and cluster topologies.
+- **Redis Services & Strategy/Factory Implementations** (`Redis/`):
+  - `TypeHandlers/`: Strategy & factory (`IRedisTypeHandler`, `RedisTypeHandlerFactory`) for `String`, `Hash`, `List`, `Set`, `SortedSet`, and `Stream`.
+  - `Services/`: `RedisKeyService` + `RedisKeyScan` (multi-primary cluster scanning + Base64 binary key support + HMAC-signed cluster continuation cursor tokens catching topology failovers), `RedisValueService`, `RedisDiagnosticsService` (`AllSections` + `CLUSTER NODES` parsing), `RedisLoadTestService` (`LoadTestOperations`, `BenchmarkResultBuilder`), `RedisSnapshotService`, `RedisSeedDataService` (`KeyNamingStrategies`, `SeedDataStrategies`), `RedisCliService`, `RedisMessagingService` + `RedisMessagingOperations` + `RedisMessagingMetricsCollector`.
+  - `Common/`: `CommandLineTokenizer`, `RedisPatternMatcher`, `RedisRespFormatter`, `RedisInfoParser`.
+- **Extensible Background Jobs & Live Hub** (`BackgroundJobs/`, `SignalR/`):
+  - `BackgroundJobManager`: Bounded multi-worker `Channel<QueuedJob>` scheduler dispatching jobs dynamically via keyed/registered `IBackgroundJobHandler` implementations, emitting MPSC status/progress events (`JobEvent`), download leases to guard in-flight artifacts, per-owner quotas, and `RedisGUI.BackgroundJobs` OpenTelemetry meters.
+  - `BackgroundJobSubscriptionRegistry`: Lock-free registry tracking active SignalR watchers per job and pushing `AccessRevoked` events when connection access changes.
+  - Background Hosted Services: `RedisMetricsBackgroundJob` (sub-second live metrics pump) and `ConnectionHealthMonitor`.
+  - SignalR Hubs (`SignalR/Hubs/`):
+    - `BackgroundJobsHub` (`/hub/jobs`, `[Authorize]`): Job lifecycle, progress, completion, and `AccessRevoked`.
+    - `RedisMetricsHub` (`/hub/metrics`): Live telemetry streaming via `NotificationService`.
+    - `KeyChangeHub` (`/hub/keychange`): Lock-free key change notifications via `KeyChangeSubscriptionManager` & `KeyChangeNotificationService`.
+    - `MessagingHub` (`/hub/messaging`): Live Redis Pub/Sub & Stream watcher with Cluster DB 0 awareness and `CanAccessAsync` checks.
+- **Security & Configuration** (`Authentication/`, `Authorization/`, `Cryptography/`, `Configuration/`):
+  - JWT bearer tokens (`JwtTokenGenerator`, `JwtSettings`), BCrypt password hashing (`PasswordHasher`), AES payload encryption (`PasswordEncryptor`), ownership authorization (`ConnectionAccessService`, `ConnectionOwnershipRequirement`), and runtime options (`DatabaseConfiguration`, `CacheConfiguration`, `MetricsCollectorOptions`, `BackgroundJobOptions`).
 
 ---
 
-## 7. Test Projects (Automated Test Suites)
+### 5. `RedisGUI.Server` (Web API Host & SPA Delivery)
+ASP.NET Core 11 host configuring Minimal API endpoints, SignalR hubs, and middleware:
+- **Modular Minimal APIs** (`Endpoints/`): Auto-discovered `IEndpoint` implementations under versioned `api/v1` route groups (`AuthenticationEndpoints`, `Connections/`, `Keys/`, `Jobs/BackgroundJobsEndpoint`, `Messaging/MessagingEndpoint`, `Diagnostics/GetSlowlogEndpoint`, `Tools/ExecuteCliEndpoint`, `Audit/GetAuditLogsEndpoint`). Includes query-safe key routes (`storage/{connectionId:guid}/key`) supporting arbitrary/binary Redis keys without path encoding issues.
+- **Unified HTTP Problem Details** (`Extensions/ErrorResultExtensions.cs`, `Middleware/GlobalExceptionHandlerMiddleware.cs`): Semantic mapping of domain error codes to RFC 9457 `ProblemDetails` status codes (`400`, `401`, `403`, `404`, `408`, `409`, `502`, `503`, `500`) across both `Result` failures and `ErrorException`.
+- **Pipeline, Rate Limiting & Telemetry** (`Middleware/`, `Observability/`, `Logging/`, `OpenApi/`, `Extensions/`):
+  - `CorrelationIdMiddleware`, `RequestLoggingMiddleware`, fixed-window rate limiters (`auth`, `sensitive`), Brotli/Gzip response compression, Swagger/OpenAPI (`ConfigureSwaggerOptions`), Serilog logging, and OpenTelemetry tracing + metrics (`RedisGUI.*`).
+  - `ApplicationBuilderExtensions.EnsureDatabaseReady`: Automatic MySQL EF Core migration retry loop and default admin/connection seeding (`admin@redisgui.local`).
+  - `Program.cs`: Maps `/hub/metrics`, `/hub/keychange`, `/hub/messaging`, `/hub/jobs`, `/health`, `/health/ready`, and Angular SPA fallback (`wwwroot/`).
 
-Comprehensive automated testing with over 350 test cases across 4 test projects:
+---
 
-1. **`RedisGUI.Domain.Tests`**: Unit tests verifying entities, value objects, domain rules, and connection string builders.
-2. **`RedisGUI.Shared.Tests`**: Unit tests verifying functional `Result<T>` and custom MediatR pipeline behaviors.
-3. **`RedisGUI.Application.Tests`**: CQRS handler tests verifying commands, queries, and FluentValidation rules.
-4. **`RedisGUI.Infrastructure.Tests`**: Unit and integration tests verifying Strategy type handlers, metric parsers, and connection pooling.
+### 6. `RedisGUI.Client` (Angular 22 Modern SPA)
+Standalone-component Angular 22 + Material 22 + Tailwind frontend powered by Signals and Signal Stores (`@ngrx/signals`):
+- **Core Services & Stores** (`src/app/core/`):
+  - Signal Stores (`core/stores/`): `AuthStore`, `ConnectionsStore`, `RedisKeysStore` (binary-safe `KeyBase64` key tracking, `serverMode`, cluster DB 0 normalization, incremental scan cursor state), `BackgroundJobsStore` (shared job tracking & unread notification state), `SideNavStore` (session-scoped `/home` fallback & reload persistence), `AuditStore`, `ServerInfoStore`, `BreadcrumbStore`, `SectionActionsStore`, `LoadingStore`, `SignalRStore`.
+  - Services (`core/services/`): `BackgroundJobsService` (SignalR `/hub/jobs` with initial retry & `AccessRevoked` handling), `KeyChangeHubService`, `MetricsHubService`, `AuthService` (multi-store logout cleanup), interceptors (`auth.interceptor`, `error.interceptor`), and Strategy `value-handlers/` for Redis data types.
+- **Shared Components & Design System** (`src/app/shared/`):
+  - `JobNotificationCenterComponent`: Global header popover tracking active and recent background jobs (`Stop`, `Refresh`, `Download`, `Details`, `Dismiss`, `Clear finished`).
+  - `RedisCliDrawerComponent`, `CommandPaletteComponent` (`Ctrl + K`), `TreeViewListComponent` (configurable delimiter tree), `JsonEditorComponent` (Monaco integration), `StatCountCardComponent`, `StatSummaryCardComponent`, `MetricSparklineCardComponent`, and reusable UI primitives (`shared/ui/`).
+- **Feature Modules** (`src/app/features/`):
+  - `auth/`: Sign-in / sign-up views with animated backdrop.
+  - `dashboard/`: Server telemetry overview, connection cards with `Cluster` / `Protected` badges, and `EditConnectionComponent`.
+  - `storage-management/`:
+    - `StorageValuesListComponent`: Angular CDK `*cdkVirtualFor` virtual scrolling table with auto-pagination, glob pattern filtering, type counters, `BIN` binary-key badges, Cluster DB 0 locking, Tree Explorer, Bulk Actions (`BulkJobProgressComponent`), `ImportDialogComponent`, `ExportDialogComponent`, `LoadTestDialogComponent`, `SeedDataDialogComponent`, `SlowlogDialogComponent`, and `AddKeyComponent`.
+    - `EditKeyComponent` & `StorageValueEditorComponent`: Dedicated editors for String/JSON, Hash, List, Set, SortedSet, and Stream.
+    - `StorageResourcesInfoComponent`: Live telemetry pill strip.
+  - `messaging-inspector/`: Live Redis Pub/Sub monitor and Stream inspector + real-time charts.
+  - `health-monitoring/`, `audit-logs/`, `info/`: Connection health matrix, compliance audit logs, and server info views.
+
+---
+
+## 7. Automated Test Suites (`test/`)
+
+All .NET test projects use **NUnit**, **FluentAssertions**, and **Moq** (with **Karma/Jasmine** for Angular frontend specs):
+
+| Project | Framework | Scope Covered |
+| :--- | :--- | :--- |
+| `RedisGUI.Shared.Tests` | NUnit | `Result` railway chaining, `Error`, `PagedResult`, `ValueObject`, `MediatorBuilder`, lock-free `PipelineRegistry`, `NotificationRegistry` & behavior execution. |
+| `RedisGUI.Domain.Tests` | NUnit | Domain aggregates (`RedisConnection`, `AuditLog`, `User`), value-object boundary validation, `Ensure` guards, `PagedRedisValues`, and `ErrorException`. |
+| `RedisGUI.Application.Tests` | NUnit + Moq | CQRS command/query handlers, connection ownership/authorization enforcement, FluentValidation validators, behaviors, and background job handlers (`BulkKey`, `Export`, `Import`, `LoadTest`, `SeedSampleData`). |
+| `RedisGUI.Infrastructure.Tests` | NUnit | AES encryption, JWT settings, MySQL schema & parameter-aware `CacheKeyProvider`, lock-free `RedisConnectionManager`, `BackgroundJobManager` queue/identity/quotas, standalone Redis & Cluster failover `SCAN`, binary key CRUD, and messaging integration tests. |
+| `RedisGUI.Server.Tests` | NUnit + `WebApplicationFactory` | End-to-end HTTP endpoint integration: auth, RFC 9457 Problem Details status mapping, binary-key streaming export/import, background job lease downloads, and live `AccessRevoked` SignalR revocation. |
+| `RedisGUI.Client` (`*.spec.ts`) | Jasmine / Karma | Signal stores (`BackgroundJobsStore`, `RedisKeysStore`, `SideNavStore` reload persistence), `BackgroundJobsService` SignalR/retry specs, and virtualized storage component cluster/pagination specs. |

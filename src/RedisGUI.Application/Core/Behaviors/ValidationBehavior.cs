@@ -11,49 +11,29 @@ using ValidationException = RedisGUI.Application.Exceptions.ValidationException;
 namespace RedisGUI.Application.Core.Behaviors;
 
 /// <summary>
-/// MediatR pipeline behavior that performs validation on commands before they are handled
+/// Mediator pipeline behavior that validates requests before handler execution.
 /// </summary>
-/// <typeparam name="TRequest">The type of request being validated</typeparam>
-/// <typeparam name="TResponse">The type of response from the handler</typeparam>
-public class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TRequest>> validators)
+	: IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IRequest<TResponse>
 {
-	/// <summary>
-	/// Collection of validators that can validate the request type
-	/// </summary>
-	private readonly IEnumerable<IValidator<TRequest>> validators;
+	private readonly IReadOnlyList<IValidator<TRequest>> validators = validators as IReadOnlyList<IValidator<TRequest>> ?? validators.ToArray();
 
-	/// <summary>
-	/// Initializes a new instance of the ValidationBehavior class
-	/// </summary>
-	/// <param name="validators">The collection of validators for the request type</param>
-	public ValidationBehavior(IEnumerable<IValidator<TRequest>> validators)
-	{
-		this.validators = validators;
-	}
-
-	/// <summary>
-	/// Handles the request by performing validation before passing to the next handler
-	/// </summary>
-	/// <param name="request">The request being handled</param>
-	/// <param name="next">The delegate for the next action in the pipeline</param>
-	/// <param name="cancellationToken">Cancellation token</param>
-	/// <returns>The response from the handler</returns>
-	/// <exception cref="ValidationException">Thrown when validation fails</exception>
 	public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, Func<Task<TResponse>> next)
 	{
-		if (!validators.Any())
+		if (validators.Count == 0)
 		{
 			return await next();
 		}
 
 		var context = new ValidationContext<TRequest>(request);
+		var validationResults = await Task.WhenAll(
+			validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
 
-		var validationErrors = validators
-			.Select(x => x.Validate(context))
-			.Where(x => x.Errors.Count != 0)
-			.SelectMany(x => x.Errors)
-			.Select(x => new ValidationError(x.PropertyName, x.ErrorMessage))
+		var validationErrors = validationResults
+			.SelectMany(result => result.Errors)
+			.Where(error => error is not null)
+			.Select(error => new ValidationError(error.PropertyName, error.ErrorMessage))
 			.ToList();
 
 		if (validationErrors.Count != 0)

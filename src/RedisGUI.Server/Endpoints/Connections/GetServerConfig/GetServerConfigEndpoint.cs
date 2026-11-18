@@ -23,7 +23,7 @@ public class GetServerConfigEndpoint : IEndpoint
 		{
 			var query = new GetServerConfigQuery(connectionId, pattern);
 			return await sender.Send<RedisServerConfigDto>(query, cancellationToken)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetServerConfig")
 		.WithSummary("Get Redis server configuration")

@@ -1,7 +1,12 @@
 <div class="health-card-body flex flex-col gap-3.5">
   <div class="health-status-row flex items-center justify-between">
-    <div class="health-label text-[11.5px] font-semibold uppercase text-canvas-muted">
-      Status & Latency
+    <div class="health-label text-[11.5px] font-semibold uppercase text-canvas-muted flex items-center gap-1.5">
+      <span>Status & Latency</span>
+      @if (health()?.serverMode === 'Cluster') {
+        <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-brand/15 text-brand">
+          Cluster
+        </span>
+      }
     </div>
     <div
       class="status-badge inline-flex items-center gap-1.5 py-1 px-2.5 rounded-xl text-[11px] font-bold uppercase"

@@ -15,10 +15,22 @@
 @if (connection(); as conn) {
 <div
   class="active-connection-chip inline-flex items-center gap-2 py-1 px-3 text-[12px] ml-3"
-  [matTooltip]="conn.host + ':' + conn.port + ' (DB ' + conn.database + ')'"
+  [matTooltip]="
+    conn.host +
+    ':' +
+    conn.port +
+    (conn.serverMode === 'Cluster' ? ' (Cluster · DB 0)' : ' (DB ' + conn.database + ')')
+  "
 >
   <span class="pulse-indicator w-2 h-2 rounded-full"></span>
   <span class="conn-name font-semibold text-canvas-text">{{ conn.name }}</span>
   <span class="conn-details text-[11px] text-canvas-muted">{{ conn.host }}:{{ conn.port }}</span>
+  @if (conn.serverMode === 'Cluster') {
+    <span
+      class="cluster-badge px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-brand/15 text-brand"
+    >
+      Cluster
+    </span>
+  }
 </div>
 }

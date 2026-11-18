@@ -1,139 +1,152 @@
 # RedisGUI — Configuration & Settings Reference Guide
 
-This document provides a comprehensive specification of all configuration options available in **RedisGUI**, including `appsettings.json`, environment variables, Docker parameters, database providers, and security settings.
+This document describes all configuration sections used by **RedisGUI.Server** (`appsettings.json`, `appsettings.Development.json`, environment variable overrides, and container defaults).
 
 ---
 
-## 1. Master Configuration File (`appsettings.json`)
+## 1. Master Configuration Structure (`appsettings.json`)
 
-The server reads configuration hierarchically from `appsettings.json`, environment-specific overrides (e.g. `appsettings.Development.json` or `appsettings.Production.json`), and operating system environment variables.
+ASP.NET Core loads configuration hierarchically from `appsettings.json`, `appsettings.{Environment}.json`, and environment variables (replacing `:` with `__`):
 
 ```json
 {
-  "Logging": {
-    "LogLevel": {
-      "Default": "Information",
-      "Microsoft.AspNetCore": "Warning",
-      "Microsoft.EntityFrameworkCore": "Warning",
-      "StackExchange.Redis": "Information"
-    }
+  "Database": {
+    "IsInMemory": false,
+    "ConnectionStringMSQL": "",
+    "ConnectionString": "Server=localhost;Port=3306;Database=redisgui;Uid=root;Pwd=your_password;"
   },
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost;Port=3306;Database=redisgui;Uid=root;Pwd=root_password;"
+  "Cache": {
+    "KeyPrefix": "",
+    "Duration": "00:05:00",
+    "CachedTables": [
+      "AnonymousRedisConnection",
+      "RedisConnectionWithCredentials"
+    ],
+    "IgnoredTables": []
   },
-  "DatabaseProvider": "InMemory",
-  "Redis": {
-    "DefaultHost": "127.0.0.1",
-    "DefaultPort": 6379,
-    "ConnectTimeout": 5000,
-    "SyncTimeout": 5000,
-    "KeepAlive": 60,
-    "AllowAdmin": true,
-    "AbortOnConnectFail": false,
-    "DefaultConnectionId": "ae3201ab-c3f1-4594-8f80-bbffd8d5eb65"
+  "Cryptography": {
+    "SecurityKey": "CHANGE_TO_SECURE_ENCRYPTION_KEY_IN_PRODUCTION!"
   },
-  "Jwt": {
-    "Secret": "SuperSecretKeyForDevelopmentOnlyPleaseChangeInProductionEnvironment12345!",
+  "JwtSettings": {
+    "SecretKey": "CHANGE_TO_SECURE_32+_CHAR_JWT_SECRET_IN_PRODUCTION!",
     "Issuer": "RedisGUI",
-    "Audience": "RedisGUIClient",
-    "AccessTokenExpirationInMinutes": 60,
-    "RefreshTokenExpirationInDays": 7
+    "Audience": "RedisGUI.Client",
+    "ExpirationMinutes": 1440
   },
   "MetricsCollector": {
-    "PoolingIntervalInSec": 5,
-    "Enabled": true,
-    "MaxHistoryDataPoints": 100
+    "PoolingIntervalInSec": 5
   },
-  "HealthCheck": {
-    "IntervalInSeconds": 15,
-    "TimeoutInSeconds": 3
+  "Redis": {
+    "ConnectionManager": {
+      "MaxConnections": 50,
+      "ConnectionTimeout": "00:00:15",
+      "SyncTimeout": "00:00:10",
+      "IdleTimeout": "00:05:00",
+      "EvictionInterval": "00:00:30",
+      "DrainTimeout": "00:00:02",
+      "EnableDockerFallback": false
+    }
   },
-  "Observability": {
-    "ServiceName": "RedisGUI.Server",
-    "ServiceVersion": "1.0.0",
-    "OtlpEndpoint": "http://localhost:4317",
-    "ExportTelemetry": false
+  "BackgroundJobs": {
+    "WorkerCount": 2,
+    "QueueCapacity": 100,
+    "MaxRetainedJobs": 512,
+    "MaxActiveParameterBytes": 67108864,
+    "ResultRetention": "00:30:00",
+    "CleanupInterval": "00:05:00"
   }
 }
 ```
 
 ---
 
-## 2. Configuration Settings Breakdown
+## 2. Configuration Sections Breakdown
 
-### 2.1 Database & Persistence (`DatabaseProvider`)
-Defines the persistence store for user accounts, connection profiles, and audit log history:
-
-| Key | Options | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `DatabaseProvider` | `InMemory`, `MySQL` | `InMemory` | Storage provider for `ApplicationDbContext`. `InMemory` is ideal for zero-setup local development and container testing. `MySQL` is recommended for multi-instance production. |
-| `ConnectionStrings:DefaultConnection` | Valid ADO.NET Connection String | Local MySQL string | Active connection string when `DatabaseProvider` is set to `MySQL`. |
-
-### 2.2 Redis Client Defaults (`Redis`)
-Default settings applied when connecting to Redis nodes:
+### 2.1 Database & Persistence (`Database`)
+Bound to `DatabaseConfiguration`:
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `DefaultHost` | `string` | `127.0.0.1` | Default fallback Redis host address. |
-| `DefaultPort` | `int` | `6379` | Default Redis TCP port. |
-| `ConnectTimeout` | `int` (ms) | `5000` | Socket connection timeout in milliseconds. |
-| `SyncTimeout` | `int` (ms) | `5000` | Synchronous command timeout before throwing a `TimeoutException`. |
-| `KeepAlive` | `int` (sec) | `60` | Heartbeat keep-alive ping interval in seconds. |
-| `AllowAdmin` | `bool` | `true` | Allows execution of administrative commands such as `INFO`, `CONFIG GET`, `SLOWLOG`, and `FLUSHDB`. |
-| `AbortOnConnectFail` | `bool` | `false` | When `false`, StackExchange.Redis reconnects in the background instead of failing immediately upon startup. |
-| `DefaultConnectionId` | `string` (GUID) | `ae3201ab-...` | ID of the pre-seeded default connection profile. |
+| `Database:IsInMemory` | `bool` | `false` | Uses Entity Framework In-Memory storage when `true`, or MySQL 8.x with automatic EF Core migrations when `false`. |
+| `Database:ConnectionString` | `string` | `""` | Active MySQL connection string when `IsInMemory` is `false`. |
 
-### 2.3 JWT Authentication (`Jwt`)
-Controls cryptographic security tokens issued to authenticated clients:
+### 2.2 EF Core Query Cache (`Cache`)
+Bound to `CacheConfiguration` (backed by **FusionCache** + SQL command interceptor with parameter-aware hashing):
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `Secret` | `string` | *Dev string (>= 32 chars)* | HMAC-SHA256 secret key for signing tokens. **Must be overridden in production.** |
-| `Issuer` | `string` | `RedisGUI` | Valid token issuer identifier. |
-| `Audience` | `string` | `RedisGUIClient` | Valid token audience claim. |
-| `AccessTokenExpirationInMinutes` | `int` | `60` | Lifespan of access tokens before requiring refresh. |
-| `RefreshTokenExpirationInDays` | `int` | `7` | Lifespan of refresh tokens stored on the client. |
+| `Cache:KeyPrefix` | `string` | `""` | Optional prefix for query cache entries. |
+| `Cache:Duration` | `TimeSpan` | `00:10:00` (`appsettings`: `00:05:00`) | Expiration TTL for cached table queries. |
+| `Cache:CachedTables` | `string[]` | `[]` (`appsettings`: `AnonymousRedisConnection`, `RedisConnectionWithCredentials`) | Tables eligible for transparent L2 caching. |
+| `Cache:IgnoredTables` | `string[]` | `[]` | Tables explicitly excluded from query caching. |
 
-### 2.4 Live Telemetry & Observability (`MetricsCollector`, `Observability`)
-Controls live metric streaming and OpenTelemetry exports:
+### 2.3 Cryptography & JWT Authentication (`Cryptography`, `JwtSettings`)
+Bound to `CryptographyConfiguration` and `JwtSettings` (with data-annotation validation):
+
+| Key | Type | Default / Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `Cryptography:SecurityKey` | `string` | `[Required]` | AES key used to encrypt/decrypt stored Redis passwords. **Must be overridden in production.** |
+| `JwtSettings:SecretKey` | `string` | `[Required]`, `[MinLength(32)]` | HMAC-SHA256 signing secret for JWT bearer tokens & SignalR hub auth. |
+| `JwtSettings:Issuer` | `string` | `[Required]` (`RedisGUI`) | Expected token `iss` claim. |
+| `JwtSettings:Audience` | `string` | `[Required]` (`RedisGUI.Client`) | Expected token `aud` claim. |
+| `JwtSettings:ExpirationMinutes` | `int` | `60` (`appsettings`: `1440`) | JWT access token lifetime in minutes. |
+
+### 2.4 Live Telemetry (`MetricsCollector`)
+Bound to `MetricsCollectorOptions`:
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `MetricsCollector:PoolingIntervalInSec` | `int` | `5` | Frequency of `server.InfoAsync()` polling for SignalR telemetry streaming. |
-| `MetricsCollector:Enabled` | `bool` | `true` | Globally toggles real-time metrics collection background workers. |
-| `MetricsCollector:MaxHistoryDataPoints` | `int` | `100` | Maximum number of in-memory data points retained for sparkline charts. |
-| `HealthCheck:IntervalInSeconds` | `int` | `15` | Periodic connection health verification interval. |
-| `Observability:ExportTelemetry` | `bool` | `false` | Enables OpenTelemetry trace and metric export over OTLP. |
-| `Observability:OtlpEndpoint` | `string` | `http://localhost:4317` | Target gRPC/HTTP OTLP collector address. |
+| `MetricsCollector:PoolingIntervalInSec` | `int` | `1` (`appsettings`: `5`) | Interval (seconds) between `INFO` scrapes broadcast by `RedisMetricsBackgroundJob` to `/hub/metrics` subscribers. |
+
+### 2.5 Lock-Free Redis Connection Pool (`Redis:ConnectionManager`)
+Bound to `RedisConnectionManagerOptions`:
+
+| Key | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `Redis:ConnectionManager:MaxConnections` | `int` | `50` | Maximum concurrent pooled `ConnectionMultiplexer` entries. |
+| `Redis:ConnectionManager:ConnectionTimeout` | `TimeSpan` | `00:00:05` (`appsettings`: `00:00:15`) | Socket connect timeout. |
+| `Redis:ConnectionManager:IdleTimeout` | `TimeSpan` | `00:05:00` | Inactivity window before idle connections become eligible for eviction. |
+| `Redis:ConnectionManager:EvictionInterval` | `TimeSpan` | `00:00:30` | Sweep cadence for stale/idle connections. |
+| `Redis:ConnectionManager:DrainTimeout` | `TimeSpan` | `00:00:02` | Grace period after eviction/replacement before multiplexer disposal so active requests drain cleanly. |
+| `Redis:ConnectionManager:EnableDockerFallback` | `bool` | `false` | When `true`, allows local-dev fallback from Docker hostname `redis` to `127.0.0.1` (`false` by default for strict fail-fast behavior). |
+
+### 2.6 Background Jobs Coordinator (`BackgroundJobs`)
+Bound to `BackgroundJobOptions` (data-annotation validated on startup):
+
+| Key | Type | Range / Default | Description |
+| :--- | :--- | :--- | :--- |
+| `BackgroundJobs:WorkerCount` | `int` | `1–32` (default `2`) | Concurrent worker loops draining queued background jobs (`bulk-keys`, `redis-export`, `redis-import`, `load-test`, `seed-data`). |
+| `BackgroundJobs:QueueCapacity` | `int` | `1–10000` (default `100`) | Bounded in-memory queue capacity (`Channel<QueuedJob>`). |
+| `BackgroundJobs:MaxRetainedJobs` | `int` | `1–50000` (default `512`) | Maximum retained completed/active job records before oldest terminal entries are pruned. |
+| `BackgroundJobs:MaxActiveParameterBytes` | `long` | `1 KB–1 GB` (default `64 MB`) | Total serialized parameter memory quota across queued/running jobs. |
+| `BackgroundJobs:ResultRetention` | `TimeSpan` | `00:30:00` | Retention lifetime for completed job results/export downloads (protected by active download leases). |
+| `BackgroundJobs:CleanupInterval` | `TimeSpan` | `00:05:00` | Periodic cleanup sweep cadence for expired terminal job artifacts. |
 
 ---
 
-## 3. Environment Variables (Docker & Cloud Overrides)
+## 3. Environment Variable Overrides & Seed Defaults
 
-Any setting in `appsettings.json` can be overridden using environment variables by replacing nested colons `:` with double underscores `__`:
-
-| Environment Variable | Equivalent JSON Key | Example Production Value |
+| Environment Variable | Purpose / Target Setting | Example Production Value |
 | :--- | :--- | :--- |
-| `ASPNETCORE_ENVIRONMENT` | Environment name | `Production` |
-| `ASPNETCORE_URLS` | Server bindings | `http://+:5000` |
-| `DatabaseProvider` | `DatabaseProvider` | `MySQL` |
-| `ConnectionStrings__DefaultConnection` | `ConnectionStrings:DefaultConnection` | `Server=db;Port=3306;Database=redisgui;Uid=app;Pwd=Secret!` |
-| `Jwt__Secret` | `Jwt:Secret` | `ProductionSecretKeyMustBeVeryLongAndSecureWithRandomEntropy123!` |
-| `Redis__DefaultHost` | `Redis:DefaultHost` | `redis` or `redis.cluster.local` |
-| `Redis__DefaultPort` | `Redis:DefaultPort` | `6379` |
-| `MetricsCollector__PoolingIntervalInSec`| `MetricsCollector:PoolingIntervalInSec`| `3` |
+| `ASPNETCORE_ENVIRONMENT` | Runtime hosting environment | `Production` |
+| `ASPNETCORE_URLS` | Kestrel HTTP bindings | `http://+:8080` |
+| `Database__IsInMemory` | `Database:IsInMemory` | `false` |
+| `Database__ConnectionString` | `Database:ConnectionString` | `Server=mysql;Port=3306;Database=redisgui;Uid=redisgui;Pwd=Secret!` |
+| `Cryptography__SecurityKey` | `Cryptography:SecurityKey` | `<32+-char-random-secret>` |
+| `JwtSettings__SecretKey` | `JwtSettings:SecretKey` | `<32+-char-jwt-signing-secret>` |
+| `BackgroundJobs__WorkerCount` | `BackgroundJobs:WorkerCount` | `4` |
+| `Redis__DefaultHost` | Default seeded Redis host when no connections exist | `redis` or `127.0.0.1` |
+| `Redis__DefaultPort` | Default seeded Redis port when no connections exist | `6379` |
+| `Redis__ConnectionManager__EnableDockerFallback` | `Redis:ConnectionManager:EnableDockerFallback` | `false` |
 
----
+### Default Seeded Credentials & Connection
+When starting against an empty database, `ApplicationBuilderExtensions.SeedDefaultUserAndConnection` creates:
+- **Administrator Email**: `admin@redisgui.local`
+- **Administrator Password**: `AdminPassword123!`
+- **Default Connection**: `Local Redis` (`Redis__DefaultHost` / `127.0.0.1`, `Redis__DefaultPort` / `6379`, Safe Mode disabled).
 
-## 4. Default Seeded Credentials
-
-When starting with an `InMemory` database, the application automatically seeds an initial administrator account and demo connection:
-
-* **Administrator Email**: `admin@redisgui.local`
-* **Administrator Password**: `AdminPassword123!`
-* **Pre-configured Connection**:
-  * **Name**: `Local Redis`
-  * **Host**: `127.0.0.1` (or `redis` inside Docker)
-  * **Port**: `6379`
-  * **Database Count**: `16` (DB 0 through DB 15)
-  * **Safe Mode**: Disabled (`IsReadOnly = false`)
+### Integration Test Environment Variables
+- `REDISGUI_TEST_REDIS` — Standalone Redis endpoint for integration suites (`127.0.0.1:16391,allowAdmin=true`; `RedisDiagnosticsIntegrationTests` expects `127.0.0.1:16391`).
+- `REDISGUI_TEST_MYSQL` — MySQL 8.x test connection string (`Server=127.0.0.1;Port=13306;Database=redisgui_test;User=root;Password=ci-password`).
+- `REDISGUI_TEST_CLUSTER` — Redis Cluster endpoints (`...,allowAdmin=true`) for primary traversal and Cluster restore tests.
+- `REDISGUI_TEST_CLUSTER_FAILOVER`, `REDISGUI_TEST_CLUSTER_FAILOVER_PRIMARY`, `REDISGUI_TEST_CLUSTER_FAILOVER_REPLICA` — Disposable cluster configuration for testing scan cursor invalidation after `CLUSTER FAILOVER`.

@@ -12,8 +12,8 @@ export class ErrorHandlingService {
 
   private readonly defaultConfig: MatSnackBarConfig = {
     duration: 5000,
-    horizontalPosition: 'end',
-    verticalPosition: 'top'
+    horizontalPosition: 'center',
+    verticalPosition: 'bottom'
   };
 
   /**

@@ -28,6 +28,8 @@ export function toRedisDataType(type: string): RedisDataType {
 
 export interface SelectedRedisKey {
   key: string;
+  keyBase64?: string | null | undefined;
+  isBinary?: boolean | undefined;
   type: RedisDataType;
   ttl: number;
 }
@@ -48,6 +50,8 @@ export interface RedisValueData {}
 /** API response for GET /storage/{connectionId}/{key}. */
 export interface GetRedisValueResponse {
   key: string;
+  keyBase64?: string | null | undefined;
+  isBinary?: boolean | undefined;
   value: unknown;
   type: RedisWireDataType;
   timeToLive?: string;
@@ -107,6 +111,8 @@ export type RedisValue =
 // Grouped keys response models
 export interface RedisKeyInfo {
   key: string;
+  keyBase64?: string | null | undefined;
+  isBinary?: boolean | undefined;
   /**
    * Display type. The API response is constrained to RedisWireDataType, while
    * this UI model also accepts extension/module types reported by Redis.
@@ -115,6 +121,7 @@ export interface RedisKeyInfo {
   size: number;
   ttl: number | null;
   memoryUsage: number | null;
+  fetchedAt?: number;
 }
 
 export interface RedisKeyGroup {

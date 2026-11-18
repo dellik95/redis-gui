@@ -1,4 +1,5 @@
 using System;
+using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Users;
 
 namespace RedisGUI.Application.Users.Commands.LoginUser;
@@ -20,4 +21,8 @@ public sealed record LoginUserResponse(
 	string LastName,
 	UserRole Role,
 	string Token,
-	DateTime ExpiresAt);
+	DateTime ExpiresAt) : IAuditActorResult
+{
+	public Guid ActorUserId => UserId;
+	public Guid? AuditEntityId => UserId;
+}

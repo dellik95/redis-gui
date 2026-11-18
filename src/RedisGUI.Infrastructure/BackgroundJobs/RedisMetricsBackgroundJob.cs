@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using RedisGUI.Application.RedisMetrics.Queries;
+using RedisGUI.Domain.Connection;
+using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.SignalR;
-using RedisGUI.Shared.Mediator;
 using System.Linq;
 
 namespace RedisGUI.Infrastructure.BackgroundJobs;
@@ -53,13 +53,19 @@ public class RedisMetricsBackgroundJob : BackgroundService
 			try
 			{
 				using var scope = this.serviceProvider.CreateScope();
-				var sender = scope.ServiceProvider.GetRequiredService<IMediator>();
+				var connections = scope.ServiceProvider.GetRequiredService<IRedisConnectionRepository>();
+				var collector = scope.ServiceProvider.GetRequiredService<IMetricsCollector>();
 
 				foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 				{
-					var metrics = await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(new GetRedisMetricsQuery(subscriber.Key), stoppingToken);
+					var connectionResult = await connections.GetConnectionByIdAsync(subscriber.Key, stoppingToken);
+					if (connectionResult.IsFailure)
+					{
+						continue;
+					}
 
-					if (!metrics.IsSuccess)
+					var metrics = await collector.CollectMetrics(connectionResult.Value, stoppingToken);
+					if (metrics.IsFailure)
 					{
 						continue;
 					}

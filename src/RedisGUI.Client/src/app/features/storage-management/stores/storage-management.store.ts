@@ -145,11 +145,11 @@ export const StorageManagementStore = signalStore(
           }
         });
 
-        // Call store directly instead of going through service
         redisKeysStore.loadKeys({
           connectionId,
           pattern: finalPattern,
-          ...(database !== undefined ? { database } : {})
+          ...(database !== undefined ? { database } : {}),
+          autoContinueEmptyPages: true
         });
       },
 
@@ -180,33 +180,36 @@ export const StorageManagementStore = signalStore(
               return of(null);
             }
 
-            // Call store directly instead of going through service
             redisKeysStore.updateValue({
               connectionId,
               key: valueData.key,
               type: valueData.type,
               value: valueData.value,
               ...(valueData.ttl !== undefined ? { ttl: valueData.ttl } : {}),
-              database: redisKeysStore.activeDatabase()
-            });
-
-            // Clear cache to force refresh
-            redisKeysStore.clearCache();
-
-            // Reload keys
-            const prefs = store.viewPreferences();
-            if (prefs) {
-              redisKeysStore.loadKeys({
-                connectionId,
-                pattern: prefs.pattern,
-                database: redisKeysStore.activeDatabase()
-              });
-            }
-
-            patchState(store, {
-              isSaving: false,
-              selectedKey: null,
-              error: null
+              database: redisKeysStore.activeDatabase(),
+              onSuccess: () => {
+                redisKeysStore.clearCache();
+                const prefs = store.viewPreferences();
+                if (prefs) {
+                  redisKeysStore.loadKeys({
+                    connectionId,
+                    pattern: prefs.pattern,
+                    database: redisKeysStore.activeDatabase(),
+                    autoContinueEmptyPages: true
+                  });
+                }
+                patchState(store, {
+                  isSaving: false,
+                  selectedKey: null,
+                  error: null
+                });
+              },
+              onError: () => {
+                patchState(store, {
+                  isSaving: false,
+                  error: 'Failed to save key value'
+                });
+              }
             });
 
             return of(null);

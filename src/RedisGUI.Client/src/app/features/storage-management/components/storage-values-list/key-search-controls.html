@@ -3,18 +3,27 @@
   <div class="db-picker-wrap relative">
     <button
       type="button"
-      class="db-picker-btn inline-flex items-center gap-1.5 h-9 py-0 px-3 rounded-lg bg-canvas text-canvas-text text-[13px] font-semibold cursor-pointer"
+      class="db-picker-btn inline-flex items-center gap-1.5 h-9 py-0 px-3 rounded-lg bg-canvas text-canvas-text text-[13px] font-semibold cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+      [disabled]="isCluster()"
       [matMenuTriggerFor]="dbMenu"
-      matTooltip="Switch Redis Database (0-15)"
+      [matTooltip]="
+        isCluster()
+          ? 'Redis Cluster supports database 0 only'
+          : 'Switch Redis Database (0-15)'
+      "
     >
-      <mat-icon class="db-icon text-[17px] w-[17px] h-[17px] text-brand">dns</mat-icon>
-      <span class="db-title">DB {{ selectedDb() }}</span>
+      <mat-icon class="db-icon text-[17px] w-[17px] h-[17px] text-brand">
+        {{ isCluster() ? 'hub' : 'dns' }}
+      </mat-icon>
+      <span class="db-title">{{ isCluster() ? 'DB 0 · Cluster' : 'DB ' + selectedDb() }}</span>
       @if (availableDatabases()[selectedDb()]?.count; as c) {
       <span class="db-count-badge text-[11px] font-medium text-canvas-muted">({{ c }})</span>
       }
+      @if (!isCluster()) {
       <mat-icon class="db-arrow text-[18px] w-[18px] h-[18px] text-canvas-muted mr-[-4px]"
         >arrow_drop_down</mat-icon
       >
+      }
     </button>
     <mat-menu #dbMenu="matMenu" class="db-dropdown-menu">
       @for (db of availableDatabases(); track db.index) {

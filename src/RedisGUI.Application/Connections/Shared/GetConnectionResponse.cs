@@ -50,14 +50,21 @@ public sealed class GetConnectionResponse
 	public bool IsReadOnly { get; init; }
 
 	/// <summary>
+	/// Confirmed Redis server deployment mode (Unknown, Standalone, Cluster, Sentinel).
+	/// </summary>
+	public string ServerMode { get; init; } = RedisServerMode.Unknown.ToString();
+
+	/// <summary>
 	/// Creates a response object from a Redis connection entity.
 	/// </summary>
 	/// <param name="connection">The Redis connection entity</param>
 	/// <param name="passwordDecrypt">Service for password decryption</param>
+	/// <param name="serverMode">Confirmed Redis deployment topology</param>
 	/// <returns>A new response object containing the connection details</returns>
 	public static GetConnectionResponse FromRedisConnection(
 		RedisConnection connection,
-		IPasswordDecrypt passwordDecrypt)
+		IPasswordDecrypt passwordDecrypt,
+		RedisServerMode serverMode = RedisServerMode.Unknown)
 	{
 		string password = string.Empty;
 		string userName = string.Empty;
@@ -77,7 +84,8 @@ public sealed class GetConnectionResponse
 			Username = userName,
 			Password = password,
 			Database = connection.DatabaseNumber.Value,
-			IsReadOnly = connection.IsReadOnly
+			IsReadOnly = connection.IsReadOnly,
+			ServerMode = serverMode.ToString()
 		};
 	}
 }

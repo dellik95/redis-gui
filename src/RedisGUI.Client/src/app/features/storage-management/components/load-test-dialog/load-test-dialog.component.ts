@@ -8,18 +8,20 @@ import {
   ChangeDetectionStrategy,
   DestroyRef
 } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
-  RedisCliService,
   LoadTestRequest,
   LoadTestResult,
   LoadTestProgress
 } from '../../../../core/services/redis-cli.service';
+import { BackgroundJobsStore } from '../../../../core/stores/background-jobs.store';
+import { isJobActive } from '../../../../core/models/background-jobs.types';
 import { NumberPresetOption, NumberPresetPickerComponent } from '../../../../shared/components';
+import { UiButtonComponent } from '../../../../shared/ui';
 
 const DURATION_PRESETS: readonly NumberPresetOption[] = [
   { value: 5, label: '5 s' },
@@ -54,6 +56,7 @@ const PAYLOAD_PRESETS: readonly NumberPresetOption[] = [
 export interface LoadTestDialogData {
   connectionId: string;
   database: number;
+  jobId?: string | undefined;
 }
 
 @Component({
@@ -66,7 +69,8 @@ export interface LoadTestDialogData {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    NumberPresetPickerComponent
+    NumberPresetPickerComponent,
+    UiButtonComponent
   ],
   templateUrl: './load-test-dialog.component.html',
   styleUrl: './load-test-dialog.component.scss',
@@ -74,10 +78,10 @@ export interface LoadTestDialogData {
 })
 export class LoadTestDialogComponent {
   readonly data: LoadTestDialogData = inject(MAT_DIALOG_DATA);
-  private readonly cliService = inject(RedisCliService);
+  private readonly dialogRef = inject(MatDialogRef<LoadTestDialogComponent>);
+  private readonly jobsStore = inject(BackgroundJobsStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  // Form options
   readonly benchmarkMode = signal<'duration' | 'count'>('duration');
   readonly durationSeconds = signal<number>(10);
   readonly operationsCount = signal<number>(1000);
@@ -89,33 +93,67 @@ export class LoadTestDialogComponent {
   readonly concurrencyPresets = CONCURRENCY_PRESETS;
   readonly payloadPresets = PAYLOAD_PRESETS;
 
-  // Execution state
-  readonly isRunning = signal<boolean>(false);
-  readonly isStopping = signal<boolean>(false);
-  readonly errorMessage = signal<string | null>(null);
-  readonly liveProgress = signal<LoadTestProgress | null>(null);
-  readonly result = signal<LoadTestResult | null>(null);
+  readonly activeJobId = signal<string | null>(
+    this.data.jobId ??
+      this.jobsStore
+        .activeJobs()
+        .find(e => e.job.kind === 'load-test' && e.job.connectionId === this.data.connectionId)?.job
+        .jobId ??
+      null
+  );
+  private readonly starting = signal(false);
+  private readonly localError = signal<string | null>(null);
 
-  private activeTestId: string | null = null;
-  private abortController: AbortController | null = null;
+  private readonly entry = computed(() => {
+    const id = this.activeJobId();
+    return id ? (this.jobsStore.jobsById()[id] ?? null) : null;
+  });
+
+  readonly isRunning = computed(() => {
+    if (this.starting()) return true;
+    const status = this.entry()?.job.status;
+    return status ? isJobActive(status) : false;
+  });
+
+  readonly isStopping = computed(() => this.entry()?.job.status === 'Cancelling');
+
+  readonly liveProgress = computed<LoadTestProgress | null>(
+    () => (this.entry()?.job.metrics as LoadTestProgress | null) ?? null
+  );
+
+  readonly result = computed<LoadTestResult | null>(
+    () => (this.entry()?.resultData as LoadTestResult | null) ?? null
+  );
+
+  readonly errorMessage = computed(() => {
+    if (this.localError()) return this.localError();
+    const current = this.entry();
+    if (!current) return null;
+    if (current.expiredReason) return current.expiredReason;
+    if (current.job.status === 'Cancelled' && !current.job.hasResult) {
+      return 'Load test cancelled.';
+    }
+    return current.job.error ?? current.resultError ?? null;
+  });
+
+  readonly connectionStatus = computed(() =>
+    this.jobsStore.liveConnected() ? null : (this.jobsStore.connectionNotice() || 'Reconnecting live updates…')
+  );
+
+  readonly progressPercent = computed(() => this.entry()?.job.progressPercent ?? 0);
 
   constructor() {
-    this.destroyRef.onDestroy(() => {
-      if (this.abortController) {
-        this.abortController.abort();
-      }
-    });
+    const initialId = this.activeJobId();
+    if (initialId && !this.entry()) {
+      this.jobsStore.refreshJob(initialId);
+    }
   }
 
   startLoadTest(): void {
-    this.isRunning.set(true);
-    this.isStopping.set(false);
-    this.errorMessage.set(null);
-    this.result.set(null);
-    this.liveProgress.set(null);
-
-    const testId = 'bench_' + Date.now();
-    this.activeTestId = testId;
+    this.dialogRef.disableClose = true;
+    this.activeJobId.set(null);
+    this.starting.set(true);
+    this.localError.set(null);
 
     const isDuration = this.benchmarkMode() === 'duration';
     const request: LoadTestRequest = {
@@ -128,66 +166,40 @@ export class LoadTestDialogComponent {
       keyPrefix: '__bench_'
     };
 
-    this.abortController = this.cliService.streamLoadTest(
-      this.data.connectionId,
-      request,
-      testId,
-      progress => {
-        this.liveProgress.set(progress);
-      },
-      res => {
-        this.isRunning.set(false);
-        this.isStopping.set(false);
-        this.result.set(res);
-        this.activeTestId = null;
-        this.abortController = null;
-      },
-      err => {
-        this.isRunning.set(false);
-        this.isStopping.set(false);
-        this.errorMessage.set(err);
-        this.activeTestId = null;
-        this.abortController = null;
-      }
-    );
-  }
-
-  stopLoadTest(): void {
-    if (!this.activeTestId) return;
-    this.isStopping.set(true);
-
-    this.cliService
-      .stopLoadTest(this.data.connectionId, this.activeTestId)
+    this.jobsStore
+      .startJob('load-test', this.data.connectionId, request, {
+        database: this.data.database,
+        markSeen: true
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
-          // Progress stream will receive completed event and end gracefully
+        next: job => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.activeJobId.set(job.jobId);
         },
-        error: () => {
-          this.isStopping.set(false);
+        error: error => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.localError.set(error?.error?.detail || error?.message || 'Could not start the job.');
         }
       });
   }
 
-  reset(): void {
-    this.result.set(null);
-    this.liveProgress.set(null);
-    this.errorMessage.set(null);
-    this.isStopping.set(false);
+  stopLoadTest(): void {
+    const jobId = this.activeJobId();
+    if (!jobId) return;
+
+    this.jobsStore
+      .cancelJob(jobId)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => this.localError.set('Could not request cancellation.')
+      });
   }
 
-  readonly progressPercent = computed(() => {
-    const p = this.liveProgress();
-    if (!p) return 0;
-
-    if (this.benchmarkMode() === 'duration') {
-      const dur = this.durationSeconds();
-      if (!dur || dur <= 0) return 0;
-      return Math.min(100, (p.elapsedSeconds / dur) * 100);
-    } else {
-      const total = this.operationsCount();
-      if (!total || total <= 0) return 0;
-      return Math.min(100, (p.completedOperations / total) * 100);
-    }
-  });
+  reset(): void {
+    this.activeJobId.set(null);
+    this.localError.set(null);
+  }
 }

@@ -170,8 +170,8 @@ function showErrorNotification(
 ): void {
   snackBar.open(message, 'Close', {
     duration: durationInSeconds * 1000,
-    horizontalPosition: 'end',
-    verticalPosition: 'top',
+    horizontalPosition: 'center',
+    verticalPosition: 'bottom',
     panelClass: ['error-snackbar']
   });
 }

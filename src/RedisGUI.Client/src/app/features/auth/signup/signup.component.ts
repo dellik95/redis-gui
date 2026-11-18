@@ -137,8 +137,8 @@ export class SignupComponent {
           next: () => {
             this.snackBar.open('Registration successful! Please sign in.', 'Close', {
               duration: 4000,
-              horizontalPosition: 'end',
-              verticalPosition: 'top',
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
               panelClass: ['success-snackbar']
             });
             this.router.navigate(['/login']);
@@ -149,8 +149,8 @@ export class SignupComponent {
               error.error?.message || error.error?.detail || 'Registration failed';
             this.snackBar.open(errorMessage, 'Close', {
               duration: 5000,
-              horizontalPosition: 'end',
-              verticalPosition: 'top',
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
               panelClass: ['error-snackbar']
             });
           },

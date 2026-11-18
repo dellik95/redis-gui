@@ -40,11 +40,11 @@
 
     <div
       class="metric-pill pill-keys flex items-center gap-[5px] py-0.5 px-1.5 text-[12px]"
-      title="Total Keys"
+      [title]="activeDatabase() !== null ? 'Total Keys in DB ' + activeDatabase() : 'Total Keys'"
     >
       <mat-icon class="metric-icon !text-[15px] !w-[15px] !h-[15px] shrink-0">key</mat-icon>
       <span class="metric-label text-[11px] font-medium">Keys</span>
-      <span class="metric-val text-[12px] font-semibold">{{ resourceInfo.keyCount }}</span>
+      <span class="metric-val text-[12px] font-semibold">{{ displayedKeyCount() }}</span>
     </div>
   </div>
 } @else {

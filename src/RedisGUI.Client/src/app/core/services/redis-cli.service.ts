@@ -70,10 +70,19 @@ export interface SeedSampleDataOptions {
 }
 
 export interface SeedDataResult {
+  requestedKeys?: number | undefined;
+  processedKeys?: number | undefined;
+  persistedKeys?: number | undefined;
+  totalKeysSeeded?: number | undefined;
   totalKeysCreated: number;
+  failedKeys?: number | undefined;
+  failedCount?: number | undefined;
   targetDatabases: number[];
   keyCountPerType: Record<string, number>;
   summary: string;
+  cancelled: boolean;
+  mayHaveUnconfirmedChanges: boolean;
+  error: string | null;
 }
 
 @Injectable({
@@ -107,132 +116,24 @@ export class RedisCliService {
   /**
    * Retrieves memory usage of a specific Redis key
    */
-  getKeyMemoryUsage(connectionId: string, key: string): Observable<KeyMemoryResponse> {
+  getKeyMemoryUsage(
+    connectionId: string,
+    key: string,
+    database?: number,
+    keyBase64?: string | null
+  ): Observable<KeyMemoryResponse> {
+    const params = new URLSearchParams();
+    if (keyBase64) {
+      params.set('keyBase64', keyBase64);
+    } else {
+      params.set('key', key);
+    }
+    if (database !== undefined && database !== null) {
+      params.set('database', String(database));
+    }
     return this.http.get<KeyMemoryResponse>(
-      `${this.baseUrl}/${connectionId}/keys/${encodeURIComponent(key)}/memory`
+      `${this.baseUrl}/${connectionId}/key/memory?${params.toString()}`
     );
   }
 
-  /**
-   * Executes synthetic Redis load test with automated cleanup (one-shot POST)
-   */
-  runLoadTest(connectionId: string, request: LoadTestRequest): Observable<LoadTestResult> {
-    return this.http.post<LoadTestResult>(`${this.baseUrl}/${connectionId}/load-test`, request);
-  }
-
-  /**
-   * Starts real-time streaming load test via Server-Sent Events (SSE)
-   */
-  streamLoadTest(
-    connectionId: string,
-    request: LoadTestRequest,
-    testId: string,
-    onProgress: (progress: LoadTestProgress) => void,
-    onComplete: (result: LoadTestResult) => void,
-    onError: (error: string) => void
-  ): AbortController {
-    const controller = new AbortController();
-    const url = `${this.baseUrl}/${connectionId}/load-test/stream?testId=${encodeURIComponent(testId)}`;
-
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(request),
-      signal: controller.signal
-    })
-      .then(async response => {
-        if (!response.ok) {
-          const errText = await response.text();
-          onError(errText || `Server returned ${response.status}`);
-          return;
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          onError('ReadableStream not supported by browser');
-          return;
-        }
-
-        const decoder = new TextDecoder();
-        let buffer = '';
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-          const events = buffer.split('\n\n');
-          buffer = events.pop() ?? '';
-
-          for (const eventBlock of events) {
-            if (!eventBlock.trim()) continue;
-
-            let currentEvent = 'message';
-            let currentData = '';
-
-            for (const line of eventBlock.split('\n')) {
-              if (line.startsWith('event: ')) {
-                currentEvent = line.slice(7).trim();
-              } else if (line.startsWith('data: ')) {
-                currentData = line.slice(6).trim();
-              }
-            }
-
-            if (currentEvent === 'progress' && currentData) {
-              try {
-                onProgress(JSON.parse(currentData));
-              } catch (e) {
-                console.error('Error parsing progress SSE', e);
-              }
-            } else if (currentEvent === 'complete' && currentData) {
-              try {
-                onComplete(JSON.parse(currentData));
-              } catch (e) {
-                console.error('Error parsing complete SSE', e);
-              }
-            } else if (currentEvent === 'error' && currentData) {
-              try {
-                const parsed = JSON.parse(currentData);
-                onError(parsed.error || currentData);
-              } catch {
-                onError(currentData);
-              }
-            }
-          }
-        }
-      })
-      .catch(err => {
-        if (err.name !== 'AbortError') {
-          onError(err.message || 'Stream connection error');
-        }
-      });
-
-    return controller;
-  }
-
-  /**
-   * Stops a running load test immediately
-   */
-  stopLoadTest(
-    connectionId: string,
-    testId: string
-  ): Observable<{ message: string; stopped: boolean }> {
-    return this.http.post<{ message: string; stopped: boolean }>(
-      `${this.baseUrl}/${connectionId}/load-test/stop?testId=${encodeURIComponent(testId)}`,
-      {}
-    );
-  }
-
-  /**
-   * Seeds customizable sample data
-   */
-  seedSampleData(
-    connectionId: string,
-    options?: SeedSampleDataOptions
-  ): Observable<SeedDataResult> {
-    return this.http.post<SeedDataResult>(
-      `${this.baseUrl}/${connectionId}/seed-sample-data`,
-      options ?? {}
-    );
-  }
 }

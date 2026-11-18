@@ -52,7 +52,9 @@ public class RedisMetricsCollector : IMetricsCollector
 			var info = await server.InfoAsync();
 			var infoSections = info.ToDictionary(x => x.Key, x => x.Select(pair => new Tuple<string, string>(pair.Key, pair.Value)));
 
-			var newMetrics = metricsMap.AddOrUpdate(connection.Id, _ => new Domain.RedisMetrics.RedisMetrics(),
+			var newMetrics = metricsMap.AddOrUpdate(
+				connection.Id,
+				_ => new Domain.RedisMetrics.RedisMetrics().PopulateMetrics(infoSections),
 				(_, redisMetrics) =>
 				{
 					var currentMetrics = new Domain.RedisMetrics.RedisMetrics();

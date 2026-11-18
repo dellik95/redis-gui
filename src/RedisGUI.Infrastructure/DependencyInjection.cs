@@ -55,6 +55,7 @@ public static class DependencyInjection
 
 		services.AddSingleton<IRedisConnectionFactory, DefaultRedisConnectionFactory>();
 		services.AddSingleton<IRedisConnectionManager, RedisConnectionManager>();
+		services.AddSingleton<IRedisTopologyRegistry, RedisTopologyRegistry>();
 
 		// Register specialized Redis services
 		services.AddSingleton<IRedisTypeHandler, StringTypeHandler>();
@@ -66,13 +67,18 @@ public static class DependencyInjection
 		services.AddSingleton<IRedisTypeHandlerFactory, RedisTypeHandlerFactory>();
 		services.AddScoped<IRedisConnectionService, RedisConnectionService>();
 		services.AddScoped<IRedisKeyService, RedisKeyService>();
+		services.AddScoped<IConnectionAccessService, Authorization.ConnectionAccessService>();
+		services.AddScoped<JobIdentity>();
+		services.AddScoped<IExportSessionFactory, RedisExportSessionFactory>();
+		services.AddScoped<IRedisSnapshotService, RedisSnapshotService>();
 		services.AddScoped<IRedisLoadTestService, RedisLoadTestService>();
 		services.AddScoped<IRedisSeedDataService, RedisSeedDataService>();
 		services.AddScoped<IRedisCliService, RedisCliService>();
 		services.AddScoped<IRedisDiagnosticsService, RedisDiagnosticsService>();
 		services.AddScoped<IRedisValueService, RedisValueService>();
-		services.AddScoped<RedisMessagingService>();
-		services.AddScoped<RedisMessagingMetricsCollector>();
+		services.AddSingleton<RedisMessagingService>();
+		services.AddSingleton<RedisMessagingMetricsCollector>();
+		services.AddScoped<IRedisMessagingOperations, RedisMessagingOperations>();
 		services.AddSingleton<RedisGUI.Infrastructure.SignalR.Hubs.MessagingSubscriptions>();
 
 		AddAuthentication(services, configuration);
@@ -85,7 +91,7 @@ public static class DependencyInjection
 
 		AddApiVersioning(services);
 
-		AddBackgroundJobs(services);
+		AddBackgroundJobs(services, configuration);
 
 		AddSignalR(services);
 
@@ -147,7 +153,7 @@ public static class DependencyInjection
 			{
 				OnMessageReceived = context =>
 				{
-					if (context.Request.Path.StartsWithSegments("/hub/messaging"))
+					if (context.Request.Path.StartsWithSegments("/hub/messaging") || context.Request.Path.StartsWithSegments("/hub/jobs"))
 						context.Token = context.Request.Query["access_token"];
 					return Task.CompletedTask;
 				}
@@ -292,8 +298,16 @@ public static class DependencyInjection
 			});
 	}
 
-	private static void AddBackgroundJobs(IServiceCollection services)
+	private static void AddBackgroundJobs(IServiceCollection services, IConfiguration configuration)
 	{
+		services.AddOptions<BackgroundJobOptions>()
+			.Bind(configuration.GetSection(BackgroundJobOptions.SectionName))
+			.ValidateDataAnnotations()
+			.ValidateOnStart();
+		services.AddSingleton(TimeProvider.System);
+		services.AddSingleton<BackgroundJobSubscriptionRegistry>();
+		services.AddSingleton<BackgroundJobManager>();
+		services.AddHostedService(provider => provider.GetRequiredService<BackgroundJobManager>());
 		services.AddHostedService<RedisMetricsBackgroundJob>();
 		services.AddHostedService<ConnectionHealthMonitor>();
 		services.AddSingleton<IConnectionHealthMonitor>(sp =>

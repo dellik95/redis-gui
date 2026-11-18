@@ -13,7 +13,7 @@ COPY src/RedisGUI.Client/ ./
 RUN npm run build -- --configuration production
 
 # ==========================================
-# Stage 2: Build & Publish .NET 10 Backend
+# Stage 2: Build & Publish .NET 11 Backend
 # ==========================================
 FROM mcr.microsoft.com/dotnet/sdk:11.0 AS dotnet-build
 WORKDIR /src

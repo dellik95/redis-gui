@@ -1,6 +1,5 @@
 using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Application.Users.Commands.LoginUser;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Shared.Mediator;
@@ -13,78 +12,58 @@ using System.Threading.Tasks;
 namespace RedisGUI.Application.Core.Behaviors;
 
 /// <summary>
-/// MediatR pipeline behavior that automatically creates audit logs for commands
+/// Pipeline behavior that creates audit logs for commands marked with <see cref="AuditableAttribute"/>.
+/// Uses domain audit contracts so feature-specific outcome formatting stays decoupled.
 /// </summary>
-public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+public sealed class AuditingBehavior<TRequest, TResponse>(
+	IAuditLogRepository auditLogRepository,
+	IUnitOfWork unitOfWork,
+	ICurrentUserService currentUserService) : IPipelineBehavior<TRequest, TResponse>
 	where TRequest : IRequest<TResponse>
 {
-	private readonly IAuditLogRepository auditLogRepository;
-	private readonly IUnitOfWork unitOfWork;
-	private readonly ICurrentUserService currentUserService;
-
-	/// <summary>
-	/// Initializes a new instance of the AuditingBehavior
-	/// </summary>
-	public AuditingBehavior(
-		IAuditLogRepository auditLogRepository,
-		IUnitOfWork unitOfWork,
-		ICurrentUserService currentUserService)
-	{
-		this.auditLogRepository = auditLogRepository;
-		this.unitOfWork = unitOfWork;
-		this.currentUserService = currentUserService;
-	}
-
-	/// <summary>
-	/// Handles the pipeline behavior for auditing
-	/// </summary>
 	public async Task<TResponse> Handle(
 		TRequest request,
 		CancellationToken cancellationToken,
 		Func<Task<TResponse>> next)
 	{
-		// Check if the request should be audited
 		Type requestType = request.GetType();
 		var auditAttribute = requestType.GetCustomAttribute<AuditableAttribute>();
-		if (auditAttribute == null)
+		if (auditAttribute is null)
 		{
 			return await next();
 		}
 
-		// Execute the command
 		var response = await next();
 
-		// Only audit successful operations (check if response is a successful Result)
 		if (response is Result result && !result.IsSuccess)
 		{
 			return response;
 		}
 
-		// Extract entity ID if available from the response
-		Guid? entityId = null;
-		if (response is Result<Guid> guidResult)
-		{
-			entityId = guidResult.Value;
-		}
+		object? resultValue = response is IValueResult valueResult && valueResult.IsSuccess
+			? valueResult.UntypedValue
+			: null;
 
-		if (entityId == null && auditAttribute.EntityType == "Connection")
-		{
-			entityId = requestType.GetProperty("Id")?.GetValue(request) as Guid?
-				?? requestType.GetProperty("ConnectionId")?.GetValue(request) as Guid?;
-		}
+		Guid? entityId = resultValue is Guid id ? id : null;
 		Guid? actorId = currentUserService.UserId;
-		if (response is Result<LoginUserResponse> loginResult)
+
+		if (resultValue is IAuditActorResult actorResult)
 		{
-			actorId = loginResult.Value.UserId;
-			entityId = actorId;
+			actorId = actorResult.ActorUserId;
+			entityId = actorResult.AuditEntityId;
 		}
 
-		// Create audit metadata
+		if (entityId is null && request is IAuditEntityRequest entityRequest)
+		{
+			entityId = entityRequest.AuditEntityId;
+		}
+
+		string? outcome = (resultValue as IAuditOutcome)?.FormatAuditOutcome();
 		var metadata = AuditMetadata.Create(
 			ipAddress: currentUserService.IpAddress,
-			userAgent: currentUserService.UserAgent);
+			userAgent: currentUserService.UserAgent,
+			newValue: outcome);
 
-		// Create audit log
 		var auditLog = AuditLog.Create(
 			userId: actorId,
 			action: auditAttribute.Action,
@@ -93,7 +72,12 @@ public sealed class AuditingBehavior<TRequest, TResponse> : IPipelineBehavior<TR
 			metadata: metadata);
 
 		auditLogRepository.Add(auditLog);
-		await unitOfWork.SaveChangesAsync(cancellationToken);
+
+		bool persistOnCancellation = request is IAuditEntityRequest { PersistAuditOnCancellation: true };
+		await unitOfWork.SaveChangesAsync(
+			persistOnCancellation && cancellationToken.IsCancellationRequested
+				? CancellationToken.None
+				: cancellationToken);
 
 		return response;
 	}

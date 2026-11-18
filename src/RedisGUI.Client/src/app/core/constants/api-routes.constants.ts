@@ -44,6 +44,7 @@ export const API_ROUTES = {
    */
   STORAGE: {
     BASE: '/api/v1/storage',
+    SCAN: (connectionId: string) => `/api/v1/connections/${connectionId}/key-scan`,
     GET_ALL: (connectionId: string, pattern?: string, pageSize?: number, pageNumber?: number) => {
       const params = new URLSearchParams();
       if (pattern) params.set('pattern', pattern);
@@ -54,32 +55,53 @@ export const API_ROUTES = {
     },
     GET_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
+    KEY_BY_QUERY: (
+      connectionId: string,
+      key: string,
+      keyBase64?: string | null,
+      database?: number | null
+    ) => {
+      const params = new URLSearchParams();
+      if (keyBase64) {
+        params.set('keyBase64', keyBase64);
+      } else {
+        params.set('key', key);
+      }
+      if (database !== undefined && database !== null) {
+        params.set('database', String(database));
+      }
+      return `/api/v1/storage/${connectionId}/key?${params.toString()}`;
+    },
     ADD_VALUE: (connectionId: string) => `/api/v1/storage/${connectionId}`,
     UPDATE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
     DELETE_VALUE: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/${encodeURIComponent(key)}`,
-    DELETE_MULTIPLE: (connectionId: string) =>
-      `/api/v1/storage/${connectionId}/keys/delete-multiple`,
-    DELETE_BY_PATTERN: (connectionId: string, pattern: string) =>
-      `/api/v1/storage/${connectionId}/keys/pattern/${encodeURIComponent(pattern)}`,
     KEYS: (connectionId: string) => `/api/v1/storage/${connectionId}/keys`,
     KEY: (connectionId: string, key: string) =>
       `/api/v1/storage/${connectionId}/keys/${encodeURIComponent(key)}`,
     KEYSPACE: (connectionId: string) => `/api/v1/storage/${connectionId}/keyspace`,
     SLOWLOG: (id: string, count: number) => `/api/v1/storage/${id}/slowlog?count=${count}`,
-    SEED: (connectionId: string) => `/api/v1/storage/${connectionId}/seed`,
     RENAME_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/rename`,
-    DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`,
-    BULK_TTL: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/bulk-ttl`,
-    IMPORT: (connectionId: string) => `/api/v1/storage/${connectionId}/import`,
-    EXPORT: (connectionId: string, pattern?: string, format?: string) => {
+    DUPLICATE_KEY: (connectionId: string) => `/api/v1/storage/${connectionId}/keys/duplicate`
+  },
+
+  /**
+   * Background jobs endpoints
+   */
+  JOBS: {
+    BASE: '/api/v1/jobs',
+    KINDS: '/api/v1/jobs/kinds',
+    LIST: (connectionId?: string, status?: string) => {
       const params = new URLSearchParams();
-      if (pattern) params.set('pattern', pattern);
-      if (format) params.set('format', format);
+      if (connectionId) params.set('connectionId', connectionId);
+      if (status) params.set('status', status);
       const query = params.toString();
-      return `/api/v1/storage/${connectionId}/export${query ? `?${query}` : ''}`;
-    }
+      return `/api/v1/jobs${query ? `?${query}` : ''}`;
+    },
+    GET: (jobId: string) => `/api/v1/jobs/${jobId}`,
+    CANCEL: (jobId: string) => `/api/v1/jobs/${jobId}/cancel`,
+    RESULT: (jobId: string) => `/api/v1/jobs/${jobId}/result`
   },
 
   /**
@@ -133,7 +155,12 @@ export const SIGNALR_HUBS = {
   /**
    * Metrics hub for Redis metrics broadcasting
    */
-  METRICS: '/hub/metrics'
+  METRICS: '/hub/metrics',
+
+  /**
+   * Background jobs hub
+   */
+  JOBS: '/hub/jobs'
 } as const;
 
 /**

@@ -42,4 +42,9 @@ export interface Connection {
    * Safe Mode (Read-Only) flag
    */
   isReadOnly?: boolean | undefined;
+
+  /**
+   * Confirmed Redis server topology (Unknown, Standalone, Cluster, Sentinel)
+   */
+  serverMode?: 'Unknown' | 'Standalone' | 'Cluster' | 'Sentinel' | undefined;
 }

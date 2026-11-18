@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetConnectionHealth;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 
@@ -25,8 +26,9 @@ public class GetConnectionHealthEndpoint : IEndpoint
 			var query = new GetConnectionHealthQuery(connectionId);
 
 			return await sender.Send<GetConnectionHealthResponse>(query)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
+		.RequireAuthorization(Policies.Authenticated)
 		.WithName("GetConnectionHealth")
 		.WithSummary("Get connection health status")
 		.WithDescription("Returns the current health status of a Redis connection");

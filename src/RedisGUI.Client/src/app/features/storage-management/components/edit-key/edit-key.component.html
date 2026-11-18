@@ -15,11 +15,19 @@
             >
               {{ selectedKey()?.key }}
             </span>
+            @if (selectedKey()?.isBinary) {
+              <span
+                class="px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                matTooltip="Non-UTF-8 binary key bytes — Base64 identity preserved"
+              >
+                BIN
+              </span>
+            }
             <button
               mat-icon-button
               class="!w-6 !h-6"
               (click)="copyKeyName()"
-              matTooltip="Copy key name"
+              [matTooltip]="selectedKey()?.isBinary ? 'Copy key Base64' : 'Copy key name'"
             >
               <mat-icon>content_copy</mat-icon>
             </button>

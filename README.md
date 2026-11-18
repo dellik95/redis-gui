@@ -32,15 +32,20 @@ Full visual inspection and editing across all native Redis types using the **Str
 ### Messaging Inspector
 - Subscribe to literal pub/sub channels or patterns and publish messages. Pub/sub messages are transient and only appear while monitoring.
 - Inspect stream length, consumer-group count, last generated ID, and recent entries; new entries arrive over SignalR.
+- Watch live charts for delivery rate and direct subscribers or stream length, with current consumer-group and pattern-subscription counts.
 - Publishing respects user write access and connection Safe Mode.
 
-### ⚡ Real-Time Live Telemetry
-- Sub-second live metrics streamed over **SignalR WebSockets**: Ops/sec, Memory RSS, CPU usage, and network bandwidth.
-- Live status pills in the Storage Manager header with pulsing indicators.
+### ⚡ Real-Time Live Telemetry & Notification Center
+- Sub-second live metrics streamed over **SignalR WebSockets** (`/hub/metrics`): Ops/sec, Memory RSS, CPU usage, and network bandwidth.
+- **Typed Background Jobs & Notification Center** (`/hub/jobs`): Queue bulk deletes/TTLs, JSON/CSV exports, imports, synthetic load tests, and sample data seeding asynchronously with live progress, download leases, access-revocation enforcement (`AccessRevoked`), and a global header notification popover.
+- Live status pills in the Storage Manager header with pulsing indicators and **Cluster** mode badges.
 
-### 📂 Dual Exploration Modes
-- **Table View**: Fast virtual-scrolled data grid with instant pattern search, type filter chips, live TTL countdowns, and aligned column sorting (Key, Type, TTL, Size).
+### 📂 Dual Exploration Modes, Binary Keys & Cluster Safety
+- **Virtualized Table View**: An Angular CDK (`*cdkVirtualFor`) virtual-scrolled grid with threshold auto-pagination, Redis glob search, type filters, `BIN` binary-key badges (`KeyBase64`), TTL countdowns, and sorting of loaded keys. Cursor-based scans load key metadata incrementally; scroll or click **Load more** to continue.
 - **Namespace Tree View**: Hierarchical folder tree grouping keys by delimiter (`:`, `/`, `.`, etc.) with **direct subfolder key creation** via the folder `+` action.
+- **Redis Cluster Awareness**: Automatically detects Standalone vs. Cluster topology (`IRedisTopologyRegistry`), locks DB 0 in Cluster mode, traverses all Cluster primaries with HMAC-signed continuation cursors that fail fast on mid-scan `CLUSTER FAILOVER`, and parses `CLUSTER NODES`.
+
+The browser shows only keys discovered so far. Redis `SCAN` is not a snapshot: keys may change during a scan, and the count hint is not a strict page-size limit. Type counts, sorting, and tree contents apply to loaded results. The browser does not load values or report value sizes while scanning.
 
 ### 🛠️ Interactive Redis CLI Drawer
 - Built-in slide-out terminal drawer.
@@ -72,6 +77,10 @@ Full visual inspection and editing across all native Redis types using the **Str
 ---
 
 ## 📸 Screenshots Gallery
+
+| Live Pub/Sub Metrics | Live Stream Metrics |
+| :---: | :---: |
+| ![Live pub/sub metrics](docs/screenshots/17_pubsub_metrics.jpg) | ![Live stream metrics](docs/screenshots/18_stream_metrics.jpg) |
 
 | Dashboard & Metrics | Storage Manager (Table View) |
 | :---: | :---: |
@@ -113,19 +122,22 @@ RedisGUI follows **Clean Architecture** and **CQRS**:
 
 ```mermaid
 flowchart LR
-    Client["Angular 22 (Signals)"] <-->|REST & SignalR| Server["ASP.NET Core 10 Minimal APIs"]
-    Server --> MediatR["MediatR CQRS Pipeline"]
-    MediatR --> App["Application Core"]
-    App --> Domain["Domain (Pure Models & Contracts)"]
-    App --> Infra["Infrastructure (StackExchange.Redis, EF Core)"]
-    Infra <--> Redis[("Redis 7.x / 8.x")]
+    Client["Angular 22 (Signals & CDK Virtual Scroll)"] <-->|"REST (ProblemDetails) & 4 SignalR Hubs"| Server["ASP.NET Core 11 Minimal APIs"]
+    Server --> Mediator["Lock-Free In-Process Mediator (CAS Pipelines)"]
+    Mediator --> App["Application Core & Typed Job Handlers"]
+    App --> Domain["Domain (Entities, Value Objects & Topology Contracts)"]
+    App --> Infra["Infrastructure (Lock-Free Connection Pool, EF Core + FusionCache, Channels)"]
+    Infra <--> Redis[("Redis 7/8 Standalone & Cluster")]
+    Infra <--> MySQL[("MySQL 8.4 / InMemory")]
 ```
 
-- **Backend**: .NET 11, ASP.NET Core Minimal APIs, MediatR, FluentValidation, StackExchange.Redis, Entity Framework Core.
-- **Frontend**: Angular 22 (Standalone Components, Signals, Signal Forms), Angular Material 22, Tailwind CSS, Monaco Editor.
+- **Backend**: .NET 11, ASP.NET Core 11 Minimal APIs, lock-free in-process mediator, FluentValidation, StackExchange.Redis, Entity Framework Core + parameter-aware FusionCache query caching, `Channel<T>` background job workers, OpenTelemetry, RFC 9457 Problem Details.
+- **Frontend**: Angular 22 (Standalone Components, Signals, Signal Forms, `@ngrx/signals` stores, CDK Virtual Scroll), Angular Material 22, Tailwind CSS, Monaco Editor.
 - **Architecture Highlights**:
-  - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`) synced between client and server.
-  - **Strategy & Factory Patterns**: Handlers registered in DI container and resolved dynamically without manual `new` instantiation.
+  - **Lock-Free Coordination**: Lock-free `PipelineRegistry` (CAS array swaps), `RedisConnectionManager` state/ref-count machine, `KeyChangeSubscriptionManager`, and `BackgroundJobSubscriptionRegistry`.
+  - **Binary-Safe & Cluster-Aware**: Base64 key identity (`KeyBase64`, `IsBinary`) over query-safe routes plus `IRedisTopologyRegistry` Cluster detection & failover-safe cursor tokens.
+  - **No magic values**: Strongly-typed enums (`RedisDataType`, `UserRole`, `RedisServerMode`) synced between client and server.
+  - **Strategy & Factory Patterns**: Data type, naming, seed, and background job (`IBackgroundJobHandler`) strategies registered in DI and discovered dynamically.
   - **Invariant Culture Parsers**: Resilient reflection metrics collectors supporting any OS locale.
 
 ---
@@ -179,7 +191,7 @@ The test suite covers domain logic, CQRS handlers, type handlers, and infrastruc
 ```bash
 dotnet test RedisGUI.slnx
 ```
-*(350+ automated unit & integration tests)*
+*(460+ automated .NET 11 & Angular 22 unit/integration tests)*
 
 ---
 

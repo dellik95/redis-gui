@@ -11,7 +11,10 @@ public sealed class StreamTypeHandler : IRedisTypeHandler
 {
 	public RedisType Type => RedisType.Stream;
 
-	public async Task<Result<object?>> ReadRawAsync(IDatabase database, string key)
+	public Task<Result<object?>> ReadRawAsync(IDatabase database, string key) =>
+		ReadRawAsync(database, (RedisKey)key);
+
+	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		StreamEntry[] entries = await database.StreamRangeAsync(key, count: 100);
 		var formatted = entries.Select(entry => new
@@ -28,10 +31,14 @@ public sealed class StreamTypeHandler : IRedisTypeHandler
 		return JsonSerializer.Serialize(new { entries = rawValue });
 	}
 
-	public async Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl)
+	public Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl) =>
+		WriteAsync(database, (RedisKey)key, value, ttl);
+
+	public async Task<Result> WriteAsync(IDatabase database, RedisKey key, object value, TimeSpan? ttl)
 	{
 		if (value is IEnumerable<Dictionary<string, string>> streamEntries)
 		{
+			await database.KeyDeleteAsync(key);
 			foreach (var entry in streamEntries)
 			{
 				var nvs = entry.Select(kvp => new NameValueEntry(kvp.Key, kvp.Value)).ToArray();

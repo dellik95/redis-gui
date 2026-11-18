@@ -44,7 +44,7 @@ public class UpdateConnectionEndpoint : IEndpoint
 
 			Result result = await sender.Send(updateConnectionCommand, cancellationToken);
 
-			return result.IsSuccess ? Results.NoContent() : Results.BadRequest(result.Error);
+			return result.IsSuccess ? Results.NoContent() : result.Error.ToProblemDetails();
 		})
 		.WithName("UpdateConnection")
 		.WithSummary("Update a Redis connection")

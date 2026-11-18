@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.RedisMetrics.Queries;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Shared.Mediator;
 
@@ -25,8 +26,9 @@ public class GetConnectionMetricsEndpoint : IEndpoint
 			var query = new GetRedisMetricsQuery(connectionId);
 
 			return await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(query)
-				.Match(Results.Ok, Results.BadRequest);
+				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
+		.RequireAuthorization(Policies.Authenticated)
 		.WithName("GetConnectionMetrics")
 		.WithSummary("Get connection metrics")
 		.WithDescription("Returns current Redis system metrics for a connection");

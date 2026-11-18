@@ -40,7 +40,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CreateConnection
 					request.UserName,
 					request.Password);
 
-				return await sender.Send(createConnectionCommand, cancellationToken).Match(Results.Ok, Results.BadRequest);
+				return await sender.Send(createConnectionCommand, cancellationToken).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("CreateConnection")
 			.WithSummary("Create a new Redis connection")

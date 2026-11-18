@@ -20,6 +20,8 @@ This comprehensive guide walks you through getting started with **RedisGUI**, co
    - [Table View & Real-Time Telemetry](#table-view--real-time-telemetry)
    - [Namespace Tree View & Direct Subfolder Key Creation](#namespace-tree-view--direct-subfolder-key-creation)
    - [Column Sorting & Filters](#column-sorting--filters)
+   - [Import and Export](#import-and-export)
+   - [Bulk Key Operations](#bulk-key-operations)
    - [Command Palette (`Ctrl + K`)](#command-palette-ctrl--k)
    - [Creating Keys & Namespaces (Add Key Dialog)](#creating-keys--namespaces-add-key-dialog)
 5. [Visual Data Structure Editors](#5-visual-data-structure-editors)
@@ -40,7 +42,7 @@ This comprehensive guide walks you through getting started with **RedisGUI**, co
 
 ### Prerequisites
 Before running RedisGUI locally, ensure your machine has the following tools installed:
-* **.NET 10 SDK** (or later) — [Download .NET](https://dotnet.microsoft.com/download)
+* **.NET 11 SDK** (or later) — [Download .NET](https://dotnet.microsoft.com/download)
 * **Node.js 20+ & npm 10+** — [Download Node.js](https://nodejs.org)
 * **Docker & Docker Compose** (optional, recommended for quick start) — [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 * **Redis Server 7.x or 8.x** running locally on port 6379 or accessible over the network.
@@ -71,7 +73,7 @@ dotnet run --project src/RedisGUI.Server/RedisGUI.Server.csproj -c Debug
 ```
 The server will start listening on:
 * **Web UI & API**: `http://localhost:5000`
-* **Scalar / OpenAPI Explorer**: `http://localhost:5000/scalar/v1`
+* **Swagger / OpenAPI Explorer** *(Development mode)*: `http://localhost:5000/swagger`
 
 #### Optional: Frontend Live Development
 If developing Angular components with instant hot reload:
@@ -91,9 +93,10 @@ To spin up RedisGUI and a persistent Redis 7 server with a single command:
 docker compose up -d --build
 ```
 
-This launches two interconnected containers:
-1. `redisgui-redis`: Redis 7 server on port `6379`.
-2. `redisgui-app`: ASP.NET Core 10 server + Angular client on port `5000`.
+This launches three interconnected containers:
+1. `redisgui-redis`: Redis 7.4 server on port `6379`.
+2. `redisgui-mysql`: MySQL 8.4 database on port `3306`.
+3. `redisgui-web`: ASP.NET Core 11 server + Angular 22 client on port `5000`.
 
 To stop the containers:
 ```bash
@@ -154,6 +157,22 @@ Click **Add Connection** in the upper right header to register a new Redis insta
 
 The Storage Manager is the core workspace for querying, creating, and modifying Redis keys.
 
+### Bulk Key Operations
+
+Select keys to delete them or change their TTL. The confirmation shows the database and example keys; the result reports how many were changed, unchanged or missing, and failed. TTL accepts whole positive seconds, or zero to remove expiration. Deleting by pattern first previews one scan page; this sample may be partial and the keyspace can change before or during deletion. Folder deletion explicitly distinguishes loaded keys from all keys matching a pattern.
+
+Bulk operations run as background jobs with SignalR progress, a job ID, and a Stop button. Closing the dialog does not stop the operation. Pattern deletion scans incrementally, so it does not need to load the entire keyspace at once; stopping prevents further work after the current command and reports the final confirmed count. Selected-key and TTL operations run in batches of 100; stopping finishes the current batch. A failure can occur after some keys have already changed, and an in-flight command may leave an unconfirmed result. Refresh the key list before retrying. Bulk mutations require write access, permission to use the connection, and a connection outside Safe Mode. Pattern operations, including stopped operations, and completed selected-key batches are included in the audit log.
+
+### Import and Export
+
+Choose a database and key pattern in Storage Manager, then start an Export job for matching keys as JSON or CSV. Export scans every page and removes duplicate keys. It preserves binary key names, Redis values and types, including full streams, and the remaining TTL recorded when each key is captured. If a scanned key disappears or cannot be read, the export fails instead of returning a partial file. The dialog reports the number of keys processed, offers Stop, and provides a download when the job completes; the total key count is unknown, so there is no percentage. Closing the dialog leaves the job running, and reopening it in the same browser session restores its status.
+
+The files contain Base64-encoded key names and Redis `DUMP` payloads (`KeyBase64`, `DumpBase64`, `Type`, and `TtlMilliseconds`). This format replaces the older value-based export and is not readable by older RedisGUI versions. Import accepts this format and legacy string records; legacy non-string records are rejected because they cannot be restored safely. Redis `RESTORE` compatibility depends on the destination Redis version and installed modules. The Redis account needs permissions for `SCAN`, `TYPE`, `PTTL`, `EVAL`, `DUMP` and, for import, `RESTORE`.
+
+Import targets the selected database, skips existing keys, and reports imported, skipped, and failed counts. It runs as a cancellable background job after the file is submitted. A cancelled import returns confirmed counts; if a Redis command was in flight, its result may be unknown and the keys should be refreshed before retrying. The browser currently accepts files up to 10 MB and loads the file into memory; the submitted content and parsed records also use server memory, subject to a shared queue payload limit. Heavily escaped JSON may exceed the request limit even when the file is smaller than 10 MB. Larger exports cannot be imported through this dialog. Safe Mode blocks import. TTLs represent remaining time at capture and restart on import, rather than counting down while the file is stored.
+
+An export is a scan of a changing database, not a point-in-time backup: keys created, modified, deleted, or moved during the scan may not be represented consistently. For a consistent backup, use Redis's persistence and backup facilities. The server stores temporary export data and a deduplication index on disk until the request completes; a process crash can leave an index file containing key names in the system temporary directory. Memory usage depends on the largest individual value and the browser holds the downloaded file in memory. Ensure adequate temporary disk space and protect the exported files.
+
 ### Table View & Real-Time Telemetry
 
 ![Storage Manager Table View](screenshots/03_storage_table.png)
@@ -163,9 +182,13 @@ The Storage Manager is the core workspace for querying, creating, and modifying 
   * **Memory**: Resident Set Size (RSS) memory consumed by Redis, formatted dynamically (e.g., `42.5 MB`).
   * **Network**: Real-time network throughput (Kb/s in and out).
   * **Keys**: Total number of keys in the currently active database.
-* **Database Selector**: Switch instantly between logical databases (`DB 0` through `DB 15`) with real-time key counts per database.
+* **Database Selector**: Switch between logical databases (`DB 0` through `DB 15`) with real-time key counts per database. When Redis Cluster topology is confirmed, connections display a **Cluster** badge in the sidebar, connection card, health card, and toolbar chip, and key browsing locks to **DB 0**.
 * **Data Type Chips**: Filter by key type (`All`, `String`, `Hash`, `List`, `Set`, `ZSet`, `Stream`) with badge counts.
 * **Pattern Search**: Search keys using glob patterns (e.g. `user:*`, `session:2026:*`).
+* **Virtual Scrolling & Incremental Continuation**: The key table renders rows via CDK virtual scrolling (`*cdkVirtualFor`) and automatically loads subsequent `SCAN` cursor pages as you scroll near the end (skipping empty cursor hops automatically while showing **Load more**, **Retry**, or **End of scan** states). Loaded keys in browser memory are capped at 10,000 entries—use the pattern filter for larger keyspaces. Non-UTF-8 keys show a **BIN** badge and preserve their Base64 raw-byte identity across view, edit, rename, duplicate, and bulk delete/TTL operations.
+* **Partial results**: Type counts, sorting, selection and the namespace tree apply to loaded keys. Redis scanning is not a snapshot, so keys can change during the scan. Refresh to restart, including after a topology change. The browser does not load values or report their sizes while scanning.
+* **Cluster requirements**: Each scan page checks node roles using `ROLE`. The Redis user must be allowed to run that command, and all discovered cluster nodes must be reachable. If the primary set changes, restart the scan; an unavailable node stops the scan instead of returning a potentially incomplete result. Stream monitors (`WatchStream`) and server info (`ClusterNodes` section) also adapt to Cluster topology.
+* **Background Jobs Notification Center**: The top-bar bell shows running and unread completed/failed/cancelled jobs across reloads and navigations via a shared SignalR connection, letting you stop, refresh, inspect details, download exports, or see clear expiration reasons.
 
 ### Namespace Tree View & Full Management Controls
 
@@ -191,7 +214,7 @@ Switch from flat Table view to hierarchical **Tree View** using the toggle in th
 
 ### Column Sorting & Filters
 
-* Click any sortable column header (**Key**, **Type**, **TTL**, **Size**) to toggle ascending and descending order.
+* Click any sortable column header (**Key**, **Type**, **TTL**) to toggle ascending and descending order of the currently loaded keys.
 * The sort icon is aligned and centered with the column title for clear visibility.
 * TTL column includes real-time live countdown badges with color-coded urgency (red for `< 60s`, green for persistent).
 
@@ -282,7 +305,9 @@ Measure Redis server throughput, latency, and concurrency under realistic condit
   * *Write Heavy*: 80% SET, 20% GET.
   * *Balanced*: 50% GET, 50% SET.
 * **Comprehensive Metrics**: Displays total elapsed time, Requests Per Second (RPS), and latency percentiles (`p50`, `p95`, `p99`).
-* **Automatic Cleanup**: Benchmark keys (`bench:*`) are automatically removed upon completion.
+* **Automatic Cleanup**: The application attempts to remove benchmark keys (`__bench:*`) when the test stops.
+
+Load tests run as background jobs. The dialog shows the job ID and receives progress over SignalR; closing it does not stop the job. Reopen the dialog in the same browser session to check its status or request cancellation. Live updates reconnect automatically, and **Refresh status** is available when the connection is unavailable. Jobs and their results are held in the application process for 30 minutes after completion and are lost if the server restarts; they are not shared across server instances. Cleanup is attempted on completion or cancellation.
 
 ---
 
@@ -299,6 +324,8 @@ Populate empty or test databases with synthetic data structures in seconds:
   * *UUID*: `orders:hash:3f4a-9b1c-...`
 * **Data Types**: Choose any combination of Strings, Hashes, Lists, Sets, Sorted Sets, and Streams.
 * **TTL Strategy**: Persistent keys, randomized expirations, or mixed lifetimes.
+
+Seeding runs as a background job with live progress and a Stop action. Stopping finishes the current key and reports the confirmed count; a write failure may leave unconfirmed changes. Jobs continue if the dialog closes and can be reopened in the same browser session. Use a test database and a suitable prefix: generated names can overlap existing keys.
 
 ---
 
@@ -337,5 +364,11 @@ RedisGUI features a design system supporting dark and light themes:
 ## Messaging Inspector
 
 Connect to a Redis instance and select **Messaging Inspector** in the sidebar. In **Pub/Sub**, enter a channel or pattern and start monitoring. Pattern subscriptions use Redis glob syntax; publishing always treats the channel as a literal name. Messages sent before monitoring begins or while disconnected are not retained by pub/sub. The display keeps the most recent 200 messages. Channel info reports direct subscribers for the literal channel and the server-wide pattern subscription count on the selected Redis server; pattern subscribers are not included in the direct count. Publishing is unavailable for read-only users and connections in Safe Mode.
+
+While monitoring, the **Live metrics** panel charts the rate delivered to this monitor and either direct subscribers or stream length. It also shows the delivered total and the server's pattern subscription count or the stream's consumer-group count. Counts are sampled from the selected Redis server or database once per second and sent over SignalR; the chart keeps up to 60 samples. Delivery rate is not server-wide throughput, and stream delivery excludes the initial snapshot. Pattern subscriptions have no direct-subscriber count. History and delivered totals reset when monitoring starts or reconnects; a warning indicates when sampling fails and retries. Redis permissions must allow the relevant PUBSUB and XINFO commands.
+
+![Live pub/sub metrics](screenshots/17_pubsub_metrics.jpg)
+
+![Live stream metrics](screenshots/18_stream_metrics.jpg)
 
 In **Streams**, enter an existing stream key and select **Inspect and monitor**. The inspector loads its length, consumer-group count, last generated ID and up to 100 recent entries, then displays new entries as they arrive. It retains up to 200 displayed entries. Stream monitoring reads the connection’s configured Redis database and resumes from the last received ID after a SignalR reconnect. Select Stop to end monitoring.

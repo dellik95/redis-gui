@@ -13,11 +13,15 @@ public interface IRedisDiagnosticsService
 	/// <param name="connection">The target Redis connection.</param>
 	/// <param name="key">The key name.</param>
 	/// <param name="cancellationToken">Cancellation token.</param>
+	/// <param name="database">Optional logical database index.</param>
+	/// <param name="keyBase64">Optional Base64-encoded key bytes.</param>
 	/// <returns>Key memory usage in bytes.</returns>
 	Task<Result<long>> GetKeyMemoryUsageAsync(
 		RedisConnection connection,
 		string key,
-		CancellationToken cancellationToken = default);
+		CancellationToken cancellationToken = default,
+		int? database = null,
+		string? keyBase64 = null);
 
 	/// <summary>
 	/// Gets the keyspace statistics (keys count per database).

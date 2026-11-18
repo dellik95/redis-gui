@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using RedisGUI.Application.Core.Services;
 using System.Security.Claims;
+using RedisGUI.Infrastructure.BackgroundJobs;
 
 namespace RedisGUI.Infrastructure.Services;
 
@@ -10,10 +11,12 @@ namespace RedisGUI.Infrastructure.Services;
 internal sealed class CurrentUserService : ICurrentUserService
 {
 	private readonly IHttpContextAccessor _httpContextAccessor;
+	private readonly JobIdentity? jobIdentity;
 
-	public CurrentUserService(IHttpContextAccessor httpContextAccessor)
+	public CurrentUserService(IHttpContextAccessor httpContextAccessor, JobIdentity? jobIdentity = null)
 	{
 		_httpContextAccessor = httpContextAccessor;
+		this.jobIdentity = jobIdentity;
 	}
 
 	/// <summary>
@@ -23,8 +26,8 @@ internal sealed class CurrentUserService : ICurrentUserService
 	{
 		get
 		{
-			string? userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
-				?? _httpContextAccessor.HttpContext?.User?.FindFirst("sub")?.Value;
+			var user = _httpContextAccessor.HttpContext?.User ?? jobIdentity?.Principal;
+			string? userIdClaim = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? user?.FindFirst("sub")?.Value;
 
 			return Guid.TryParse(userIdClaim, out Guid userId) ? userId : null;
 		}
@@ -43,5 +46,5 @@ internal sealed class CurrentUserService : ICurrentUserService
 	/// <summary>
 	/// Gets whether the user is authenticated
 	/// </summary>
-	public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User?.Identity?.IsAuthenticated ?? false;
+	public bool IsAuthenticated => (_httpContextAccessor.HttpContext?.User ?? jobIdentity?.Principal)?.Identity?.IsAuthenticated ?? false;
 }

@@ -6,6 +6,9 @@ import { API_ROUTES } from '../../constants/api-routes.constants';
 import { TokenStorageService } from './token-storage.service';
 import { ConnectionsStore } from '../../stores/connections.store';
 import { AuthStore } from '../../stores/auth.store';
+import { SideNavStore } from '../../stores/side-nav.store';
+import { RedisKeysStore } from '../../stores/redis-keys.store';
+import { BackgroundJobsStore } from '../../stores/background-jobs.store';
 import {
   User,
   UserRole,
@@ -28,6 +31,9 @@ export class AuthService {
   private readonly tokenStorage = inject(TokenStorageService);
   private readonly connectionsStore = inject(ConnectionsStore);
   private readonly authStore = inject(AuthStore);
+  private readonly sideNavStore = inject(SideNavStore);
+  private readonly redisKeysStore = inject(RedisKeysStore);
+  private readonly backgroundJobsStore = inject(BackgroundJobsStore);
 
   // 3. Exposed store signals
   /** Current authenticated user */
@@ -101,6 +107,9 @@ export class AuthService {
    */
   logout(): void {
     this.connectionsStore.resetSession();
+    this.redisKeysStore.resetSession();
+    this.sideNavStore.resetSession(true);
+    this.backgroundJobsStore.resetSession(true);
     this.tokenStorage.clear();
     this.authStore.clearUser();
     this.router.navigate(['/login']);

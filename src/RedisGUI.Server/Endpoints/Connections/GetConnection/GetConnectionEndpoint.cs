@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetConnectionById;
 using RedisGUI.Application.Connections.Shared;
+using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Server.Abstraction;
 
@@ -20,8 +21,9 @@ namespace RedisGUI.Server.Endpoints.Connections.GetConnection
 			routerBuilder.MapGet("connections/{id:guid}", async (IMediator sender, Guid id) =>
 				{
 					var query = new GetConnectionByIdQuery(id);
-					return await sender.Send<GetConnectionResponse>(query).Match(Results.Ok, Results.BadRequest);
+					return await sender.Send<GetConnectionResponse>(query).Match(Results.Ok, error => error.ToProblemDetails());
 				})
+				.RequireAuthorization(Policies.Authenticated)
 				.WithOpenApi();
 		}
 	}

@@ -1,4 +1,8 @@
-<div class="tree-wrapper py-3 px-4 overflow-y-auto overflow-x-hidden h-full box-border">
+<div
+  #treeWrapper
+  class="tree-wrapper py-3 px-4 overflow-y-auto overflow-x-hidden h-full box-border"
+  (scroll)="onTreeScroll($event)"
+>
   @if (isLoading() && dataSource().length === 0) {
     <div class="tree-loading">
       <mat-spinner diameter="32"></mat-spinner>

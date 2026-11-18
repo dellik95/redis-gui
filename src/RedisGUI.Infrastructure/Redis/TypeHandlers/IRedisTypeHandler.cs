@@ -20,6 +20,9 @@ public interface IRedisTypeHandler
 	/// <returns>Raw result from Redis command.</returns>
 	Task<Result<object?>> ReadRawAsync(IDatabase database, string key);
 
+	/// <summary>Reads the raw value using a binary-safe <see cref="RedisKey"/>.</summary>
+	Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key) => ReadRawAsync(database, key.ToString());
+
 	/// <summary>
 	/// Serializes the raw value into a JSON or string representation suitable for the UI editor.
 	/// </summary>
@@ -36,4 +39,8 @@ public interface IRedisTypeHandler
 	/// <param name="ttl">Optional TTL.</param>
 	/// <returns>Result indicating success or failure.</returns>
 	Task<Result> WriteAsync(IDatabase database, string key, object value, TimeSpan? ttl);
+
+	/// <summary>Writes or updates the value using a binary-safe <see cref="RedisKey"/>.</summary>
+	Task<Result> WriteAsync(IDatabase database, RedisKey key, object value, TimeSpan? ttl) =>
+		WriteAsync(database, key.ToString(), value, ttl);
 }

@@ -1,5 +1,6 @@
 #nullable enable
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -161,27 +162,27 @@ namespace RedisGUI.Shared.Mediator
 		private sealed record PipelineRegistration(Type InterfaceType, Func<object> Factory);
 		private sealed record OpenPipelineRegistration(Type BehaviorType, Func<Type, object?> Factory);
 
-		private readonly ConcurrentBag<PipelineRegistration> behaviors = new();
-		private readonly ConcurrentBag<OpenPipelineRegistration> openBehaviors = new();
+		private PipelineRegistration[] behaviors = [];
+		private OpenPipelineRegistration[] openBehaviors = [];
 
 		public void AddBehavior<TRequest, TResult>(IPipelineBehavior<TRequest, TResult> behavior)
 			where TRequest : IRequest<TResult>
 		{
 			var interfaceType = typeof(IPipelineBehavior<TRequest, TResult>);
-			behaviors.Add(new PipelineRegistration(interfaceType, () => behavior));
+			AppendLockFree(ref behaviors, new PipelineRegistration(interfaceType, () => behavior));
 		}
 
 		public void AddBehavior<TRequest, TResult>(Func<IPipelineBehavior<TRequest, TResult>> factory)
 			where TRequest : IRequest<TResult>
 		{
 			var interfaceType = typeof(IPipelineBehavior<TRequest, TResult>);
-			behaviors.Add(new PipelineRegistration(interfaceType, () => factory()));
+			AppendLockFree(ref behaviors, new PipelineRegistration(interfaceType, () => factory()));
 		}
 
 		internal void AddBehavior(Type requestType, Type resultType, Func<object> factory)
 		{
 			var interfaceType = typeof(IPipelineBehavior<,>).MakeGenericType(requestType, resultType);
-			behaviors.Add(new PipelineRegistration(interfaceType, factory));
+			AppendLockFree(ref behaviors, new PipelineRegistration(interfaceType, factory));
 		}
 
 		internal void AddOpenBehavior(Type behaviorType, Func<Type, object?> factory)
@@ -191,18 +192,35 @@ namespace RedisGUI.Shared.Mediator
 				throw new ArgumentException("Behavior type must be an open generic definition.", nameof(behaviorType));
 			}
 
-			openBehaviors.Add(new OpenPipelineRegistration(behaviorType, factory));
+			AppendLockFree(ref openBehaviors, new OpenPipelineRegistration(behaviorType, factory));
 		}
 
-		public IEnumerable<IPipelineBehavior<TRequest, TResult>> GetBehaviors<TRequest, TResult>()
+		private static void AppendLockFree<T>(ref T[] array, T item)
+		{
+			while (true)
+			{
+				var current = Volatile.Read(ref array);
+				T[] next = [.. current, item];
+				if (ReferenceEquals(Interlocked.CompareExchange(ref array, next, current), current))
+				{
+					return;
+				}
+			}
+		}
+
+		public IEnumerable<IPipelineBehavior<TRequest, TResult>> GetBehaviors<TRequest, TResult>(bool includeOpen = true)
 			where TRequest : IRequest<TResult>
 		{
 			var interfaceType = typeof(IPipelineBehavior<TRequest, TResult>);
-			var resolved = behaviors
+			var currentBehaviors = Volatile.Read(ref behaviors);
+			var resolved = currentBehaviors
 				.Where(b => b.InterfaceType == interfaceType)
 				.Select(b => (IPipelineBehavior<TRequest, TResult>)b.Factory());
 
-			var openResolved = openBehaviors
+			if (!includeOpen) return resolved;
+
+			var currentOpen = Volatile.Read(ref openBehaviors);
+			var openResolved = currentOpen
 				.Select(InstantiateOpenBehavior<TRequest, TResult>)
 				.Where(static behavior => behavior is not null)
 				.Cast<IPipelineBehavior<TRequest, TResult>>();
@@ -244,34 +262,34 @@ namespace RedisGUI.Shared.Mediator
 
 	public class NotificationRegistry
 	{
-		private readonly ConcurrentDictionary<Type, ConcurrentBag<Func<object>>> handlers = new();
+		private readonly ConcurrentDictionary<Type, ImmutableArray<Func<object>>> handlers = new();
 
 		public void AddHandler<TNotification>(INotificationHandler<TNotification> handler)
 			where TNotification : INotification
 		{
-			var bag = handlers.GetOrAdd(typeof(TNotification), _ => new ConcurrentBag<Func<object>>());
-			bag.Add(() => handler);
+			AddHandler(typeof(TNotification), () => handler);
 		}
 
 		public void AddHandler<TNotification>(Func<INotificationHandler<TNotification>> factory)
 			where TNotification : INotification
 		{
-			var bag = handlers.GetOrAdd(typeof(TNotification), _ => new ConcurrentBag<Func<object>>());
-			bag.Add(() => factory());
+			AddHandler(typeof(TNotification), () => factory());
 		}
 
 		internal void AddHandler(Type notificationType, Func<object> factory)
 		{
-			var bag = handlers.GetOrAdd(notificationType, _ => new ConcurrentBag<Func<object>>());
-			bag.Add(factory);
+			handlers.AddOrUpdate(
+				notificationType,
+				_ => [factory],
+				(_, existing) => existing.Add(factory));
 		}
 
 		public IEnumerable<INotificationHandler<TNotification>> GetHandlers<TNotification>()
 			where TNotification : INotification
 		{
-			if (handlers.TryGetValue(typeof(TNotification), out var handlerBag))
+			if (handlers.TryGetValue(typeof(TNotification), out var handlerArray))
 			{
-				return handlerBag.Select(factory => (INotificationHandler<TNotification>)factory());
+				return handlerArray.Select(factory => (INotificationHandler<TNotification>)factory());
 			}
 
 			return Enumerable.Empty<INotificationHandler<TNotification>>();

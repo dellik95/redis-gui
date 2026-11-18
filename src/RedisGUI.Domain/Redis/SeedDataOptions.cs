@@ -1,3 +1,5 @@
+using RedisGUI.Domain.Audit;
+
 namespace RedisGUI.Domain.Redis;
 
 /// <summary>
@@ -29,10 +31,18 @@ public sealed class SeedSampleDataOptions
 /// <summary>
 /// Execution summary of seeded sample data
 /// </summary>
-public sealed class SeedDataResult
+public sealed class SeedDataResult : IAuditOutcome
 {
+	public bool Cancelled { get; set; }
+	public bool MayHaveUnconfirmedChanges { get; set; }
+	public string? Error { get; set; }
+	public int RequestedKeys { get; set; }
+	public int ProcessedKeys { get; set; }
 	public int TotalKeysSeeded { get; set; }
 	public int TotalKeysCreated { get => TotalKeysSeeded; set => TotalKeysSeeded = value; }
+	public int PersistedKeys { get => TotalKeysSeeded; set => TotalKeysSeeded = value; }
+	public int FailedKeys { get; set; }
+	public int FailedCount { get => FailedKeys; set => FailedKeys = value; }
 
 	public Dictionary<string, int> CountByType { get; set; } = new();
 	public Dictionary<string, int> KeyCountPerType { get => CountByType; set => CountByType = value; }
@@ -42,4 +52,7 @@ public sealed class SeedDataResult
 
 	public string Message { get; set; } = string.Empty;
 	public string Summary { get => Message; set => Message = value; }
+
+	public string FormatAuditOutcome() =>
+		$"Requested {RequestedKeys}, processed {ProcessedKeys}, persisted {TotalKeysSeeded}, failed {FailedKeys}; cancelled: {Cancelled}; unconfirmed changes: {MayHaveUnconfirmedChanges}.";
 }

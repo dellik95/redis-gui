@@ -1,0 +1,141 @@
+<button
+  mat-icon-button
+  type="button"
+  class="job-bell-btn"
+  [matMenuTriggerFor]="jobsMenu"
+  (menuOpened)="jobsStore.markAllRead()"
+  [matBadge]="jobsStore.badgeCount() || null"
+  matBadgeColor="accent"
+  matBadgeSize="small"
+  aria-label="Background jobs and notifications"
+  matTooltip="Background jobs"
+>
+  <mat-icon [class.text-brand]="jobsStore.activeCount() > 0">
+    {{ jobsStore.activeCount() > 0 ? 'notifications_active' : 'notifications' }}
+  </mat-icon>
+</button>
+
+<mat-menu #jobsMenu="matMenu" class="job-notification-menu">
+  <div class="job-menu-header" (click)="$event.stopPropagation()">
+    <div class="flex flex-col">
+      <span class="text-[13px] font-semibold text-canvas-text">Background Jobs</span>
+      @if (!jobsStore.liveConnected()) {
+        <span class="text-[11px] text-amber-600 dark:text-amber-400">
+          {{ jobsStore.connectionNotice() || 'Reconnecting…' }}
+        </span>
+      }
+    </div>
+    @if (jobsStore.visibleJobs().length > 0) {
+      <button mat-button type="button" class="!text-[11px]" (click)="clearCompleted($event)">
+        Clear finished
+      </button>
+    }
+  </div>
+
+  <div class="job-menu-list" (click)="$event.stopPropagation()">
+    @if (jobsStore.visibleJobs().length === 0) {
+      <div class="job-empty text-[12px] text-canvas-muted px-4 py-5 text-center">
+        No active or recent background jobs.
+      </div>
+    } @else {
+      @for (entry of jobsStore.visibleJobs(); track entry.job.jobId) {
+        <div
+          class="job-card px-3 py-1.5 border-b border-canvas-border last:border-b-0"
+          role="region"
+          [attr.aria-label]="labelFor(entry.job)"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[12px] font-semibold text-canvas-text truncate">
+                  {{ labelFor(entry.job) }}
+                </span>
+                <span
+                  class="status-pill text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                  [class.status-running]="isActive(entry)"
+                  [class.status-completed]="entry.job.status === 'Completed'"
+                  [class.status-failed]="entry.job.status === 'Failed'"
+                  [class.status-cancelled]="entry.job.status === 'Cancelled'"
+                >
+                  {{ entry.job.status }}
+                </span>
+              </div>
+              <div class="text-[11px] text-canvas-muted truncate mt-0.5">
+                @if (entry.job.connectionName) {
+                  <span>{{ entry.job.connectionName }} · </span>
+                }
+                <span>{{ entry.job.updatedAt | date: 'shortTime' }}</span>
+              </div>
+            </div>
+            @if (!isActive(entry)) {
+              <button
+                mat-icon-button
+                type="button"
+                class="!w-6 !h-6 shrink-0"
+                (click)="dismiss($event, entry.job.jobId)"
+                aria-label="Dismiss notification"
+                matTooltip="Dismiss"
+              >
+                <mat-icon class="!text-[16px]">close</mat-icon>
+              </button>
+            }
+          </div>
+
+          @if (isActive(entry)) {
+            <div class="mt-1.5">
+              <mat-progress-bar
+                [mode]="entry.job.progressPercent === null ? 'indeterminate' : 'determinate'"
+                [value]="entry.job.progressPercent ?? 0"
+              />
+            </div>
+          }
+
+          @if (formatMetricsSummary(entry); as summary) {
+            <div class="text-[11px] text-canvas-text mt-1">{{ summary }}</div>
+          }
+
+          @if (entry.expiredReason || entry.job.error) {
+            <div class="text-[11px] text-red-600 dark:text-red-400 mt-1" role="alert">
+              {{ entry.expiredReason || entry.job.error }}
+            </div>
+          }
+
+          <div class="flex items-center justify-end gap-1 mt-0.5">
+            @if (isActive(entry)) {
+              <button
+                mat-button
+                type="button"
+                color="warn"
+                class="!text-[11px] !min-w-0 !h-6 !leading-6 !px-2"
+                [disabled]="entry.job.status === 'Cancelling'"
+                (click)="stopJob($event, entry.job.jobId)"
+              >
+                {{ entry.job.status === 'Cancelling' ? 'Stopping…' : 'Stop' }}
+              </button>
+            }
+            @if (entry.job.kind === 'redis-export' && entry.job.hasResult) {
+              <button
+                mat-button
+                type="button"
+                color="primary"
+                class="!text-[11px] !min-w-0 !h-6 !leading-6 !px-2"
+                (click)="downloadResult($event, entry)"
+              >
+                Download
+              </button>
+            }
+            <button
+              mat-button
+              type="button"
+              color="primary"
+              class="!text-[11px] !min-w-0 !h-6 !leading-6 !px-2"
+              (click)="openDetails(entry)"
+            >
+              Details
+            </button>
+          </div>
+        </div>
+      }
+    }
+  </div>
+</mat-menu>

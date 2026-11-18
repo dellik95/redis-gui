@@ -1,18 +1,17 @@
 import { SeedResult } from './seed-result';
-import { Component, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
+import { Component, computed, inject, signal, ChangeDetectionStrategy, DestroyRef } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
-import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  RedisCliService,
-  SeedSampleDataOptions,
-  SeedDataResult
-} from '../../../../core/services/redis-cli.service';
+import { SeedSampleDataOptions, SeedDataResult } from '../../../../core/services/redis-cli.service';
+import { BackgroundJobsStore } from '../../../../core/stores/background-jobs.store';
+import { SeedDataJobProgress, isJobActive } from '../../../../core/models/background-jobs.types';
 import { NumberPresetOption, NumberPresetPickerComponent } from '../../../../shared/components';
+import { UiButtonComponent } from '../../../../shared/ui';
 
 const KEY_COUNT_PRESETS: readonly NumberPresetOption[] = [
   { value: 25, label: '25' },
@@ -20,7 +19,9 @@ const KEY_COUNT_PRESETS: readonly NumberPresetOption[] = [
   { value: 100, label: '100' },
   { value: 250, label: '250' },
   { value: 500, label: '500' },
-  { value: 1000, label: '1,000' }
+  { value: 1000, label: '1,000' },
+  { value: 5000, label: '5,000' },
+  { value: 10000, label: '10,000' }
 ];
 const RANDOM_DATABASE_PRESETS: readonly NumberPresetOption[] = [
   { value: 2, label: '2 DBs' },
@@ -32,6 +33,7 @@ const RANDOM_DATABASE_PRESETS: readonly NumberPresetOption[] = [
 export interface SeedDataDialogData {
   connectionId: string;
   database: number;
+  jobId?: string | undefined;
 }
 
 @Component({
@@ -45,7 +47,8 @@ export interface SeedDataDialogData {
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    NumberPresetPickerComponent
+    NumberPresetPickerComponent,
+    UiButtonComponent
   ],
   templateUrl: './seed-data-dialog.component.html',
   styleUrl: './seed-data-dialog.component.scss',
@@ -53,12 +56,12 @@ export interface SeedDataDialogData {
 })
 export class SeedDataDialogComponent {
   readonly data: SeedDataDialogData = inject(MAT_DIALOG_DATA);
-  private readonly cliService = inject(RedisCliService);
+  private readonly jobsStore = inject(BackgroundJobsStore);
+  readonly dialogRef = inject(MatDialogRef<SeedDataDialogComponent>);
   private readonly destroyRef = inject(DestroyRef);
 
   readonly availableDbs = Array.from({ length: 16 }, (_, i) => i);
 
-  // Form Signals
   readonly keyCount = signal<number>(50);
   readonly dbMode = signal<'current' | 'specific' | 'random'>('current');
   readonly selectedDbs = signal<number[]>([this.data.database]);
@@ -72,10 +75,60 @@ export class SeedDataDialogComponent {
   readonly seedModel = signal({ keyPrefix: 'demo' });
   readonly seedForm = form(this.seedModel);
 
-  // Status Signals
-  readonly isSeeding = signal<boolean>(false);
-  readonly errorMessage = signal<string | null>(null);
-  readonly result = signal<SeedDataResult | null>(null);
+  readonly jobId = signal<string | null>(
+    this.data.jobId ??
+      this.jobsStore
+        .activeJobs()
+        .find(e => e.job.kind === 'seed-data' && e.job.connectionId === this.data.connectionId)?.job
+        .jobId ??
+      null
+  );
+  private readonly starting = signal(false);
+  private readonly localError = signal<string | null>(null);
+
+  private readonly entry = computed(() => {
+    const id = this.jobId();
+    return id ? (this.jobsStore.jobsById()[id] ?? null) : null;
+  });
+
+  readonly jobStatus = computed(() => this.entry()?.job.status ?? null);
+  readonly isSeeding = computed(() => {
+    if (this.starting()) return true;
+    const status = this.entry()?.job.status;
+    return status ? isJobActive(status) : false;
+  });
+  readonly stopping = computed(() => this.entry()?.job.status === 'Cancelling');
+  readonly result = computed<SeedDataResult | null>(
+    () => (this.entry()?.resultData as SeedDataResult | null) ?? null
+  );
+  readonly created = computed(() => {
+    const metrics = this.entry()?.job.metrics as SeedDataJobProgress | null;
+    return metrics?.created ?? 0;
+  });
+  readonly total = computed(() => {
+    const metrics = this.entry()?.job.metrics as SeedDataJobProgress | null;
+    return metrics?.total ?? 0;
+  });
+  readonly errorMessage = computed(() => {
+    if (this.localError()) return this.localError();
+    const current = this.entry();
+    if (!current) return null;
+    if (current.expiredReason) return current.expiredReason;
+    if (current.job.status === 'Cancelled' && !current.job.hasResult) {
+      return 'Seeding was cancelled before a result was available.';
+    }
+    return current.job.error ?? current.resultError ?? null;
+  });
+  readonly connectionStatus = computed(() =>
+    this.jobsStore.liveConnected() ? null : (this.jobsStore.connectionNotice() || 'Reconnecting live updates…')
+  );
+
+  constructor() {
+    const initialId = this.jobId();
+    if (initialId && !this.entry()) {
+      this.jobsStore.refreshJob(initialId);
+    }
+  }
 
   isDbSelected(db: number): boolean {
     return this.selectedDbs().includes(db);
@@ -158,9 +211,10 @@ export class SeedDataDialogComponent {
   }
 
   startSeed(): void {
-    this.isSeeding.set(true);
-    this.errorMessage.set(null);
-    this.result.set(null);
+    this.jobId.set(null);
+    this.localError.set(null);
+    this.starting.set(true);
+    this.dialogRef.disableClose = true;
 
     let targetDbs: number[] | undefined;
     let isRandom = false;
@@ -185,18 +239,34 @@ export class SeedDataDialogComponent {
       keyPrefix: this.seedModel().keyPrefix.trim() || 'demo'
     };
 
-    this.cliService
-      .seedSampleData(this.data.connectionId, options)
+    this.jobsStore
+      .startJob('seed-data', this.data.connectionId, options, {
+        database: this.data.database,
+        markSeen: true
+      })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: res => {
-          this.isSeeding.set(false);
-          this.result.set(res);
+        next: job => {
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.jobId.set(job.jobId);
         },
         error: err => {
-          this.isSeeding.set(false);
-          this.errorMessage.set(err.error?.message || err.message || 'Failed to seed sample data');
+          this.starting.set(false);
+          this.dialogRef.disableClose = false;
+          this.localError.set(err?.error?.message || err?.message || 'Failed to seed sample data');
         }
+      });
+  }
+
+  stopSeed(): void {
+    const id = this.jobId();
+    if (!id) return;
+    this.jobsStore
+      .cancelJob(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => this.localError.set('Could not request cancellation.')
       });
   }
 }

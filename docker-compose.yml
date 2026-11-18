@@ -44,7 +44,7 @@ services:
       - redisgui-network
 
   # ==========================================
-  # RedisGUI Web Application (.NET 10 + Angular 22)
+  # RedisGUI Web Application (.NET 11 + Angular 22)
   # ==========================================
   app:
     build:

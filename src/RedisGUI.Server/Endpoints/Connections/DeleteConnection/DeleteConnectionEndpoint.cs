@@ -25,15 +25,14 @@ namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 		/// DELETE /connections/{id}
 		/// Deletes the specified connection and returns OK if successful, BadRequest if deletion fails.
 		/// </remarks>
-		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
-		{
+		public void MapEndpoint(IEndpointRouteBuilder routerBuilder) =>
 			routerBuilder.MapDelete("connections/{id:guid}", async (
 				IMediator sender,
 				Guid id,
 				CancellationToken cancellationToken) =>
 			{
 				DeleteConnectionCommand command = new(id);
-				return await sender.Send(command, cancellationToken).Match(() => Results.Ok(), Results.BadRequest);
+				return await sender.Send(command, cancellationToken).Match(() => Results.Ok(), error => error.ToProblemDetails());
 			})
 			.WithName("DeleteConnection")
 			.WithSummary("Delete a Redis connection")
@@ -43,6 +42,5 @@ namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 			.Produces(StatusCodes.Status400BadRequest)
 			.Produces(StatusCodes.Status404NotFound)
 			.RequireAuthorization(Policies.AdminOnly);
-		}
 	}
 }

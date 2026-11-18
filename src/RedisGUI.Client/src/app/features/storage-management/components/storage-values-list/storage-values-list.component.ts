@@ -16,20 +16,20 @@ import {
   output
 } from '@angular/core';
 import { interval } from 'rxjs';
+import { HttpClient, HttpParams } from '@angular/common/http';
+import { API_ROUTES } from '../../../../core/constants/api-routes.constants';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTable, MatTableModule } from '@angular/material/table';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import { SelectionModel } from '@angular/cdk/collections';
 
 import { BulkActionsToolbarComponent } from '../bulk-actions-toolbar/bulk-actions-toolbar.component';
@@ -41,12 +41,14 @@ import {
   EmptyStateComponent
 } from '../../../../shared/components';
 import type { RedisTypeCounts } from './key-type-filter';
-import { FormatBytesPipe } from '../../../../shared/pipes/format-bytes.pipe';
 import { filter } from 'rxjs/operators';
 
 import { StorageManagementStore } from '../../stores/storage-management.store';
-import { RedisKeysStore } from '../../../../core/stores/redis-keys.store';
-import { RedisOperationsStore } from '../../../../core/stores/redis-operations.store';
+import { ConnectionsStore } from '../../../../core/stores/connections.store';
+import {
+  RedisKeysStore,
+  redisKeyIdentity
+} from '../../../../core/stores/redis-keys.store';
 import {
   RedisDataType,
   RedisKeyInfo,
@@ -56,7 +58,7 @@ import {
 
 /**
  * Storage Values List Component (Angular 22)
- * Main component for exploring, filtering, and managing Redis keys
+ * Main component for exploring, filtering, and managing Redis keys with CDK virtual scrolling
  */
 @Component({
   selector: 'app-storage-values-list',
@@ -68,7 +70,6 @@ import {
   imports: [
     KeySearchControls,
     KeyTypeFilter,
-    MatTableModule,
     ScrollingModule,
     MatIconModule,
     MatButtonModule,
@@ -77,31 +78,27 @@ import {
     MatProgressSpinnerModule,
     MatProgressBarModule,
     MatTooltipModule,
-    MatPaginatorModule,
     MatCheckboxModule,
-    FormatBytesPipe,
     TypeBadgeComponent,
     EmptyStateComponent
   ]
 })
 export class StorageValuesListComponent {
-  // 1. Injected dependencies
   private readonly dialog = inject(MatDialog);
+  private readonly http = inject(HttpClient);
   private readonly snackBar = inject(MatSnackBar);
   private readonly storageStore = inject(StorageManagementStore);
   private readonly redisKeysStore = inject(RedisKeysStore);
-  private readonly redisOperationsStore = inject(RedisOperationsStore);
+  private readonly connectionsStore = inject(ConnectionsStore);
   private readonly destroyRef = inject(DestroyRef);
 
-  // 2. Inputs & Outputs
   readonly connectionId = input.required<string>();
   readonly activeKey = input<string | null>(null);
+  readonly activeKeyBase64 = input<string | null>(null);
   readonly keySelected = output<SelectedRedisKey>();
 
-  // 3. View queries
-  readonly table = viewChild(MatTable);
+  readonly scrollViewport = viewChild(CdkVirtualScrollViewport);
 
-  // 4. Model signals (Angular 22 two-way signal bindings)
   readonly viewMode = model<'table' | 'tree'>('table');
   readonly keyDelimiter = model<string>(':');
   readonly searchPattern = model<string>('*');
@@ -109,16 +106,27 @@ export class StorageValuesListComponent {
   readonly sortField = model<string>('key');
   readonly sortDir = model<'asc' | 'desc'>('asc');
 
-  // 5. State signals
   readonly isLoading = computed(() => this.redisKeysStore.isLoading() && this.keys().length === 0);
-  readonly chunkLoading = signal<boolean>(false);
-  readonly pageSize = signal<number>(50);
-  readonly pageNumber = signal<number>(1);
+  readonly scanLoading = this.redisKeysStore.isLoading;
+  readonly nextCursor = this.redisKeysStore.nextCursor;
+  readonly scanError = this.redisKeysStore.error;
+  readonly retentionLimitReached = this.redisKeysStore.retentionLimitReached;
+  readonly isCluster = computed(() => {
+    const conn =
+      this.connectionsStore.getConnectionById(this.connectionId()) ??
+      this.connectionsStore.selectedConnection();
+    return conn?.serverMode === 'Cluster' || this.redisKeysStore.serverMode() === 'Cluster';
+  });
+
   readonly selectedDb = signal<number>(0);
   readonly fetchTimestamp = signal<number>(Date.now());
   readonly currentTimestamp = signal<number>(Date.now());
 
   readonly availableDatabases = computed<{ index: number; count: number }[]>(() => {
+    if (this.isCluster()) {
+      const keyspace = this.redisKeysStore.keyspace();
+      return [{ index: 0, count: keyspace[0] ?? 0 }];
+    }
     const keyspace = this.redisKeysStore.keyspace();
     const result: { index: number; count: number }[] = [];
     for (let i = 0; i <= 15; i++) {
@@ -130,23 +138,21 @@ export class StorageValuesListComponent {
     return result;
   });
 
-  // 6. Data source and selection
   readonly keys = computed(() =>
     this.redisKeysStore.keys().map(key => ({ ...key, type: toRedisDataType(key.type) }))
   );
+
+  /** Keyed by canonical identity (`b64:...` or `txt:...`) so binary collisions cannot happen. */
   readonly selection = new SelectionModel<string>(true, []);
+  readonly selectedCount = signal<number>(0);
 
-  // 7. Configuration
-  readonly displayedColumns: readonly string[] = [
-    'select',
-    'type',
-    'key',
-    'ttl',
-    'size',
-    'actions'
-  ] as const;
-
-  // 8. Type counting for filter badges
+  private readonly keysByIdentity = computed(() => {
+    const map = new Map<string, RedisKeyInfo>();
+    for (const item of this.keys()) {
+      map.set(redisKeyIdentity(item), item);
+    }
+    return map;
+  });
 
   readonly typeCounts = computed<RedisTypeCounts>(() => {
     const data = this.keys();
@@ -186,7 +192,6 @@ export class StorageValuesListComponent {
     return counts;
   });
 
-  // 9. Computed filtered data and total count
   readonly filteredData = computed<RedisKeyInfo[]>(() => {
     let data = this.keys();
     const filterVal = this.typeFilter();
@@ -239,15 +244,46 @@ export class StorageValuesListComponent {
 
   readonly totalCount = computed<number>(() => this.filteredData().length);
 
-  readonly trackByKey = (_index: number, item: RedisKeyInfo) => item.key;
+  readonly trackByIdentity = (_index: number, item: RedisKeyInfo) => redisKeyIdentity(item);
 
   constructor() {
     effect(() => {
-      this.connectionId();
-      untracked(() => this.loadKeys());
+      const connId = this.connectionId();
+      untracked(() => {
+        const conn =
+          this.connectionsStore.getConnectionById(connId) ??
+          this.connectionsStore.selectedConnection();
+        const initialDb = conn?.serverMode === 'Cluster' ? 0 : (conn?.database ?? 0);
+        this.selectedDb.set(initialDb);
+        this.redisKeysStore.setActiveDatabase(initialDb);
+        this.loadKeys();
+      });
     });
 
-    // Live countdown interval ticker
+    effect(() => {
+      if (this.isCluster() && this.selectedDb() !== 0) {
+        untracked(() => {
+          this.selectedDb.set(0);
+          this.redisKeysStore.setActiveDatabase(0);
+        });
+      }
+    });
+
+    effect(() => {
+      const visibleCount = this.filteredData().length;
+      const cursor = this.nextCursor();
+      const loading = this.scanLoading();
+      const limitReached = this.retentionLimitReached();
+      const err = this.scanError();
+      if (visibleCount < 25 && cursor && !loading && !limitReached && !err) {
+        untracked(() => this.loadMore());
+      }
+    });
+
+    this.selection.changed.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      this.selectedCount.set(this.selection.selected.length);
+    });
+
     interval(1000)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
@@ -255,20 +291,29 @@ export class StorageValuesListComponent {
       });
   }
 
-  onScroll(index: number): void {
-    const dataLength = this.keys().length;
+  onScrolledIndexChange(firstVisibleIndex: number): void {
+    const totalLoaded = this.filteredData().length;
     if (
-      dataLength >= this.pageSize() * this.pageNumber() &&
-      index > dataLength - 20 &&
-      !this.chunkLoading()
+      totalLoaded > 0 &&
+      firstVisibleIndex + 25 >= totalLoaded &&
+      this.nextCursor() &&
+      !this.scanLoading() &&
+      !this.retentionLimitReached()
     ) {
-      this.chunkLoading.set(true);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          this.chunkLoading.set(false);
-        });
-      });
+      this.loadMore();
     }
+  }
+
+  rowIdentity(item: RedisKeyInfo): string {
+    return redisKeyIdentity(item);
+  }
+
+  isRowActive(item: RedisKeyInfo): boolean {
+    const activeB64 = this.activeKeyBase64();
+    if (activeB64 && item.keyBase64) {
+      return activeB64 === item.keyBase64;
+    }
+    return this.activeKey() === item.key;
   }
 
   setTypeFilter(type: string): void {
@@ -281,7 +326,11 @@ export class StorageValuesListComponent {
   }
 
   toggleViewMode(mode: string): void {
-    this.viewMode.set(mode as 'table' | 'tree');
+    const nextMode = mode as 'table' | 'tree';
+    this.viewMode.set(nextMode);
+    if (nextMode === 'table') {
+      setTimeout(() => this.scrollViewport()?.checkViewportSize(), 0);
+    }
   }
 
   changeKeyDelimiter(): void {
@@ -310,20 +359,42 @@ export class StorageValuesListComponent {
   }
 
   loadKeys(): void {
+    const connId = this.connectionId();
+    if (this.storageStore.connectionId() !== connId) {
+      this.storageStore.initialize(connId);
+    }
     this.fetchTimestamp.set(Date.now());
+    this.selection.clear();
     this.storageStore.loadKeys(this.searchPattern(), this.keyDelimiter(), this.selectedDb());
-    this.redisKeysStore.loadKeyspace({ connectionId: this.connectionId() });
+    this.redisKeysStore.loadKeyspace({ connectionId: connId });
+  }
+
+  loadMore(): void {
+    if (this.scanLoading() || !this.nextCursor() || this.retentionLimitReached()) return;
+    this.redisKeysStore.loadKeys({
+      connectionId: this.connectionId(),
+      pattern: this.searchPattern(),
+      database: this.selectedDb(),
+      append: true,
+      autoContinueEmptyPages: true
+    });
   }
 
   onDatabaseChange(db: number): void {
+    if (this.isCluster() && db !== 0) {
+      this.snackBar.open('Redis Cluster supports database 0 only.', 'Close', { duration: 3000 });
+      return;
+    }
     this.selectedDb.set(db);
     this.redisKeysStore.setActiveDatabase(db);
     this.loadKeys();
   }
 
-  getLiveTtl(originalTtl: number | null): number | null {
+  getLiveTtl(originalTtl: number | null, fetchedAt?: number): number | null {
     if (originalTtl === null || originalTtl <= 0) return originalTtl;
-    const elapsedSec = Math.floor((this.currentTimestamp() - this.fetchTimestamp()) / 1000);
+    const elapsedSec = Math.floor(
+      (this.currentTimestamp() - (fetchedAt ?? this.fetchTimestamp())) / 1000
+    );
     return Math.max(0, originalTtl - elapsedSec);
   }
 
@@ -397,7 +468,11 @@ export class StorageValuesListComponent {
       });
   }
 
-  deleteKey(key: string): void {
+  deleteKey(target: string | RedisKeyInfo): void {
+    const item = this.resolveKeyItem(target);
+    const key = item?.key ?? (typeof target === 'string' ? target : target.key);
+    const keyBase64 = item?.keyBase64 ?? null;
+
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
@@ -411,10 +486,11 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
-        this.selection.deselect(key);
+        this.selection.deselect(redisKeyIdentity({ key, keyBase64 }));
         this.redisKeysStore.deleteKey({
           connectionId: this.connectionId(),
           key,
+          keyBase64,
           database: this.selectedDb(),
           onSuccess: () => {
             this.redisKeysStore.clearCache();
@@ -428,13 +504,18 @@ export class StorageValuesListComponent {
   deleteFolder(event: { path: string; name: string; keyCount: number; keys: string[] }): void {
     const delim = this.keyDelimiter() || ':';
     const pattern = event.path.endsWith(delim) ? `${event.path}*` : `${event.path}${delim}*`;
+    const database = this.selectedDb();
 
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
           title: `Delete Folder "${event.name}"`,
-          message: `Are you sure you want to delete folder "${event.path}" and all ${event.keyCount} key(s) under it? This will delete all keys matching "${pattern}". This action cannot be undone.`,
-          confirmText: `Delete ${event.keyCount} Key(s)`,
+          message:
+            event.keys.length > 0
+              ? `Delete the ${event.keys.length} loaded key(s) in "${event.path}"? Keys not loaded in the browser will not be deleted. This action cannot be undone.`
+              : `Delete all keys matching "${pattern}", including keys not loaded in the browser? This action cannot be undone.`,
+          confirmText:
+            event.keys.length > 0 ? `Delete ${event.keys.length} Key(s)` : 'Delete matching keys',
           cancelText: 'Cancel',
           confirmColor: 'warn'
         }
@@ -443,52 +524,46 @@ export class StorageValuesListComponent {
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
         if (event.keys.length > 0) {
-          this.redisOperationsStore.deleteMultipleKeys({
-            connectionId: this.connectionId(),
-            keys: event.keys,
-            database: this.selectedDb(),
-            onSuccess: () => {
-              this.selection.clear();
-              this.redisKeysStore.clearCache();
-              this.loadKeys();
-              this.snackBar.open(
-                `Folder "${event.name}" and ${event.keys.length} key(s) deleted`,
-                'Close',
-                { duration: 3500 }
-              );
-            }
-          });
+          const items = event.keys.map(k => this.resolveKeyItem(k) ?? { key: k, type: 'string', ttl: null, size: 0, memoryUsage: null });
+          void this.runSelectedBulk('delete', items, database);
         } else {
-          this.redisOperationsStore.deleteKeysByPattern({
-            connectionId: this.connectionId(),
-            pattern,
-            database: this.selectedDb(),
-            onSuccess: () => {
-              this.selection.clear();
-              this.redisKeysStore.clearCache();
-              this.loadKeys();
-              this.snackBar.open(`Folder "${event.name}" keys deleted`, 'Close', {
-                duration: 3500
-              });
-            }
-          });
+          void this.runPatternBulk(pattern, database);
         }
       });
   }
 
-  copyKey(key: string, event?: Event): void {
+  copyKey(target: string | RedisKeyInfo, event?: Event): void {
     if (event) event.stopPropagation();
-    navigator.clipboard.writeText(key);
-    this.snackBar.open(`Copied "${key}" to clipboard`, 'Close', { duration: 2000 });
+    const item = this.resolveKeyItem(target);
+    if (item?.isBinary && item.keyBase64) {
+      navigator.clipboard.writeText(item.keyBase64);
+      this.snackBar.open('Binary key copied as Base64', 'Close', { duration: 2500 });
+      return;
+    }
+    const text = typeof target === 'string' ? target : target.key;
+    navigator.clipboard.writeText(text);
+    this.snackBar.open(`Copied "${text}" to clipboard`, 'Close', { duration: 2000 });
   }
 
-  editKey(key: string): void {
-    const item = this.keys().find(row => row.key === key);
-    this.keySelected.emit({ key, type: item?.type ?? RedisDataType.String, ttl: item?.ttl ?? -1 });
+  editKey(target: string | RedisKeyInfo): void {
+    const item = this.resolveKeyItem(target);
+    const key = item?.key ?? (typeof target === 'string' ? target : target.key);
+    this.keySelected.emit({
+      key,
+      keyBase64: item?.keyBase64 ?? null,
+      isBinary: item?.isBinary ?? false,
+      type: toRedisDataType(item?.type ?? 'string'),
+      ttl: item?.ttl ?? -1
+    });
   }
 
   onTreeKeySelected(event: SelectedRedisKey): void {
-    this.keySelected.emit(event);
+    const item = this.resolveKeyItem(event.key);
+    this.keySelected.emit({
+      ...event,
+      keyBase64: event.keyBase64 ?? item?.keyBase64 ?? null,
+      isBinary: event.isBinary ?? item?.isBinary ?? false
+    });
   }
 
   formatTtl(seconds: number): string {
@@ -498,12 +573,6 @@ export class StorageValuesListComponent {
     if (seconds < 86400)
       return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
     return `${Math.floor(seconds / 86400)}d ${Math.floor((seconds % 86400) / 3600)}h`;
-  }
-
-  onPageChange(event: PageEvent): void {
-    this.pageSize.set(event.pageSize);
-    this.pageNumber.set(event.pageIndex + 1);
-    this.loadKeys();
   }
 
   isAllSelected(): boolean {
@@ -517,22 +586,24 @@ export class StorageValuesListComponent {
       this.selection.clear();
     } else {
       const currentPageData = this.filteredData();
-      currentPageData.forEach((row: RedisKeyInfo) => this.selection.select(row.key));
+      currentPageData.forEach(row => this.selection.select(redisKeyIdentity(row)));
     }
   }
 
   deleteSelected(): void {
-    const selectedKeys = [...this.selection.selected];
-    if (selectedKeys.length === 0) {
+    const items = this.getSelectedItems();
+    const database = this.selectedDb();
+    if (items.length === 0) {
       this.snackBar.open('No keys selected', 'Close', { duration: 3000 });
       return;
     }
 
+    const preview = items.slice(0, 5).map(i => i.key).join(', ');
     this.dialog
       .open(ConfirmDialogComponent, {
         data: {
           title: 'Delete Selected Keys',
-          message: `Are you sure you want to delete ${selectedKeys.length} selected key(s)?`,
+          message: `Delete ${items.length} selected key(s) from DB ${database}? Examples: ${preview}${items.length > 5 ? ', …' : ''}. Keys may change before deletion.`,
           confirmText: 'Delete',
           cancelText: 'Cancel',
           confirmColor: 'warn'
@@ -541,19 +612,7 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
       .subscribe(() => {
-        this.redisOperationsStore.deleteMultipleKeys({
-          connectionId: this.connectionId(),
-          keys: selectedKeys,
-          database: this.selectedDb(),
-          onSuccess: () => {
-            this.selection.clear();
-            this.redisKeysStore.clearCache();
-            this.loadKeys();
-            this.snackBar.open(`Deleted ${selectedKeys.length} key(s)`, 'Close', {
-              duration: 4000
-            });
-          }
-        });
+        void this.runSelectedBulk('delete', items, database);
       });
   }
 
@@ -571,40 +630,66 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((pattern): pattern is string => pattern !== null && pattern.trim().length > 0))
       .subscribe(pattern => {
-        this.dialog
-          .open(ConfirmDialogComponent, {
-            data: {
-              title: 'Confirm Delete',
-              message: `Are you sure you want to delete all keys matching "${pattern}"?`,
-              confirmText: 'Delete',
-              cancelText: 'Cancel',
-              confirmColor: 'warn'
-            }
-          })
-          .afterClosed()
-          .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
-          .subscribe(() => {
-            this.redisOperationsStore.deleteKeysByPattern({
-              connectionId: this.connectionId(),
-              pattern,
-              database: this.selectedDb(),
-              onSuccess: () => {
-                this.selection.clear();
-                this.redisKeysStore.clearCache();
-                this.loadKeys();
-                this.snackBar.open(`Deleted keys matching "${pattern}"`, 'Close', {
-                  duration: 4000
+        const database = this.selectedDb();
+        const params = new HttpParams()
+          .set('pattern', pattern)
+          .set('database', database)
+          .set('count', 100);
+        this.http
+          .get<{ keys: { key: string }[]; nextCursor: string | null }>(
+            API_ROUTES.STORAGE.SCAN(this.connectionId()),
+            { params }
+          )
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe({
+            next: preview => {
+              const examples =
+                preview.keys.slice(0, 5).map(item => item.key).join(', ') ||
+                '(none in this scan page)';
+              this.dialog
+                .open(ConfirmDialogComponent, {
+                  data: {
+                    title: 'Confirm Delete',
+                    message: `Delete all keys matching "${pattern}" in DB ${database}? Preview (one scan page): ${examples}. This preview may be partial and keys may change before or during deletion.`,
+                    confirmText: 'Delete',
+                    cancelText: 'Cancel',
+                    confirmColor: 'warn'
+                  }
+                })
+                .afterClosed()
+                .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
+                .subscribe(() => {
+                  void this.runPatternBulk(pattern, database);
                 });
-              }
-            });
+            },
+            error: () =>
+              this.snackBar.open(
+                'Could not preview matching keys; deletion was not started.',
+                'Close',
+                { duration: 5000 }
+              )
           });
       });
   }
 
   async exportData(format: 'json' | 'csv'): Promise<void> {
+    const items = this.getSelectedItems();
+    if (items.length === 0) {
+      this.snackBar.open('Select at least one key to export.', 'Close', { duration: 3000 });
+      return;
+    }
+    const hasBinary = items.some(item => !!item.keyBase64);
     const { ExportDialogComponent } = await import('../export/export-dialog.component');
     const ref = this.dialog.open(ExportDialogComponent, {
-      data: { connectionId: this.connectionId(), format }
+      closeOnNavigation: false,
+      data: {
+        connectionId: this.connectionId(),
+        format,
+        database: this.selectedDb(),
+        pattern: this.searchPattern(),
+        keys: items.map(item => item.key),
+        ...(hasBinary ? { keysBase64: items.map(item => item.keyBase64 ?? null) } : {})
+      }
     });
     ref.afterClosed().subscribe(success => {
       if (success) this.snackBar.open('Export completed', 'Close', { duration: 3000 });
@@ -614,22 +699,31 @@ export class StorageValuesListComponent {
   async importData(): Promise<void> {
     const { ImportDialogComponent } = await import('../import/import-dialog.component');
     const dialogRef = this.dialog.open(ImportDialogComponent, {
-      data: { connectionId: this.connectionId() }
+      closeOnNavigation: false,
+      data: { connectionId: this.connectionId(), database: this.selectedDb() }
     });
 
     dialogRef
       .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(success => {
+        this.redisKeysStore.clearCache();
         if (success) {
-          this.redisKeysStore.clearCache();
-          this.snackBar.open('Data imported successfully', 'Close', { duration: 3000 });
-          this.loadKeys();
+          this.snackBar.open(
+            `Imported ${success.importedCount} key(s); skipped ${success.skippedCount}.`,
+            'Close',
+            { duration: 3000 }
+          );
         }
+        this.loadKeys();
       });
   }
 
-  renameKey(oldKey: string): void {
+  renameKey(target: string | RedisKeyInfo): void {
+    const item = this.resolveKeyItem(target);
+    const oldKey = item?.key ?? (typeof target === 'string' ? target : target.key);
+    const oldKeyBase64 = item?.keyBase64 ?? null;
+
     this.dialog
       .open(PromptDialogComponent, {
         data: {
@@ -651,6 +745,7 @@ export class StorageValuesListComponent {
         this.redisKeysStore.renameKey({
           connectionId: this.connectionId(),
           oldKey,
+          oldKeyBase64,
           newKey: newKey.trim(),
           database: this.selectedDb(),
           onSuccess: () => {
@@ -661,7 +756,11 @@ export class StorageValuesListComponent {
       });
   }
 
-  duplicateKey(sourceKey: string): void {
+  duplicateKey(target: string | RedisKeyInfo): void {
+    const item = this.resolveKeyItem(target);
+    const sourceKey = item?.key ?? (typeof target === 'string' ? target : target.key);
+    const sourceKeyBase64 = item?.keyBase64 ?? null;
+
     this.dialog
       .open(PromptDialogComponent, {
         data: {
@@ -682,6 +781,7 @@ export class StorageValuesListComponent {
         this.redisKeysStore.duplicateKey({
           connectionId: this.connectionId(),
           sourceKey,
+          sourceKeyBase64,
           targetKey: targetKey.trim(),
           database: this.selectedDb(),
           onSuccess: () => {
@@ -695,13 +795,14 @@ export class StorageValuesListComponent {
   }
 
   openBulkTtl(): void {
-    const selected = this.selection.selected;
-    if (selected.length === 0) return;
+    const items = this.getSelectedItems();
+    const database = this.selectedDb();
+    if (items.length === 0) return;
 
     this.dialog
       .open(PromptDialogComponent, {
         data: {
-          title: `Set TTL for ${selected.length} keys`,
+          title: `Set TTL for ${items.length} keys`,
           message:
             'Enter TTL in seconds (e.g. 300 for 5m, 3600 for 1h, or 0 to PERSIST indefinitely):',
           placeholder: 'TTL in seconds (0 = persist)',
@@ -712,24 +813,103 @@ export class StorageValuesListComponent {
       .afterClosed()
       .pipe(filter((val): val is string => val !== null && val.trim().length > 0))
       .subscribe(val => {
-        const seconds = parseInt(val.trim(), 10);
-        const ttlSeconds = isNaN(seconds) || seconds <= 0 ? null : seconds;
+        const input = val.trim();
+        const seconds = Number(input);
+        if (!/^\d+$/.test(input) || !Number.isSafeInteger(seconds)) {
+          this.snackBar.open('Enter a whole number of seconds, or 0 to persist.', 'Close', {
+            duration: 4000
+          });
+          return;
+        }
+        const ttlSeconds = seconds === 0 ? null : seconds;
+        const preview = items.slice(0, 5).map(i => i.key).join(', ');
 
-        this.redisKeysStore.bulkUpdateTtl({
-          connectionId: this.connectionId(),
-          keys: selected,
-          ttlSeconds,
-          database: this.selectedDb(),
-          onSuccess: count => {
-            const label = ttlSeconds
-              ? `TTL set to ${ttlSeconds}s for ${count} keys`
-              : `Persisted ${count} keys indefinitely`;
-            this.snackBar.open(label, 'Close', { duration: 3000 });
-            this.selection.clear();
-            this.loadKeys();
-          }
-        });
+        this.dialog
+          .open(ConfirmDialogComponent, {
+            data: {
+              title: 'Confirm TTL change',
+              message: `${ttlSeconds === null ? 'Persist' : `Set TTL to ${ttlSeconds}s for`} ${items.length} key(s) in DB ${database}? Examples: ${preview}${items.length > 5 ? ', …' : ''}. Keys may change before this runs.`,
+              confirmText: 'Apply',
+              cancelText: 'Cancel'
+            }
+          })
+          .afterClosed()
+          .pipe(filter((confirmed): confirmed is boolean => confirmed === true))
+          .subscribe(() => {
+            void this.runSelectedBulk('ttl', items, database, ttlSeconds);
+          });
       });
+  }
+
+  private resolveKeyItem(target: string | RedisKeyInfo): RedisKeyInfo | undefined {
+    if (typeof target !== 'string') return target;
+    return (
+      this.keysByIdentity().get(`txt:${target}`) ??
+      this.keys().find(row => row.key === target)
+    );
+  }
+
+  private getSelectedItems(): RedisKeyInfo[] {
+    const map = this.keysByIdentity();
+    const items: RedisKeyInfo[] = [];
+    for (const id of this.selection.selected) {
+      const found = map.get(id);
+      if (found) {
+        items.push(found);
+      } else if (id.startsWith('txt:')) {
+        items.push({ key: id.slice(4), type: 'string', ttl: null, size: 0, memoryUsage: null });
+      }
+    }
+    return items;
+  }
+
+  private async runPatternBulk(pattern: string, database: number): Promise<void> {
+    const { BulkJobProgressComponent } =
+      await import('../bulk-job-progress/bulk-job-progress.component');
+    this.dialog
+      .open(BulkJobProgressComponent, {
+        disableClose: true,
+        closeOnNavigation: false,
+        width: '480px',
+        data: { connectionId: this.connectionId(), operation: 'delete-pattern', pattern, database }
+      })
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshAfterBulk());
+  }
+
+  private async runSelectedBulk(
+    operation: 'delete' | 'ttl',
+    items: RedisKeyInfo[],
+    database: number,
+    ttlSeconds?: number | null
+  ): Promise<void> {
+    const { BulkJobProgressComponent } =
+      await import('../bulk-job-progress/bulk-job-progress.component');
+    const hasBinary = items.some(item => !!item.keyBase64);
+    this.dialog
+      .open(BulkJobProgressComponent, {
+        disableClose: true,
+        closeOnNavigation: false,
+        width: '480px',
+        data: {
+          connectionId: this.connectionId(),
+          operation,
+          keys: items.map(item => item.key),
+          ...(hasBinary ? { keysBase64: items.map(item => item.keyBase64 ?? null) } : {}),
+          database,
+          ttlSeconds
+        }
+      })
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => this.refreshAfterBulk());
+  }
+
+  private refreshAfterBulk(): void {
+    this.selection.clear();
+    this.redisKeysStore.clearCache();
+    this.loadKeys();
   }
 
   async seedDemoData(): Promise<void> {
@@ -739,15 +919,18 @@ export class StorageValuesListComponent {
       .open(SeedDataDialogComponent, {
         width: '740px',
         maxWidth: '92vw',
+        closeOnNavigation: false,
         data: {
           connectionId: this.connectionId(),
           database: this.selectedDb()
         }
       })
       .afterClosed()
-      .pipe(filter((seeded): seeded is boolean => seeded === true))
-      .subscribe(() => {
-        this.snackBar.open('Demo data successfully seeded!', 'Close', { duration: 3000 });
+      .subscribe(seeded => {
+        if (seeded)
+          this.snackBar.open('Sample-data job finished. Keys refreshed.', 'Close', {
+            duration: 3000
+          });
         this.loadKeys();
       });
   }
@@ -767,6 +950,7 @@ export class StorageValuesListComponent {
     this.dialog.open(LoadTestDialogComponent, {
       width: '680px',
       maxWidth: '94vw',
+      closeOnNavigation: false,
       data: {
         connectionId: this.connectionId(),
         database: this.selectedDb()

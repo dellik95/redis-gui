@@ -1,20 +1,38 @@
 <h2 mat-dialog-title>Export Redis Data</h2>
 <mat-dialog-content>
-  <p class="export-hint">Select the export format for your Redis keys and values:</p>
+  @if (selectedKeysCount() > 0) {
+    <p class="export-hint">
+      Export <strong>{{ selectedKeysCount() }}</strong> selected key(s) from database {{ data.database }}.
+    </p>
+  } @else {
+    <p class="export-hint">Export database {{ data.database }}, pattern <code>{{ data.pattern || '*' }}</code>.</p>
+  }
+  <p class="export-hint">The file contains Redis-native snapshots. Restore requires a compatible Redis version and RESTORE permission.</p>
 
   <ui-radio-group [formField]="exportForm.format" [options]="formatOptions" />
 
   @if (isLoading()) {
     <div class="loading-container">
       <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
-      <span>Preparing and downloading export...</span>
+      <span>
+        {{ jobStatus() || 'Starting' }} · {{ exportedCount() }}
+        @if (selectedKeysCount() > 0) {
+          / {{ selectedKeysCount() }}
+        }
+        keys exported
+      </span>
     </div>
   }
   @if (error()) {
     <div class="error">{{ error() }}</div>
   }
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }}</p>
+  }
 </mat-dialog-content>
 <mat-dialog-actions align="end" class="dialog-actions">
-  <ui-button variant="ghost" (click)="dialogRef.close()">Cancel</ui-button>
-  <ui-button variant="primary" [loading]="isLoading()" (click)="onExport()"> Export </ui-button>
+  <ui-button variant="ghost" [disabled]="isLoading() && !jobId()" (click)="dialogRef.close()">Close</ui-button>
+  @if (isLoading() && jobId()) { <ui-button variant="ghost" [loading]="stopping()" (click)="cancel()">Stop</ui-button> }
+  @if (canDownload()) { <ui-button variant="primary" (click)="download()">Download</ui-button> }
+  @if (!isLoading()) { <ui-button variant="primary" (click)="onExport()">Start export</ui-button> }
 </mat-dialog-actions>

@@ -47,6 +47,37 @@ public class PipelineBehaviorTests
 		}
 	}
 
+	private class CancelledCommandHandler : ICommandHandler<TestCommand, string>
+	{
+		public Task<Result<string>> Handle(TestCommand command, CancellationToken cancellationToken) =>
+			Task.FromCanceled<Result<string>>(cancellationToken);
+	}
+
+	[Test]
+	public async Task Send_Command_PropagatesCancellation()
+	{
+		using var cancellation = new CancellationTokenSource();
+		cancellation.Cancel();
+		var mediator = new MediatorBuilder().RegisterCommandHandler<TestCommand, string>(new CancelledCommandHandler()).Build();
+		await Assert.ThatAsync(() => mediator.Send<string>(new TestCommand("test"), cancellation.Token), Throws.InstanceOf<OperationCanceledException>());
+	}
+
+	[Test]
+	public async Task Send_Command_ExecutesConcreteAndInterfaceBehaviors()
+	{
+		var concrete = new LoggingBehavior<TestCommand, Result<string>>();
+		var common = new LoggingBehavior<ICommand<string>, Result<string>>();
+		var mediator = new MediatorBuilder()
+			.RegisterCommandHandler<TestCommand, string>(new TestCommandHandler())
+			.AddPipelineBehavior<TestCommand, Result<string>>(concrete)
+			.AddPipelineBehavior<ICommand<string>, Result<string>>(common)
+			.Build();
+		var result = await mediator.Send<string>(new TestCommand("test"));
+		Assert.That(result.IsSuccess, Is.True);
+		Assert.That(concrete.WasCalled, Is.True);
+		Assert.That(common.WasCalled, Is.True);
+	}
+
 	[Test]
 	public async Task Send_Command_WithPipelineBehavior_ExecutesBehavior()
 	{

@@ -1,0 +1,31 @@
+using FluentValidation;
+
+namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
+
+/// <summary>
+/// Validator for ImportRedisDataCommand.
+/// </summary>
+public sealed class ImportRedisDataCommandValidator : AbstractValidator<ImportRedisDataCommand>
+{
+	/// <summary>
+	/// Initializes a new instance of the ImportRedisDataCommandValidator class.
+	/// </summary>
+	public ImportRedisDataCommandValidator()
+	{
+		RuleFor(x => x.ConnectionId)
+			.NotEmpty()
+			.WithMessage("Connection ID is required.");
+
+		RuleFor(x => x.Data)
+			.NotEmpty()
+			.WithMessage("Import data is required.")
+			.MaximumLength(10 * 1024 * 1024) // 10MB max
+			.WithMessage("Import data must not exceed 10MB.");
+
+		RuleFor(x => x.Format)
+			.IsInEnum()
+			.WithMessage("Invalid import format.");
+
+		RuleFor(x => x.Database).InclusiveBetween(0, 15).When(x => x.Database.HasValue);
+	}
+}

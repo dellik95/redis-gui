@@ -15,7 +15,7 @@
     mat-dialog-close
     matTooltip="Close"
     class="close-btn text-canvas-muted"
-    [disabled]="isSeeding()"
+    [disabled]="isSeeding() && !jobId()"
   >
     <mat-icon>close</mat-icon>
   </button>
@@ -294,6 +294,9 @@
   }
 
   <!-- Loading State during Seeding -->
+  @if (connectionStatus()) {
+    <p role="status">{{ connectionStatus() }}</p>
+  }
   @if (isSeeding()) {
     <div
       class="seeding-state flex flex-col items-center justify-center py-12 px-6 text-center gap-4"
@@ -301,8 +304,7 @@
       <mat-spinner diameter="52"></mat-spinner>
       <h3>Generating & Populating Sample Data...</h3>
       <p class="seeding-desc text-canvas-muted m-0">
-        Generating {{ keyCount() }} keys across {{ getTargetDbDescription() }} with
-        {{ payloadComplexity() }} payload complexity.
+        {{ jobStatus() || 'Starting' }} · {{ created() }} of {{ total() }} keys confirmed.
       </p>
     </div>
   }
@@ -315,20 +317,24 @@
 
 <div class="dialog-actions flex justify-end items-center gap-3 py-3.5 px-6 bg-canvas-card">
   @if (!isSeeding() && !result()) {
-    <button mat-stroked-button mat-dialog-close>Cancel</button>
-    <button
-      mat-flat-button
-      color="primary"
+    <ui-button variant="outline" (click)="dialogRef.close()">Cancel</ui-button>
+    <ui-button
+      variant="primary"
+      icon="cloud_upload"
       class="seed-btn font-semibold"
       (click)="startSeed()"
       [disabled]="selectedTypes().length === 0"
     >
-      <mat-icon>cloud_upload</mat-icon>
-      <span>Seed {{ keyCount() }} Keys</span>
-    </button>
+      Seed {{ keyCount() }} Keys
+    </ui-button>
   }
 
   @if (!isSeeding() && result()) {
-    <button mat-flat-button color="primary" [mat-dialog-close]="true">Close & Refresh Keys</button>
+    <ui-button variant="primary" (click)="dialogRef.close(true)">Close & Refresh Keys</ui-button>
+  }
+  @if (isSeeding() && jobId()) {
+    <ui-button variant="danger" (click)="stopSeed()" [disabled]="stopping()">
+      {{ stopping() ? 'Stopping…' : 'Stop' }}
+    </ui-button>
   }
 </div>

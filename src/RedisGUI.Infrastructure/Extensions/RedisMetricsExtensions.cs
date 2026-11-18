@@ -42,6 +42,30 @@ public static class RedisMetricsExtensions
 			property.SetValue(metrics, convertedValue);
 		}
 
+		var dbCounts = new Dictionary<int, long>();
+		for (int i = 0; i < 16; i++)
+		{
+			dbCounts[i] = 0;
+		}
+
+		if (infoSections.TryGetValue("Keyspace", out IEnumerable<Tuple<string, string>>? keyspaceData) && keyspaceData is not null)
+		{
+			foreach (var entry in keyspaceData)
+			{
+				if (entry.Item1.StartsWith("db", StringComparison.OrdinalIgnoreCase) &&
+					int.TryParse(entry.Item1.AsSpan(2), NumberStyles.Integer, CultureInfo.InvariantCulture, out int dbIdx))
+				{
+					Match keysMatch = Regex.Match(entry.Item2, @"keys=(\d+)");
+					if (keysMatch.Success &&
+						long.TryParse(keysMatch.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long count))
+					{
+						dbCounts[dbIdx] = count;
+					}
+				}
+			}
+		}
+
+		metrics.DatabaseKeyCounts = dbCounts;
 		return metrics;
 	}
 
@@ -91,14 +115,26 @@ public static class RedisMetricsExtensions
 			return string.Empty;
 		}
 
-		Match? match = sectionData.Select(x => Regex.Match(x.Item2, attribute.ValuePattern)).FirstOrDefault(x => x.Success);
-
-		if (match == null || match.Groups.Count == 0)
+		long sum = 0;
+		bool matchedAny = false;
+		foreach (var item in sectionData)
 		{
-			return string.Empty;
+			Match match = Regex.Match(item.Item2, attribute.ValuePattern);
+			if (match.Success && match.Groups.Count > 1)
+			{
+				if (long.TryParse(match.Groups[1].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out long val))
+				{
+					sum += val;
+					matchedAny = true;
+				}
+				else
+				{
+					return match.Groups[1].Value;
+				}
+			}
 		}
 
-		return match.Groups[1].Value;
+		return matchedAny ? sum.ToString(CultureInfo.InvariantCulture) : string.Empty;
 	}
 
 	private static double CalculateCpuUsage(Domain.RedisMetrics.RedisMetrics currentMetrics, Domain.RedisMetrics.RedisMetrics previousMetrics)

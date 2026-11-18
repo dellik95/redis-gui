@@ -1,5 +1,6 @@
 import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter, withComponentInputBinding } from '@angular/router';
+import { MAT_SNACK_BAR_DEFAULT_OPTIONS } from '@angular/material/snack-bar';
 import { routes } from './app.routes';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { retryInterceptor } from './core/interceptors/retry.interceptor';
@@ -27,6 +28,13 @@ export const appConfig: ApplicationConfig = {
         loaderInterceptor // Last: Show/hide loading indicator
       ])
     ),
-    provideRouter(routes, withComponentInputBinding())
+    provideRouter(routes, withComponentInputBinding()),
+    {
+      provide: MAT_SNACK_BAR_DEFAULT_OPTIONS,
+      useValue: {
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      }
+    }
   ]
 };
