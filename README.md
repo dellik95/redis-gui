@@ -1,5 +1,7 @@
 # RedisGUI — Modern Redis Studio & Observability Platform
 
+[Project landing](https://dellik95.github.io/redis-gui/) · [Portfolio](https://dellik95.github.io/portfolio/) · [Qandivo](https://dellik95.github.io/portfolio/qandivo/) · [Kadex UI component library](https://dellik95.github.io/portfolio/kadex-ui/)
+
 <p align="center">
   <img src="docs/screenshots/03_storage_table.png" alt="RedisGUI Storage Manager" width="850">
 </p>
