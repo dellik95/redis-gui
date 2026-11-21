@@ -84,7 +84,7 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 	/// <summary>
 	/// Gets the owner of this connection (None for legacy/public connections)
 	/// </summary>
-	public ConnectionOwnerId OwnerId { get; private set; } = null!;
+	public ConnectionOwnerId OwnerId { get; private set; } = ConnectionOwnerId.None();
 
 	/// <summary>
 	/// Creates a new Redis connection configuration
@@ -192,7 +192,7 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 			return true;
 
 		// Connection without owner is public (legacy/shared)
-		if (!OwnerId.HasValue)
+		if (OwnerId is null || !OwnerId.HasValue)
 			return true;
 
 		// User can only access their own connections
