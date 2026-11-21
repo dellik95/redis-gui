@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace RedisGUI.Shared.Mediator
@@ -8,7 +9,7 @@ namespace RedisGUI.Shared.Mediator
 		{
 			var builder = new MediatorBuilder();
 			configure(builder);
-			services.AddScoped<IMediator>(sp => builder.Build(type => ActivatorUtilities.CreateInstance(sp, type)));
+			services.AddScoped<IDispatcher>(sp => builder.Build(type => ActivatorUtilities.CreateInstance(sp, type)));
 			return services;
 		}
 	}

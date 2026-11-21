@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -6,7 +7,6 @@ using Moq;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Redis.Commands.RunLoadTest;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Tests.Redis.Diagnostics;
@@ -22,7 +22,7 @@ public class LoadTestJobHandlerTests
 		var repo = new Mock<IRedisConnectionRepository>();
 		repo.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
 		var access = new Mock<IConnectionAccessService>();
-		var handler = new LoadTestJobHandler(repo.Object, access.Object, Mock.Of<IMediator>());
+		var handler = new LoadTestJobHandler(repo.Object, access.Object, Mock.Of<IDispatcher>());
 		using var invalid = JsonDocument.Parse("{\"concurrency\":0}");
 		var invalidResult = await handler.ValidateAsync(connection.Id, invalid.RootElement, CancellationToken.None);
 		Assert.That(invalidResult.IsFailure, Is.True);

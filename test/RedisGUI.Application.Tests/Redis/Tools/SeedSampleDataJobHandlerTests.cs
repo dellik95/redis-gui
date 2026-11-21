@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -6,7 +7,6 @@ using Moq;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Application.Redis.Commands.SeedSampleData;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Tests.Redis.Tools;
@@ -22,7 +22,7 @@ public class SeedSampleDataJobHandlerTests
 		var repository = new Mock<IRedisConnectionRepository>();
 		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
 		var access = new Mock<IConnectionAccessService>();
-		var handler = new SeedSampleDataJobHandler(repository.Object, access.Object, Mock.Of<IMediator>());
+		var handler = new SeedSampleDataJobHandler(repository.Object, access.Object, Mock.Of<IDispatcher>());
 		var invalid = JsonSerializer.SerializeToElement(new { keyCount = 10001 });
 		var invalidResult = await handler.ValidateAsync(connection.Id, invalid, CancellationToken.None);
 		Assert.That(invalidResult.IsFailure, Is.True);

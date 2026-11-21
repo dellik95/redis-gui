@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.RedisMetrics.Queries;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetConnectionMetrics;
 
@@ -20,12 +20,12 @@ public class GetConnectionMetricsEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("connections/{connectionId:guid}/metrics", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId) =>
 		{
 			var query = new GetRedisMetricsQuery(connectionId);
 
-			return await sender.Send<RedisGUI.Domain.RedisMetrics.RedisMetrics>(query)
+			return await sender.Send(query)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.RequireAuthorization(Policies.Authenticated)

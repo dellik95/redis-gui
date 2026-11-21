@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +9,6 @@ using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
@@ -19,7 +19,7 @@ public sealed record ImportJobParameters(string Data, string Format = "json", bo
 public sealed class ImportRedisDataJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<ImportJobParameters>? validator = null)
 	: BackgroundJobHandler<ImportJobParameters, ImportRedisDataProgress, ImportRedisDataResponse>(repository, access, validator)
 {

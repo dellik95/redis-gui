@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -5,7 +6,6 @@ using RedisGUI.Application.Redis.Queries.GetSlowlog;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 using System.Collections.Generic;
 
@@ -16,12 +16,12 @@ public class GetSlowlogEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("storage/{connectionId:guid}/slowlog", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			int count = 25) =>
 		{
 			var query = new GetSlowlogQuery(connectionId, count);
-			return await sender.Send<List<SlowlogEntryInfo>>(query).Match(Results.Ok, error => error.ToProblemDetails());
+			return await sender.Send(query).Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.RequireAuthorization(Policies.Authenticated)
 		.WithName("GetSlowlog")

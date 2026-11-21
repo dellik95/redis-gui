@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +11,6 @@ using RedisGUI.Application.Redis.Commands.BulkUpdateTtl;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.BulkOperations;
@@ -30,7 +30,7 @@ public sealed record BulkKeyJobResult(int Processed, int? Total, int Changed, in
 public sealed class BulkKeyJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<BulkKeyJobParameters>? validator = null)
 	: BackgroundJobHandler<BulkKeyJobParameters, BulkKeyJobProgress, BulkKeyJobResult>(repository, access, validator)
 {

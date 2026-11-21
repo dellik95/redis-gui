@@ -1,10 +1,10 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.DeleteConnection;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -27,7 +27,7 @@ namespace RedisGUI.Server.Endpoints.Connections.DeleteConnection
 		/// </remarks>
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder) =>
 			routerBuilder.MapDelete("connections/{id:guid}", async (
-				IMediator sender,
+				IDispatcher sender,
 				Guid id,
 				CancellationToken cancellationToken) =>
 			{

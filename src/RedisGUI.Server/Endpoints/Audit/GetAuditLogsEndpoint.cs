@@ -1,10 +1,10 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Audit.Queries.GetAuditLogs;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 using System.Threading;
 
@@ -21,7 +21,7 @@ public class GetAuditLogsEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("audit", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid? userId,
 			string? entityType,
 			Guid? entityId,
@@ -40,7 +40,7 @@ public class GetAuditLogsEndpoint : IEndpoint
 				skip,
 				take);
 
-			return await sender.Send<GetAuditLogsResponse>(query, cancellationToken)
+			return await sender.Send(query, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetAuditLogs")

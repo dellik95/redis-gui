@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -42,7 +43,7 @@ public class ImportRedisDataJobHandlerTests
 		services.AddSingleton(Mock.Of<ICurrentUserService>());
 		await using var provider = services.BuildServiceProvider();
 		using var scope = provider.CreateScope();
-		var handler = new ImportRedisDataJobHandler(repository.Object, access.Object, scope.ServiceProvider.GetRequiredService<RedisGUI.Shared.Mediator.IMediator>());
+		var handler = new ImportRedisDataJobHandler(repository.Object, access.Object, scope.ServiceProvider.GetRequiredService<IDispatcher>());
 		var data = JsonSerializer.Serialize(new[] { new RedisImportItem { Key = "a", Value = "1" }, new RedisImportItem { Key = "b", Value = "2" } });
 		var parameters = JsonSerializer.SerializeToElement(new { data, format = "json", database = 0, overwrite = false });
 		using var cancellation = new CancellationTokenSource();

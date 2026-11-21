@@ -1,3 +1,4 @@
+using IDispatcher = DispatchWeave.IDispatcher;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -35,7 +36,7 @@ public class MediatorTests
 		var command = new TestCommand(Guid.NewGuid());
 
 		// Act
-		var result = await mediator.Send<Guid>(command);
+		var result = await mediator.Send(command);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -54,7 +55,7 @@ public class MediatorTests
 		var command = new TestCommand(Guid.NewGuid());
 
 		// Act
-		var result = await mediator.Send<Guid>(command);
+		var result = await mediator.Send(command);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -75,7 +76,7 @@ public class MediatorTests
 		var command = new TestCommand(Guid.NewGuid());
 
 		// Act
-		var result = await mediator.Send<Guid>(command);
+		var result = await mediator.Send(command);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -117,7 +118,7 @@ public class MediatorTests
 		var command = new TestCommand(Guid.NewGuid());
 
 		// Act
-		await mediator.Send<Guid>(command, cts.Token);
+		await mediator.Send(command, cts.Token);
 
 		// Assert
 		Assert.That(handler.ReceivedCancellationToken, Is.EqualTo(cts.Token));
@@ -135,7 +136,7 @@ public class MediatorTests
 		var query = new TestQuery("test-id");
 
 		// Act
-		var result = await mediator.Send<string>(query);
+		var result = await mediator.Send(query);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -155,7 +156,7 @@ public class MediatorTests
 		var query = new TestQuery("test-id");
 
 		// Act
-		var result = await mediator.Send<string>(query);
+		var result = await mediator.Send(query);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -281,47 +282,47 @@ public class MediatorTests
 
 	#region Helper Methods
 
-	private static IMediator CreateMediator()
+	private static IDispatcher CreateMediator()
 	{
 		return new MediatorBuilder().Build();
 	}
 
-	private static IMediator CreateMediatorWithCommandHandler(ThrowingCommandHandler handler)
+	private static IDispatcher CreateMediatorWithCommandHandler(ThrowingCommandHandler handler)
 	{
 		return new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, Guid>(handler)
 			.Build();
 	}
 
-	private static IMediator CreateMediatorWithCommandHandler(SuccessfulCommandHandler handler)
+	private static IDispatcher CreateMediatorWithCommandHandler(SuccessfulCommandHandler handler)
 	{
 		return new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, Guid>(handler)
 			.Build();
 	}
 
-	private static IMediator CreateMediatorWithCommandHandler(CancellationAwareCommandHandler handler)
+	private static IDispatcher CreateMediatorWithCommandHandler(CancellationAwareCommandHandler handler)
 	{
 		return new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, Guid>(handler)
 			.Build();
 	}
 
-	private static IMediator CreateMediatorWithCommandHandlerVoid(TestCommandHandlerWithoutResult handler)
+	private static IDispatcher CreateMediatorWithCommandHandlerVoid(TestCommandHandlerWithoutResult handler)
 	{
 		return new MediatorBuilder()
 			.RegisterCommandHandler<TestCommandWithoutResult>(handler)
 			.Build();
 	}
 
-	private static IMediator CreateMediatorWithQueryHandler(SuccessfulQueryHandler handler)
+	private static IDispatcher CreateMediatorWithQueryHandler(SuccessfulQueryHandler handler)
 	{
 		return new MediatorBuilder()
 			.RegisterQueryHandler<TestQuery, string>(handler)
 			.Build();
 	}
 
-	private static IMediator CreateMediatorWithNotificationHandlers(params TestNotificationHandler[] handlers)
+	private static IDispatcher CreateMediatorWithNotificationHandlers(params TestNotificationHandler[] handlers)
 	{
 		var builder = new MediatorBuilder();
 		foreach (var handler in handlers)
@@ -331,7 +332,7 @@ public class MediatorTests
 		return builder.Build();
 	}
 
-	private static IMediator CreateMediatorWithSequentialNotificationHandlers(params OrderedNotificationHandler[] handlers)
+	private static IDispatcher CreateMediatorWithSequentialNotificationHandlers(params OrderedNotificationHandler[] handlers)
 	{
 		var builder = new MediatorBuilder()
 			.Configure(options => options.NotificationExecution = NotificationExecution.Sequential);
@@ -344,7 +345,7 @@ public class MediatorTests
 		return builder.Build();
 	}
 
-	private static IMediator CreateMediatorWithParallelNotificationHandlers(params DelayedNotificationHandler[] handlers)
+	private static IDispatcher CreateMediatorWithParallelNotificationHandlers(params DelayedNotificationHandler[] handlers)
 	{
 		var builder = new MediatorBuilder()
 			.Configure(options => options.NotificationExecution = NotificationExecution.Parallel);

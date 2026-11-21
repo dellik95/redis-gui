@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +8,6 @@ using RedisGUI.Application.Connections.GetServerInfo;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetServerInfo;
 
@@ -16,12 +16,12 @@ public class GetServerInfoEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("connections/{connectionId:guid}/info", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			CancellationToken cancellationToken) =>
 		{
 			var query = new GetServerInfoQuery(connectionId);
-			return await sender.Send<RedisServerInfoDto>(query, cancellationToken)
+			return await sender.Send(query, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetServerInfo")

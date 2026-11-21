@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -9,7 +10,6 @@ using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Tests.Core;
@@ -41,7 +41,7 @@ public class MediatorCompositionTests
 		using var provider = services.BuildServiceProvider();
 		using var scope = provider.CreateScope();
 
-		var result = await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new RenameKeyCommand(connection.Id, "old", "new"));
+		var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>().Send(new RenameKeyCommand(connection.Id, "old", "new"));
 
 		Assert.That(result.IsSuccess, Is.True);
 		audit.Verify(x => x.Add(It.IsAny<AuditLog>()), Times.Once);
@@ -64,7 +64,7 @@ public class MediatorCompositionTests
 		using var provider = services.BuildServiceProvider();
 		using var scope = provider.CreateScope();
 
-		var result = await scope.ServiceProvider.GetRequiredService<IMediator>()
+		var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>()
 			.Send(new ScanRedisKeysQuery(System.Guid.NewGuid(), "", null, null, 0));
 
 		Assert.That(result.Error, Is.InstanceOf<ValidationFailureError>());
@@ -89,7 +89,7 @@ public class MediatorCompositionTests
 		using var provider = services.BuildServiceProvider();
 		using var scope = provider.CreateScope();
 
-		var result = await scope.ServiceProvider.GetRequiredService<IMediator>().Send(new CheckConnectionCommand("", 0));
+		var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>().Send(new CheckConnectionCommand("", 0));
 
 		Assert.That(result.IsFailure, Is.True);
 		Assert.That(result.Error.Code, Is.EqualTo("Validation.Failed"));

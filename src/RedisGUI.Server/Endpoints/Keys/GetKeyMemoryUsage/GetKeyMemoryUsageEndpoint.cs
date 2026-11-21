@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetKeyMemoryUsage;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.GetKeyMemoryUsage;
 
@@ -19,7 +19,7 @@ public sealed class GetKeyMemoryUsageEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("storage/{connectionId:guid}/key/memory", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			[FromQuery] string? key = null,
 			[FromQuery] string? keyBase64 = null,
@@ -27,7 +27,7 @@ public sealed class GetKeyMemoryUsageEndpoint : IEndpoint
 			CancellationToken cancellationToken = default) =>
 		{
 			GetKeyMemoryUsageQuery query = new(connectionId, key ?? string.Empty, database, keyBase64);
-			return await sender.Send<GetKeyMemoryUsageResponse>(query, cancellationToken)
+			return await sender.Send(query, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetKeyMemoryUsageByQuery")
@@ -37,7 +37,7 @@ public sealed class GetKeyMemoryUsageEndpoint : IEndpoint
 		.RequireAuthorization(Policies.Authenticated);
 
 		routerBuilder.MapGet("storage/{connectionId:guid}/keys/{key}/memory", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			string key,
 			[FromQuery] int? database = null,
@@ -45,7 +45,7 @@ public sealed class GetKeyMemoryUsageEndpoint : IEndpoint
 			CancellationToken cancellationToken = default) =>
 		{
 			GetKeyMemoryUsageQuery query = new(connectionId, key, database, keyBase64);
-			return await sender.Send<GetKeyMemoryUsageResponse>(query, cancellationToken)
+			return await sender.Send(query, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetKeyMemoryUsage")

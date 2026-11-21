@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DuplicateKey;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.DuplicateKey;
@@ -22,7 +22,7 @@ public class DuplicateKeyEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapPost("storage/{connectionId:guid}/keys/duplicate", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			[FromBody] DuplicateKeyRequest request) =>
 		{

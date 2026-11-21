@@ -1,5 +1,5 @@
+using DispatchWeave;
 using Microsoft.EntityFrameworkCore.Diagnostics;
-using RedisGUI.Shared.Mediator;
 using System.Linq;
 
 namespace RedisGUI.Infrastructure.Persistence.Interceptors;
@@ -9,7 +9,7 @@ namespace RedisGUI.Infrastructure.Persistence.Interceptors;
 /// </summary>
 public sealed class DomainEventsDispatcherInterceptor : SaveChangesInterceptor
 {
-	private readonly IMediator mediator;
+	private readonly IDispatcher mediator;
 	private readonly ILogger<DomainEventsDispatcherInterceptor> logger;
 
 	/// <summary>
@@ -18,7 +18,7 @@ public sealed class DomainEventsDispatcherInterceptor : SaveChangesInterceptor
 	/// <param name="mediator">The mediator for publishing domain events</param>
 	/// <param name="logger">Logger instance</param>
 	public DomainEventsDispatcherInterceptor(
-		IMediator mediator,
+		IDispatcher mediator,
 		ILogger<DomainEventsDispatcherInterceptor> logger)
 	{
 		this.mediator = mediator;

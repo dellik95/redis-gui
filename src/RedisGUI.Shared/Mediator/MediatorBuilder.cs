@@ -1,3 +1,4 @@
+using IDispatcher = DispatchWeave.IDispatcher;
 using System.Reflection;
 
 namespace RedisGUI.Shared.Mediator
@@ -219,7 +220,7 @@ namespace RedisGUI.Shared.Mediator
 			return this;
 		}
 
-		public IMediator Build(Func<Type, object?>? typeResolver = null)
+		public IDispatcher Build(Func<Type, object?>? typeResolver = null)
 		{
 			HandlerRegistry handlerRegistry = new();
 			PipelineRegistry pipelineRegistry = new();
@@ -237,7 +238,22 @@ namespace RedisGUI.Shared.Mediator
 				NotificationExecution = options.NotificationExecution
 			};
 
-			return new Mediator(handlerRegistry, pipelineRegistry, notificationRegistry, optionsCopy);
+			return new DispatchWeave.Dispatcher(new ResultRoutes(handlerRegistry, pipelineRegistry, notificationRegistry),
+				new IsolatedNotificationPublisher(optionsCopy));
+		}
+
+		// Standalone registrations historically wrap concrete behaviors with command/query-wide behaviors.
+		private sealed class ResultRoutes(HandlerRegistry handlers, PipelineRegistry pipelines, NotificationRegistry notifications)
+			: DispatchWeave.Registration.RegistryRoutes(handlers, pipelines, notifications, lastBehaviorOutermost: true)
+		{
+			public override IEnumerable<DispatchWeave.IPipelineBehavior<TRequest, TResponse>> Behaviors<TRequest, TResponse>()
+			{
+				yield return new ResultErrorBehavior<TRequest, TResponse>();
+				foreach (var behavior in pipelines.GetInheritedBehaviors<TRequest, TResponse>().Reverse())
+					yield return behavior;
+				foreach (var behavior in base.Behaviors<TRequest, TResponse>())
+					yield return behavior;
+			}
 		}
 
 		private static object DefaultResolver(Type type)

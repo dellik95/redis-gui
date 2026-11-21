@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +8,6 @@ using RedisGUI.Application.Connections.GetServerConfig;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetServerConfig;
 
@@ -16,13 +16,13 @@ public class GetServerConfigEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("connections/{connectionId:guid}/config", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			string? pattern,
 			CancellationToken cancellationToken) =>
 		{
 			var query = new GetServerConfigQuery(connectionId, pattern);
-			return await sender.Send<RedisServerConfigDto>(query, cancellationToken)
+			return await sender.Send(query, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("GetServerConfig")

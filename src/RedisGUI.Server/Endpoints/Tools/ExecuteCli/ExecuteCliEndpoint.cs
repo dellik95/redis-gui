@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -6,7 +7,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.ExecuteCli;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.ExecuteCli;
 
@@ -18,13 +18,13 @@ public sealed class ExecuteCliEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapPost("storage/{connectionId:guid}/cli", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			ExecuteCliRequest request,
 			CancellationToken cancellationToken) =>
 		{
 			ExecuteCliCommand command = new(connectionId, request.Command, request.Database);
-			return await sender.Send<ExecuteCliResponse>(command, cancellationToken)
+			return await sender.Send(command, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("ExecuteRedisCli")

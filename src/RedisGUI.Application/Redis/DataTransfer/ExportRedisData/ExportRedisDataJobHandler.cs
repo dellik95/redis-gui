@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -7,7 +8,6 @@ using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Queries.ExportRedisData;
@@ -24,7 +24,7 @@ public sealed record ExportJobProgress(int ExportedCount, int? Total = null);
 public sealed class ExportRedisDataJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<ExportJobParameters>? validator = null)
 	: BackgroundJobHandler<ExportJobParameters, ExportJobProgress, BackgroundJobFile>(repository, access, validator)
 {

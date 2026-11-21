@@ -1,10 +1,10 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetRedisValue;
 using RedisGUI.Infrastructure.Authorization;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Extensions;
 using System;
@@ -29,7 +29,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			async Task<IResult> HandleGet(
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,
@@ -37,12 +37,12 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 				int? database)
 			{
 				var query = new GetRedisValueQuery(connectionId, key, database, keyBase64);
-				var result = await sender.Send<GetRedisValueResponse>(query);
+				var result = await sender.Send(query);
 				return result.MatchHttp(Results.Ok, httpContext);
 			}
 
 			routerBuilder.MapGet("storage/{connectionId:guid}/key", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				[FromQuery] string? key = null,
@@ -55,7 +55,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 			}).RequireAuthorization(Policies.Authenticated).WithName("GetRedisValueByQuery").WithOpenApi();
 
 			routerBuilder.MapGet("storage/{connectionId:guid}/{*key}", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,
@@ -65,7 +65,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 				.RequireAuthorization(Policies.Authenticated).WithOpenApi();
 
 			routerBuilder.MapGet("storage/{connectionId:guid}/keys/{*key}", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,

@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +8,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.UpdateRedisValue;
@@ -23,7 +23,7 @@ public class UpdateRedisValueEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		async Task<IResult> HandleUpdate(
-			IMediator sender,
+			IDispatcher sender,
 			HttpContext httpContext,
 			Guid connectionId,
 			string key,
@@ -48,7 +48,7 @@ public class UpdateRedisValueEndpoint : IEndpoint
 		}
 
 		routerBuilder.MapPut("storage/{connectionId:guid}/key", (
-			IMediator sender,
+			IDispatcher sender,
 			HttpContext httpContext,
 			Guid connectionId,
 			[FromBody] UpdateRedisValueRequest request,
@@ -61,7 +61,7 @@ public class UpdateRedisValueEndpoint : IEndpoint
 		.WithSummary("Update a Redis value by query/Base64 key identity");
 
 		routerBuilder.MapPut("storage/{connectionId:guid}/keys/{key}", (
-			IMediator sender,
+			IDispatcher sender,
 			HttpContext httpContext,
 			Guid connectionId,
 			string key,

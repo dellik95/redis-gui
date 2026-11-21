@@ -10,22 +10,36 @@ namespace RedisGUI.Shared.Mediator
 	/// <typeparam name="TResult">The wrapped result type.</typeparam>
 	public interface IRequest<TResult> : DispatchWeave.IRequest<TResult> { }
 
+	public interface IResultRequest<TResult> : IRequest<TResult>
+	{
+		internal TResult Failure(Error error);
+	}
+
 	/// <summary>
 	/// Represents a command with no response (returns Result).
 	/// </summary>
-	public interface ICommand : IRequest<Result> { }
+	public interface ICommand : IResultRequest<Result>
+	{
+		Result IResultRequest<Result>.Failure(Error error) => Result.Failure(error);
+	}
 
 	/// <summary>
 	/// Represents a command with a response of type TResult (returns Result{TResult}).
 	/// </summary>
 	/// <typeparam name="TResult">The type of the response.</typeparam>
-	public interface ICommand<TResult> : IRequest<Result<TResult>> { }
+	public interface ICommand<TResult> : IResultRequest<Result<TResult>>
+	{
+		Result<TResult> IResultRequest<Result<TResult>>.Failure(Error error) => Result.Failure<TResult>(error);
+	}
 
 	/// <summary>
 	/// Represents a query with a response of type TResult (returns Result{TResult}).
 	/// </summary>
 	/// <typeparam name="TResult">The type of the response.</typeparam>
-	public interface IQuery<TResult> : IRequest<Result<TResult>> { }
+	public interface IQuery<TResult> : IResultRequest<Result<TResult>>
+	{
+		Result<TResult> IResultRequest<Result<TResult>>.Failure(Error error) => Result.Failure<TResult>(error);
+	}
 
 	/// <summary>
 	/// Handles a command with no result and returns Result.

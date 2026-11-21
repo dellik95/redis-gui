@@ -1,3 +1,4 @@
+using IDispatcher = DispatchWeave.IDispatcher;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -59,7 +60,7 @@ public class PipelineBehaviorTests
 		using var cancellation = new CancellationTokenSource();
 		cancellation.Cancel();
 		var mediator = new MediatorBuilder().RegisterCommandHandler<TestCommand, string>(new CancelledCommandHandler()).Build();
-		await Assert.ThatAsync(() => mediator.Send<string>(new TestCommand("test"), cancellation.Token), Throws.InstanceOf<OperationCanceledException>());
+		await Assert.ThatAsync(() => mediator.Send(new TestCommand("test"), cancellation.Token), Throws.InstanceOf<OperationCanceledException>());
 	}
 
 	[Test]
@@ -72,7 +73,7 @@ public class PipelineBehaviorTests
 			.AddPipelineBehavior<TestCommand, Result<string>>(concrete)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(common)
 			.Build();
-		var result = await mediator.Send<string>(new TestCommand("test"));
+		var result = await mediator.Send(new TestCommand("test"));
 		Assert.That(result.IsSuccess, Is.True);
 		Assert.That(concrete.WasCalled, Is.True);
 		Assert.That(common.WasCalled, Is.True);
@@ -88,10 +89,10 @@ public class PipelineBehaviorTests
 		MediatorBuilder builder = new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, string>(handler)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior);
-		IMediator mediator = builder.Build();
+		IDispatcher mediator = builder.Build();
 
 		// Act
-		Result<string> result = await mediator.Send<string>(new TestCommand("test"));
+		Result<string> result = await mediator.Send(new TestCommand("test"));
 
 		// Assert
 		Assert.Multiple(() =>
@@ -116,10 +117,10 @@ public class PipelineBehaviorTests
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior1)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior2)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior3);
-		IMediator mediator = builder.Build();
+		IDispatcher mediator = builder.Build();
 
 		// Act
-		Result<string> result = await mediator.Send<string>(new TestCommand("test"));
+		Result<string> result = await mediator.Send(new TestCommand("test"));
 
 		// Assert
 		Assert.Multiple(() =>
@@ -140,10 +141,10 @@ public class PipelineBehaviorTests
 		MediatorBuilder builder = new MediatorBuilder()
 			.RegisterQueryHandler<TestQuery, int>(handler)
 			.AddPipelineBehavior<IQuery<int>, Result<int>>(behavior);
-		IMediator mediator = builder.Build();
+		IDispatcher mediator = builder.Build();
 
 		// Act
-		Result<int> result = await mediator.Send<int>(new TestQuery(5));
+		Result<int> result = await mediator.Send(new TestQuery(5));
 
 		// Assert
 		Assert.Multiple(() =>
@@ -164,12 +165,12 @@ public class PipelineBehaviorTests
 		MediatorBuilder builder = new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, string>(handler)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior);
-		IMediator mediator = builder.Build();
+		IDispatcher mediator = builder.Build();
 
 		TestCommand command = new("original");
 
 		// Act
-		Result<string> result = await mediator.Send<string>(command);
+		Result<string> result = await mediator.Send(command);
 
 		// Assert
 		Assert.Multiple(() =>
@@ -189,10 +190,10 @@ public class PipelineBehaviorTests
 		MediatorBuilder builder = new MediatorBuilder()
 			.RegisterCommandHandler<TestCommand, string>(handler)
 			.AddPipelineBehavior<ICommand<string>, Result<string>>(behavior);
-		IMediator mediator = builder.Build();
+		IDispatcher mediator = builder.Build();
 
 		// Act
-		Result<string> result = await mediator.Send<string>(new TestCommand("test"));
+		Result<string> result = await mediator.Send(new TestCommand("test"));
 
 		// Assert
 		Assert.Multiple(() =>

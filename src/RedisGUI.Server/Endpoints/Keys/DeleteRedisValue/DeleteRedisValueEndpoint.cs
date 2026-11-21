@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 using System.Threading.Tasks;
 
@@ -23,7 +23,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			async Task<IResult> HandleDelete(
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,
@@ -37,7 +37,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 			}
 
 			routerBuilder.MapDelete("storage/{connectionId:guid}/key", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				[FromQuery] string? key = null,
@@ -50,7 +50,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 			}).RequireAuthorization(Policies.WriteAccess).WithName("DeleteRedisValueByQuery").WithOpenApi();
 
 			routerBuilder.MapDelete("storage/{connectionId:guid}/{*key}", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,
@@ -60,7 +60,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.DeleteRedisValue
 				.RequireAuthorization(Policies.WriteAccess).WithOpenApi();
 
 			routerBuilder.MapDelete("storage/{connectionId:guid}/keys/{*key}", (
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				string key,

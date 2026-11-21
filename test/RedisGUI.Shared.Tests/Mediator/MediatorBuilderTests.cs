@@ -1,3 +1,4 @@
+using IDispatcher = DispatchWeave.IDispatcher;
 using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -60,7 +61,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 			TestCommandHandler handler = new();
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommand, Guid>(handler);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -70,7 +71,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommand, Guid>(() => new TestCommandHandler());
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -80,7 +81,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommand, Guid, TestCommandHandler>();
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -91,7 +92,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 			TestCommandHandlerWithoutResult handler = new();
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommandWithoutResult>(handler);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -101,7 +102,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommandWithoutResult>(() => new TestCommandHandlerWithoutResult());
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -111,7 +112,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterCommandHandler<TestCommandWithoutResult, TestCommandHandlerWithoutResult>();
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -122,7 +123,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 			TestQueryHandler handler = new();
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterQueryHandler<TestQuery, string>(handler);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -132,7 +133,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterQueryHandler<TestQuery, string>(() => new TestQueryHandler());
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -142,7 +143,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterQueryHandler<TestQuery, string, TestQueryHandler>();
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -153,7 +154,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 			TestNotificationHandler handler = new();
 			MediatorBuilder builder = new MediatorBuilder()
 				.AddNotificationHandler<TestNotification>(handler);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -163,7 +164,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.AddNotificationHandler<TestNotification>(() => new TestNotificationHandler());
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -173,7 +174,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.AddNotificationHandler<TestNotification, TestNotificationHandler>();
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -183,7 +184,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.Configure(options => options.NotificationExecution = NotificationExecution.Parallel);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -193,7 +194,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 		{
 			MediatorBuilder builder = new MediatorBuilder()
 				.RegisterHandlersFromAssembly(typeof(TestCommandHandler).Assembly);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -205,7 +206,7 @@ namespace RedisGUI.Shared.Tests.Mediator
 				.RegisterHandlersFromAssemblies(
 					typeof(TestCommandHandler).Assembly,
 					typeof(MediatorBuilder).Assembly);
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
 			Assert.That(mediator, Is.Not.Null);
 		}
@@ -222,10 +223,10 @@ namespace RedisGUI.Shared.Tests.Mediator
 				.RegisterQueryHandler<TestQuery, string>(queryHandler)
 				.AddNotificationHandler<TestNotification>(notificationHandler);
 
-			IMediator mediator = builder.Build();
+			IDispatcher mediator = builder.Build();
 
-			Result<Guid> commandResult = await mediator.Send<Guid>(new TestCommand(Guid.NewGuid()));
-			Result<string> queryResult = await mediator.Send<string>(new TestQuery("test"));
+			Result<Guid> commandResult = await mediator.Send(new TestCommand(Guid.NewGuid()));
+			Result<string> queryResult = await mediator.Send(new TestQuery("test"));
 			await mediator.Publish(new TestNotification("test"));
 
 			Assert.That(commandResult.IsSuccess, Is.True);
