@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,7 @@ public class BulkOperationAuthorizationTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(false);
 		var keys = new Mock<IRedisKeyService>(MockBehavior.Strict);
@@ -33,9 +34,9 @@ public class BulkOperationAuthorizationTests
 			.Handle(new BulkUpdateTtlCommand(connection.Id, ["key"], 10), CancellationToken.None);
 		Assert.Multiple(() =>
 		{
-			Assert.That(selected.Error.Code, Is.EqualTo("Connection.Forbidden"));
-			Assert.That(pattern.Error.Code, Is.EqualTo("Connection.Forbidden"));
-			Assert.That(ttl.Error.Code, Is.EqualTo("Connection.Forbidden"));
+			Assert.That(selected.GetDomainError().Code, Is.EqualTo("Connection.Forbidden"));
+			Assert.That(pattern.GetDomainError().Code, Is.EqualTo("Connection.Forbidden"));
+			Assert.That(ttl.GetDomainError().Code, Is.EqualTo("Connection.Forbidden"));
 		});
 	}
 }

@@ -1,8 +1,10 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -21,9 +23,9 @@ internal sealed class RunStreamingLoadTestCommandHandler(IRedisConnectionReposit
 		return await (await repository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken)).BindAsync(async connection =>
 		{
 			if (!await access.CanAccessAsync(connection))
-				return Result.Failure<RedisLoadTestResult>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+				return Result.Fail<RedisLoadTestResult>(new DomainError("Connection.Forbidden", "Access to the connection is denied."));
 			if (connection.IsReadOnly && !string.Equals(request.Request.OperationType, "read", StringComparison.OrdinalIgnoreCase))
-				return Result.Failure<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
+				return Result.Fail<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
 			return await loadTests.RunStreamingLoadTestAsync(connection, request.Request, request.OnProgress, cancellationToken);
 		});
 	}

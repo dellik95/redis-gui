@@ -1,3 +1,4 @@
+using FluentResults;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using RedisGUI.Infrastructure.Redis;
 using StackExchange.Redis;
@@ -25,14 +26,14 @@ public class RedisHealthCheck(
 		{
 			Result<ConnectionMultiplexer> connectionResult = await connectionManager.GetConnection(options.ConnectionString, cancellationToken);
 
-			if (connectionResult.IsFailure)
+			if (connectionResult.IsFailed)
 			{
 				return HealthCheckResult.Unhealthy(
 					"Failed to acquire Redis connection.",
 					data: new Dictionary<string, object>
 					{
-						["Error"] = connectionResult.Error.Message,
-						["ErrorCode"] = connectionResult.Error.Code
+						["Error"] = connectionResult.GetDomainError().Message,
+						["ErrorCode"] = connectionResult.GetDomainError().Code
 					});
 			}
 

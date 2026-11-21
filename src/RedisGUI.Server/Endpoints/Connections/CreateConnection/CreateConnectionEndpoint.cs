@@ -1,10 +1,10 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.CreateConnection;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -28,7 +28,7 @@ namespace RedisGUI.Server.Endpoints.Connections.CreateConnection
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapPost("connections", async (
-				IMediator sender,
+				IDispatcher sender,
 				CreateConnectionRequest request,
 				CancellationToken cancellationToken) =>
 			{

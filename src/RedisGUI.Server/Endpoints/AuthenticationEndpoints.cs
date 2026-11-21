@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +7,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Users.Commands.LoginUser;
 using RedisGUI.Application.Users.Commands.RegisterUser;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -45,7 +46,7 @@ public class AuthenticationEndpoints : IEndpoint
 	/// </summary>
 	private static async Task<IResult> RegisterUser(
 		[FromBody] RegisterUserCommand command,
-		[FromServices] IMediator mediator,
+		[FromServices] IDispatcher mediator,
 		CancellationToken cancellationToken)
 	{
 		Result<Guid> result = await mediator.Send(command, cancellationToken);
@@ -58,13 +59,13 @@ public class AuthenticationEndpoints : IEndpoint
 	/// </summary>
 	private static async Task<IResult> LoginUser(
 		[FromBody] LoginUserCommand command,
-		[FromServices] IMediator mediator,
+		[FromServices] IDispatcher mediator,
 		CancellationToken cancellationToken)
 	{
 		Result<LoginUserResponse> result = await mediator.Send(command, cancellationToken);
 
 		return result.IsSuccess
 			? Results.Ok(result.Value)
-			: new Error("User.InvalidCredentials", "Invalid email or password.").ToProblemDetails();
+			: new DomainError("User.InvalidCredentials", "Invalid email or password.").ToProblemDetails();
 	}
 }

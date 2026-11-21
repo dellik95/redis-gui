@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.UpdateConnection;
@@ -58,15 +59,15 @@ public class UpdateConnectionCommandHandlerTests
 
 		_repositoryMock
 		.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Success(existingConnection));
+		.ReturnsAsync(Result.Ok(existingConnection));
 
 		_connectionServiceMock
 		.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Success());
+		.ReturnsAsync(Result.Ok());
 
 		_unitOfWorkMock
 		.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Success(1));
+		.ReturnsAsync(1);
 
 		// Act
 		Result result = await _handler.Handle(command, CancellationToken.None);
@@ -93,14 +94,14 @@ public class UpdateConnectionCommandHandlerTests
 
 		_repositoryMock
 		.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+		.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		Result result = await _handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.NotFound);
 	}
 
 	[Test]
@@ -126,11 +127,11 @@ public class UpdateConnectionCommandHandlerTests
 
 		_repositoryMock
 		.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Success(existingConnection));
+		.ReturnsAsync(Result.Ok(existingConnection));
 
 		_connectionServiceMock
 		.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-		.ReturnsAsync(Result.Success());
+		.ReturnsAsync(Result.Ok());
 
 		_unitOfWorkMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ThrowsAsync(new RedisGUI.Domain.Exceptions.ErrorException(DomainErrors.Storage.ConcurrencyConflict));
 
@@ -138,8 +139,8 @@ public class UpdateConnectionCommandHandlerTests
 		Result result = await _handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Storage.ConcurrencyConflict);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Storage.ConcurrencyConflict);
 		_repositoryMock.Verify(x => x.Update(existingConnection), Times.Once);
 		_unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
 	}

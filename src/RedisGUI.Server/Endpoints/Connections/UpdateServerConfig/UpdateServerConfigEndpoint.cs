@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using System.Threading;
 using Microsoft.AspNetCore.Builder;
@@ -7,7 +8,6 @@ using RedisGUI.Application.Connections.UpdateServerConfig;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.UpdateServerConfig;
 
@@ -16,13 +16,13 @@ public class UpdateServerConfigEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapPost("connections/{connectionId:guid}/config", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			UpdateServerConfigRequest request,
 			CancellationToken cancellationToken) =>
 		{
 			var command = new UpdateServerConfigCommand(connectionId, request.ParameterName, request.ParameterValue);
-			return await sender.Send<RedisSetConfigResponseDto>(command, cancellationToken)
+			return await sender.Send(command, cancellationToken)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.WithName("UpdateServerConfig")

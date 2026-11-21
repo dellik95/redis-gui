@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,14 +34,14 @@ public class BackgroundJobQueueTests
 		public string Kind => "race-fail";
 		public bool RequiresWriteAccess => false;
 		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken cancellationToken) =>
-			Task.FromResult(Result.Success());
+			Task.FromResult(Result.Ok());
 		public async Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> progress, CancellationToken cancellationToken)
 		{
 			await progress(50, new { partial = 3 });
 			try { await Task.Delay(Timeout.Infinite, cancellationToken); }
 			catch (OperationCanceledException) { }
 			cancelledObserved.TrySetResult(cancellationToken.IsCancellationRequested);
-			return Result.Success<object?>(new BackgroundJobOutcome(new { partial = 3 }, "Write failed during stop"));
+			return Result.Ok<object?>(new BackgroundJobOutcome(new { partial = 3 }, "Write failed during stop"));
 		}
 	}
 
@@ -50,14 +51,14 @@ public class BackgroundJobQueueTests
 		public bool RequiresWriteAccess => false;
 		public string? CreatedPath { get; private set; }
 		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken cancellationToken) =>
-			Task.FromResult(Result.Success());
+			Task.FromResult(Result.Ok());
 		public async Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> progress, CancellationToken cancellationToken)
 		{
 			Directory.CreateDirectory(BackgroundJobTempStorage.DirectoryPath);
 			var path = Path.Combine(BackgroundJobTempStorage.DirectoryPath, $"redisgui-job-lease-{Guid.NewGuid():N}.txt");
 			await File.WriteAllTextAsync(path, "download-lease-content", cancellationToken);
 			CreatedPath = path;
-			return Result.Success<object?>(new BackgroundJobFile(path, "lease.txt", "text/plain"));
+			return Result.Ok<object?>(new BackgroundJobFile(path, "lease.txt", "text/plain"));
 		}
 	}
 

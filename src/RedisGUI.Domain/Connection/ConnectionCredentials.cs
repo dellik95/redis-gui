@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Errors;
 
@@ -50,12 +51,12 @@ public class ConnectionCredentials
 	{
 		if (string.IsNullOrEmpty(username) && string.IsNullOrEmpty(password))
 		{
-			return Result.Success<ConnectionCredentials?>(null);
+			return Result.Ok<ConnectionCredentials?>(null);
 		}
 
 		if (string.IsNullOrEmpty(username) || string.IsNullOrEmpty(password))
 		{
-			return Result.Failure<ConnectionCredentials?>(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
+			return Result.Fail<ConnectionCredentials?>(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
 		}
 
 		string passwordHash = passwordEncryptor.EncryptPassword(password);

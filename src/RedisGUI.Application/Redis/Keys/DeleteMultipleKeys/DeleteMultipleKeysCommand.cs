@@ -1,8 +1,10 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
 using System.Collections.Generic;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Primitives;
@@ -46,9 +48,9 @@ internal sealed class DeleteMultipleKeysCommandHandler(
 			cancellationToken,
 			requireWritable: true);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<DeleteMultipleKeysResponse>(connectionResult.Error);
+			return Result.Fail<DeleteMultipleKeysResponse>(connectionResult.Errors);
 		}
 
 		var deleteResult = request.KeysBase64 is null || request.KeysBase64.Count == 0
@@ -64,9 +66,9 @@ internal sealed class DeleteMultipleKeysCommandHandler(
 				cancellationToken,
 				request.Database);
 
-		if (deleteResult.IsFailure)
+		if (deleteResult.IsFailed)
 		{
-			return Result.Failure<DeleteMultipleKeysResponse>(deleteResult.Error);
+			return Result.Fail<DeleteMultipleKeysResponse>(deleteResult.Errors);
 		}
 
 		var (deletedCount, failedKeys) = deleteResult.Value;
@@ -76,6 +78,6 @@ internal sealed class DeleteMultipleKeysCommandHandler(
 			request.Keys.Count,
 			failedKeys);
 
-		return Result.Success(response);
+		return Result.Ok(response);
 	}
 }

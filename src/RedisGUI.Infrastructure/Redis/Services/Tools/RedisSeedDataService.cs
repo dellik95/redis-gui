@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Infrastructure.Redis.Seeding;
@@ -22,11 +23,11 @@ public class RedisSeedDataService(
 		CancellationToken cancellationToken = default,
 		Func<int, int, Task>? onProgress = null)
 	{
-		if (connection.IsReadOnly) return Result.Failure<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
+		if (connection.IsReadOnly) return Result.Fail<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<SeedDataResult>(multiplexerResult.Error);
+			return Result.Fail<SeedDataResult>(multiplexerResult.Errors);
 		}
 
 		var multiplexer = multiplexerResult.Value;
@@ -41,7 +42,7 @@ public class RedisSeedDataService(
 		List<int> targetDbs = ResolveTargetDatabases(optionsActual, isCluster);
 		if (isCluster && targetDbs.Any(db => db != 0))
 		{
-			return Result.Failure<SeedDataResult>(new Error("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."));
+			return Result.Fail<SeedDataResult>(new DomainError("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."));
 		}
 
 		// Resolve data types
@@ -148,7 +149,7 @@ public class RedisSeedDataService(
 			totalSeeded,
 			failedKeys,
 			string.Join(", ", finalDbs));
-		return Result.Success(result);
+		return Result.Ok(result);
 	}
 
 	private static List<int> ResolveTargetDatabases(SeedSampleDataOptions options, bool isCluster)

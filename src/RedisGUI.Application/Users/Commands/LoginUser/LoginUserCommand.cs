@@ -1,5 +1,7 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Users;
 using RedisGUI.Shared.Primitives;
@@ -53,21 +55,21 @@ internal sealed class LoginUserCommandHandler : ICommandHandler<LoginUserCommand
 	{
 		// 1. Validate and create email value object
 		var emailResult = Email.Create(request.Email);
-		if (emailResult.IsFailure)
-			return Result.Failure<LoginUserResponse>(emailResult.Error);
+		if (emailResult.IsFailed)
+			return Result.Fail<LoginUserResponse>(emailResult.Errors);
 
 		// 2. Get user by email
 		var user = await userRepository.GetByEmailAsync(emailResult.Value, cancellationToken);
 		if (user is null)
-			return Result.Failure<LoginUserResponse>(Domain.Errors.DomainErrors.User.InvalidCredentials);
+			return Result.Fail<LoginUserResponse>(Domain.Errors.DomainErrors.User.InvalidCredentials);
 
 		// 3. Verify password
 		if (!passwordHasher.Verify(request.Password, user.PasswordHash.Value))
-			return Result.Failure<LoginUserResponse>(Domain.Errors.DomainErrors.User.InvalidCredentials);
+			return Result.Fail<LoginUserResponse>(Domain.Errors.DomainErrors.User.InvalidCredentials);
 
 		// 4. Check if user is active
 		if (!user.IsActive)
-			return Result.Failure<LoginUserResponse>(Domain.Errors.DomainErrors.User.Deactivated);
+			return Result.Fail<LoginUserResponse>(Domain.Errors.DomainErrors.User.Deactivated);
 
 		// 5. Record login and update last login timestamp
 		user.RecordLogin();
@@ -80,7 +82,7 @@ internal sealed class LoginUserCommandHandler : ICommandHandler<LoginUserCommand
 		var expiresAt = DateTime.UtcNow.AddMinutes(60);
 
 		// 8. Return response with user details
-		return Result.Success(new LoginUserResponse(
+		return Result.Ok(new LoginUserResponse(
 			user.Id,
 			user.Email.Value,
 			user.Profile.FirstName,

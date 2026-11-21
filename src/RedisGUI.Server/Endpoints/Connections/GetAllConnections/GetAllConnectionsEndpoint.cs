@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -5,7 +6,6 @@ using RedisGUI.Application.Connections.GetAllConnections;
 using RedisGUI.Application.Connections.Shared;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System.Collections.Generic;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetAllConnections
@@ -18,11 +18,11 @@ namespace RedisGUI.Server.Endpoints.Connections.GetAllConnections
 		/// <inheritdoc />
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder) =>
 			routerBuilder.MapGet("connections/", static async (
-				IMediator sender,
+				IDispatcher sender,
 				[AsParameters] GetAllConnectionsRequest request) =>
 			{
 				GetAllConnectionsQuery query = new(request.PageNumber, request.PageSize);
-				return await sender.Send<IEnumerable<GetConnectionResponse>>(query).Match(Results.Ok, error => error.ToProblemDetails());
+				return await sender.Send(query).Match(Results.Ok, error => error.ToProblemDetails());
 			})
 			.WithName("GetAllConnections")
 			.WithSummary("Get all Redis connections")

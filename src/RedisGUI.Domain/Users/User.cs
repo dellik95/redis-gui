@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users.Events;
@@ -78,7 +79,7 @@ public class User : Entity, IAggregateRoot
 		UserRole role = UserRole.User)
 	{
 		User user = new(System.Guid.NewGuid(), email, passwordHash, profile, role);
-		return Result.Success(user);
+		return Result.Ok(user);
 	}
 
 	/// <summary>
@@ -89,7 +90,7 @@ public class User : Entity, IAggregateRoot
 	public Result UpdateProfile(UserProfile newProfile)
 	{
 		Profile = newProfile;
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <summary>
@@ -102,11 +103,11 @@ public class User : Entity, IAggregateRoot
 	public Result ChangePassword(string oldPassword, PasswordHash newPassword, IPasswordHasher hasher)
 	{
 		if (!hasher.Verify(oldPassword, PasswordHash.Value))
-			return Result.Failure(DomainErrors.User.InvalidPassword);
+			return Result.Fail(DomainErrors.User.InvalidPassword);
 
 		PasswordHash = newPassword;
 		RaiseDomainEvent(new UserPasswordChangedDomainEvent(Id));
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <summary>
@@ -125,11 +126,11 @@ public class User : Entity, IAggregateRoot
 	public Result Deactivate()
 	{
 		if (!IsActive)
-			return Result.Failure(DomainErrors.User.AlreadyDeactivated);
+			return Result.Fail(DomainErrors.User.AlreadyDeactivated);
 
 		IsActive = false;
 		RaiseDomainEvent(new UserDeactivatedDomainEvent(Id));
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <summary>
@@ -139,10 +140,10 @@ public class User : Entity, IAggregateRoot
 	public Result Activate()
 	{
 		if (IsActive)
-			return Result.Success(); // Already active
+			return Result.Ok(); // Already active
 
 		IsActive = true;
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <summary>
@@ -153,6 +154,6 @@ public class User : Entity, IAggregateRoot
 	public Result ChangeRole(UserRole newRole)
 	{
 		Role = newRole;
-		return Result.Success();
+		return Result.Ok();
 	}
 }

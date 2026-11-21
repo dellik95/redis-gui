@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,20 +23,20 @@ public class RunStreamingLoadTestCommandTests
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		connection.SetReadOnly(readOnly);
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(allowed);
 		var service = new Mock<IRedisLoadTestService>();
 		var request = new RedisLoadTestRequest();
 		Func<RedisLoadTestProgress, Task> progress = _ => Task.CompletedTask;
 		service.Setup(x => x.RunStreamingLoadTestAsync(connection, request, progress, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisLoadTestResult()));
+			.ReturnsAsync(Result.Ok(new RedisLoadTestResult()));
 		var handler = new RunStreamingLoadTestCommandHandler(repository.Object, access.Object, service.Object);
 
 		var result = await handler.Handle(new RunStreamingLoadTestCommand(connection.Id, request, progress), CancellationToken.None);
 
 		Assert.That(result.IsSuccess, Is.EqualTo(error is null));
-		if (error is not null) Assert.That(result.Error.Code, Is.EqualTo(error));
+		if (error is not null) Assert.That(result.GetDomainError().Code, Is.EqualTo(error));
 		service.Verify(x => x.RunStreamingLoadTestAsync(connection, request, progress, It.IsAny<CancellationToken>()), error is null ? Times.Once : Times.Never);
 	}
 }

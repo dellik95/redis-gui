@@ -1,6 +1,8 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -25,17 +27,17 @@ internal sealed class GetKeyspaceInfoQueryHandler(
 	public async Task<Result<GetKeyspaceInfoResponse>> Handle(GetKeyspaceInfoQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<GetKeyspaceInfoResponse>(connectionResult.Error);
+			return Result.Fail<GetKeyspaceInfoResponse>(connectionResult.Errors);
 		}
 
 		var keyspaceResult = await diagnosticsService.GetKeyspaceInfoAsync(connectionResult.Value, cancellationToken);
-		if (keyspaceResult.IsFailure)
+		if (keyspaceResult.IsFailed)
 		{
-			return Result.Failure<GetKeyspaceInfoResponse>(keyspaceResult.Error);
+			return Result.Fail<GetKeyspaceInfoResponse>(keyspaceResult.Errors);
 		}
 
-		return Result.Success(new GetKeyspaceInfoResponse(keyspaceResult.Value));
+		return Result.Ok(new GetKeyspaceInfoResponse(keyspaceResult.Value));
 	}
 }

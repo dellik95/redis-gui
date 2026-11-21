@@ -1,8 +1,10 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -24,7 +26,7 @@ public sealed class UpdateServerConfigCommandHandler(
 	IRedisDiagnosticsService diagnosticsService,
 	IConnectionAccessService? access = null) : ICommandHandler<UpdateServerConfigCommand, RedisSetConfigResponseDto>
 {
-	private static readonly Error ReadOnlyError = new(
+	private static readonly DomainError ReadOnlyError = new(
 		"Connection.ReadOnly",
 		"This connection is in read-only safe mode. Configuration changes are disabled.");
 
@@ -36,9 +38,9 @@ public sealed class UpdateServerConfigCommandHandler(
 			cancellationToken,
 			requireWritable: true,
 			readOnlyError: ReadOnlyError);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<RedisSetConfigResponseDto>(connectionResult.Error);
+			return Result.Fail<RedisSetConfigResponseDto>(connectionResult.Errors);
 		}
 
 		return await diagnosticsService.SetServerConfigAsync(

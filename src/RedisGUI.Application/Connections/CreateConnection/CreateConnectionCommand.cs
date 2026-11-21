@@ -1,6 +1,8 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
@@ -52,13 +54,13 @@ internal sealed class CreateConnectionCommandHandler(
 			request.Password,
 			passwordEncryptor);
 
-		if (credentialsResult.IsFailure)
-			return Result.Failure<Guid>(credentialsResult.Error);
+		if (credentialsResult.IsFailed)
+			return Result.Fail<Guid>(credentialsResult.Errors);
 
 		Guid? userId = currentUserService.UserId;
 		if (!userId.HasValue)
 		{
-			return Result.Failure<Guid>(Domain.Errors.DomainErrors.User.Unauthorized);
+			return Result.Fail<Guid>(Domain.Errors.DomainErrors.User.Unauthorized);
 		}
 
 		DatabaseNumber databaseNumber = new(request.Database);
@@ -72,24 +74,24 @@ internal sealed class CreateConnectionCommandHandler(
 			ownerId,
 			credentialsResult.Value);
 
-		if (createResult.IsFailure)
-			return Result.Failure<Guid>(createResult.Error);
+		if (createResult.IsFailed)
+			return Result.Fail<Guid>(createResult.Errors);
 
 		createResult.Value.SetReadOnly(request.IsReadOnly);
 
 		Result testResult = await connectionService.CheckConnectionAsync(createResult.Value, cancellationToken);
-		if (testResult.IsFailure)
-			return Result.Failure<Guid>(testResult.Error);
+		if (testResult.IsFailed)
+			return Result.Fail<Guid>(testResult.Errors);
 		createResult.Value.UpdateAvailability(testResult.IsSuccess);
 
 		connectionRepository.Add(createResult.Value);
 		Result<int> saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
 
-		if (saveResult.IsFailure)
+		if (saveResult.IsFailed)
 		{
-			return Result.Failure<Guid>(saveResult.Error);
+			return Result.Fail<Guid>(saveResult.Errors);
 		}
 
-		return Result.Success(createResult.Value.Id);
+		return Result.Ok(createResult.Value.Id);
 	}
 }

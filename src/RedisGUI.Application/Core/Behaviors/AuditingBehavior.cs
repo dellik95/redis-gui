@@ -1,9 +1,9 @@
+using DispatchWeave;
+using FluentResults;
 using RedisGUI.Application.Core.Attributes;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
-using RedisGUI.Shared.Mediator;
-using RedisGUI.Shared.Primitives;
 using System;
 using System.Reflection;
 using System.Threading;
@@ -23,8 +23,8 @@ public sealed class AuditingBehavior<TRequest, TResponse>(
 {
 	public async Task<TResponse> Handle(
 		TRequest request,
-		CancellationToken cancellationToken,
-		Func<Task<TResponse>> next)
+		RequestHandlerDelegate<TResponse> next,
+		CancellationToken cancellationToken = default)
 	{
 		Type requestType = request.GetType();
 		var auditAttribute = requestType.GetCustomAttribute<AuditableAttribute>();
@@ -35,14 +35,18 @@ public sealed class AuditingBehavior<TRequest, TResponse>(
 
 		var response = await next();
 
-		if (response is Result result && !result.IsSuccess)
+		if (response is IResultBase { IsFailed: true })
 		{
 			return response;
 		}
 
-		object? resultValue = response is IValueResult valueResult && valueResult.IsSuccess
-			? valueResult.UntypedValue
-			: null;
+		object? resultValue = response switch
+		{
+			IResult<Guid> guid => guid.Value,
+			IResult<IAuditActorResult> actor => actor.Value,
+			IResult<IAuditOutcome> outcomeResult => outcomeResult.Value,
+			_ => null
+		};
 
 		Guid? entityId = resultValue is Guid id ? id : null;
 		Guid? actorId = currentUserService.UserId;

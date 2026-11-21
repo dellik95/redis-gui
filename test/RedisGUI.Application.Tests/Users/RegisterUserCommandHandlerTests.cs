@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Users.Commands.RegisterUser;
@@ -51,7 +52,7 @@ public class RegisterUserCommandHandlerTests
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Shared.Primitives.Result.Success(1));
+			.ReturnsAsync(1);
 
 		// Act
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
@@ -77,7 +78,7 @@ public class RegisterUserCommandHandlerTests
 		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("Jane", "Doe");
 
-		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
+		if (emailResult.IsFailed || passwordHashResult.IsFailed || profileResult.IsFailed)
 		{
 			Assert.Fail("Failed to create test data");
 			return;
@@ -89,7 +90,7 @@ public class RegisterUserCommandHandlerTests
 			profileResult.Value,
 			UserRole.User);
 
-		if (userResult.IsFailure)
+		if (userResult.IsFailed)
 		{
 			Assert.Fail("Failed to create user");
 			return;
@@ -105,8 +106,8 @@ public class RegisterUserCommandHandlerTests
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.EmailAlreadyExists);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.EmailAlreadyExists);
 		userRepositoryMock.Verify(x => x.Add(It.IsAny<User>()), Times.Never);
 	}
 
@@ -124,7 +125,7 @@ public class RegisterUserCommandHandlerTests
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 		userRepositoryMock.Verify(x => x.Add(It.IsAny<User>()), Times.Never);
 	}
 }

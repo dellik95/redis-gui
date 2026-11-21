@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +12,6 @@ using RedisGUI.Application.Redis.Commands.BulkUpdateTtl;
 using RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
 using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.BulkOperations;
@@ -30,7 +31,7 @@ public sealed record BulkKeyJobResult(int Processed, int? Total, int Changed, in
 public sealed class BulkKeyJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<BulkKeyJobParameters>? validator = null)
 	: BackgroundJobHandler<BulkKeyJobParameters, BulkKeyJobProgress, BulkKeyJobResult>(repository, access, validator)
 {
@@ -57,16 +58,16 @@ public sealed class BulkKeyJobHandler(
 				await progress.ReportAsync(null, new BulkKeyJobProgress(count, null, count, 0, 0));
 			});
 			var patternResult = await mediator.Send(command, cancellationToken);
-			if (patternResult.IsFailure)
+			if (patternResult.IsFailed)
 			{
-				return Result.Failure<JobExecutionOutcome<BulkKeyJobResult>>(patternResult.Error);
+				return Result.Fail<JobExecutionOutcome<BulkKeyJobResult>>(patternResult.Errors);
 			}
 
 			var result = patternResult.Value;
 			await progress.ReportAsync(null, new BulkKeyJobProgress(result.DeletedCount, null, result.DeletedCount, 0, 0));
 			var summary = new BulkKeyJobResult(result.DeletedCount, null, result.DeletedCount, 0, 0, [],
 				result.Cancelled, result.Error is not null, result.Error);
-			return Result.Success(result.Error is null
+			return Result.Ok(result.Error is null
 				? JobExecutionOutcome<BulkKeyJobResult>.Completed(summary)
 				: JobExecutionOutcome<BulkKeyJobResult>.Failed(result.Error, summary, cancellationToken.IsCancellationRequested));
 		}
@@ -89,11 +90,11 @@ public sealed class BulkKeyJobHandler(
 				var result = await mediator.Send(
 					new DeleteMultipleKeysCommand(connectionId, batch, request.Database, batchBase64),
 					CancellationToken.None);
-				if (result.IsFailure)
+				if (result.IsFailed)
 				{
 					var summary = new BulkKeyJobResult(processed, keys.Length, changed, unchanged, failed,
-						failedExamples, cancellationToken.IsCancellationRequested, true, result.Error.Message);
-					return Result.Success(JobExecutionOutcome<BulkKeyJobResult>.Failed(result.Error.Message, summary, cancellationToken.IsCancellationRequested));
+						failedExamples, cancellationToken.IsCancellationRequested, true, result.GetDomainError().Message);
+					return Result.Ok(JobExecutionOutcome<BulkKeyJobResult>.Failed(result.GetDomainError().Message, summary, cancellationToken.IsCancellationRequested));
 				}
 				changed += result.Value.DeletedCount;
 				failed += result.Value.FailedKeys.Count;
@@ -104,11 +105,11 @@ public sealed class BulkKeyJobHandler(
 				var result = await mediator.Send(
 					new BulkUpdateTtlCommand(connectionId, batch, request.TtlSeconds, request.Database, batchBase64),
 					CancellationToken.None);
-				if (result.IsFailure)
+				if (result.IsFailed)
 				{
 					var summary = new BulkKeyJobResult(processed, keys.Length, changed, unchanged, failed,
-						failedExamples, cancellationToken.IsCancellationRequested, true, result.Error.Message);
-					return Result.Success(JobExecutionOutcome<BulkKeyJobResult>.Failed(result.Error.Message, summary, cancellationToken.IsCancellationRequested));
+						failedExamples, cancellationToken.IsCancellationRequested, true, result.GetDomainError().Message);
+					return Result.Ok(JobExecutionOutcome<BulkKeyJobResult>.Failed(result.GetDomainError().Message, summary, cancellationToken.IsCancellationRequested));
 				}
 				changed += result.Value.UpdatedCount;
 				unchanged += result.Value.UnchangedCount;
@@ -119,7 +120,7 @@ public sealed class BulkKeyJobHandler(
 			await progress.ReportAsync((double)processed / keys.Length * 100, new BulkKeyJobProgress(processed, keys.Length, changed, unchanged, failed));
 		}
 
-		return Result.Success(JobExecutionOutcome<BulkKeyJobResult>.Completed(
+		return Result.Ok(JobExecutionOutcome<BulkKeyJobResult>.Completed(
 			new BulkKeyJobResult(processed, keys.Length, changed, unchanged, failed, failedExamples,
 				cancellationToken.IsCancellationRequested && processed < keys.Length, false, null)));
 	}

@@ -1,10 +1,10 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Queries.GetAllRedisValues;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 using System.Threading;
 
@@ -28,7 +28,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetAllRedisKeys
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			routerBuilder.MapGet("storage/{connectionId:guid}", async (
-				IMediator sender,
+				IDispatcher sender,
 				Guid connectionId,
 				string? pattern,
 				int? pageSize,
@@ -37,7 +37,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetAllRedisKeys
 				CancellationToken cancellationToken) =>
 			{
 				GetAllRedisKeysQuery query = new(connectionId, pattern ?? "*", pageSize, pageNumber, database);
-				var result = await sender.Send<GetAllRedisValuesResponse>(query, cancellationToken);
+				var result = await sender.Send(query, cancellationToken);
 				return result.ToHttpResult();
 			})
 			.WithName("GetAllRedisKeys")

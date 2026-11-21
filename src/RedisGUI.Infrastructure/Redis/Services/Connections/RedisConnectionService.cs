@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 
@@ -18,10 +19,10 @@ public class RedisConnectionService(
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
 
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to connect: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure(multiplexerResult.Error);
+			logger.LogError("Failed to connect: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail(multiplexerResult.Errors);
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
@@ -31,7 +32,7 @@ public class RedisConnectionService(
 		TimeSpan result = await multiplexer.GetDatabase(targetDb).PingAsync().WaitAsync(cancellationToken);
 
 		return result.CompareTo(TimeSpan.Zero) > 0
-			? Result.Success()
-			: Result.Failure(DomainErrors.Connection.ConnectionNotEstablished);
+			? Result.Ok()
+			: Result.Fail(DomainErrors.Connection.ConnectionNotEstablished);
 	}
 }

@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using System;
 using System.Diagnostics;
 using System.Linq;
@@ -7,7 +9,6 @@ using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.SeedSampleData;
@@ -24,7 +25,7 @@ public sealed record SeedJobProgress(
 public sealed class SeedSampleDataJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<SeedSampleDataOptions>? validator = null)
 	: BackgroundJobHandler<SeedSampleDataOptions, SeedJobProgress, SeedDataResult>(repository, access, validator)
 {
@@ -52,9 +53,9 @@ public sealed class SeedSampleDataJobHandler(
 
 		// Allow a cancelled operation to return and audit its confirmed partial result.
 		var result = await mediator.Send(command, CancellationToken.None);
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<JobExecutionOutcome<SeedDataResult>>(result.Error);
+			return Result.Fail<JobExecutionOutcome<SeedDataResult>>(result.Errors);
 		}
 
 		var outcome = result.Value;
@@ -67,7 +68,7 @@ public sealed class SeedSampleDataJobHandler(
 			requested > 0 ? (double)persisted / requested * 100 : 100,
 			new SeedJobProgress(persisted, requested, requested, processed, persisted, failed));
 
-		return Result.Success(outcome.Error is null
+		return Result.Ok(outcome.Error is null
 			? JobExecutionOutcome<SeedDataResult>.Completed(outcome)
 			: JobExecutionOutcome<SeedDataResult>.Failed(outcome.Error, outcome, cancellationToken.IsCancellationRequested));
 	}

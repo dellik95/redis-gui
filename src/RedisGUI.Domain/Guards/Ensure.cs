@@ -28,7 +28,7 @@ public static class Ensure
 	/// <param name="value">Input string</param>
 	/// <param name="error">Error</param>
 	/// <exception cref="ArgumentException">Exception</exception>
-	public static void NotEmpty(string value, Error error)
+	public static void NotEmpty(string value, DomainError error)
 	{
 		if (string.IsNullOrWhiteSpace(value))
 		{
@@ -72,7 +72,7 @@ public static class Ensure
 	/// <param name="action">Condition</param>
 	/// <param name="error">Error</param>
 	/// <exception cref="ErrorException">Exception</exception>
-	public static void Is(Func<bool> action, Error error)
+	public static void Is(Func<bool> action, DomainError error)
 	{
 		if (!action())
 		{

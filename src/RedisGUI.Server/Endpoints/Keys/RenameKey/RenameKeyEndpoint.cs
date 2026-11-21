@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Redis.Commands.RenameKey;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using System;
 
 namespace RedisGUI.Server.Endpoints.RedisStorage.RenameKey;
@@ -23,7 +23,7 @@ public class RenameKeyEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapPost("storage/{connectionId:guid}/keys/rename", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId,
 			[FromBody] RenameKeyRequest request) =>
 		{

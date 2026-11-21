@@ -12,7 +12,7 @@ public static class ErrorExtensions
 	/// </summary>
 	/// <param name="errors">The collection of errors</param>
 	/// <returns>A string containing all error codes separated by commas</returns>
-	public static string ToCodeString(this IEnumerable<Error> errors)
+	public static string ToCodeString(this IEnumerable<DomainError> errors)
 	{
 		errors ??= [];
 		return string.Join(", ", errors.Select(x => x.Code));
@@ -23,7 +23,7 @@ public static class ErrorExtensions
 	/// </summary>
 	/// <param name="errors">The collection of errors</param>
 	/// <returns>A string containing all error codes and messages, one per line</returns>
-	public static string ToFormattedMessage(this IEnumerable<Error> errors)
+	public static string ToFormattedMessage(this IEnumerable<DomainError> errors)
 	{
 		errors ??= [];
 		return string.Join('\n', errors.Select(x => $"{x.Code}: {x.Message}"));

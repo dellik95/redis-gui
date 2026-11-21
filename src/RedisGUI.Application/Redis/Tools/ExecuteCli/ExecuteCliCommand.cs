@@ -1,8 +1,10 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using FluentValidation;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -42,9 +44,9 @@ internal sealed class ExecuteCliCommandHandler(
 	public async Task<Result<ExecuteCliResponse>> Handle(ExecuteCliCommand request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<ExecuteCliResponse>(connectionResult.Error);
+			return Result.Fail<ExecuteCliResponse>(connectionResult.Errors);
 		}
 
 		if (connectionResult.Value.IsReadOnly)
@@ -52,7 +54,7 @@ internal sealed class ExecuteCliCommandHandler(
 			string cmd = request.Command.Trim().ToUpperInvariant();
 			if (cmd.StartsWith("FLUSHALL") || cmd.StartsWith("FLUSHDB") || cmd.StartsWith("DEL") || cmd.StartsWith("UNLINK") || cmd.StartsWith("SET") || cmd.StartsWith("RENAME") || cmd.StartsWith("RESTORE"))
 			{
-				return Result.Failure<ExecuteCliResponse>(DomainErrors.Connection.ReadOnlyMode);
+				return Result.Fail<ExecuteCliResponse>(DomainErrors.Connection.ReadOnlyMode);
 			}
 		}
 
@@ -62,11 +64,11 @@ internal sealed class ExecuteCliCommandHandler(
 			request.Database,
 			cancellationToken);
 
-		if (executionResult.IsFailure)
+		if (executionResult.IsFailed)
 		{
-			return Result.Failure<ExecuteCliResponse>(executionResult.Error);
+			return Result.Fail<ExecuteCliResponse>(executionResult.Errors);
 		}
 
-		return Result.Success(new ExecuteCliResponse(executionResult.Value, true));
+		return Result.Ok(new ExecuteCliResponse(executionResult.Value, true));
 	}
 }

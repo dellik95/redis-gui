@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users;
 using RedisGUI.Shared.Primitives;
@@ -39,8 +40,8 @@ public class EmailTests
 		Result<Email> result = Email.Create("");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Email.Empty);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Email.Empty);
 	}
 
 	[Test]
@@ -50,8 +51,8 @@ public class EmailTests
 		Result<Email> result = Email.Create("   ");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Email.Empty);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Email.Empty);
 	}
 
 	[Test]
@@ -61,8 +62,8 @@ public class EmailTests
 		Result<Email> result = Email.Create("invalid-email");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Email.InvalidFormat);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Email.InvalidFormat);
 	}
 
 	[Test]
@@ -72,8 +73,8 @@ public class EmailTests
 		Result<Email> result = Email.Create("invalidemail.com");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Email.InvalidFormat);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Email.InvalidFormat);
 	}
 
 	[Test]

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Infrastructure.Redis.Common;
 using StackExchange.Redis;
 using System.Linq;
@@ -21,14 +22,14 @@ public class RedisCliService(
 	{
 		if (string.IsNullOrWhiteSpace(rawCommand))
 		{
-			return Result.Failure<string>(new Error("Cli.EmptyCommand", "Command cannot be empty."));
+			return Result.Fail<string>(new DomainError("Cli.EmptyCommand", "Command cannot be empty."));
 		}
 
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to get connection for CLI command: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure<string>(multiplexerResult.Error);
+			logger.LogError("Failed to get connection for CLI command: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail<string>(multiplexerResult.Errors);
 		}
 
 		var multiplexer = multiplexerResult.Value;
@@ -36,9 +37,9 @@ public class RedisCliService(
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure)
+		if (dbValidation.IsFailed)
 		{
-			return Result.Success($"(error) {dbValidation.Error.Message}");
+			return Result.Ok($"(error) {dbValidation.GetDomainError().Message}");
 		}
 
 		IDatabase db = multiplexer.GetDatabase(targetDb);
@@ -46,7 +47,7 @@ public class RedisCliService(
 		string[] parts = CommandLineTokenizer.Tokenize(rawCommand);
 		if (parts.Length == 0)
 		{
-			return Result.Failure<string>(new Error("Cli.EmptyCommand", "Command cannot be empty."));
+			return Result.Fail<string>(new DomainError("Cli.EmptyCommand", "Command cannot be empty."));
 		}
 
 		string command = parts[0].ToUpperInvariant();
@@ -55,7 +56,7 @@ public class RedisCliService(
 		try
 		{
 			RedisResult result = await db.ExecuteAsync(command, args).WaitAsync(cancellationToken);
-			return Result.Success(RedisRespFormatter.Format(result));
+			return Result.Ok(RedisRespFormatter.Format(result));
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
@@ -63,7 +64,7 @@ public class RedisCliService(
 		}
 		catch (Exception ex)
 		{
-			return Result.Success($"(error) {ex.Message}");
+			return Result.Ok($"(error) {ex.Message}");
 		}
 	}
 }

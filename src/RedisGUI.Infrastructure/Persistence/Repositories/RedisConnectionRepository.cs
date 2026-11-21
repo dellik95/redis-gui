@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 
 namespace RedisGUI.Infrastructure.Persistence.Repositories;
@@ -20,8 +21,8 @@ public class RedisConnectionRepository(ApplicationDbContext applicationDbContext
 		// Use FindAsync for better performance (uses primary key lookup)
 		RedisConnection? connection = await DbSet.FindAsync([id], token);
 		return connection is null
-			? Result.Failure<RedisConnection>(DomainErrors.Connection.ConnectionNotFound)
-			: Result.Success(connection);
+			? Result.Fail<RedisConnection>(DomainErrors.Connection.ConnectionNotFound)
+			: Result.Ok(connection);
 	}
 
 	/// <summary>
@@ -34,6 +35,6 @@ public class RedisConnectionRepository(ApplicationDbContext applicationDbContext
 		List<RedisConnection> connections = await DbSet
 			.AsNoTracking()
 			.ToListAsync(token);
-		return Result.Success(connections);
+		return Result.Ok(connections);
 	}
 }

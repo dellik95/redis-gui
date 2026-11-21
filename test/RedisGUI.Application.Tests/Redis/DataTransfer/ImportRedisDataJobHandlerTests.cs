@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -22,15 +24,15 @@ public class ImportRedisDataJobHandlerTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		var snapshots = new Mock<IRedisSnapshotService>();
 		snapshots.Setup(x => x.SetLegacyStringAsync(connection, It.IsAny<string>(), It.IsAny<string>(), null, false, 0, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(true));
+			.ReturnsAsync(Result.Ok(true));
 		var logs = new Mock<IAuditLogRepository>();
 		var unit = new Mock<IUnitOfWork>();
-		unit.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(1));
+		unit.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 		var services = new ServiceCollection();
 		services.AddLogging();
 		services.AddApplication();
@@ -42,7 +44,7 @@ public class ImportRedisDataJobHandlerTests
 		services.AddSingleton(Mock.Of<ICurrentUserService>());
 		await using var provider = services.BuildServiceProvider();
 		using var scope = provider.CreateScope();
-		var handler = new ImportRedisDataJobHandler(repository.Object, access.Object, scope.ServiceProvider.GetRequiredService<RedisGUI.Shared.Mediator.IMediator>());
+		var handler = new ImportRedisDataJobHandler(repository.Object, access.Object, scope.ServiceProvider.GetRequiredService<IDispatcher>());
 		var data = JsonSerializer.Serialize(new[] { new RedisImportItem { Key = "a", Value = "1" }, new RedisImportItem { Key = "b", Value = "2" } });
 		var parameters = JsonSerializer.SerializeToElement(new { data, format = "json", database = 0, overwrite = false });
 		using var cancellation = new CancellationTokenSource();

@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -5,7 +7,6 @@ using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.RunLoadTest;
@@ -14,7 +15,7 @@ namespace RedisGUI.Application.Redis.Commands.RunLoadTest;
 public sealed class LoadTestJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<RedisLoadTestRequest>? validator = null)
 	: BackgroundJobHandler<RedisLoadTestRequest, RedisLoadTestProgress, RedisLoadTestResult>(repository, access, validator)
 {
@@ -38,10 +39,10 @@ public sealed class LoadTestJobHandler(
 			return progress.ReportAsync(percent, itemProgress);
 		});
 
-		var result = await mediator.Send<RedisLoadTestResult>(command, cancellationToken);
+		var result = await mediator.Send(command, cancellationToken);
 		return result.IsSuccess
-			? Result.Success(JobExecutionOutcome<RedisLoadTestResult>.Completed(result.Value))
-			: Result.Failure<JobExecutionOutcome<RedisLoadTestResult>>(result.Error);
+			? Result.Ok(JobExecutionOutcome<RedisLoadTestResult>.Completed(result.Value))
+			: Result.Fail<JobExecutionOutcome<RedisLoadTestResult>>(result.Errors);
 	}
 }
 

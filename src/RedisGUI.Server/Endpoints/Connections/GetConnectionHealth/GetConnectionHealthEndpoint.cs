@@ -1,3 +1,4 @@
+using DispatchWeave;
 using System;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -5,7 +6,6 @@ using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.GetConnectionHealth;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 
 namespace RedisGUI.Server.Endpoints.Connections.GetConnectionHealth;
 
@@ -20,12 +20,12 @@ public class GetConnectionHealthEndpoint : IEndpoint
 	public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 	{
 		routerBuilder.MapGet("connections/{connectionId:guid}/health", async (
-			IMediator sender,
+			IDispatcher sender,
 			Guid connectionId) =>
 		{
 			var query = new GetConnectionHealthQuery(connectionId);
 
-			return await sender.Send<GetConnectionHealthResponse>(query)
+			return await sender.Send(query)
 				.Match(Results.Ok, error => error.ToProblemDetails());
 		})
 		.RequireAuthorization(Policies.Authenticated)

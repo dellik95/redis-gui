@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ public class MessagingHandlerTests
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		connection.SetReadOnly(readOnly);
 		var repo = new Mock<IRedisConnectionRepository>();
-		repo.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repo.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(canAccess);
 		var messaging = new Mock<IRedisMessagingOperations>();
@@ -31,7 +32,7 @@ public class MessagingHandlerTests
 		var result = await handler.Handle(new PublishMessageCommand(connection.Id, "channel", "hello"), CancellationToken.None);
 
 		Assert.That(result.IsSuccess, Is.EqualTo(expectedError is null));
-		if (expectedError is not null) Assert.That(result.Error.Code, Is.EqualTo(expectedError));
+		if (expectedError is not null) Assert.That(result.GetDomainError().Code, Is.EqualTo(expectedError));
 		else Assert.That(result.Value, Is.EqualTo(4));
 		messaging.Verify(x => x.PublishAsync(connection, "channel", "hello", It.IsAny<CancellationToken>()), expectedError is null ? Times.Once : Times.Never);
 	}

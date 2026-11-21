@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -35,12 +36,12 @@ public class SeedSampleDataCommandHandlerTests
 		Guid connectionId = Guid.NewGuid();
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		var result = await _handler.Handle(new SeedSampleDataCommand(connectionId), CancellationToken.None);
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.NotFound);
 	}
 
 	[Test]
@@ -57,12 +58,12 @@ public class SeedSampleDataCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(conn));
+			.ReturnsAsync(Result.Ok(conn));
 
 		var result = await _handler.Handle(new SeedSampleDataCommand(connectionId), CancellationToken.None);
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.ReadOnlyMode);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.ReadOnlyMode);
 	}
 
 	[Test]
@@ -78,7 +79,7 @@ public class SeedSampleDataCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(conn));
+			.ReturnsAsync(Result.Ok(conn));
 
 		var expectedResult = new SeedDataResult
 		{
@@ -88,7 +89,7 @@ public class SeedSampleDataCommandHandlerTests
 
 		_seedDataServiceMock
 			.Setup(x => x.SeedSampleDataAsync(conn, It.IsAny<SeedSampleDataOptions?>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(expectedResult));
+			.ReturnsAsync(Result.Ok(expectedResult));
 
 		var result = await _handler.Handle(new SeedSampleDataCommand(connectionId), CancellationToken.None);
 

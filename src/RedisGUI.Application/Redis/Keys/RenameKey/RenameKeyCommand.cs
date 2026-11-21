@@ -1,6 +1,8 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -39,9 +41,9 @@ internal sealed class RenameKeyCommandHandler(
 			access,
 			cancellationToken,
 			requireWritable: true);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure(connectionResult.Error);
+			return Result.Fail(connectionResult.Errors);
 		}
 
 		return string.IsNullOrEmpty(request.OldKeyBase64) && string.IsNullOrEmpty(request.NewKeyBase64)

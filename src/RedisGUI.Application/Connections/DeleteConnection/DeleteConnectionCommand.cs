@@ -1,6 +1,8 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Abstraction;
@@ -28,9 +30,9 @@ internal sealed class DeleteConnectionCommandHandler(
 		if (access is not null)
 		{
 			var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(command.Id, access, cancellationToken);
-			if (connectionResult.IsFailure)
+			if (connectionResult.IsFailed)
 			{
-				return Result.Failure(connectionResult.Error);
+				return Result.Fail(connectionResult.Errors);
 			}
 		}
 

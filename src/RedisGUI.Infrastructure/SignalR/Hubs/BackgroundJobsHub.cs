@@ -23,7 +23,7 @@ public sealed class BackgroundJobsHub(
 		if (job is null) throw new HubException("Job not found.");
 
 		var connection = await repository.GetConnectionByIdAsync(job.ConnectionId, Context.ConnectionAborted);
-		if (connection.IsFailure || Context.User is null ||
+		if (connection.IsFailed || Context.User is null ||
 			!(await authorization.AuthorizeAsync(Context.User, connection.Value, new ConnectionOwnershipRequirement())).Succeeded)
 		{
 			throw new HubException("Job not found.");

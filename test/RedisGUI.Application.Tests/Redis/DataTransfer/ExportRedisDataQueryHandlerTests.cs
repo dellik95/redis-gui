@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -32,7 +33,7 @@ public class ExportRedisDataQueryHandlerTests
 		connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		keys = new Mock<IRedisKeyService>();
@@ -52,11 +53,11 @@ public class ExportRedisDataQueryHandlerTests
 		var first = Enumerable.Range(0, 100).Select(i => Item(i)).ToArray();
 		var second = Enumerable.Range(99, 51).Select(i => Item(i)).ToArray();
 		keys.Setup(x => x.ScanKeysAsync(connection, "user:*", 2, null, 100, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeyScanPage(first, "next")));
+			.ReturnsAsync(Result.Ok(new RedisKeyScanPage(first, "next")));
 		keys.Setup(x => x.ScanKeysAsync(connection, "user:*", 2, "next", 100, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeyScanPage(second, null)));
+			.ReturnsAsync(Result.Ok(new RedisKeyScanPage(second, null)));
 		snapshots.Setup(x => x.CaptureAsync(connection, It.IsAny<byte[]>(), 2, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeySnapshot([0, 255, 1], "stream", 12345)));
+			.ReturnsAsync(Result.Ok(new RedisKeySnapshot([0, 255, 1], "stream", 12345)));
 		var result = await handler.Handle(new ExportRedisDataQuery(connection.Id, "user:*", ExportFormat.Json, 2), CancellationToken.None);
 		Assert.That(result.IsSuccess, Is.True);
 		await using var output = result.Value.Data;
@@ -72,11 +73,11 @@ public class ExportRedisDataQueryHandlerTests
 	public async Task Handle_ReadFailure_DoesNotReturnPartialOutput()
 	{
 		keys.Setup(x => x.ScanKeysAsync(connection, "*", 0, null, 100, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeyScanPage([Item(1)], null)));
+			.ReturnsAsync(Result.Ok(new RedisKeyScanPage([Item(1)], null)));
 		snapshots.Setup(x => x.CaptureAsync(connection, It.IsAny<byte[]>(), 0, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisKeySnapshot>(new Error("Redis.KeyNotFound", "disappeared")));
+			.ReturnsAsync(Result.Fail<RedisKeySnapshot>(new DomainError("Redis.KeyNotFound", "disappeared")));
 		var result = await handler.Handle(new ExportRedisDataQuery(connection.Id), CancellationToken.None);
-		Assert.That(result.Error.Code, Is.EqualTo("Export.KeyReadFailed"));
+		Assert.That(result.GetDomainError().Code, Is.EqualTo("Export.KeyReadFailed"));
 		Assert.That(session.Disposed, Is.True);
 		Assert.That(session.Detached, Is.False);
 	}
@@ -85,9 +86,9 @@ public class ExportRedisDataQueryHandlerTests
 	public async Task Handle_ScannedKeyDisappears_DoesNotReturnPartialOutput()
 	{
 		keys.Setup(x => x.ScanKeysAsync(connection, "*", 0, null, 100, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeyScanPage([], null, MissingCount: 1)));
+			.ReturnsAsync(Result.Ok(new RedisKeyScanPage([], null, MissingCount: 1)));
 		var result = await handler.Handle(new ExportRedisDataQuery(connection.Id), CancellationToken.None);
-		Assert.That(result.Error.Code, Is.EqualTo("Export.KeyReadFailed"));
+		Assert.That(result.GetDomainError().Code, Is.EqualTo("Export.KeyReadFailed"));
 		Assert.That(session.Detached, Is.False);
 	}
 
@@ -95,9 +96,9 @@ public class ExportRedisDataQueryHandlerTests
 	public async Task Handle_CsvFormat_UsesBinarySafeFields()
 	{
 		keys.Setup(x => x.ScanKeysAsync(connection, "*", 0, null, 100, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeyScanPage([Item(2)], null)));
+			.ReturnsAsync(Result.Ok(new RedisKeyScanPage([Item(2)], null)));
 		snapshots.Setup(x => x.CaptureAsync(connection, It.IsAny<byte[]>(), 0, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisKeySnapshot([0, 255], "string", null)));
+			.ReturnsAsync(Result.Ok(new RedisKeySnapshot([0, 255], "string", null)));
 		var result = await handler.Handle(new ExportRedisDataQuery(connection.Id, Format: ExportFormat.Csv), CancellationToken.None);
 		Assert.That(result.IsSuccess, Is.True);
 		await using var output = result.Value.Data;

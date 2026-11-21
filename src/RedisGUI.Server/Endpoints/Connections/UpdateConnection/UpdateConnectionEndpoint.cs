@@ -1,10 +1,11 @@
+using FluentResults;
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using RedisGUI.Application.Connections.UpdateConnection;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -30,7 +31,7 @@ public class UpdateConnectionEndpoint : IEndpoint
 		routerBuilder.MapPut("connections/{id:guid}", async (
 			Guid id,
 			UpdateConnectionRequest request,
-			IMediator sender,
+			IDispatcher sender,
 			CancellationToken cancellationToken) =>
 		{
 			UpdateConnectionCommand updateConnectionCommand = new(
@@ -44,7 +45,7 @@ public class UpdateConnectionEndpoint : IEndpoint
 
 			Result result = await sender.Send(updateConnectionCommand, cancellationToken);
 
-			return result.IsSuccess ? Results.NoContent() : result.Error.ToProblemDetails();
+			return result.IsSuccess ? Results.NoContent() : result.GetDomainError().ToProblemDetails();
 		})
 		.WithName("UpdateConnection")
 		.WithSummary("Update a Redis connection")

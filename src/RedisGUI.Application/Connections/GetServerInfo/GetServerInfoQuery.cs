@@ -1,7 +1,9 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -19,9 +21,9 @@ public sealed class GetServerInfoQueryHandler(
 	public async Task<Result<RedisServerInfoDto>> Handle(GetServerInfoQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<RedisServerInfoDto>(connectionResult.Error);
+			return Result.Fail<RedisServerInfoDto>(connectionResult.Errors);
 		}
 
 		return await diagnosticsService.GetServerInfoAsync(connectionResult.Value, cancellationToken);

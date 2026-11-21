@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Connection.Events;
 using RedisGUI.Domain.Errors;
@@ -83,7 +84,7 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 	/// <summary>
 	/// Gets the owner of this connection (None for legacy/public connections)
 	/// </summary>
-	public ConnectionOwnerId OwnerId { get; private set; } = null!;
+	public ConnectionOwnerId OwnerId { get; private set; } = ConnectionOwnerId.None();
 
 	/// <summary>
 	/// Creates a new Redis connection configuration
@@ -129,11 +130,11 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 					connectionCredentials);
 			}
 
-			return Result.Success(connection);
+			return Result.Ok(connection);
 		}
 		catch (Exception)
 		{
-			return Result.Failure<RedisConnection>(DomainErrors.Connection.CreationFailed);
+			return Result.Fail<RedisConnection>(DomainErrors.Connection.CreationFailed);
 		}
 	}
 
@@ -159,11 +160,11 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 			ServerPort = newPort;
 			DatabaseNumber = newDatabaseNumber;
 
-			return Result.Success();
+			return Result.Ok();
 		}
 		catch (Exception)
 		{
-			return Result.Failure(DomainErrors.Connection.UpdateFailed);
+			return Result.Fail(DomainErrors.Connection.UpdateFailed);
 		}
 
 	}
@@ -191,7 +192,7 @@ public abstract class RedisConnection : Entity, IAggregateRoot
 			return true;
 
 		// Connection without owner is public (legacy/shared)
-		if (!OwnerId.HasValue)
+		if (OwnerId is null || !OwnerId.HasValue)
 			return true;
 
 		// User can only access their own connections

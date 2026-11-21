@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users;
@@ -35,8 +36,8 @@ public class PasswordHashTests
 		Result<PasswordHash> result = PasswordHash.Create("", hasher);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Password.Empty);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Password.Empty);
 	}
 
 	[Test]
@@ -49,8 +50,8 @@ public class PasswordHashTests
 		Result<PasswordHash> result = PasswordHash.Create("   ", hasher);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Password.Empty);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Password.Empty);
 	}
 
 	[Test]
@@ -63,8 +64,8 @@ public class PasswordHashTests
 		Result<PasswordHash> result = PasswordHash.Create("Short1!", hasher);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Password.TooShort);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Password.TooShort);
 	}
 
 	[Test]
@@ -78,8 +79,8 @@ public class PasswordHashTests
 		Result<PasswordHash> result = PasswordHash.Create(longPassword, hasher);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Password.TooLong);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Password.TooLong);
 	}
 
 	[Test]

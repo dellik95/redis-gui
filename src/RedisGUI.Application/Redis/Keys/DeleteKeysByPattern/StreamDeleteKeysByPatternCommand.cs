@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -6,7 +7,8 @@ using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.DeleteKeysByPattern;
@@ -47,7 +49,7 @@ internal sealed class StreamDeleteKeysByPatternCommandHandler(IRedisConnectionRe
 			access,
 			cancellationToken,
 			requireWritable: true);
-		if (connection.IsFailure) return Result.Failure<StreamDeleteKeysByPatternResult>(connection.Error);
+		if (connection.IsFailed) return Result.Fail<StreamDeleteKeysByPatternResult>(connection.Errors);
 		int deleted = 0;
 		try
 		{
@@ -56,13 +58,13 @@ internal sealed class StreamDeleteKeysByPatternCommandHandler(IRedisConnectionRe
 				deleted = count;
 				await request.OnProgress(count);
 			});
-			return Result.Success(result.IsSuccess
+			return Result.Ok(result.IsSuccess
 				? new StreamDeleteKeysByPatternResult(result.Value, false, null)
-				: new StreamDeleteKeysByPatternResult(deleted, false, result.Error.Message));
+				: new StreamDeleteKeysByPatternResult(deleted, false, result.GetDomainError().Message));
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
-			return Result.Success(new StreamDeleteKeysByPatternResult(deleted, true, null));
+			return Result.Ok(new StreamDeleteKeysByPatternResult(deleted, true, null));
 		}
 	}
 }

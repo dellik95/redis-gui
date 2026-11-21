@@ -44,7 +44,7 @@ public static class ValidationExtensions
 
 			if (model is null)
 			{
-				return new Error("Request.Invalid", "Request model is required").ToProblemDetails(context.HttpContext);
+				return new DomainError("Request.Invalid", "Request model is required").ToProblemDetails(context.HttpContext);
 			}
 
 			ValidationResult validationResult = await validator.ValidateAsync(model, context.HttpContext.RequestAborted);

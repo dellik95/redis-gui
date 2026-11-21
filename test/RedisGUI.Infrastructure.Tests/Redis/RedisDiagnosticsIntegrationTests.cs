@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Linq;
 using System.Threading;
@@ -24,7 +25,7 @@ public class RedisDiagnosticsIntegrationTests
 		using var mux = await ConnectionMultiplexer.ConnectAsync("127.0.0.1:16391,allowAdmin=true");
 		var server = mux.GetServer("127.0.0.1", 16391);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(mux));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Test"), new ConnectionHost("127.0.0.1"), new ConnectionPort(16391), new DatabaseNumber(0), ConnectionOwnerId.None());
 		await server.ConfigSetAsync("slowlog-log-slower-than", "0");
 		await mux.GetDatabase().StringSetAsync("slowlog-verification", "value");

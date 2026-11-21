@@ -13,7 +13,7 @@ public class ErrorTests
 	public void Constructor_ShouldSetCodeAndMessage()
 	{
 		// Arrange & Act
-		Error error = new("Test.Error", "Test error message");
+		DomainError error = new("Test.Error", "Test error message");
 
 		// Assert
 		error.Code.Should().Be("Test.Error");
@@ -24,7 +24,7 @@ public class ErrorTests
 	public void None_ShouldReturnNoneError()
 	{
 		// Arrange & Act
-		Error error = Error.None;
+		DomainError error = DomainError.None;
 
 		// Assert
 		error.Code.Should().Be(string.Empty);
@@ -35,7 +35,7 @@ public class ErrorTests
 	public void NullValue_ShouldReturnNullValueError()
 	{
 		// Arrange & Act
-		Error error = Error.NullValue;
+		DomainError error = DomainError.NullValue;
 
 		// Assert
 		error.Code.Should().Be("Error.NullValue");
@@ -46,8 +46,8 @@ public class ErrorTests
 	public void Equals_SameCodeAndMessage_ShouldReturnTrue()
 	{
 		// Arrange
-		Error error1 = new("Test.Error", "Test message");
-		Error error2 = new("Test.Error", "Test message");
+		DomainError error1 = new("Test.Error", "Test message");
+		DomainError error2 = new("Test.Error", "Test message");
 
 		// Act & Assert
 		error1.Should().Be(error2);
@@ -58,8 +58,8 @@ public class ErrorTests
 	public void Equals_DifferentCode_ShouldReturnFalse()
 	{
 		// Arrange
-		Error error1 = new("Test.Error1", "Message");
-		Error error2 = new("Test.Error2", "Message");
+		DomainError error1 = new("Test.Error1", "Message");
+		DomainError error2 = new("Test.Error2", "Message");
 
 		// Act & Assert
 		error1.Should().NotBe(error2);
@@ -69,8 +69,8 @@ public class ErrorTests
 	public void Equals_SameCodeDifferentMessage_ShouldCheckCodeOnly()
 	{
 		// Arrange
-		Error error1 = new("Test.Error", "Message 1");
-		Error error2 = new("Test.Error", "Message 2");
+		DomainError error1 = new("Test.Error", "Message 1");
+		DomainError error2 = new("Test.Error", "Message 2");
 
 		// Act & Assert
 		// Note: Error equality should be based on Code only for error type matching

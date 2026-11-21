@@ -1,3 +1,4 @@
+using FluentResults;
 using System.Linq.Expressions;
 
 namespace RedisGUI.Domain.Abstraction;

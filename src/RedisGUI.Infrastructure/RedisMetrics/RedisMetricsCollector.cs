@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.RedisMetrics.Abstractions;
 using RedisGUI.Infrastructure.Configuration;
 using RedisGUI.Infrastructure.Extensions;
@@ -41,9 +42,9 @@ public class RedisMetricsCollector : IMetricsCollector
 		try
 		{
 			var multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
-			if (multiplexerResult.IsFailure)
+			if (multiplexerResult.IsFailed)
 			{
-				return Result.Failure<Domain.RedisMetrics.RedisMetrics>(multiplexerResult.Error);
+				return Result.Fail<Domain.RedisMetrics.RedisMetrics>(multiplexerResult.Errors);
 			}
 
 			var multiplexer = multiplexerResult.Value;
@@ -71,7 +72,7 @@ public class RedisMetricsCollector : IMetricsCollector
 		catch (Exception ex)
 		{
 			this.logger.LogError(ex, "Error occured on processing metrics. Message: {Message}", ex.Message);
-			return Result.Failure<Domain.RedisMetrics.RedisMetrics>(new Error("MetricsCollection.Exception", ex.Message));
+			return Result.Fail<Domain.RedisMetrics.RedisMetrics>(new DomainError("MetricsCollection.Exception", ex.Message));
 		}
 	}
 }

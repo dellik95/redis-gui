@@ -1,6 +1,8 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -19,13 +21,13 @@ internal sealed class GetRedisMetricsQueryHandler(
 	public async Task<Result<Domain.RedisMetrics.RedisMetrics>> Handle(GetRedisMetricsQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<Domain.RedisMetrics.RedisMetrics>(connectionResult.Error);
+			return Result.Fail<Domain.RedisMetrics.RedisMetrics>(connectionResult.Errors);
 		}
 
 		var metricsResult = await metricsCollector.CollectMetrics(connectionResult.Value, cancellationToken);
 
-		return metricsResult.IsFailure ? Result.Failure<Domain.RedisMetrics.RedisMetrics>(metricsResult.Error) : metricsResult.Value;
+		return metricsResult.IsFailed ? Result.Fail<Domain.RedisMetrics.RedisMetrics>(metricsResult.Errors) : metricsResult.Value;
 	}
 }

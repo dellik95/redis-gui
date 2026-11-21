@@ -1,3 +1,4 @@
+using FluentResults;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -14,8 +15,8 @@ internal static class RedisKeyScan
 
 	internal static Result ValidateParameters(string pattern, int database, string? cursor, int count) =>
 		database is < 0 or > 15 || count is < 1 or > 500 || string.IsNullOrEmpty(pattern) || pattern.Length > 1024 || cursor?.Length > 8192
-			? Result.Failure(new Error("Redis.InvalidScan", "Invalid scan parameters."))
-			: Result.Success();
+			? Result.Fail(new DomainError("Redis.InvalidScan", "Invalid scan parameters."))
+			: Result.Ok();
 
 	internal static async Task<Result<Context>> CreateContextAsync(ConnectionMultiplexer multiplexer, Guid connectionId, string pattern, int database,
 		string? cursor, CancellationToken cancellationToken)
@@ -24,7 +25,7 @@ internal static class RedisKeyScan
 		bool cluster = candidates.Any(server => server.ServerType == ServerType.Cluster);
 		if (cluster && candidates.Any(server => !server.IsConnected || server.ServerType != ServerType.Cluster))
 		{
-			return Result.Failure<Context>(new Error("Redis.ScanUnavailable", "A cluster node is unavailable; refresh when all nodes are reachable."));
+			return Result.Fail<Context>(new DomainError("Redis.ScanUnavailable", "A cluster node is unavailable; refresh when all nodes are reachable."));
 		}
 
 		// Cached IsReplica flags can lag behind a successful failover. Query current node roles
@@ -42,27 +43,27 @@ internal static class RedisKeyScan
 			.ToArray();
 		if (servers.Length == 0 || servers.Any(server => !server.IsConnected || !server.Features.Scan))
 		{
-			return Result.Failure<Context>(new Error("Redis.ScanUnavailable", "A primary Redis server is unavailable or does not support SCAN."));
+			return Result.Fail<Context>(new DomainError("Redis.ScanUnavailable", "A primary Redis server is unavailable or does not support SCAN."));
 		}
 
 		if (servers.Length > 1 && servers.Any(server => server.ServerType != ServerType.Cluster))
 		{
-			return Result.Failure<Context>(new Error("Redis.ScanUnavailable", "Multiple standalone primaries cannot be scanned reliably through one connection."));
+			return Result.Fail<Context>(new DomainError("Redis.ScanUnavailable", "Multiple standalone primaries cannot be scanned reliably through one connection."));
 		}
 
 		var serverMode = cluster ? RedisServerMode.Cluster : RedisServerMode.Standalone;
 		string[] nodes = servers.Select(server => server.EndPoint.ToString()!).ToArray();
 		return ParseCursor(cursor, connectionId, database, pattern, nodes)
 			.Bind(state => servers[state.NodeIndex].ServerType == ServerType.Cluster && database != 0
-				? Result.Failure<Context>(new Error("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."))
-				: Result.Success(new Context(servers, state, serverMode)));
+				? Result.Fail<Context>(new DomainError("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."))
+				: Result.Ok(new Context(servers, state, serverMode)));
 	}
 
 	private static Result<Cursor> ParseCursor(string? encoded, Guid connectionId, int database, string pattern, string[] nodes)
 	{
 		if (encoded is null)
 		{
-			return Result.Success(new Cursor(connectionId, database, pattern, nodes, 0, "0"));
+			return Result.Ok(new Cursor(connectionId, database, pattern, nodes, 0, "0"));
 		}
 
 		try
@@ -73,14 +74,14 @@ internal static class RedisKeyScan
 				stored.Nodes is null || !stored.Nodes.SequenceEqual(nodes) || stored.NodeIndex < 0 || stored.NodeIndex >= nodes.Length ||
 				!ulong.TryParse(stored.Position, out _))
 			{
-				return Result.Failure<Cursor>(new Error("Redis.InvalidCursor", "Scan cursor is invalid or the Redis topology changed. Refresh to start again."));
+				return Result.Fail<Cursor>(new DomainError("Redis.InvalidCursor", "Scan cursor is invalid or the Redis topology changed. Refresh to start again."));
 			}
 
-			return Result.Success(stored);
+			return Result.Ok(stored);
 		}
 		catch (Exception ex) when (ex is FormatException or JsonException or ArgumentException)
 		{
-			return Result.Failure<Cursor>(new Error("Redis.InvalidCursor", "Scan cursor is invalid. Refresh to start again."));
+			return Result.Fail<Cursor>(new DomainError("Redis.InvalidCursor", "Scan cursor is invalid. Refresh to start again."));
 		}
 	}
 
@@ -100,7 +101,7 @@ internal static class RedisKeyScan
 		RedisKeyScanItem?[] metadata = await Task.WhenAll(keys.Select(key => ReadMetadataAsync(database, (byte[])key!, cancellationToken)));
 		int node = state.NodeIndex + (next == "0" ? 1 : 0);
 		string? nextCursor = node >= context.Servers.Length ? null : EncodeCursor(state, node, next);
-		return Result.Success(new RedisKeyScanPage(
+		return Result.Ok(new RedisKeyScanPage(
 			metadata.OfType<RedisKeyScanItem>().ToArray(),
 			nextCursor,
 			metadata.Count(item => item is null),

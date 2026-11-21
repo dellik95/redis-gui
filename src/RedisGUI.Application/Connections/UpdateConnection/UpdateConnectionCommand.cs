@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
@@ -42,9 +44,9 @@ internal sealed class UpdateConnectionCommandHandler(
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.Id, access, cancellationToken);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return connectionResult;
+			return connectionResult.ToResult();
 		}
 
 		var existingConnection = connectionResult.Value;
@@ -55,7 +57,7 @@ internal sealed class UpdateConnectionCommandHandler(
 			new ConnectionPort(request.Port),
 			new DatabaseNumber(request.Database));
 
-		if (updateResult.IsFailure)
+		if (updateResult.IsFailed)
 		{
 			return updateResult;
 		}
@@ -82,11 +84,11 @@ internal sealed class UpdateConnectionCommandHandler(
 		try
 		{
 			await unitOfWork.SaveChangesAsync(cancellationToken);
-			return Result.Success();
+			return Result.Ok();
 		}
 		catch (RedisGUI.Domain.Exceptions.ErrorException ex)
 		{
-			return Result.Failure(ex.Error);
+			return Result.Fail(ex.Error);
 		}
 	}
 }

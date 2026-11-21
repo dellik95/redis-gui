@@ -1,3 +1,5 @@
+using FluentResults;
+using DispatchWeave;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -8,7 +10,6 @@ using FluentValidation;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 
 namespace RedisGUI.Application.Redis.Commands.ImportRedisData;
@@ -19,7 +20,7 @@ public sealed record ImportJobParameters(string Data, string Format = "json", bo
 public sealed class ImportRedisDataJobHandler(
 	IRedisConnectionRepository repository,
 	IConnectionAccessService access,
-	IMediator mediator,
+	IDispatcher mediator,
 	IValidator<ImportJobParameters>? validator = null)
 	: BackgroundJobHandler<ImportJobParameters, ImportRedisDataProgress, ImportRedisDataResponse>(repository, access, validator)
 {
@@ -55,9 +56,9 @@ public sealed class ImportRedisDataJobHandler(
 
 		// Preserve the partial result and audit record after cooperative cancellation.
 		var result = await mediator.Send(command, CancellationToken.None);
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<JobExecutionOutcome<ImportRedisDataResponse>>(result.Error);
+			return Result.Fail<JobExecutionOutcome<ImportRedisDataResponse>>(result.Errors);
 		}
 
 		int processedTotal = result.Value.ImportedCount + result.Value.SkippedCount + result.Value.FailedCount;
@@ -73,14 +74,14 @@ public sealed class ImportRedisDataJobHandler(
 		var json = JsonSerializer.SerializeToUtf8Bytes(result.Value, JsonOptions);
 		if (json.Length <= 16384)
 		{
-			return Result.Success(JobExecutionOutcome<ImportRedisDataResponse>.Completed(result.Value));
+			return Result.Ok(JobExecutionOutcome<ImportRedisDataResponse>.Completed(result.Value));
 		}
 
 		var path = BackgroundJobTempStorage.CreateFilePath("redisgui-job-import-result", ".json");
 		try
 		{
 			await File.WriteAllBytesAsync(path, json, CancellationToken.None);
-			return Result.Success(JobExecutionOutcome<ImportRedisDataResponse>.FileOutcome(
+			return Result.Ok(JobExecutionOutcome<ImportRedisDataResponse>.FileOutcome(
 				new BackgroundJobFile(path, "import-result.json", "application/json")));
 		}
 		catch

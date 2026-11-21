@@ -46,7 +46,7 @@ public class EnsureTests
 	public void NotEmpty_WithError_ValidString_ShouldNotThrow()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
+		DomainError error = new("Test.Error", "Test error");
 
 		// Act
 		Action act = () => Ensure.NotEmpty("valid", error);
@@ -59,7 +59,7 @@ public class EnsureTests
 	public void NotEmpty_WithError_EmptyString_ShouldThrowErrorException()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
+		DomainError error = new("Test.Error", "Test error");
 
 		// Act
 		Action act = () => Ensure.NotEmpty("", error);
@@ -125,7 +125,7 @@ public class EnsureTests
 	public void Is_TrueCondition_ShouldNotThrow()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
+		DomainError error = new("Test.Error", "Test error");
 
 		// Act
 		Action act = () => Ensure.Is(() => true, error);
@@ -138,7 +138,7 @@ public class EnsureTests
 	public void Is_FalseCondition_ShouldThrowErrorException()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
+		DomainError error = new("Test.Error", "Test error");
 
 		// Act
 		Action act = () => Ensure.Is(() => false, error);

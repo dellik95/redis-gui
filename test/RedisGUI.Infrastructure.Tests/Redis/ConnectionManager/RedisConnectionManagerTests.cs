@@ -166,7 +166,7 @@ public class RedisConnectionManagerTests
 
 		var result = await manager.GetConnection("127.0.0.1:6384");
 
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 		manager.GetStatistics().TotalCachedConnections.Should().Be(0);
 		manager.GetConnectionStates().Should().BeEmpty();
 	}
@@ -194,7 +194,7 @@ public class RedisConnectionManagerTests
 		using var manager = CreateManager(factory);
 
 		var firstResult = await manager.GetConnection("127.0.0.1:6385");
-		firstResult.IsFailure.Should().BeTrue();
+		firstResult.IsFailed.Should().BeTrue();
 
 		var secondResult = await manager.GetConnection("127.0.0.1:6385,abortConnect=false");
 		secondResult.IsSuccess.Should().BeTrue();
@@ -234,8 +234,8 @@ public class RedisConnectionManagerTests
 		ctsCaller1.Cancel();
 
 		var resultCaller1 = await taskCaller1;
-		resultCaller1.IsFailure.Should().BeTrue();
-		resultCaller1.Error.Code.Should().Be(DomainErrors.ConnectionManager.Cancelled.Code);
+		resultCaller1.IsFailed.Should().BeTrue();
+		resultCaller1.GetDomainError().Code.Should().Be(DomainErrors.ConnectionManager.Cancelled.Code);
 
 		// Complete connect for caller 2
 		connectCompleteTcs.SetResult(true);
@@ -264,7 +264,7 @@ public class RedisConnectionManagerTests
 
 		var result = await manager.GetConnection("127.0.0.1:6387,abortConnect=false");
 
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 
 		// Create a real test multiplexer and release it as late-arriving
 		var testOpt = ConfigurationOptions.Parse("127.0.0.1:6387,abortConnect=false,connectTimeout=100");
@@ -402,8 +402,8 @@ public class RedisConnectionManagerTests
 
 		var result = await manager.GetConnection("127.0.0.1:6392,abortConnect=false");
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.Code.Should().Be(DomainErrors.ConnectionManager.Cancelled.Code);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Code.Should().Be(DomainErrors.ConnectionManager.Cancelled.Code);
 		factory.CreationCount.Should().Be(0);
 	}
 
@@ -549,7 +549,7 @@ public class RedisConnectionManagerTests
 		using var managerA = CreateManager(factoryA, opt => opt.EnableDockerFallback = false);
 
 		var resultA = await managerA.GetConnection("redis:6379");
-		resultA.IsFailure.Should().BeTrue();
+		resultA.IsFailed.Should().BeTrue();
 		factoryA.CreatedOptions.Should().ContainSingle(o => o.EndPoints[0].ToString()!.Contains("redis", StringComparison.OrdinalIgnoreCase));
 
 		// Scenario B: EnableDockerFallback is true

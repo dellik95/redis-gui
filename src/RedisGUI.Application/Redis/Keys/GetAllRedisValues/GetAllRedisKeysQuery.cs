@@ -1,5 +1,7 @@
+using FluentResults;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
 using System.Linq;
@@ -59,9 +61,9 @@ internal sealed class GetAllRedisValuesQueryHandler
 			request.ConnectionId,
 			cancellationToken);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<GetAllRedisValuesResponse>(connectionResult.Error);
+			return Result.Fail<GetAllRedisValuesResponse>(connectionResult.Errors);
 		}
 
 		var result = await valueService.GetAllValuesAsync(
@@ -72,9 +74,9 @@ internal sealed class GetAllRedisValuesQueryHandler
 			cancellationToken,
 			request.Database);
 
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<GetAllRedisValuesResponse>(result.Error);
+			return Result.Fail<GetAllRedisValuesResponse>(result.Errors);
 		}
 
 		var pagedValues = result.Value;
@@ -91,6 +93,6 @@ internal sealed class GetAllRedisValuesQueryHandler
 			pagedValues.HasPreviousPage,
 			pagedValues.HasNextPage);
 
-		return Result.Success(response);
+		return Result.Ok(response);
 	}
 }

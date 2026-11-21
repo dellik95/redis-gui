@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Redis.LoadTesting;
@@ -32,22 +33,22 @@ public class RedisLoadTestService(
 	{
 		if (connection.IsReadOnly)
 		{
-			return Result.Failure<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
+			return Result.Fail<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
 		Result<ConnectionMultiplexer> multiplexerResult = await connectionManager.GetConnection(connection.BuildConnectionString(), cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<RedisLoadTestResult>(multiplexerResult.Error);
+			return Result.Fail<RedisLoadTestResult>(multiplexerResult.Errors);
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		topology?.SetMode(connection.Id, multiplexer.DetectServerMode());
 		int targetDb = request.Database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure)
+		if (dbValidation.IsFailed)
 		{
-			return Result.Failure<RedisLoadTestResult>(dbValidation.Error);
+			return Result.Fail<RedisLoadTestResult>(dbValidation.Errors);
 		}
 		IDatabase db = multiplexer.GetDatabase(targetDb);
 
@@ -216,7 +217,7 @@ public class RedisLoadTestService(
 			.WithMetadata(opType, concurrency)
 			.Build();
 
-		return Result.Success(result);
+		return Result.Ok(result);
 	}
 
 	private static string EscapeScanPattern(string value) =>

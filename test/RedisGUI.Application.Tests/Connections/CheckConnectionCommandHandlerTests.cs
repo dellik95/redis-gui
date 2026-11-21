@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.CheckConnection;
@@ -44,7 +45,7 @@ public class CheckConnectionCommandHandlerTests
 
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		// Act
 		Result result = await handler.Handle(command, CancellationToken.None);
@@ -71,13 +72,13 @@ public class CheckConnectionCommandHandlerTests
 
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure(DomainErrors.Connection.ConnectionNotEstablished));
+			.ReturnsAsync(Result.Fail(DomainErrors.Connection.ConnectionNotEstablished));
 
 		// Act
 		Result result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 	}
 
 	[Test]
@@ -97,7 +98,7 @@ public class CheckConnectionCommandHandlerTests
 
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		// Act
 		Result result = await handler.Handle(command, CancellationToken.None);

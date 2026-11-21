@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,14 +37,14 @@ public class ExecuteCliCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		var result = await _handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.NotFound);
 	}
 
 	[Test]
@@ -62,11 +63,11 @@ public class ExecuteCliCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_cliServiceMock
 			.Setup(x => x.ExecuteCliCommandAsync(connection, "PING", null, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success("PONG"));
+			.ReturnsAsync(Result.Ok("PONG"));
 
 		// Act
 		var result = await _handler.Handle(command, CancellationToken.None);

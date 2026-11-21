@@ -16,7 +16,7 @@ public sealed class MessagingHub(IRedisConnectionRepository repository, IAuthori
     private async Task<RedisConnection> GetConnection(Guid id)
     {
         var result = await repository.GetConnectionByIdAsync(id, Context.ConnectionAborted);
-        if (result.IsFailure || !(await authorization.AuthorizeAsync(Context.User!, result.Value, new ConnectionOwnershipRequirement())).Succeeded)
+        if (result.IsFailed || !(await authorization.AuthorizeAsync(Context.User!, result.Value, new ConnectionOwnershipRequirement())).Succeeded)
             throw new HubException("Connection not found or access denied.");
         return result.Value;
     }

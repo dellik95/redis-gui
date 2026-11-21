@@ -1,3 +1,4 @@
+using FluentResults;
 using StackExchange.Redis;
 
 namespace RedisGUI.Infrastructure.Redis.ConnectionManager;

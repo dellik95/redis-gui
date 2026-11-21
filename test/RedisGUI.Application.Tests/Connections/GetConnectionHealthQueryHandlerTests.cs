@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.GetConnectionHealth;
@@ -84,8 +85,8 @@ public class GetConnectionHealthQueryHandlerTests
 		Result<GetConnectionHealthResponse> result = await _handler.Handle(query, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Health.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Health.NotFound);
 	}
 }
 

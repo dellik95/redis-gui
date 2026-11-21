@@ -1,3 +1,6 @@
+using DispatchWeave;
+using DispatchWeave.Results;
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Core.Behaviors;
@@ -7,7 +10,6 @@ using RedisGUI.Application.Redis.Commands.DeleteMultipleKeys;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Errors;
-using RedisGUI.Shared.Mediator;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -38,21 +40,18 @@ public class AuditingBehaviorTests
 	[Test]
 	public async Task Handle_RequestWithoutAuditableAttribute_ShouldNotAudit()
 	{
-		// Arrange
 		AuditingBehavior<TestRequestWithoutAttribute, Result<Guid>> testBehavior = new(
 			auditLogRepositoryMock.Object,
 			unitOfWorkMock.Object,
 			currentUserServiceMock.Object);
 		TestRequestWithoutAttribute request = new();
-		Result<Guid> response = Result.Success(Guid.NewGuid());
+		Result<Guid> response = Result.Ok(Guid.NewGuid());
 
-		// Act
 		Result<Guid> result = await testBehavior.Handle(
 			request,
-			CancellationToken.None,
-			async () => await Task.FromResult(response));
+			async () => await Task.FromResult(response),
+			CancellationToken.None);
 
-		// Assert
 		result.Should().Be(response);
 		auditLogRepositoryMock.Verify(x => x.Add(It.IsAny<AuditLog>()), Times.Never);
 	}
@@ -60,11 +59,10 @@ public class AuditingBehaviorTests
 	[Test]
 	public async Task Handle_SuccessfulRequest_ShouldCreateAuditLog()
 	{
-		// Arrange
 		Guid userId = Guid.NewGuid();
 		Guid entityId = Guid.NewGuid();
 		RegisterUserCommand request = new("test@example.com", "Password123!", "John", "Doe");
-		Result<Guid> response = Result.Success(entityId);
+		Result<Guid> response = Result.Ok(entityId);
 
 		currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
 		currentUserServiceMock.Setup(x => x.IpAddress).Returns("127.0.0.1");
@@ -72,15 +70,13 @@ public class AuditingBehaviorTests
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(1));
+			.ReturnsAsync(1);
 
-		// Act
 		Result<Guid> result = await behavior.Handle(
 			request,
-			CancellationToken.None,
-			async () => await Task.FromResult(response));
+			async () => await Task.FromResult(response),
+			CancellationToken.None);
 
-		// Assert
 		result.Should().Be(response);
 		auditLogRepositoryMock.Verify(x => x.Add(It.Is<AuditLog>(log =>
 			log.UserId == userId &&
@@ -93,17 +89,14 @@ public class AuditingBehaviorTests
 	[Test]
 	public async Task Handle_FailedRequest_ShouldNotCreateAuditLog()
 	{
-		// Arrange
 		RegisterUserCommand request = new("test@example.com", "Password123!", "John", "Doe");
-		Result<Guid> response = Result.Failure<Guid>(DomainErrors.User.EmailAlreadyExists);
+		Result<Guid> response = Result.Fail<Guid>(DomainErrors.User.EmailAlreadyExists);
 
-		// Act
 		Result<Guid> result = await behavior.Handle(
 			request,
-			CancellationToken.None,
-			async () => await Task.FromResult(response));
+			async () => await Task.FromResult(response),
+			CancellationToken.None);
 
-		// Assert
 		result.Should().Be(response);
 		auditLogRepositoryMock.Verify(x => x.Add(It.IsAny<AuditLog>()), Times.Never);
 	}
@@ -115,8 +108,8 @@ public class AuditingBehaviorTests
 			auditLogRepositoryMock.Object, unitOfWorkMock.Object, currentUserServiceMock.Object);
 		var connectionId = Guid.NewGuid();
 		var command = new DeleteMultipleKeysCommand(connectionId, ["a", "b"]);
-		var response = Result.Success(new DeleteMultipleKeysResponse(1, 2, ["b"]));
-		await pipeline.Handle(command, CancellationToken.None, () => Task.FromResult(response));
+		var response = Result.Ok(new DeleteMultipleKeysResponse(1, 2, ["b"]));
+		await pipeline.Handle(command, () => Task.FromResult(response), CancellationToken.None);
 		auditLogRepositoryMock.Verify(x => x.Add(It.Is<AuditLog>(log =>
 			log.EntityId == connectionId && log.Metadata.NewValue == "Deleted 1 of 2; failed or missing: 1.")), Times.Once);
 	}
@@ -128,7 +121,7 @@ public class AuditingBehaviorTests
 			auditLogRepositoryMock.Object, unitOfWorkMock.Object, currentUserServiceMock.Object);
 		var id = Guid.NewGuid();
 		ICommand<Guid> request = new RegisterUserCommand("test@example.com", "Password123!", "John", "Doe");
-		await pipeline.Handle(request, CancellationToken.None, () => Task.FromResult(Result.Success(id)));
+		await pipeline.Handle(request, () => Task.FromResult(Result.Ok(id)), CancellationToken.None);
 		auditLogRepositoryMock.Verify(x => x.Add(It.Is<AuditLog>(log => log.Action == AuditAction.Create && log.EntityId == id)), Times.Once);
 	}
 
@@ -136,4 +129,3 @@ public class AuditingBehaviorTests
 	{
 	}
 }
-

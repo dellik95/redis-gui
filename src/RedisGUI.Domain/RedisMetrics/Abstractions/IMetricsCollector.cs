@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Connection;
 
 namespace RedisGUI.Domain.RedisMetrics.Abstractions;

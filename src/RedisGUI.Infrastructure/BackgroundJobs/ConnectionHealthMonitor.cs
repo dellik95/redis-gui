@@ -64,7 +64,7 @@ public sealed class ConnectionHealthMonitor(
 
 		var connectionsResult = await connectionRepository.GetAllConnectionsAsync(cancellationToken);
 
-		if (connectionsResult.IsFailure)
+		if (connectionsResult.IsFailed)
 		{
 			logger.LogWarning("Failed to retrieve connections for health check");
 			return;
@@ -129,7 +129,7 @@ public sealed class ConnectionHealthMonitor(
 
 				var health = ConnectionHealth.Unhealthy(
 					connection.Id,
-					result.Error.Message,
+					result.GetDomainError().Message,
 					previousFailures,
 					serverMode);
 
@@ -141,7 +141,7 @@ public sealed class ConnectionHealthMonitor(
 						"Connection {ConnectionId} has failed {Failures} consecutive times: {Error}",
 						connection.Id,
 						previousFailures,
-						result.Error.Message);
+						result.GetDomainError().Message);
 				}
 			}
 		}

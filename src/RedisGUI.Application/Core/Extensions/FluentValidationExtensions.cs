@@ -19,7 +19,7 @@ public static class FluentValidationExtensions
 	/// <returns>The rule builder for method chaining</returns>
 	/// <exception cref="ArgumentNullException">Thrown when error is null</exception>
 	public static IRuleBuilder<T, TProperty> WithError<T, TProperty>(this IRuleBuilderOptions<T, TProperty> builder,
-			Error error)
+			DomainError error)
 	{
 		if (error is null)
 		{

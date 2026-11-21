@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Errors;
 
@@ -24,16 +25,16 @@ public sealed class PasswordHash : ValueObject
 	public static Result<PasswordHash> Create(string password, IPasswordHasher hasher)
 	{
 		if (string.IsNullOrWhiteSpace(password))
-			return Result.Failure<PasswordHash>(DomainErrors.Password.Empty);
+			return Result.Fail<PasswordHash>(DomainErrors.Password.Empty);
 
 		if (password.Length < 8)
-			return Result.Failure<PasswordHash>(DomainErrors.Password.TooShort);
+			return Result.Fail<PasswordHash>(DomainErrors.Password.TooShort);
 
 		if (password.Length > 128)
-			return Result.Failure<PasswordHash>(DomainErrors.Password.TooLong);
+			return Result.Fail<PasswordHash>(DomainErrors.Password.TooLong);
 
 		string hashedPassword = hasher.Hash(password);
-		return Result.Success(new PasswordHash(hashedPassword));
+		return Result.Ok(new PasswordHash(hashedPassword));
 	}
 
 	/// <summary>

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
@@ -14,7 +15,7 @@ internal static class MessagingConnectionAccess
 	{
 		var result = await repository.GetConnectionByIdAsync(id, cancellationToken);
 		return await result.BindAsync(async connection => await access.CanAccessAsync(connection)
-			? Result.Success(connection)
-			: Result.Failure<RedisConnection>(new Error("Connection.Forbidden", "Access to the connection is denied.")));
+			? Result.Ok(connection)
+			: Result.Fail<RedisConnection>(new DomainError("Connection.Forbidden", "Access to the connection is denied.")));
 	}
 }

@@ -1,3 +1,4 @@
+using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -5,7 +6,6 @@ using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
 using RedisGUI.Infrastructure.Authorization;
 using RedisGUI.Server.Abstraction;
 using RedisGUI.Server.Endpoints.RedisStorage.UpdateRedisValue;
-using RedisGUI.Shared.Mediator;
 using System;
 using System.Threading.Tasks;
 
@@ -23,7 +23,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.AddRedisValue
 		public void MapEndpoint(IEndpointRouteBuilder routerBuilder)
 		{
 			async Task<IResult> HandleAddKey(
-				IMediator sender,
+				IDispatcher sender,
 				HttpContext httpContext,
 				Guid connectionId,
 				UpdateRedisValueRequest request,

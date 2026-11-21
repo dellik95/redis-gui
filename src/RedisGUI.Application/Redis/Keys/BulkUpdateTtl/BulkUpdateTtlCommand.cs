@@ -1,7 +1,9 @@
+using FluentResults;
 using System.Linq;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using System.Collections.Generic;
 using RedisGUI.Domain.Connection;
@@ -39,9 +41,9 @@ internal sealed class BulkUpdateTtlCommandHandler(
 			access,
 			cancellationToken,
 			requireWritable: true);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<RedisBulkTtlResult>(connectionResult.Error);
+			return Result.Fail<RedisBulkTtlResult>(connectionResult.Errors);
 		}
 
 		TimeSpan? ttl = request.TtlSeconds.HasValue && request.TtlSeconds.Value > 0

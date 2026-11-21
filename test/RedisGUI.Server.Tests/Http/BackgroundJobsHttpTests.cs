@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Linq;
 using System.IO;
@@ -48,7 +49,7 @@ public class BackgroundJobsHttpTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -62,7 +63,7 @@ public class BackgroundJobsHttpTests
 				await progress(new RedisLoadTestProgress { CompletedOperations = 7, TotalOperations = 100 });
 				entered.TrySetResult();
 				await Task.Delay(Timeout.Infinite, token);
-				return Result.Success(new RedisLoadTestResult());
+				return Result.Ok(new RedisLoadTestResult());
 			});
 		var builder = WebApplication.CreateBuilder();
 		builder.WebHost.UseUrls("http://127.0.0.1:0");
@@ -156,7 +157,7 @@ public class BackgroundJobsHttpTests
 
 		loadTests.Setup(x => x.RunStreamingLoadTestAsync(connection, It.IsAny<RedisLoadTestRequest>(),
 			It.IsAny<Func<RedisLoadTestProgress, Task>>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(new RedisLoadTestResult { SuccessfulOperations = 5 }));
+			.ReturnsAsync(Result.Ok(new RedisLoadTestResult { SuccessfulOperations = 5 }));
 		using var second = Request(HttpMethod.Post, "/jobs", owner);
 		second.Content = JsonContent.Create(body);
 		using var completedStart = await client.SendAsync(second);
@@ -203,7 +204,7 @@ public class BackgroundJobsHttpTests
 		var activeConnection = ownedConnection;
 		var repository = new Mock<IRedisConnectionRepository>();
 		repository.Setup(x => x.GetConnectionByIdAsync(ownedConnection.Id, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(() => Result.Success(activeConnection));
+			.ReturnsAsync(() => Result.Ok(activeConnection));
 
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(It.IsAny<RedisConnection>()))
@@ -344,7 +345,7 @@ public class BackgroundJobsHttpTests
 			await gates.First.Task.WaitAsync(cancellationToken);
 			await progress.ReportAsync(40, new CustomEchoProgress(parameters.Label));
 			await gates.Second.Task.WaitAsync(cancellationToken);
-			return Result.Success(JobExecutionOutcome<CustomEchoResult>.Completed(new CustomEchoResult(parameters.Label.ToUpperInvariant())));
+			return Result.Ok(JobExecutionOutcome<CustomEchoResult>.Completed(new CustomEchoResult(parameters.Label.ToUpperInvariant())));
 		}
 	}
 
@@ -368,12 +369,12 @@ public class BackgroundJobsHttpTests
 	{
 		public string Kind => "test-file";
 		public bool RequiresWriteAccess => false;
-		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken token) => Task.FromResult(Result.Success());
+		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken token) => Task.FromResult(Result.Ok());
 		public async Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> progress, CancellationToken token)
 		{
 			var path = Path.Combine(Path.GetTempPath(), "redisgui-job-test-" + Guid.NewGuid().ToString("N") + ".txt");
 			await File.WriteAllTextAsync(path, "large-result", token);
-			return Result.Success<object?>(new BackgroundJobFile(path, "result.txt", "text/plain"));
+			return Result.Ok<object?>(new BackgroundJobFile(path, "result.txt", "text/plain"));
 		}
 	}
 
@@ -381,9 +382,9 @@ public class BackgroundJobsHttpTests
 	{
 		public string Kind => "test-failure";
 		public bool RequiresWriteAccess => false;
-		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken token) => Task.FromResult(Result.Success());
+		public Task<Result> ValidateAsync(Guid connectionId, JsonElement parameters, CancellationToken token) => Task.FromResult(Result.Ok());
 		public Task<Result<object?>> ExecuteAsync(Guid connectionId, JsonElement parameters, Func<double?, object?, Task> progress, CancellationToken token) =>
-			Task.FromResult(Result.Success<object?>(new BackgroundJobOutcome(new { processed = 2 }, "Expected failure.")));
+			Task.FromResult(Result.Ok<object?>(new BackgroundJobOutcome(new { processed = 2 }, "Expected failure.")));
 	}
 
 	private sealed class TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder)

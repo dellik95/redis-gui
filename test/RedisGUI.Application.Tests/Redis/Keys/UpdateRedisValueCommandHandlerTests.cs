@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Commands.UpdateRedisValue;
@@ -47,11 +48,11 @@ public class UpdateRedisValueCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_connectionServiceMock
 			.Setup(x => x.UpdateValueAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		// Act
 		Result result = await _handler.Handle(command, CancellationToken.None);
