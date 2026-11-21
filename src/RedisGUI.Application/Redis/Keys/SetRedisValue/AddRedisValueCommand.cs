@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
 using System.Threading;
@@ -42,9 +44,9 @@ internal sealed class AddRedisValueCommandHandler(
 			cancellationToken,
 			requireWritable: true);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure(connectionResult.Error);
+			return Result.Fail(connectionResult.Errors);
 		}
 
 		return await valueService.SetValueAsync(connectionResult.Value, request.Key, request.Value, request.Ttl, cancellationToken);

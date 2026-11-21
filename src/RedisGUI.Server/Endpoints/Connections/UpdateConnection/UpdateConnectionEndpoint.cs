@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -44,7 +45,7 @@ public class UpdateConnectionEndpoint : IEndpoint
 
 			Result result = await sender.Send(updateConnectionCommand, cancellationToken);
 
-			return result.IsSuccess ? Results.NoContent() : result.Error.ToProblemDetails();
+			return result.IsSuccess ? Results.NoContent() : result.GetDomainError().ToProblemDetails();
 		})
 		.WithName("UpdateConnection")
 		.WithSummary("Update a Redis connection")

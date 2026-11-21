@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentValidation;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -69,7 +70,7 @@ public abstract class BackgroundJobHandler<TParameters, TProgress, TResult>(
 		var request = ParseParameters(parameters);
 		if (request is null)
 		{
-			return Result.Failure(new ValidationFailureError(new Dictionary<string, string[]>
+			return Result.Fail(new ValidationFailureError(new Dictionary<string, string[]>
 			{
 				["parameters"] = [$"Valid parameters are required for '{Kind}'."]
 			}));
@@ -84,7 +85,7 @@ public abstract class BackgroundJobHandler<TParameters, TProgress, TResult>(
 				var errors = validation.Errors
 					.GroupBy(error => string.IsNullOrWhiteSpace(error.PropertyName) ? "parameters" : error.PropertyName)
 					.ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray());
-				return Result.Failure(new ValidationFailureError(errors));
+				return Result.Fail(new ValidationFailureError(errors));
 			}
 		}
 
@@ -93,9 +94,9 @@ public abstract class BackgroundJobHandler<TParameters, TProgress, TResult>(
 			access,
 			cancellationToken,
 			RequiresNonReadOnlyConnection);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure(connectionResult.Error);
+			return Result.Fail(connectionResult.Errors);
 		}
 
 		return ValidateForConnection(request, connectionResult.Value);
@@ -110,14 +111,14 @@ public abstract class BackgroundJobHandler<TParameters, TProgress, TResult>(
 		var request = ParseParameters(parameters);
 		if (request is null)
 		{
-			return Result.Failure<object?>(new Error("Job.InvalidParameters", $"Valid parameters are required for '{Kind}'."));
+			return Result.Fail<object?>(new DomainError("Job.InvalidParameters", $"Valid parameters are required for '{Kind}'."));
 		}
 
 		var reporter = new DelegateProgressReporter(reportProgress);
 		var result = await ExecuteTypedAsync(connectionId, request, reporter, cancellationToken);
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<object?>(result.Error);
+			return Result.Fail<object?>(result.Errors);
 		}
 
 		object? mapped = result.Value switch
@@ -129,12 +130,12 @@ public abstract class BackgroundJobHandler<TParameters, TProgress, TResult>(
 			_ => null
 		};
 
-		return Result.Success(mapped);
+		return Result.Ok(mapped);
 	}
 
 	protected virtual IValidator<TParameters>? CreateFallbackValidator() => null;
 
-	protected virtual Result ValidateForConnection(TParameters parameters, RedisConnection connection) => Result.Success();
+	protected virtual Result ValidateForConnection(TParameters parameters, RedisConnection connection) => Result.Ok();
 
 	protected abstract Task<Result<JobExecutionOutcome<TResult>>> ExecuteTypedAsync(
 		Guid connectionId,

@@ -1,4 +1,6 @@
-using RedisGUI.Shared.Mediator;
+using FluentResults;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
@@ -53,7 +55,10 @@ internal sealed class CheckConnectionCommandHandler(
 			ConnectionOwnerId.None(), // ownerId - temporary test connection
 			credentialsResult.Value);
 
-		Result result = await connectionService.CheckConnectionAsync(connection, cancellationToken);
+		if (connection.IsFailed)
+            return connection.ToResult();
+
+        Result result = await connectionService.CheckConnectionAsync(connection.Value, cancellationToken);
 
 		return result;
 	}

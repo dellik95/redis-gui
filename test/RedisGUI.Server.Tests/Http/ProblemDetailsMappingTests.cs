@@ -1,3 +1,4 @@
+using FluentResults;
 using System.IO;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -47,7 +48,7 @@ public class ProblemDetailsMappingTests
 		await using var services = new ServiceCollection().AddLogging().AddProblemDetails().BuildServiceProvider();
 		var context = new DefaultHttpContext { RequestServices = services };
 		context.Response.Body = new MemoryStream();
-		var result = Result.Failure<string>(new Error(code, "Example error"));
+		var result = Result.Fail<string>(new DomainError(code, "Example error"));
 		await result.ToHttpResult(context).ExecuteAsync(context);
 
 		Assert.That(context.Response.StatusCode, Is.EqualTo(status));
@@ -70,7 +71,7 @@ public class ProblemDetailsMappingTests
 		var environment = new Mock<IWebHostEnvironment>();
 		environment.SetupGet(x => x.EnvironmentName).Returns("Production");
 		var middleware = new GlobalExceptionHandlerMiddleware(
-			_ => throw new ErrorException(new Error("Connection.Forbidden", "Denied")),
+			_ => throw new ErrorException(new DomainError("Connection.Forbidden", "Denied")),
 			NullLogger<GlobalExceptionHandlerMiddleware>.Instance, environment.Object);
 
 		await middleware.InvokeAsync(context);
@@ -89,7 +90,7 @@ public class ProblemDetailsMappingTests
 		var context = new DefaultHttpContext { RequestServices = services };
 		context.Response.Body = new MemoryStream();
 		var error = new ValidationFailureError(new Dictionary<string, string[]> { ["Host"] = ["Host is required"] });
-		await Result.Failure<string>(error).ToHttpResult(context).ExecuteAsync(context);
+		await Result.Fail<string>(error).ToHttpResult(context).ExecuteAsync(context);
 		Assert.That(context.Response.StatusCode, Is.EqualTo(400));
 		context.Response.Body.Position = 0;
 		using var json = await JsonDocument.ParseAsync(context.Response.Body);
@@ -100,7 +101,7 @@ public class ProblemDetailsMappingTests
 	[Test]
 	public void SuccessfulResult_PreservesValue()
 	{
-		var result = Result.Success("value").ToHttpResult();
+		var result = Result.Ok("value").ToHttpResult();
 		Assert.That(((IStatusCodeHttpResult)result).StatusCode, Is.EqualTo(200));
 		Assert.That(((IValueHttpResult)result).Value, Is.EqualTo("value"));
 	}

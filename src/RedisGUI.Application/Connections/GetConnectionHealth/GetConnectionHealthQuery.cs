@@ -1,6 +1,8 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Errors;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,15 +31,15 @@ public sealed class GetConnectionHealthQueryHandler(
 		if (connectionRepository is not null && access is not null)
 		{
 			var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-			if (connectionResult.IsFailure)
-				return Result.Failure<GetConnectionHealthResponse>(connectionResult.Error);
+			if (connectionResult.IsFailed)
+				return Result.Fail<GetConnectionHealthResponse>(connectionResult.Errors);
 		}
 
 		var health = healthMonitor.GetHealth(request.ConnectionId);
 
 		if (health == null)
 		{
-			return Result.Failure<GetConnectionHealthResponse>(
+			return Result.Fail<GetConnectionHealthResponse>(
 				DomainErrors.Health.NotFound);
 		}
 
@@ -55,6 +57,6 @@ public sealed class GetConnectionHealthQueryHandler(
 			health.ConsecutiveFailures,
 			serverMode);
 
-		return Result.Success(response);
+		return Result.Ok(response);
 	}
 }

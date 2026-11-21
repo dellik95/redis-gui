@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.CreateConnection;
@@ -61,11 +62,11 @@ public class CreateConnectionCommandHandlerTests
 
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(1));
+			.ReturnsAsync(1);
 
 		// Act
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
@@ -95,8 +96,8 @@ public class CreateConnectionCommandHandlerTests
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.Unauthorized);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.Unauthorized);
 		connectionRepositoryMock.Verify(x => x.Add(It.IsAny<RedisConnection>()), Times.Never);
 	}
 
@@ -116,14 +117,14 @@ public class CreateConnectionCommandHandlerTests
 		currentUserServiceMock.Setup(x => x.UserId).Returns(userId);
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure(DomainErrors.Connection.ConnectionNotEstablished));
+			.ReturnsAsync(Result.Fail(DomainErrors.Connection.ConnectionNotEstablished));
 
 		// Act
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.ConnectionNotEstablished);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.ConnectionNotEstablished);
 	}
 
 	[Test]
@@ -146,11 +147,11 @@ public class CreateConnectionCommandHandlerTests
 
 		connectionServiceMock
 			.Setup(x => x.CheckConnectionAsync(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(1));
+			.ReturnsAsync(1);
 
 		// Act
 		Result<Guid> result = await handler.Handle(command, CancellationToken.None);

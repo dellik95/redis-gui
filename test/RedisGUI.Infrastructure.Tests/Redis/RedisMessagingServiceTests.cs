@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Linq;
 using System.Threading;
@@ -21,7 +22,7 @@ public class RedisMessagingServiceTests
         if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
         using var redis = await ConnectionMultiplexer.ConnectAsync(configuration!);
         var manager = new Mock<IRedisConnectionManager>();
-        manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(redis));
+        manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(redis));
         var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Messaging test"), new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
         var service = new RedisMessagingService(manager.Object);
         var key = "redisgui:test:" + Guid.NewGuid();
@@ -63,7 +64,7 @@ public class RedisMessagingServiceTests
         if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
         using var redis = await ConnectionMultiplexer.ConnectAsync(configuration!);
         var manager = new Mock<IRedisConnectionManager>();
-        manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(redis));
+        manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(redis));
         var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Messaging test"), new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
         var service = new RedisMessagingService(manager.Object);
         var key = "redisgui:test:" + Guid.NewGuid();

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Redis;
 
 namespace RedisGUI.Domain.Connection;

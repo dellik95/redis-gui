@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 using System.Linq;
@@ -18,7 +19,7 @@ public sealed class SortedSetTypeHandler : IRedisTypeHandler
 	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		SortedSetEntry[] entries = await database.SortedSetRangeByRankWithScoresAsync(key);
-		return Result.Success<object?>(entries);
+		return Result.Ok<object?>(entries);
 	}
 
 	public string Serialize(object? rawValue)
@@ -46,7 +47,7 @@ public sealed class SortedSetTypeHandler : IRedisTypeHandler
 		}
 		else
 		{
-			return Result.Failure(DomainErrors.Redis.InvalidValueType);
+			return Result.Fail(DomainErrors.Redis.InvalidValueType);
 		}
 
 		await database.KeyDeleteAsync(key);
@@ -64,6 +65,6 @@ public sealed class SortedSetTypeHandler : IRedisTypeHandler
 			await database.KeyPersistAsync(key);
 		}
 
-		return Result.Success();
+		return Result.Ok();
 	}
 }

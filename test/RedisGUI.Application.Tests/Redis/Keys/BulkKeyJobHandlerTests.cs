@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using System;
 using System.Linq;
@@ -21,7 +22,7 @@ public class BulkKeyJobHandlerTests
 	{
 		var mediator = new Mock<IDispatcher>();
 		mediator.Setup(x => x.Send(It.IsAny<DeleteMultipleKeysCommand>(), CancellationToken.None))
-			.ReturnsAsync(Result.Success(new DeleteMultipleKeysResponse(99, 100, ["failed"])));
+			.ReturnsAsync(Result.Ok(new DeleteMultipleKeysResponse(99, 100, ["failed"])));
 		var handler = new BulkKeyJobHandler(Mock.Of<IRedisConnectionRepository>(), Mock.Of<IConnectionAccessService>(), mediator.Object);
 		var parameters = JsonSerializer.SerializeToElement(new { operation = "delete", database = 2, keys = Enumerable.Range(0, 150).Select(i => $"key-{i}").ToArray() });
 		using var cancellation = new CancellationTokenSource();
@@ -39,8 +40,8 @@ public class BulkKeyJobHandlerTests
 	{
 		var mediator = new Mock<IDispatcher>();
 		mediator.SetupSequence(x => x.Send(It.IsAny<DeleteMultipleKeysCommand>(), CancellationToken.None))
-			.ReturnsAsync(Result.Success(new DeleteMultipleKeysResponse(100, 100, [])))
-			.ReturnsAsync(Result.Failure<DeleteMultipleKeysResponse>(new Error("Redis.Error", "Batch failed.")));
+			.ReturnsAsync(Result.Ok(new DeleteMultipleKeysResponse(100, 100, [])))
+			.ReturnsAsync(Result.Fail<DeleteMultipleKeysResponse>(new DomainError("Redis.Error", "Batch failed.")));
 		var handler = new BulkKeyJobHandler(Mock.Of<IRedisConnectionRepository>(), Mock.Of<IConnectionAccessService>(), mediator.Object);
 		var parameters = JsonSerializer.SerializeToElement(new { operation = "delete", database = 0, keys = Enumerable.Range(0, 150).Select(i => $"key-{i}").ToArray() });
 		var result = await handler.ExecuteAsync(Guid.NewGuid(), parameters, (_, _) => Task.CompletedTask, CancellationToken.None);
@@ -58,13 +59,13 @@ public class BulkKeyJobHandlerTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		var handler = new BulkKeyJobHandler(repository.Object, access.Object, Mock.Of<IDispatcher>());
 		var parameters = JsonSerializer.SerializeToElement(new { operation = "delete", database = 0, keys = new[] { "a" } });
-		Assert.That((await handler.ValidateAsync(connection.Id, parameters, CancellationToken.None)).Error.Code, Is.EqualTo("Connection.Forbidden"));
+		Assert.That((await handler.ValidateAsync(connection.Id, parameters, CancellationToken.None)).GetDomainError().Code, Is.EqualTo("Connection.Forbidden"));
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		connection.SetReadOnly(true);
-		Assert.That((await handler.ValidateAsync(connection.Id, parameters, CancellationToken.None)).Error.Code, Is.EqualTo("Connection.ReadOnlyMode"));
+		Assert.That((await handler.ValidateAsync(connection.Id, parameters, CancellationToken.None)).GetDomainError().Code, Is.EqualTo("Connection.ReadOnlyMode"));
 	}
 }

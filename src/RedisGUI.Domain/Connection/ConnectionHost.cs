@@ -31,7 +31,7 @@ public sealed partial class ConnectionHost
 	/// <param name="host">Host</param>
 	public ConnectionHost(string host)
 	{
-		Ensure.NotEmpty(host, Error.NullValue);
+		Ensure.NotEmpty(host, DomainError.NullValue);
 		Ensure.Is(() => host.Length < MaxLength, DomainErrors.ConnectionHost.LongerThanAllowed);
 		Ensure.Is(() => HostRegex.IsMatch(host), DomainErrors.ConnectionHost.InvalidFormat);
 

@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -22,7 +23,7 @@ public class RedisValueServiceDatabaseTests
 			new ConnectionHost("localhost"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var keys = new Mock<IRedisKeyService>();
 		keys.Setup(x => x.GetKeysAsync(connection, It.IsAny<CancellationToken>(), 1))
-			.ReturnsAsync(Result.Success<IEnumerable<string>>(Array.Empty<string>()));
+			.ReturnsAsync(Result.Ok<IEnumerable<string>>(Array.Empty<string>()));
 		var service = new RedisValueService(Mock.Of<IRedisConnectionManager>(), keys.Object,
 			Mock.Of<IRedisTypeHandlerFactory>(), Mock.Of<IRedisLoadTestService>(), Mock.Of<IRedisSeedDataService>(),
 			Mock.Of<IRedisCliService>(), Mock.Of<IRedisDiagnosticsService>(), NullLogger<RedisValueService>.Instance);

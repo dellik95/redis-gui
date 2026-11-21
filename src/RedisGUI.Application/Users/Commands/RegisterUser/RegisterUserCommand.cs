@@ -1,6 +1,8 @@
+using FluentResults;
 using System;
 using RedisGUI.Domain.Audit;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Abstraction;
@@ -52,23 +54,23 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
 	{
 		// 1. Create and validate email value object
 		var emailResult = Email.Create(request.Email);
-		if (emailResult.IsFailure)
-			return Result.Failure<Guid>(emailResult.Error);
+		if (emailResult.IsFailed)
+			return Result.Fail<Guid>(emailResult.Errors);
 
 		// 2. Check if email already exists
 		var existingUser = await userRepository.GetByEmailAsync(emailResult.Value, cancellationToken);
 		if (existingUser is not null)
-			return Result.Failure<Guid>(Domain.Errors.DomainErrors.User.EmailAlreadyExists);
+			return Result.Fail<Guid>(Domain.Errors.DomainErrors.User.EmailAlreadyExists);
 
 		// 3. Create and validate password hash value object
 		var passwordResult = PasswordHash.Create(request.Password, passwordHasher);
-		if (passwordResult.IsFailure)
-			return Result.Failure<Guid>(passwordResult.Error);
+		if (passwordResult.IsFailed)
+			return Result.Fail<Guid>(passwordResult.Errors);
 
 		// 4. Create and validate user profile value object
 		var profileResult = UserProfile.Create(request.FirstName, request.LastName);
-		if (profileResult.IsFailure)
-			return Result.Failure<Guid>(profileResult.Error);
+		if (profileResult.IsFailed)
+			return Result.Fail<Guid>(profileResult.Errors);
 
 		// 5. Create user aggregate
 		var userResult = User.Create(
@@ -77,13 +79,13 @@ internal sealed class RegisterUserCommandHandler : ICommandHandler<RegisterUserC
 			profileResult.Value,
 			UserRole.User); // Default role
 
-		if (userResult.IsFailure)
-			return Result.Failure<Guid>(userResult.Error);
+		if (userResult.IsFailed)
+			return Result.Fail<Guid>(userResult.Errors);
 
 		// 6. Persist to repository
 		userRepository.Add(userResult.Value);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
-		return Result.Success(userResult.Value.Id);
+		return Result.Ok(userResult.Value.Id);
 	}
 }

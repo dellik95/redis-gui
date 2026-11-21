@@ -1,6 +1,8 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Connection;
@@ -32,9 +34,9 @@ internal sealed class GetKeyMemoryUsageQueryHandler(
 	public async Task<Result<GetKeyMemoryUsageResponse>> Handle(GetKeyMemoryUsageQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<GetKeyMemoryUsageResponse>(connectionResult.Error);
+			return Result.Fail<GetKeyMemoryUsageResponse>(connectionResult.Errors);
 		}
 
 		var memoryResult = await diagnosticsService.GetKeyMemoryUsageAsync(
@@ -44,11 +46,11 @@ internal sealed class GetKeyMemoryUsageQueryHandler(
 			request.Database,
 			request.KeyBase64);
 
-		if (memoryResult.IsFailure)
+		if (memoryResult.IsFailed)
 		{
-			return Result.Failure<GetKeyMemoryUsageResponse>(memoryResult.Error);
+			return Result.Fail<GetKeyMemoryUsageResponse>(memoryResult.Errors);
 		}
 
-		return Result.Success(new GetKeyMemoryUsageResponse(request.Key, memoryResult.Value));
+		return Result.Ok(new GetKeyMemoryUsageResponse(request.Key, memoryResult.Value));
 	}
 }

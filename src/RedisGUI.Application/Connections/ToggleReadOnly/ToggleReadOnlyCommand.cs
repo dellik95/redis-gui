@@ -1,6 +1,8 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Connection;
@@ -27,9 +29,9 @@ internal sealed class ToggleReadOnlyCommandHandler(
 	public async Task<Result<bool>> Handle(ToggleReadOnlyCommand request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<bool>(connectionResult.Error);
+			return Result.Fail<bool>(connectionResult.Errors);
 		}
 
 		var connection = connectionResult.Value;
@@ -38,6 +40,6 @@ internal sealed class ToggleReadOnlyCommandHandler(
 		connectionRepository.Update(connection);
 		await unitOfWork.SaveChangesAsync(cancellationToken);
 
-		return Result.Success(connection.IsReadOnly);
+		return Result.Ok(connection.IsReadOnly);
 	}
 }

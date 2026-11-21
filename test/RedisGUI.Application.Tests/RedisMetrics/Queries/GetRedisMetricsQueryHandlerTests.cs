@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.RedisMetrics.Queries;
@@ -53,11 +54,11 @@ public class GetRedisMetricsQueryHandlerTests
 
 		repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		metricsCollectorMock
 			.Setup(x => x.CollectMetrics(connection, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(metrics));
+			.ReturnsAsync(Result.Ok(metrics));
 
 		// Act
 		Result<RedisGUI.Domain.RedisMetrics.RedisMetrics> result = await handler.Handle(query, CancellationToken.None);
@@ -78,13 +79,13 @@ public class GetRedisMetricsQueryHandlerTests
 
 		repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		Result<RedisGUI.Domain.RedisMetrics.RedisMetrics> result = await handler.Handle(query, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 		metricsCollectorMock.Verify(x => x.CollectMetrics(It.IsAny<RedisConnection>(), It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using RedisGUI.Shared.Primitives;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ public class ResultExtensionsTests
 	public void Map_SuccessfulResult_ShouldTransformValue()
 	{
 		// Arrange
-		Result<int> result = Result.Success(5);
+		Result<int> result = Result.Ok(5);
 
 		// Act
 		Result<int> mapped = result.Map(x => x * 2);
@@ -28,22 +29,22 @@ public class ResultExtensionsTests
 	public void Map_FailedResult_ShouldReturnFailure()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
-		Result<int> result = Result.Failure<int>(error);
+		DomainError error = new("Test.Error", "Test error");
+		Result<int> result = Result.Fail<int>(error);
 
 		// Act
 		Result<int> mapped = result.Map(x => x * 2);
 
 		// Assert
-		mapped.IsFailure.Should().BeTrue();
-		mapped.Error.Should().Be(error);
+		mapped.IsFailed.Should().BeTrue();
+		mapped.GetDomainError().Should().Be(error);
 	}
 
 	[Test]
 	public async Task MapAsync_SuccessfulResult_ShouldTransformValue()
 	{
 		// Arrange
-		Task<Result<int>> resultTask = Task.FromResult(Result.Success(5));
+		Task<Result<int>> resultTask = Task.FromResult(Result.Ok(5));
 
 		// Act
 		Result<int> mapped = await resultTask.MapAsync(async x => await Task.FromResult(x * 2));
@@ -57,10 +58,10 @@ public class ResultExtensionsTests
 	public void Bind_SuccessfulResult_ShouldChainOperations()
 	{
 		// Arrange
-		Result<int> result = Result.Success(5);
+		Result<int> result = Result.Ok(5);
 
 		// Act
-		Result<int> bound = result.Bind(x => Result.Success(x * 2));
+		Result<int> bound = result.Bind(x => Result.Ok(x * 2));
 
 		// Assert
 		bound.IsSuccess.Should().BeTrue();
@@ -71,25 +72,25 @@ public class ResultExtensionsTests
 	public void Bind_FailedResult_ShouldReturnFailure()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
-		Result<int> result = Result.Failure<int>(error);
+		DomainError error = new("Test.Error", "Test error");
+		Result<int> result = Result.Fail<int>(error);
 
 		// Act
-		Result<int> bound = result.Bind(x => Result.Success(x * 2));
+		Result<int> bound = result.Bind(x => Result.Ok(x * 2));
 
 		// Assert
-		bound.IsFailure.Should().BeTrue();
-		bound.Error.Should().Be(error);
+		bound.IsFailed.Should().BeTrue();
+		bound.GetDomainError().Should().Be(error);
 	}
 
 	[Test]
 	public async Task BindAsync_SuccessfulResult_ShouldChainOperations()
 	{
 		// Arrange
-		Result<int> result = Result.Success(5);
+		Result<int> result = Result.Ok(5);
 
 		// Act
-		Result<int> bound = await result.BindAsync(async x => await Task.FromResult(Result.Success(x * 2)));
+		Result<int> bound = await result.BindAsync(async x => await Task.FromResult(Result.Ok(x * 2)));
 
 		// Assert
 		bound.IsSuccess.Should().BeTrue();
@@ -100,10 +101,10 @@ public class ResultExtensionsTests
 	public async Task BindAsync_FromTask_SuccessfulResult_ShouldChainOperations()
 	{
 		// Arrange
-		Task<Result<int>> resultTask = Task.FromResult(Result.Success(5));
+		Task<Result<int>> resultTask = Task.FromResult(Result.Ok(5));
 
 		// Act
-		Result<int> bound = await resultTask.BindAsync(async x => await Task.FromResult(Result.Success(x * 2)));
+		Result<int> bound = await resultTask.BindAsync(async x => await Task.FromResult(Result.Ok(x * 2)));
 
 		// Assert
 		bound.IsSuccess.Should().BeTrue();
@@ -114,7 +115,7 @@ public class ResultExtensionsTests
 	public void Match_SuccessfulResult_ShouldExecuteSuccessHandler()
 	{
 		// Arrange
-		Result<int> result = Result.Success(42);
+		Result<int> result = Result.Ok(42);
 
 		// Act
 		string value = result.Match(
@@ -129,8 +130,8 @@ public class ResultExtensionsTests
 	public void Match_FailedResult_ShouldExecuteFailureHandler()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
-		Result<int> result = Result.Failure<int>(error);
+		DomainError error = new("Test.Error", "Test error");
+		Result<int> result = Result.Fail<int>(error);
 
 		// Act
 		string value = result.Match(
@@ -145,7 +146,7 @@ public class ResultExtensionsTests
 	public void Tap_SuccessfulResult_ShouldExecuteAction()
 	{
 		// Arrange
-		Result<int> result = Result.Success(42);
+		Result<int> result = Result.Ok(42);
 		bool executed = false;
 
 		// Act
@@ -160,8 +161,8 @@ public class ResultExtensionsTests
 	public void Tap_FailedResult_ShouldNotExecuteAction()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error");
-		Result<int> result = Result.Failure<int>(error);
+		DomainError error = new("Test.Error", "Test error");
+		Result<int> result = Result.Fail<int>(error);
 		bool executed = false;
 
 		// Act
@@ -176,7 +177,7 @@ public class ResultExtensionsTests
 	public async Task TapAsync_SuccessfulResult_ShouldExecuteAction()
 	{
 		// Arrange
-		Result<int> result = Result.Success(42);
+		Result<int> result = Result.Ok(42);
 		bool executed = false;
 
 		// Act
@@ -195,10 +196,10 @@ public class ResultExtensionsTests
 	public void Ensure_PredicateSatisfied_ReturnsOriginalResult()
 	{
 		// Arrange
-		Result<int> result = Result.Success(42);
+		Result<int> result = Result.Ok(42);
 
 		// Act
-		Result<int> ensured = result.Ensure(x => x > 0, new Error("Invalid", "Must be positive"));
+		Result<int> ensured = result.Ensure(x => x > 0, new DomainError("Invalid", "Must be positive"));
 
 		// Assert
 		ensured.IsSuccess.Should().BeTrue();
@@ -209,23 +210,23 @@ public class ResultExtensionsTests
 	public void Ensure_PredicateNotSatisfied_ReturnsFailure()
 	{
 		// Arrange
-		Result<int> result = Result.Success(-1);
-		Error error = new("Invalid", "Must be positive");
+		Result<int> result = Result.Ok(-1);
+		DomainError error = new("Invalid", "Must be positive");
 
 		// Act
 		Result<int> ensured = result.Ensure(x => x > 0, error);
 
 		// Assert
-		ensured.IsFailure.Should().BeTrue();
-		ensured.Error.Should().Be(error);
+		ensured.IsFailed.Should().BeTrue();
+		ensured.GetDomainError().Should().Be(error);
 	}
 
 	[Test]
 	public async Task Match_TaskResult_ExecutesAppropriateBranch()
 	{
 		// Arrange
-		Task<Result> successTask = Task.FromResult(Result.Success());
-		Task<Result> failureTask = Task.FromResult(Result.Failure(new Error("Err", "Fail")));
+		Task<Result> successTask = Task.FromResult(Result.Ok());
+		Task<Result> failureTask = Task.FromResult(Result.Fail(new DomainError("Err", "Fail")));
 
 		// Act
 		string successResult = await successTask.Match(() => "ok", err => "failed");

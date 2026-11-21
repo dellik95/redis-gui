@@ -15,11 +15,11 @@ public class ErrorExtensionsTests
 	public void ToCodeString_WithErrors_ReturnsCommaSeparatedCodes()
 	{
 		// Arrange
-		List<Error> errors =
+		List<DomainError> errors =
 		[
-			new Error("Error.Code1", "Message 1"),
-			new Error("Error.Code2", "Message 2"),
-			new Error("Error.Code3", "Message 3")
+			new DomainError("Error.Code1", "Message 1"),
+			new DomainError("Error.Code2", "Message 2"),
+			new DomainError("Error.Code3", "Message 3")
 		];
 
 		// Act
@@ -33,7 +33,7 @@ public class ErrorExtensionsTests
 	public void ToCodeString_EmptyCollection_ReturnsEmptyString()
 	{
 		// Arrange
-		List<Error> errors = [];
+		List<DomainError> errors = [];
 
 		// Act
 		string result = errors.ToCodeString();
@@ -46,9 +46,9 @@ public class ErrorExtensionsTests
 	public void ToCodeString_SingleError_ReturnsSingleCode()
 	{
 		// Arrange
-		List<Error> errors =
+		List<DomainError> errors =
 		[
-			new Error("Error.Single", "Single message")
+			new DomainError("Error.Single", "Single message")
 		];
 
 		// Act
@@ -62,7 +62,7 @@ public class ErrorExtensionsTests
 	public void ToCodeString_NullCollection_ReturnsEmptyString()
 	{
 		// Arrange
-		IEnumerable<Error>? errors = null!;
+		IEnumerable<DomainError>? errors = null!;
 
 		// Act
 		string result = errors.ToCodeString();
@@ -75,10 +75,10 @@ public class ErrorExtensionsTests
 	public void ToFormattedMessage_WithErrors_ReturnsFormattedString()
 	{
 		// Arrange
-		List<Error> errors =
+		List<DomainError> errors =
 		[
-			new Error("Error.Code1", "Message 1"),
-			new Error("Error.Code2", "Message 2")
+			new DomainError("Error.Code1", "Message 1"),
+			new DomainError("Error.Code2", "Message 2")
 		];
 
 		// Act
@@ -92,7 +92,7 @@ public class ErrorExtensionsTests
 	public void ToFormattedMessage_EmptyCollection_ReturnsEmptyString()
 	{
 		// Arrange
-		List<Error> errors = [];
+		List<DomainError> errors = [];
 
 		// Act
 		string result = errors.ToFormattedMessage();
@@ -105,9 +105,9 @@ public class ErrorExtensionsTests
 	public void ToFormattedMessage_SingleError_ReturnsSingleFormattedLine()
 	{
 		// Arrange
-		List<Error> errors =
+		List<DomainError> errors =
 		[
-			new Error("Error.Single", "Single message")
+			new DomainError("Error.Single", "Single message")
 		];
 
 		// Act
@@ -121,7 +121,7 @@ public class ErrorExtensionsTests
 	public void ToFormattedMessage_NullCollection_ReturnsEmptyString()
 	{
 		// Arrange
-		IEnumerable<Error>? errors = null!;
+		IEnumerable<DomainError>? errors = null!;
 
 		// Act
 		string result = errors.ToFormattedMessage();
@@ -134,9 +134,9 @@ public class ErrorExtensionsTests
 	public void ToFormattedMessage_WithEmptyMessage_ReturnsCodeOnly()
 	{
 		// Arrange
-		List<Error> errors =
+		List<DomainError> errors =
 		[
-			new Error("Error.Code", string.Empty)
+			new DomainError("Error.Code", string.Empty)
 		];
 
 		// Act

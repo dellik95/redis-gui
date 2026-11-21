@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -37,14 +38,14 @@ public class GetKeyspaceInfoQueryHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		var result = await _handler.Handle(query, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.NotFound);
 	}
 
 	[Test]
@@ -63,12 +64,12 @@ public class GetKeyspaceInfoQueryHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		var expectedData = new Dictionary<int, long> { [0] = 42L, [1] = 10L };
 		_diagnosticsServiceMock
 			.Setup(x => x.GetKeyspaceInfoAsync(connection, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(expectedData));
+			.ReturnsAsync(Result.Ok(expectedData));
 
 		// Act
 		var result = await _handler.Handle(query, CancellationToken.None);

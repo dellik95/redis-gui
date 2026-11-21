@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 using System.Linq;
@@ -18,9 +19,9 @@ public class RedisKeyService(
 	{
 		cancellationToken.ThrowIfCancellationRequested();
 		Result validation = RedisKeyScan.ValidateParameters(pattern, database, cursor, count);
-		if (validation.IsFailure)
+		if (validation.IsFailed)
 		{
-			return Result.Failure<RedisKeyScanPage>(validation.Error);
+			return Result.Fail<RedisKeyScanPage>(validation.Errors);
 		}
 
 		return await GetConnectionAsync(connection, cancellationToken)
@@ -43,7 +44,7 @@ public class RedisKeyService(
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Redis key scan failed");
-			return Result.Failure<RedisKeyScanPage>(new Error("Redis.ScanFailed", "Unable to scan Redis keys. Check the connection and command permissions."));
+			return Result.Fail<RedisKeyScanPage>(new DomainError("Redis.ScanFailed", "Unable to scan Redis keys. Check the connection and command permissions."));
 		}
 	}
 
@@ -56,18 +57,18 @@ public class RedisKeyService(
 	public async ValueTask<Result<IEnumerable<string>>> GetKeysAsync(RedisConnection connection, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to get connection for keys: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure<IEnumerable<string>>(multiplexerResult.Error);
+			logger.LogError("Failed to get connection for keys: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail<IEnumerable<string>>(multiplexerResult.Errors);
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure)
+		if (dbValidation.IsFailed)
 		{
-			return Result.Failure<IEnumerable<string>>(dbValidation.Error);
+			return Result.Fail<IEnumerable<string>>(dbValidation.Errors);
 		}
 
 		IServer[] servers = multiplexer.GetConnectedPrimaryServers();
@@ -85,7 +86,7 @@ public class RedisKeyService(
 			}
 		}
 
-		return Result.Success<IEnumerable<string>>(distinctKeys);
+		return Result.Ok<IEnumerable<string>>(distinctKeys);
 	}
 
 	/// <inheritdoc />
@@ -97,22 +98,22 @@ public class RedisKeyService(
 		CancellationToken cancellationToken = default, int? database = null)
 	{
 		var resolvedKey = RedisServerResolver.ResolveKey(key, keyBase64);
-		if (resolvedKey.IsFailure) return Result.Failure<bool>(resolvedKey.Error);
+		if (resolvedKey.IsFailed) return Result.Fail<bool>(resolvedKey.Errors);
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<bool>(multiplexerResult.Error);
+			return Result.Fail<bool>(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<bool>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<bool>(dbValidation.Errors);
 
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		bool deleted = await db.KeyDeleteAsync(resolvedKey.Value).WaitAsync(cancellationToken);
 
-		return Result.Success(deleted);
+		return Result.Ok(deleted);
 	}
 
 	/// <summary>
@@ -121,22 +122,22 @@ public class RedisKeyService(
 	public async Task<Result<long>> DeleteKeysAsync(RedisConnection connection, string[] keys, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to get connection for delete keys: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure<long>(multiplexerResult.Error);
+			logger.LogError("Failed to get connection for delete keys: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail<long>(multiplexerResult.Errors);
 		}
 
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<long>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<long>(dbValidation.Errors);
 
 		IDatabase db = multiplexer.GetDatabase(targetDb);
 		RedisKey[] redisKeys = keys.Select(x => new RedisKey(x)).ToArray();
 		if (redisKeys.Length == 0)
 		{
-			return Result.Success(0L);
+			return Result.Ok(0L);
 		}
 
 		if (multiplexer.IsCluster())
@@ -147,11 +148,11 @@ public class RedisKeyService(
 				cancellationToken.ThrowIfCancellationRequested();
 				totalDeleted += await db.KeyDeleteAsync(slotGroup.ToArray()).WaitAsync(cancellationToken);
 			}
-			return Result.Success(totalDeleted);
+			return Result.Ok(totalDeleted);
 		}
 
 		long deletedCount = await db.KeyDeleteAsync(redisKeys).WaitAsync(cancellationToken);
-		return Result.Success(deletedCount);
+		return Result.Ok(deletedCount);
 	}
 
 	/// <inheritdoc />
@@ -171,14 +172,14 @@ public class RedisKeyService(
 		int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<(int, IReadOnlyList<string>)>(multiplexerResult.Error);
+			return Result.Fail<(int, IReadOnlyList<string>)>(multiplexerResult.GetDomainError());
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<(int, IReadOnlyList<string>)>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<(int, IReadOnlyList<string>)>(dbValidation.GetDomainError());
 
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		List<string> failedKeys = [];
@@ -190,7 +191,7 @@ public class RedisKeyService(
 			string displayKey = keys[i];
 			string? rawB64 = keysBase64 is not null && i < keysBase64.Count ? keysBase64[i] : null;
 			var resolved = RedisServerResolver.ResolveKey(displayKey, rawB64);
-			if (resolved.IsFailure)
+			if (resolved.IsFailed)
 			{
 				failedKeys.Add(displayKey);
 				continue;
@@ -219,7 +220,7 @@ public class RedisKeyService(
 			}
 		}
 
-		return Result.Success((deletedCount, (IReadOnlyList<string>)failedKeys));
+		return Result.Ok((deletedCount, (IReadOnlyList<string>)failedKeys));
 	}
 
 	/// <summary>
@@ -229,15 +230,15 @@ public class RedisKeyService(
 		int? database = null, Func<int, Task>? onProgress = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<int>(multiplexerResult.Error);
+			return Result.Fail<int>(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		ConnectionMultiplexer multiplexer = multiplexerResult.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<int>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<int>(dbValidation.Errors);
 
 		IDatabase db = multiplexer.GetDatabase(targetDb);
 		int deletedCount = 0;
@@ -248,8 +249,8 @@ public class RedisKeyService(
 			{
 				cancellationToken.ThrowIfCancellationRequested();
 				var page = await ScanKeysAsync(connection, pattern, targetDb, cursor, 100, cancellationToken);
-				if (page.IsFailure)
-					return Result.Failure<int>(new Error("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s): {page.Error.Message}"));
+				if (page.IsFailed)
+					return Result.Fail<int>(new DomainError("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s): {page.GetDomainError().Message}"));
 				foreach (var item in page.Value.Keys)
 				{
 					cancellationToken.ThrowIfCancellationRequested();
@@ -262,13 +263,13 @@ public class RedisKeyService(
 				}
 				cursor = page.Value.NextCursor;
 			} while (cursor is not null);
-			return Result.Success(deletedCount);
+			return Result.Ok(deletedCount);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to delete keys by pattern {Pattern}", pattern);
-			return Result.Failure<int>(new Error("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s). Refresh the key list before retrying."));
+			return Result.Fail<int>(new DomainError("Redis.DeleteByPatternFailed", $"Deletion stopped after deleting {deletedCount} key(s). Refresh the key list before retrying."));
 		}
 	}
 
@@ -278,18 +279,18 @@ public class RedisKeyService(
 	public async Task<Result<string>> GetKeyTypeAsync(RedisConnection connection, string key, CancellationToken cancellationToken = default, int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<string>(multiplexerResult.Error);
+			return Result.Fail<string>(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<string>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<string>(dbValidation.Errors);
 
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		RedisType type = await db.KeyTypeAsync(key).WaitAsync(cancellationToken);
 
-		return Result.Success(type.ToString());
+		return Result.Ok(type.ToString());
 	}
 }

@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Primitives;
@@ -43,9 +45,9 @@ internal sealed class DeleteKeysByPatternCommandHandler(
 			cancellationToken,
 			requireWritable: true);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<DeleteKeysByPatternResponse>(connectionResult.Error);
+			return Result.Fail<DeleteKeysByPatternResponse>(connectionResult.Errors);
 		}
 
 		var deleteResult = await keyService.DeleteKeysByPatternAsync(
@@ -54,9 +56,9 @@ internal sealed class DeleteKeysByPatternCommandHandler(
 			cancellationToken,
 			request.Database);
 
-		if (deleteResult.IsFailure)
+		if (deleteResult.IsFailed)
 		{
-			return Result.Failure<DeleteKeysByPatternResponse>(deleteResult.Error);
+			return Result.Fail<DeleteKeysByPatternResponse>(deleteResult.Errors);
 		}
 
 		var deletedCount = deleteResult.Value;
@@ -65,6 +67,6 @@ internal sealed class DeleteKeysByPatternCommandHandler(
 			deletedCount,
 			request.Pattern);
 
-		return Result.Success(response);
+		return Result.Ok(response);
 	}
 }

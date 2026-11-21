@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Users;
 using System.Linq;
 using System.Linq.Expressions;
@@ -102,15 +103,15 @@ internal sealed class UserRepository(ApplicationDbContext context) : IUserReposi
 			.ToListAsync(cancellationToken);
 
 		PagedResult<User> pagedResult = new(items, totalCount, pageNumber, pageSize);
-		return Result.Success(pagedResult);
+		return Result.Ok(pagedResult);
 	}
 
 	public async Task<Result<User?>> FindAsync(Guid id, CancellationToken cancellationToken = default)
 	{
 		User? entity = await context.Users.FindAsync([id], cancellationToken);
 		return entity is null
-			? Result.Failure<User?>(Domain.Errors.DomainErrors.User.NotFound)
-			: Result.Success<User?>(entity);
+			? Result.Fail<User?>(Domain.Errors.DomainErrors.User.NotFound)
+			: Result.Ok<User?>(entity);
 	}
 
 	public void Update(User entity)
@@ -122,9 +123,9 @@ internal sealed class UserRepository(ApplicationDbContext context) : IUserReposi
 	{
 		User? user = await GetByIdAsync(id, cancellationToken);
 		if (user is null)
-			return Result.Failure(Domain.Errors.DomainErrors.User.NotFound);
+			return Result.Fail(Domain.Errors.DomainErrors.User.NotFound);
 
 		context.Users.Remove(user);
-		return Result.Success();
+		return Result.Ok();
 	}
 }

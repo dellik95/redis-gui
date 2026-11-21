@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading.Tasks;
 
@@ -8,22 +9,6 @@ namespace RedisGUI.Shared.Primitives;
 /// </summary>
 public static class ResultExtensions
 {
-	/// <summary>
-	/// Maps a successful result to a new result type
-	/// </summary>
-	/// <typeparam name="TValue">Source value type</typeparam>
-	/// <typeparam name="TNew">Target value type</typeparam>
-	/// <param name="result">The result to map</param>
-	/// <param name="mapper">The mapping function</param>
-	/// <returns>A new result with the mapped value, or the original error</returns>
-	public static Result<TNew> Map<TValue, TNew>(
-		this Result<TValue> result,
-		Func<TValue, TNew> mapper)
-	{
-		return result.IsSuccess
-			? Result.Success(mapper(result.Value))
-			: Result.Failure<TNew>(result.Error);
-	}
 
 	/// <summary>
 	/// Maps a successful result to a new result type asynchronously
@@ -39,26 +24,10 @@ public static class ResultExtensions
 	{
 		Result<TValue> result = await resultTask;
 		return result.IsSuccess
-			? Result.Success(await mapper(result.Value))
-			: Result.Failure<TNew>(result.Error);
+			? Result.Ok(await mapper(result.Value))
+			: Result.Fail<TNew>(result.Errors);
 	}
 
-	/// <summary>
-	/// Binds a successful result to a new result (monadic bind)
-	/// </summary>
-	/// <typeparam name="TValue">Source value type</typeparam>
-	/// <typeparam name="TNew">Target value type</typeparam>
-	/// <param name="result">The result to bind</param>
-	/// <param name="binder">The binding function that returns a new result</param>
-	/// <returns>A new result from the binder, or the original error</returns>
-	public static Result<TNew> Bind<TValue, TNew>(
-		this Result<TValue> result,
-		Func<TValue, Result<TNew>> binder)
-	{
-		return result.IsSuccess
-			? binder(result.Value)
-			: Result.Failure<TNew>(result.Error);
-	}
 
 	/// <summary>
 	/// Binds a successful result to a new result asynchronously (monadic bind)
@@ -74,7 +43,7 @@ public static class ResultExtensions
 	{
 		return result.IsSuccess
 			? await binder(result.Value)
-			: Result.Failure<TNew>(result.Error);
+			: Result.Fail<TNew>(result.Errors);
 	}
 
 	/// <summary>
@@ -92,7 +61,7 @@ public static class ResultExtensions
 		Result<TValue> result = await resultTask;
 		return result.IsSuccess
 			? await binder(result.Value)
-			: Result.Failure<TNew>(result.Error);
+			: Result.Fail<TNew>(result.Errors);
 	}
 
 	/// <summary>
@@ -106,9 +75,9 @@ public static class ResultExtensions
 	public static T Match<T>(
 		this Result result,
 		Func<T> onSuccess,
-		Func<Error, T> onFailure)
+		Func<DomainError, T> onFailure)
 	{
-		return result.IsSuccess ? onSuccess() : onFailure(result.Error);
+		return result.IsSuccess ? onSuccess() : onFailure(result.GetDomainError());
 	}
 
 	/// <summary>
@@ -123,9 +92,9 @@ public static class ResultExtensions
 	public static T Match<TValue, T>(
 		this Result<TValue> result,
 		Func<TValue, T> onSuccess,
-		Func<Error, T> onFailure)
+		Func<DomainError, T> onFailure)
 	{
-		return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Error);
+		return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.GetDomainError());
 	}
 
 	/// <summary>
@@ -177,14 +146,14 @@ public static class ResultExtensions
 	public static Result<TValue> Ensure<TValue>(
 		this Result<TValue> result,
 		Func<TValue, bool> predicate,
-		Error error)
+		DomainError error)
 	{
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
 			return result;
 		}
 
-		return predicate(result.Value) ? result : Result.Failure<TValue>(error);
+		return predicate(result.Value) ? result : Result.Fail<TValue>(error);
 	}
 
 	/// <summary>
@@ -198,10 +167,10 @@ public static class ResultExtensions
 	public static async Task<T> Match<T>(
 		this Task<Result> resultTask,
 		Func<T> onSuccess,
-		Func<Error, T> onFailure)
+		Func<DomainError, T> onFailure)
 	{
 		Result result = await resultTask;
-		return result.IsSuccess ? onSuccess() : onFailure(result.Error);
+		return result.IsSuccess ? onSuccess() : onFailure(result.GetDomainError());
 	}
 
 	/// <summary>
@@ -216,10 +185,10 @@ public static class ResultExtensions
 	public static async Task<T> Match<TValue, T>(
 		this Task<Result<TValue>> resultTask,
 		Func<TValue, T> onSuccess,
-		Func<Error, T> onFailure)
+		Func<DomainError, T> onFailure)
 	{
 		Result<TValue> result = await resultTask;
-		return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.Error);
+		return result.IsSuccess ? onSuccess(result.Value) : onFailure(result.GetDomainError());
 	}
 }
 

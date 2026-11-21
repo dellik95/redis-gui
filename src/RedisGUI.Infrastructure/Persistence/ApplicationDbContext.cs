@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users;
@@ -54,17 +55,17 @@ public class ApplicationDbContext : DbContext, IUnitOfWork
 		try
 		{
 			int count = await base.SaveChangesAsync(cancellationToken);
-			return Result.Success(count);
+			return Result.Ok(count);
 		}
 		catch (DbUpdateConcurrencyException)
 		{
-			return Result.Failure<int>(DomainErrors.Storage.ConcurrencyConflict);
+			return Result.Fail<int>(DomainErrors.Storage.ConcurrencyConflict);
 		}
 		catch (DbUpdateException)
 		{
 			// Handle other database update exceptions (e.g., constraint violations, connection issues)
 			// Return a generic storage error - specific error details should be logged by infrastructure
-			return Result.Failure<int>(DomainErrors.Storage.ItemNotFound);
+			return Result.Fail<int>(DomainErrors.Storage.ItemNotFound);
 		}
 	}
 }

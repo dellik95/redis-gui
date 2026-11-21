@@ -1,3 +1,4 @@
+using FluentResults;
 using StackExchange.Redis;
 using System.Linq;
 using System.Text.Json;
@@ -23,7 +24,7 @@ public sealed class StreamTypeHandler : IRedisTypeHandler
 			Values = entry.Values.ToDictionary(nv => nv.Name.ToString(), nv => nv.Value.ToString())
 		}).ToArray();
 
-		return Result.Success<object?>(formatted);
+		return Result.Ok<object?>(formatted);
 	}
 
 	public string Serialize(object? rawValue)
@@ -58,6 +59,6 @@ public sealed class StreamTypeHandler : IRedisTypeHandler
 			await database.KeyPersistAsync(key);
 		}
 
-		return Result.Success();
+		return Result.Ok();
 	}
 }

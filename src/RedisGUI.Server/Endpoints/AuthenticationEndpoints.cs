@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -65,6 +66,6 @@ public class AuthenticationEndpoints : IEndpoint
 
 		return result.IsSuccess
 			? Results.Ok(result.Value)
-			: new Error("User.InvalidCredentials", "Invalid email or password.").ToProblemDetails();
+			: new DomainError("User.InvalidCredentials", "Invalid email or password.").ToProblemDetails();
 	}
 }

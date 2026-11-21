@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users;
 using RedisGUI.Shared.Primitives;
@@ -42,8 +43,8 @@ public class UserProfileTests
 		Result<UserProfile> result = UserProfile.Create("", "Doe");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.UserProfile.FirstNameRequired);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.UserProfile.FirstNameRequired);
 	}
 
 	[Test]
@@ -53,8 +54,8 @@ public class UserProfileTests
 		Result<UserProfile> result = UserProfile.Create("John", "");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.UserProfile.LastNameRequired);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.UserProfile.LastNameRequired);
 	}
 
 	[Test]
@@ -67,8 +68,8 @@ public class UserProfileTests
 		Result<UserProfile> result = UserProfile.Create(longFirstName, "Doe");
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.UserProfile.FirstNameTooLong);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.UserProfile.FirstNameTooLong);
 	}
 
 	[Test]
@@ -81,8 +82,8 @@ public class UserProfileTests
 		Result<UserProfile> result = UserProfile.Create("John", longLastName);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.UserProfile.LastNameTooLong);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.UserProfile.LastNameTooLong);
 	}
 
 	[Test]

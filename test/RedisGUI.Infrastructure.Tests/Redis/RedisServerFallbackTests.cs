@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Linq;
 using System.Threading;
@@ -34,12 +35,12 @@ public class RedisServerFallbackTests
 		Assert.That(primary.IsReplica, Is.False);
 		Assert.That(replica.IsReplica, Is.True);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(multiplexer));
+		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Failover test"),
 			new ConnectionHost("localhost"), new ConnectionPort(17100), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
 		var initial = await service.ScanKeysAsync(connection, "*", 0, null, 1);
-		Assert.That(initial.IsSuccess, Is.True, initial.IsFailure ? initial.Error.Message : "");
+		Assert.That(initial.IsSuccess, Is.True, initial.IsFailed ? initial.GetDomainError().Message : "");
 		Assert.That(initial.Value.NextCursor, Is.Not.Null);
 
 		await replica.ExecuteAsync("CLUSTER", "FAILOVER");
@@ -57,8 +58,8 @@ public class RedisServerFallbackTests
 		Assert.That(primaryRole, Is.EqualTo("slave"), "Original primary did not become a replica.");
 
 		var continuation = await service.ScanKeysAsync(connection, "*", 0, initial.Value.NextCursor, 1);
-		Assert.That(continuation.IsFailure, Is.True, "A cursor from the old topology must not continue silently.");
-		Assert.That(continuation.Error.Code, Is.AnyOf("Redis.InvalidCursor", "Redis.ScanUnavailable"));
+		Assert.That(continuation.IsFailed, Is.True, "A cursor from the old topology must not continue silently.");
+		Assert.That(continuation.GetDomainError().Code, Is.AnyOf("Redis.InvalidCursor", "Redis.ScanUnavailable"));
 	}
 
 	[Test]
@@ -69,7 +70,7 @@ public class RedisServerFallbackTests
 		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
 		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(multiplexer));
+			.ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Cluster scan test"),
 			new ConnectionHost("localhost"), new ConnectionPort(17000), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
@@ -84,7 +85,7 @@ public class RedisServerFallbackTests
 			do
 			{
 				var page = await service.ScanKeysAsync(connection, prefix + "*", 0, cursor, 10);
-				Assert.That(page.IsSuccess, Is.True, page.IsFailure ? page.Error.Message : "");
+				Assert.That(page.IsSuccess, Is.True, page.IsFailed ? page.GetDomainError().Message : "");
 				foreach (var item in page.Value.Keys) found.Add(item.Key);
 				cursor = page.Value.NextCursor;
 				Assert.That(++pages, Is.LessThan(1000));
@@ -107,7 +108,7 @@ public class RedisServerFallbackTests
 		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
 		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(multiplexer));
+			.ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Scan test"),
 			new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
@@ -123,7 +124,7 @@ public class RedisServerFallbackTests
 			do
 			{
 				var page = await service.ScanKeysAsync(connection, prefix + "*", 1, cursor, 10);
-				Assert.That(page.IsSuccess, Is.True, page.IsFailure ? page.Error.Message : "");
+				Assert.That(page.IsSuccess, Is.True, page.IsFailed ? page.GetDomainError().Message : "");
 				foreach (var item in page.Value.Keys)
 				{
 					found.Add(item.Key);
@@ -134,7 +135,7 @@ public class RedisServerFallbackTests
 				if (pages == 0 && cursor != null)
 				{
 					var wrongPattern = await service.ScanKeysAsync(connection, "different:*", 1, cursor, 10);
-					Assert.That(wrongPattern.IsFailure, Is.True);
+					Assert.That(wrongPattern.IsFailed, Is.True);
 				}
 				Assert.That(++pages, Is.LessThan(1000));
 			} while (cursor != null);
@@ -142,7 +143,7 @@ public class RedisServerFallbackTests
 			Assert.That(found, Has.Count.EqualTo(120));
 			Assert.That(found, Does.Not.Contain(prefix + "wrong-db"));
 			var invalid = await service.ScanKeysAsync(connection, prefix + "*", 1, "not-a-cursor", 10);
-			Assert.That(invalid.IsFailure, Is.True);
+			Assert.That(invalid.IsFailed, Is.True);
 			using var cancelled = new CancellationTokenSource();
 			cancelled.Cancel();
 			await Assert.ThrowsAsync<OperationCanceledException>(async () =>
@@ -163,7 +164,7 @@ public class RedisServerFallbackTests
 		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
 		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(multiplexer));
+			.ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Database test"),
 			new ConnectionHost("redis"), new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisKeyService(manager.Object, NullLogger<RedisKeyService>.Instance);
@@ -196,7 +197,7 @@ public class RedisServerFallbackTests
 		using var multiplexer = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
 		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(multiplexer));
+			.ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(
 			Guid.NewGuid(), new ConnectionName("Fallback test"), new ConnectionHost("redis"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
@@ -209,7 +210,7 @@ public class RedisServerFallbackTests
 		{
 			await multiplexer.GetDatabase().StringSetAsync(key, "value");
 			var collected = await metrics.CollectMetrics(connection);
-			Assert.That(collected.IsSuccess, Is.True, collected.IsFailure ? collected.Error.Message : string.Empty);
+			Assert.That(collected.IsSuccess, Is.True, collected.IsFailed ? collected.GetDomainError().Message : string.Empty);
 			Assert.That((await diagnostics.GetServerInfoAsync(connection)).IsSuccess, Is.True);
 			Assert.That((await diagnostics.GetServerConfigAsync(connection, "maxmemory")).IsSuccess, Is.True);
 			Assert.That((await diagnostics.GetSlowlogAsync(connection)).IsSuccess, Is.True);
@@ -232,7 +233,7 @@ public class RedisServerFallbackTests
 		var endpoint = (System.Net.IPEndPoint)multiplexer.GetEndPoints()[0];
 		var manager = new Mock<IRedisConnectionManager>();
 		manager.Setup(m => m.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(multiplexer));
+			.ReturnsAsync(Result.Ok(multiplexer));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Fallback test"),
 			new ConnectionHost("redis"), new ConnectionPort(endpoint.Port), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisLoadTestService(manager.Object, NullLogger<RedisLoadTestService>.Instance);

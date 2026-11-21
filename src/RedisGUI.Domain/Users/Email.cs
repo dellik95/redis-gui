@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using System.Net.Mail;
 
@@ -23,12 +24,12 @@ public sealed class Email : ValueObject
 	public static Result<Email> Create(string value)
 	{
 		if (string.IsNullOrWhiteSpace(value))
-			return Result.Failure<Email>(DomainErrors.Email.Empty);
+			return Result.Fail<Email>(DomainErrors.Email.Empty);
 
 		if (!IsValidEmail(value))
-			return Result.Failure<Email>(DomainErrors.Email.InvalidFormat);
+			return Result.Fail<Email>(DomainErrors.Email.InvalidFormat);
 
-		return Result.Success(new Email(value.ToLowerInvariant()));
+		return Result.Ok(new Email(value.ToLowerInvariant()));
 	}
 
 	private static bool IsValidEmail(string email)

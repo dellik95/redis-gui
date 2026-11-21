@@ -1,7 +1,9 @@
+using FluentResults;
 using System;
 using RedisGUI.Application.Connections.Shared;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using System.Threading;
@@ -28,10 +30,10 @@ internal sealed class GetConnectionByIdQueryHandler(
 	public async Task<Result<GetConnectionResponse>> Handle(GetConnectionByIdQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.Id, access, cancellationToken);
-		if (connectionResult.IsFailure)
-			return Result.Failure<GetConnectionResponse>(connectionResult.Error);
+		if (connectionResult.IsFailed)
+			return Result.Fail<GetConnectionResponse>(connectionResult.Errors);
 
 		var serverMode = topology?.GetMode(request.Id) ?? RedisServerMode.Unknown;
-		return Result.Success(GetConnectionResponse.FromRedisConnection(connectionResult.Value, passwordDecrypt, serverMode));
+		return Result.Ok(GetConnectionResponse.FromRedisConnection(connectionResult.Value, passwordDecrypt, serverMode));
 	}
 }

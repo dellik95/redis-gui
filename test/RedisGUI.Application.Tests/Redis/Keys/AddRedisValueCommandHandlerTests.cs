@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Commands.SetRedisValue;
@@ -47,11 +48,11 @@ public class AddRedisValueCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_connectionServiceMock
 			.Setup(x => x.SetValueAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan?>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		// Act
 		Result result = await _handler.Handle(command, CancellationToken.None);
@@ -74,13 +75,13 @@ public class AddRedisValueCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		Result result = await _handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 		_connectionServiceMock.Verify(x => x.SetValueAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<TimeSpan?>()), Times.Never);
 	}
 }

@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.DeleteConnection;
@@ -36,11 +37,11 @@ public class DeleteConnectionCommandHandlerTests
 
 		repositoryMock
 			.Setup(x => x.DeleteAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(1));
+			.ReturnsAsync(1);
 
 		// Act
 		Result result = await handler.Handle(command, CancellationToken.None);
@@ -60,13 +61,13 @@ public class DeleteConnectionCommandHandlerTests
 
 		repositoryMock
 			.Setup(x => x.DeleteAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure(RedisGUI.Domain.Errors.DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail(RedisGUI.Domain.Errors.DomainErrors.Connection.NotFound));
 
 		// Act
 		Result result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 		unitOfWorkMock.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
 	}
 }

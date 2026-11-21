@@ -1,3 +1,4 @@
+using FluentResults;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.IO;
@@ -446,7 +447,7 @@ public sealed class BackgroundJobManager : BackgroundService
 
 	private BackgroundJobSnapshot? ResolveExecutionOutcome(
 		Job job,
-		Shared.Primitives.Result<object?> result,
+		FluentResults.Result<object?> result,
 		bool tokenCancelled,
 		bool hostStopping)
 	{
@@ -454,11 +455,11 @@ public sealed class BackgroundJobManager : BackgroundService
 
 		// Precedence rule 1: Operational failures and partial failures ALWAYS preserve Failed status
 		// even when cancellation raced concurrently, so errors are never masked as Cancelled.
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
 			FailedCounter.Add(1, new KeyValuePair<string, object?>("kind", job.Kind));
 			return job.FinishFailed(
-				result.Error.Message,
+				result.GetDomainError().Message,
 				value: null,
 				cancellationRequested: tokenCancelled,
 				mayHaveUnconfirmedChanges: false,

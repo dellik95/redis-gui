@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using FluentValidation;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -22,6 +24,6 @@ internal sealed class GetStreamQueryHandler(IRedisConnectionRepository repositor
 	public async Task<Result<object>> Handle(GetStreamQuery request, CancellationToken cancellationToken)
 	{
 		return await (await MessagingConnectionAccess.FindAsync(request.ConnectionId, repository, access, cancellationToken))
-			.BindAsync(async connection => Result.Success(await messaging.GetStreamAsync(connection, request.Key, cancellationToken)));
+			.BindAsync(async connection => Result.Ok(await messaging.GetStreamAsync(connection, request.Key, cancellationToken)));
 	}
 }

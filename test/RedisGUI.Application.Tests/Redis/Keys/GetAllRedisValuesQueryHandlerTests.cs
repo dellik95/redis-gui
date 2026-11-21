@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Queries.GetAllRedisValues;
@@ -52,11 +53,11 @@ public class GetAllRedisValuesQueryHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_connectionServiceMock
 			.Setup(x => x.GetAllValuesAsync(connection, "*", 10, 1, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(pagedResult));
+			.ReturnsAsync(Result.Ok(pagedResult));
 
 		// Act
 		Result<GetAllRedisValuesResponse> result = await _handler.Handle(query, CancellationToken.None);

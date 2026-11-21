@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Users;
@@ -79,8 +80,8 @@ public class UserTests
 		Result result = user.ChangePassword("wrongpassword", newPasswordHash, hasher);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.InvalidPassword);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.InvalidPassword);
 	}
 
 	[Test]
@@ -127,8 +128,8 @@ public class UserTests
 		Result result = user.Deactivate();
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.AlreadyDeactivated);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.AlreadyDeactivated);
 	}
 
 	[Test]

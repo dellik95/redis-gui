@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Text;
 using System.Linq;
@@ -23,7 +24,7 @@ public class RedisSnapshotIntegrationTests
 		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_CLUSTER to run the Redis Cluster integration check.");
 		using var mux = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(mux));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Cluster test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var service = new RedisSnapshotService(manager.Object, NullLogger<RedisSnapshotService>.Instance);
@@ -37,9 +38,9 @@ public class RedisSnapshotIntegrationTests
 			await db.StringSetAsync((RedisKey)source, "source-value");
 			await db.ListRightPushAsync((RedisKey)destination, "old");
 			var snapshot = await service.CaptureAsync(connection, source, 0);
-			Assert.That(snapshot.IsSuccess, Is.True, snapshot.IsFailure ? snapshot.Error.Message : "");
+			Assert.That(snapshot.IsSuccess, Is.True, snapshot.IsFailed ? snapshot.GetDomainError().Message : "");
 			var restored = await service.RestoreAsync(connection, destination, snapshot.Value.Payload, null, true, 0);
-			Assert.That(restored.IsSuccess && restored.Value, Is.True, restored.IsFailure ? restored.Error.Message : "");
+			Assert.That(restored.IsSuccess && restored.Value, Is.True, restored.IsFailed ? restored.GetDomainError().Message : "");
 			Assert.That((string?)await db.StringGetAsync((RedisKey)destination), Is.EqualTo("source-value"));
 		}
 		finally
@@ -56,7 +57,7 @@ public class RedisSnapshotIntegrationTests
 		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
 		using var mux = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(mux));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Snapshot test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(1), ConnectionOwnerId.None());
 		var service = new RedisSnapshotService(manager.Object, NullLogger<RedisSnapshotService>.Instance);
@@ -75,13 +76,13 @@ public class RedisSnapshotIntegrationTests
 			do
 			{
 				var page = await scanner.ScanKeysAsync(connection, Encoding.UTF8.GetString(prefix) + "*", 1, cursor, 100);
-				Assert.That(page.IsSuccess, Is.True, page.IsFailure ? page.Error.Message : "");
+				Assert.That(page.IsSuccess, Is.True, page.IsFailed ? page.GetDomainError().Message : "");
 				foundBinaryKey |= page.Value.Keys.Any(item => item.RawKey is not null && item.RawKey.SequenceEqual(source));
 				cursor = page.Value.NextCursor;
 			} while (cursor is not null);
 			Assert.That(foundBinaryKey, Is.True);
 			var capture = await service.CaptureAsync(connection, source, 1);
-			Assert.That(capture.IsSuccess, Is.True, capture.IsFailure ? capture.Error.Message : "");
+			Assert.That(capture.IsSuccess, Is.True, capture.IsFailed ? capture.GetDomainError().Message : "");
 			Assert.That(capture.Value.TtlMilliseconds, Is.GreaterThan(0));
 			var restored = await service.RestoreAsync(connection, destination, capture.Value.Payload,
 				TimeSpan.FromMilliseconds(capture.Value.TtlMilliseconds!.Value), false, 1);
@@ -90,7 +91,7 @@ public class RedisSnapshotIntegrationTests
 			var collision = await service.RestoreAsync(connection, destination, capture.Value.Payload, null, false, 1);
 			Assert.That(collision.IsSuccess && !collision.Value, Is.True);
 			var replaced = await service.RestoreAsync(connection, destination, capture.Value.Payload, null, true, 1);
-			Assert.That(replaced.IsSuccess && replaced.Value, Is.True, replaced.IsFailure ? replaced.Error.Message : "");
+			Assert.That(replaced.IsSuccess && replaced.Value, Is.True, replaced.IsFailed ? replaced.GetDomainError().Message : "");
 			var legacyName = Encoding.UTF8.GetString(prefix) + "legacy";
 			await db.ListRightPushAsync(legacyName, "existing");
 			try
@@ -103,7 +104,7 @@ public class RedisSnapshotIntegrationTests
 
 			for (int i = 0; i < 120; i++) await db.StreamAddAsync((RedisKey)stream, "value", i);
 			var streamSnapshot = await service.CaptureAsync(connection, stream, 1);
-			Assert.That(streamSnapshot.IsSuccess, Is.True, streamSnapshot.IsFailure ? streamSnapshot.Error.Message : "");
+			Assert.That(streamSnapshot.IsSuccess, Is.True, streamSnapshot.IsFailed ? streamSnapshot.GetDomainError().Message : "");
 			var restoredResult = await service.RestoreAsync(connection, restoredStream, streamSnapshot.Value.Payload, null, false, 1);
 			Assert.That(restoredResult.IsSuccess && restoredResult.Value, Is.True);
 			Assert.That(await db.StreamLengthAsync((RedisKey)restoredStream), Is.EqualTo(120));

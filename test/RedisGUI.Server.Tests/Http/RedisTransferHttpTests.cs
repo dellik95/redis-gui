@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -47,11 +48,11 @@ public class RedisTransferHttpTests
 		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
 		using var mux = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(mux));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Transfer test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success<RedisConnection>(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok<RedisConnection>(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		var owner = Guid.NewGuid();

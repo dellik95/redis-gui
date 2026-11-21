@@ -1,3 +1,4 @@
+using FluentResults;
 using Microsoft.AspNetCore.Http;
 using RedisGUI.Shared.Primitives;
 using System;
@@ -19,7 +20,7 @@ public static class ResultExtensions
 			return Results.Ok(result.Value);
 		}
 
-		return result.Error.ToProblemDetails(httpContext);
+		return result.GetDomainError().ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -32,7 +33,7 @@ public static class ResultExtensions
 			return Results.Ok();
 		}
 
-		return result.Error.ToProblemDetails(httpContext);
+		return result.GetDomainError().ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -45,7 +46,7 @@ public static class ResultExtensions
 	{
 		return result.IsSuccess
 			? onSuccess(result.Value)
-			: result.Error.ToProblemDetails(httpContext);
+			: result.GetDomainError().ToProblemDetails(httpContext);
 	}
 
 	/// <summary>
@@ -58,6 +59,6 @@ public static class ResultExtensions
 	{
 		return result.IsSuccess
 			? onSuccess()
-			: result.Error.ToProblemDetails(httpContext);
+			: result.GetDomainError().ToProblemDetails(httpContext);
 	}
 }

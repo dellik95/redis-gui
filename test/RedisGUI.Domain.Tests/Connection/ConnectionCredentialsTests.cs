@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -50,8 +51,8 @@ public class ConnectionCredentialsTests
 		Result<ConnectionCredentials?> result = ConnectionCredentials.Create("username", "", encryptor);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
 	}
 
 	[Test]
@@ -64,8 +65,8 @@ public class ConnectionCredentialsTests
 		Result<ConnectionCredentials?> result = ConnectionCredentials.Create("", "password", encryptor);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.ConnectionCredentials.UsernameAndPasswordInvalid);
 	}
 
 	private class MockPasswordEncryptor : IPasswordEncryptor

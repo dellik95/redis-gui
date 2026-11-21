@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Redis;
 

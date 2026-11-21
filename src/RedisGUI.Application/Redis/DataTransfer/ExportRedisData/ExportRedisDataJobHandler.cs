@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using System;
 using System.Diagnostics;
@@ -60,9 +61,9 @@ public sealed class ExportRedisDataJobHandler(
 			request.Keys,
 			request.KeysBase64);
 		var result = await mediator.Send(query, cancellationToken);
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<JobExecutionOutcome<BackgroundJobFile>>(result.Error);
+			return Result.Fail<JobExecutionOutcome<BackgroundJobFile>>(result.Errors);
 		}
 
 		await progress.ReportAsync(totalKeys is > 0 ? 100 : null, new ExportJobProgress(exported, totalKeys));
@@ -74,7 +75,7 @@ public sealed class ExportRedisDataJobHandler(
 			{
 				await source.CopyToAsync(output, cancellationToken);
 			}
-			return Result.Success(JobExecutionOutcome<BackgroundJobFile>.FileOutcome(
+			return Result.Ok(JobExecutionOutcome<BackgroundJobFile>.FileOutcome(
 				new BackgroundJobFile(path, result.Value.FileName, result.Value.ContentType)));
 		}
 		catch

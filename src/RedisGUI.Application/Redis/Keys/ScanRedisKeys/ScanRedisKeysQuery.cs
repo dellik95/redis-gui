@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using FluentValidation;
 using RedisGUI.Domain.Connection;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Shared.Primitives;
 using System;
 using System.Threading;
@@ -31,6 +33,6 @@ internal sealed class ScanRedisKeysQueryHandler(IRedisConnectionRepository repos
 			.BindAsync(async connection => await access.CanAccessAsync(connection)
 				? await keys.ScanKeysAsync(connection, request.Pattern, request.Database ?? connection.DatabaseNumber.Value,
 					request.Cursor, request.Count, cancellationToken)
-				: Result.Failure<RedisKeyScanPage>(new Error("Connection.Forbidden", "Access to the connection is denied.")));
+				: Result.Fail<RedisKeyScanPage>(new DomainError("Connection.Forbidden", "Access to the connection is denied.")));
 	}
 }

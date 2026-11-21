@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 
 namespace RedisGUI.Domain.Users;
@@ -37,18 +38,18 @@ public sealed class UserProfile : ValueObject
 	public static Result<UserProfile> Create(string firstName, string lastName)
 	{
 		if (string.IsNullOrWhiteSpace(firstName))
-			return Result.Failure<UserProfile>(DomainErrors.UserProfile.FirstNameRequired);
+			return Result.Fail<UserProfile>(DomainErrors.UserProfile.FirstNameRequired);
 
 		if (string.IsNullOrWhiteSpace(lastName))
-			return Result.Failure<UserProfile>(DomainErrors.UserProfile.LastNameRequired);
+			return Result.Fail<UserProfile>(DomainErrors.UserProfile.LastNameRequired);
 
 		if (firstName.Length > 100)
-			return Result.Failure<UserProfile>(DomainErrors.UserProfile.FirstNameTooLong);
+			return Result.Fail<UserProfile>(DomainErrors.UserProfile.FirstNameTooLong);
 
 		if (lastName.Length > 100)
-			return Result.Failure<UserProfile>(DomainErrors.UserProfile.LastNameTooLong);
+			return Result.Fail<UserProfile>(DomainErrors.UserProfile.LastNameTooLong);
 
-		return Result.Success(new UserProfile(firstName.Trim(), lastName.Trim()));
+		return Result.Ok(new UserProfile(firstName.Trim(), lastName.Trim()));
 	}
 
 	protected override IEnumerable<object> GetAtomicValues()

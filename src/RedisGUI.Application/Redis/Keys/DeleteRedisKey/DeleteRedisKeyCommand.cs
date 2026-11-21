@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Primitives;
@@ -39,9 +41,9 @@ internal sealed class DeleteRedisKeyCommandHandler(
 			cancellationToken,
 			requireWritable: true);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<bool>(connectionResult.Error);
+			return Result.Fail<bool>(connectionResult.Errors);
 		}
 
 		return string.IsNullOrEmpty(request.KeyBase64)

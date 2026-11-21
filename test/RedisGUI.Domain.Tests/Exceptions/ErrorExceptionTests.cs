@@ -13,7 +13,7 @@ public class ErrorExceptionTests
 	public void Constructor_WithError_ShouldSetError()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error message");
+		DomainError error = new("Test.Error", "Test error message");
 
 		// Act
 		ErrorException exception = new(error);
@@ -27,7 +27,7 @@ public class ErrorExceptionTests
 	public void Constructor_WithError_ShouldSetMessage()
 	{
 		// Arrange
-		Error error = new("Test.Error", "Test error message");
+		DomainError error = new("Test.Error", "Test error message");
 
 		// Act
 		ErrorException exception = new(error);

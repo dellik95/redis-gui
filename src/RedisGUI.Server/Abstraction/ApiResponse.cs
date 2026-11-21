@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
@@ -124,7 +125,7 @@ public static class ApiResponseExtensions
 	/// <summary>
 	/// Converts a Result to an ApiResponse
 	/// </summary>
-	public static ApiResponse<T> ToApiResponse<T>(this RedisGUI.Shared.Primitives.Result<T> result, string? correlationId = null)
+	public static ApiResponse<T> ToApiResponse<T>(this FluentResults.Result<T> result, string? correlationId = null)
 	{
 		if (result.IsSuccess)
 		{
@@ -132,15 +133,15 @@ public static class ApiResponseExtensions
 		}
 
 		return ApiResponse<T>.Fail(
-			result.Error.Code,
-			result.Error.Message,
+			result.GetDomainError().Code,
+			result.GetDomainError().Message,
 			correlationId: correlationId);
 	}
 
 	/// <summary>
 	/// Converts a non-generic Result to an ApiResponse
 	/// </summary>
-	public static ApiResponse<object> ToApiResponse(this RedisGUI.Shared.Primitives.Result result, string? correlationId = null)
+	public static ApiResponse<object> ToApiResponse(this FluentResults.Result result, string? correlationId = null)
 	{
 		if (result.IsSuccess)
 		{
@@ -148,8 +149,8 @@ public static class ApiResponseExtensions
 		}
 
 		return ApiResponse<object>.Fail(
-			result.Error.Code,
-			result.Error.Message,
+			result.GetDomainError().Code,
+			result.GetDomainError().Message,
 			correlationId: correlationId);
 	}
 }

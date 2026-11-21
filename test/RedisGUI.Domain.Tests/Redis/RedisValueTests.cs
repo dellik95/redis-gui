@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Shared.Primitives;
@@ -46,8 +47,8 @@ public class RedisValueTests
 		Result<RedisValue> result = RedisValue.Create("", "value", "String", null);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.RedisValue.EmptyKey);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.RedisValue.EmptyKey);
 	}
 
 	[Test]
@@ -57,8 +58,8 @@ public class RedisValueTests
 		Result<RedisValue> result = RedisValue.Create("   ", "value", "String", null);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.RedisValue.EmptyKey);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.RedisValue.EmptyKey);
 	}
 
 	[Test]
@@ -68,8 +69,8 @@ public class RedisValueTests
 		Result<RedisValue> result = RedisValue.Create("key", "value", "", null);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.RedisValue.EmptyType);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.RedisValue.EmptyType);
 	}
 
 	[Test]

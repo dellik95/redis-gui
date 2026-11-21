@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Domain.Errors;
 using System.Linq;
@@ -149,15 +150,15 @@ internal sealed class AuditLogRepository(ApplicationDbContext context) : IAuditL
 			.ToListAsync(cancellationToken);
 
 		PagedResult<AuditLog> pagedResult = new(items, totalCount, pageNumber, pageSize);
-		return Result.Success(pagedResult);
+		return Result.Ok(pagedResult);
 	}
 
 	public async Task<Result<AuditLog?>> FindAsync(Guid id, CancellationToken cancellationToken = default)
 	{
 		AuditLog? entity = await context.AuditLogs.FindAsync([id], cancellationToken);
 		return entity is null
-			? Result.Failure<AuditLog?>(DomainErrors.Storage.ItemNotFound)
-			: Result.Success<AuditLog?>(entity);
+			? Result.Fail<AuditLog?>(DomainErrors.Storage.ItemNotFound)
+			: Result.Ok<AuditLog?>(entity);
 	}
 
 	public void Update(AuditLog entity)
@@ -169,9 +170,9 @@ internal sealed class AuditLogRepository(ApplicationDbContext context) : IAuditL
 	{
 		AuditLog? auditLog = await GetByIdAsync(id, cancellationToken);
 		if (auditLog is null)
-			return Result.Failure(DomainErrors.AuditLog.NotFound);
+			return Result.Fail(DomainErrors.AuditLog.NotFound);
 
 		context.AuditLogs.Remove(auditLog);
-		return Result.Success();
+		return Result.Ok();
 	}
 }

@@ -11,7 +11,7 @@ public sealed class RedisMessagingService(
 	public async Task<ConnectionMultiplexer> ConnectAsync(RedisConnection connection, CancellationToken cancellationToken = default)
 	{
 		var result = await connections.GetConnection(connection.BuildConnectionString(), cancellationToken);
-		if (result.IsFailure) throw new InvalidOperationException(result.Error.Message);
+		if (result.IsFailed) throw new InvalidOperationException(result.GetDomainError().Message);
 		topology?.SetMode(connection.Id, result.Value.DetectServerMode());
 		return result.Value;
 	}

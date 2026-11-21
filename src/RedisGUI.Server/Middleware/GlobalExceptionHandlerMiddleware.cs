@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using RedisGUI.Application.Exceptions;
 using RedisGUI.Domain.Exceptions;
 using RedisGUI.Domain.Primitives;
 using RedisGUI.Server.Abstraction;
@@ -59,7 +58,6 @@ public sealed class GlobalExceptionHandlerMiddleware
 		{
 			BadHttpRequestException badRequest => ApiErrorResponse.BadRequest(
 				"Request.Invalid", badRequest.Message, context.Request.Path),
-			ValidationException validationEx => HandleValidationException(context, validationEx),
 			ErrorException errorEx => HandleErrorException(context, errorEx),
 			ArgumentException argEx => HandleArgumentException(context, argEx),
 			InvalidOperationException opEx => HandleInvalidOperationException(context, opEx),
@@ -80,25 +78,10 @@ public sealed class GlobalExceptionHandlerMiddleware
 			instance: context.Request.Path, extensions: extensions).ExecuteAsync(context);
 	}
 
-	private static ApiErrorResponse HandleValidationException(HttpContext context, ValidationException exception)
-	{
-		Dictionary<string, string[]> errors = exception.Errors
-			.GroupBy(e => e.PropertyName)
-			.ToDictionary(
-				g => g.Key,
-				g => g.Select(e => e.ErrorMessage).ToArray());
-
-		return ApiErrorResponse.BadRequest(
-			"Validation.Failed",
-			"One or more validation errors occurred",
-			context.Request.Path,
-			new Dictionary<string, object> { ["errors"] = errors });
-	}
-
 	private ApiErrorResponse HandleErrorException(HttpContext context, ErrorException exception)
 	{
 		// ErrorException wraps domain errors
-		Error? firstError = exception.Errors.FirstOrDefault();
+		DomainError? firstError = exception.Errors.FirstOrDefault();
 		if (firstError is null)
 		{
 			return ApiErrorResponse.InternalServerError(

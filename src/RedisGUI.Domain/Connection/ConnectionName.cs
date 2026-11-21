@@ -19,7 +19,7 @@ public record ConnectionName
 	/// <param name="name">The connection name value</param>
 	public ConnectionName(string name)
 	{
-		Ensure.NotEmpty(name, Error.NullValue);
+		Ensure.NotEmpty(name, DomainError.NullValue);
 		Ensure.Is(() => name.Length <= MaxLength, DomainErrors.ConnectionName.LongerThanAllowed);
 
 		Value = name;

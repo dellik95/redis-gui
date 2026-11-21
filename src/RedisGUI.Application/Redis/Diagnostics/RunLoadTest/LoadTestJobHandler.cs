@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using System;
 using System.Threading;
@@ -40,8 +41,8 @@ public sealed class LoadTestJobHandler(
 
 		var result = await mediator.Send(command, cancellationToken);
 		return result.IsSuccess
-			? Result.Success(JobExecutionOutcome<RedisLoadTestResult>.Completed(result.Value))
-			: Result.Failure<JobExecutionOutcome<RedisLoadTestResult>>(result.Error);
+			? Result.Ok(JobExecutionOutcome<RedisLoadTestResult>.Completed(result.Value))
+			: Result.Fail<JobExecutionOutcome<RedisLoadTestResult>>(result.Errors);
 	}
 }
 

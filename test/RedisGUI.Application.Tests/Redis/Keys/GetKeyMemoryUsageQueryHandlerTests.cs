@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,14 +37,14 @@ public class GetKeyMemoryUsageQueryHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound));
+			.ReturnsAsync(Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound));
 
 		// Act
 		var result = await _handler.Handle(query, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.NotFound);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.NotFound);
 	}
 
 	[Test]
@@ -62,11 +63,11 @@ public class GetKeyMemoryUsageQueryHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_diagnosticsServiceMock
 			.Setup(x => x.GetKeyMemoryUsageAsync(connection, "user:100", It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(1024L));
+			.ReturnsAsync(Result.Ok(1024L));
 
 		// Act
 		var result = await _handler.Handle(query, CancellationToken.None);

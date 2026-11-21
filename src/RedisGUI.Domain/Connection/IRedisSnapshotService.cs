@@ -1,3 +1,4 @@
+using FluentResults;
 namespace RedisGUI.Domain.Connection;
 
 /// <summary>Reads and restores Redis-native serialized key snapshots.</summary>

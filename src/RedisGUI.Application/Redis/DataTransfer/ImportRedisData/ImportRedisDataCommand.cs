@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -109,15 +111,15 @@ internal sealed class ImportRedisDataCommandHandler
 			request.ConnectionId,
 			cancellationToken);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<ImportRedisDataResponse>(connectionResult.Error);
+			return Result.Fail<ImportRedisDataResponse>(connectionResult.Errors);
 		}
 
 		if (!await access.CanAccessAsync(connectionResult.Value))
-			return Result.Failure<ImportRedisDataResponse>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+			return Result.Fail<ImportRedisDataResponse>(new DomainError("Connection.Forbidden", "Access to the connection is denied."));
 		if (connectionResult.Value.IsReadOnly)
-			return Result.Failure<ImportRedisDataResponse>(DomainErrors.Connection.ReadOnlyMode);
+			return Result.Fail<ImportRedisDataResponse>(DomainErrors.Connection.ReadOnlyMode);
 		int database = request.Database ?? connectionResult.Value.DatabaseNumber.Value;
 
 		List<RedisImportItem> items;
@@ -130,7 +132,7 @@ internal sealed class ImportRedisDataCommandHandler
 		}
 		catch (Exception)
 		{
-			return Result.Failure<ImportRedisDataResponse>(
+			return Result.Fail<ImportRedisDataResponse>(
 				DomainErrors.Import.ParseError);
 		}
 
@@ -155,7 +157,7 @@ internal sealed class ImportRedisDataCommandHandler
 					byte[] payload = Convert.FromBase64String(item.DumpBase64);
 					TimeSpan? snapshotTtl = item.TtlMilliseconds is long ms ? TimeSpan.FromMilliseconds(ms) : null;
 					var restored = await snapshots.RestoreAsync(connectionResult.Value, rawKey, payload, snapshotTtl, request.Overwrite, database, operationToken);
-					if (restored.IsFailure) failedKeys.Add(item.KeyBase64);
+					if (restored.IsFailed) failedKeys.Add(item.KeyBase64);
 					else if (restored.Value) importedCount++;
 					else skippedCount++;
 					continue;
@@ -178,7 +180,7 @@ internal sealed class ImportRedisDataCommandHandler
 					item.Value,
 					ttl, request.Overwrite, database, operationToken);
 
-				if (setResult.IsFailure) failedKeys.Add(item.Key);
+				if (setResult.IsFailed) failedKeys.Add(item.Key);
 				else if (setResult.Value) importedCount++;
 				else skippedCount++;
 			}
@@ -203,7 +205,7 @@ internal sealed class ImportRedisDataCommandHandler
 			failedKeys.Count,
 			failedKeys, cancelled, unconfirmed);
 
-		return Result.Success(response);
+		return Result.Ok(response);
 	}
 
 	private static List<RedisImportItem> ParseJson(string data)

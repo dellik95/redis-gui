@@ -1,3 +1,4 @@
+using FluentResults;
 using StackExchange.Redis;
 
 namespace RedisGUI.Infrastructure.Redis.TypeHandlers;
@@ -15,7 +16,7 @@ public sealed class StringTypeHandler : IRedisTypeHandler
 	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		StackExchange.Redis.RedisValue val = await database.StringGetAsync(key);
-		return Result.Success<object?>(val);
+		return Result.Ok<object?>(val);
 	}
 
 	public string Serialize(object? rawValue)
@@ -38,6 +39,6 @@ public sealed class StringTypeHandler : IRedisTypeHandler
 			await database.KeyPersistAsync(key);
 		}
 
-		return ok ? Result.Success() : Result.Failure(Domain.Errors.DomainErrors.Redis.UpdateFailed);
+		return ok ? Result.Ok() : Result.Fail(Domain.Errors.DomainErrors.Redis.UpdateFailed);
 	}
 }

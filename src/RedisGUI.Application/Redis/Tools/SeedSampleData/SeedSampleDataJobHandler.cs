@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using System;
 using System.Diagnostics;
@@ -52,9 +53,9 @@ public sealed class SeedSampleDataJobHandler(
 
 		// Allow a cancelled operation to return and audit its confirmed partial result.
 		var result = await mediator.Send(command, CancellationToken.None);
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<JobExecutionOutcome<SeedDataResult>>(result.Error);
+			return Result.Fail<JobExecutionOutcome<SeedDataResult>>(result.Errors);
 		}
 
 		var outcome = result.Value;
@@ -67,7 +68,7 @@ public sealed class SeedSampleDataJobHandler(
 			requested > 0 ? (double)persisted / requested * 100 : 100,
 			new SeedJobProgress(persisted, requested, requested, processed, persisted, failed));
 
-		return Result.Success(outcome.Error is null
+		return Result.Ok(outcome.Error is null
 			? JobExecutionOutcome<SeedDataResult>.Completed(outcome)
 			: JobExecutionOutcome<SeedDataResult>.Failed(outcome.Error, outcome, cancellationToken.IsCancellationRequested));
 	}

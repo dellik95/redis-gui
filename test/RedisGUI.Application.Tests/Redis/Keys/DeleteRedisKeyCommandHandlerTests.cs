@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Redis.Commands.DeleteRedisKey;
@@ -42,11 +43,11 @@ public class DeleteRedisKeyCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_connectionServiceMock
 			.Setup(x => x.DeleteKeyAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(true));
+			.ReturnsAsync(Result.Ok(true));
 
 		// Act
 		Result<bool> result = await _handler.Handle(command, CancellationToken.None);
@@ -73,11 +74,11 @@ public class DeleteRedisKeyCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		_connectionServiceMock
 			.Setup(x => x.DeleteKeyAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(false));
+			.ReturnsAsync(Result.Ok(false));
 
 		// Act
 		Result<bool> result = await _handler.Handle(command, CancellationToken.None);

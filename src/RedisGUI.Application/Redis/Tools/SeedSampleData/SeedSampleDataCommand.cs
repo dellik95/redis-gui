@@ -1,7 +1,9 @@
+using FluentResults;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -43,17 +45,17 @@ internal sealed class SeedSampleDataCommandHandler : ICommandHandler<SeedSampleD
 	public async Task<Result<SeedDataResult>> Handle(SeedSampleDataCommand request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<SeedDataResult>(connectionResult.Error);
+			return Result.Fail<SeedDataResult>(connectionResult.Errors);
 		}
 
 		if (!await access.CanAccessAsync(connectionResult.Value))
-			return Result.Failure<SeedDataResult>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+			return Result.Fail<SeedDataResult>(new DomainError("Connection.Forbidden", "Access to the connection is denied."));
 
 		if (connectionResult.Value.IsReadOnly)
 		{
-			return Result.Failure<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
+			return Result.Fail<SeedDataResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
 		return await seedDataService.SeedSampleDataAsync(connectionResult.Value, request.Options,

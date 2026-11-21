@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 
 namespace RedisGUI.Domain.Redis;
@@ -54,15 +55,15 @@ public sealed class RedisValue
 	{
 		if (string.IsNullOrWhiteSpace(key))
 		{
-			return Result.Failure<RedisValue>(DomainErrors.RedisValue.EmptyKey);
+			return Result.Fail<RedisValue>(DomainErrors.RedisValue.EmptyKey);
 		}
 
 		if (string.IsNullOrWhiteSpace(type))
 		{
-			return Result.Failure<RedisValue>(DomainErrors.RedisValue.EmptyType);
+			return Result.Fail<RedisValue>(DomainErrors.RedisValue.EmptyType);
 		}
 
-		return Result.Success(new RedisValue(key, value ?? string.Empty, type, timeToLive));
+		return Result.Ok(new RedisValue(key, value ?? string.Empty, type, timeToLive));
 	}
 
 	/// <summary>

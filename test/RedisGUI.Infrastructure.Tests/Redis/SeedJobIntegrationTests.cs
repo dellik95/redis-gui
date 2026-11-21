@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +23,7 @@ public class SeedJobIntegrationTests
 		if (string.IsNullOrEmpty(configuration)) Assert.Ignore("Set REDISGUI_TEST_REDIS to run the Redis integration check.");
 		using var mux = await ConnectionMultiplexer.ConnectAsync(configuration!);
 		var manager = new Mock<IRedisConnectionManager>();
-		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(mux));
+		manager.Setup(x => x.GetConnection(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(mux));
 		var connection = new AnonymousRedisConnection(Guid.NewGuid(), new ConnectionName("Seed test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None());
 		var prefix = "redisgui-seed-test-" + Guid.NewGuid().ToString("N");

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Redis.Parsers;
 using StackExchange.Redis;
@@ -26,12 +27,12 @@ public class RedisDiagnosticsService(
 		string? keyBase64 = null)
 	{
 		var resolvedKey = RedisServerResolver.ResolveKey(key, keyBase64);
-		if (resolvedKey.IsFailure) return Result.Failure<long>(resolvedKey.Error);
+		if (resolvedKey.IsFailed) return Result.Fail<long>(resolvedKey.Errors);
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<long>(multiplexerResult.Error);
+			return Result.Fail<long>(multiplexerResult.Errors);
 		}
 
 		int targetDb = multiplexerResult.Value.IsCluster() ? 0 : (database ?? connection.DatabaseNumber.Value);
@@ -41,14 +42,14 @@ public class RedisDiagnosticsService(
 			RedisResult result = await db.ExecuteAsync("MEMORY", "USAGE", resolvedKey.Value).WaitAsync(cancellationToken);
 			if (result.IsNull)
 			{
-				return Result.Success(0L);
+				return Result.Ok(0L);
 			}
-			return Result.Success((long)result);
+			return Result.Ok((long)result);
 		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Could not get memory usage for key {Key} in DB {Database}", key, targetDb);
-			return Result.Success(0L);
+			return Result.Ok(0L);
 		}
 	}
 
@@ -58,9 +59,9 @@ public class RedisDiagnosticsService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<Dictionary<int, long>>(multiplexerResult.Error);
+			return Result.Fail<Dictionary<int, long>>(multiplexerResult.Errors);
 		}
 
 		try
@@ -84,17 +85,17 @@ public class RedisDiagnosticsService(
 						merged[kvp.Key] = merged.GetValueOrDefault(kvp.Key) + kvp.Value;
 					}
 				}
-				return Result.Success(merged);
+				return Result.Ok(merged);
 			}
 
 			IServer server = multiplexer.GetConnectedServer(connection);
 			string? raw = await server.InfoRawAsync("keyspace").WaitAsync(cancellationToken);
-			return Result.Success(RedisInfoParser.ParseKeyspace(raw));
+			return Result.Ok(RedisInfoParser.ParseKeyspace(raw));
 		}
 		catch (Exception ex)
 		{
 			logger.LogWarning(ex, "Failed to get keyspace info");
-			return Result.Success(RedisInfoParser.ParseKeyspace(null));
+			return Result.Ok(RedisInfoParser.ParseKeyspace(null));
 		}
 	}
 
@@ -105,7 +106,7 @@ public class RedisDiagnosticsService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<List<SlowlogEntryInfo>>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail<List<SlowlogEntryInfo>>(multiplexerResult.Errors);
 
 		var multiplexer = multiplexerResult.Value;
 		if (multiplexer.IsCluster())
@@ -134,7 +135,7 @@ public class RedisDiagnosticsService(
 				}
 			}
 
-			return Result.Success(allEntries
+			return Result.Ok(allEntries
 				.OrderByDescending(e => e.Timestamp)
 				.Take(count)
 				.ToList());
@@ -151,7 +152,7 @@ public class RedisDiagnosticsService(
 			string.Empty
 		)).ToList();
 
-		return Result.Success(result);
+		return Result.Ok(result);
 	}
 
 	/// <inheritdoc />
@@ -160,7 +161,7 @@ public class RedisDiagnosticsService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerInfoDto>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail<RedisServerInfoDto>(multiplexerResult.Errors);
 
 		var multiplexer = multiplexerResult.Value;
 		var server = multiplexer.GetConnectedServer(connection);
@@ -185,7 +186,7 @@ public class RedisDiagnosticsService(
 			dto = dto with { RedisMode = "cluster", AllSections = sections };
 		}
 
-		return Result.Success(dto);
+		return Result.Ok(dto);
 	}
 
 	/// <inheritdoc />
@@ -195,7 +196,7 @@ public class RedisDiagnosticsService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<RedisServerConfigDto>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail<RedisServerConfigDto>(multiplexerResult.Errors);
 
 		var server = multiplexerResult.Value.GetConnectedServer(connection);
 		var configs = await server.ConfigGetAsync(pattern ?? "*").WaitAsync(cancellationToken);
@@ -204,7 +205,7 @@ public class RedisDiagnosticsService(
 			.OrderBy(c => c.Name)
 			.ToList();
 
-		return Result.Success(new RedisServerConfigDto(paramList, paramList.Count));
+		return Result.Ok(new RedisServerConfigDto(paramList, paramList.Count));
 	}
 
 	/// <inheritdoc />
@@ -215,17 +216,17 @@ public class RedisDiagnosticsService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<RedisSetConfigResponseDto>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail<RedisSetConfigResponseDto>(multiplexerResult.Errors);
 
 		try
 		{
 			var server = multiplexerResult.Value.GetConnectedServer(connection);
 			await server.ConfigSetAsync(parameterName, parameterValue).WaitAsync(cancellationToken);
-			return Result.Success(new RedisSetConfigResponseDto(true, "Configuration parameter updated successfully", parameterName, parameterValue));
+			return Result.Ok(new RedisSetConfigResponseDto(true, "Configuration parameter updated successfully", parameterName, parameterValue));
 		}
 		catch (Exception ex)
 		{
-			return Result.Failure<RedisSetConfigResponseDto>(new Error("Config.UpdateFailed", ex.Message));
+			return Result.Fail<RedisSetConfigResponseDto>(new DomainError("Config.UpdateFailed", ex.Message));
 		}
 	}
 }

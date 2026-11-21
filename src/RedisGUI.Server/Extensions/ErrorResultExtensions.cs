@@ -11,7 +11,7 @@ public static class ErrorResultExtensions
 	/// <summary>
 	/// Converts an Error to an IResult with appropriate status code and structured response
 	/// </summary>
-	public static IResult ToProblemDetails(this Error error, HttpContext? httpContext = null)
+	public static IResult ToProblemDetails(this DomainError error, HttpContext? httpContext = null)
 	{
 		if (error is ValidationFailureError validation)
 		{
@@ -33,7 +33,7 @@ public static class ErrorResultExtensions
 	}
 
 	/// <summary>Maps known application errors to HTTP statuses; unmatched codes default to client error (400).</summary>
-	public static int GetStatusCode(Error error) => error.Code switch
+	public static int GetStatusCode(DomainError error) => error.Code switch
 	{
 		"Connection.Forbidden" or "Connection.ReadOnlyMode" or "User.Deactivated"
 			=> StatusCodes.Status403Forbidden,

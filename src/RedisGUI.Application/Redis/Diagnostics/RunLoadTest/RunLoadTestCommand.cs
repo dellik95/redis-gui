@@ -1,5 +1,7 @@
+using FluentResults;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
@@ -38,16 +40,16 @@ internal sealed class RunLoadTestCommandHandler : ICommandHandler<RunLoadTestCom
 	public async Task<Result<RedisLoadTestResult>> Handle(RunLoadTestCommand request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetConnectionByIdAsync(request.ConnectionId, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<RedisLoadTestResult>(connectionResult.Error);
+			return Result.Fail<RedisLoadTestResult>(connectionResult.Errors);
 		}
 
 		var connection = connectionResult.Value;
 
 		if (connection.IsReadOnly && !string.Equals(request.OperationType, "read", System.StringComparison.OrdinalIgnoreCase))
 		{
-			return Result.Failure<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
+			return Result.Fail<RedisLoadTestResult>(DomainErrors.Connection.ReadOnlyMode);
 		}
 
 		var testRequest = new RedisLoadTestRequest(

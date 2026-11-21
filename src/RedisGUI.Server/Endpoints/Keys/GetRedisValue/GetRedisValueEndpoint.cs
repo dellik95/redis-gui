@@ -50,7 +50,7 @@ namespace RedisGUI.Server.Endpoints.RedisStorage.GetRedisValue
 				[FromQuery] int? database = null) =>
 			{
 				if (string.IsNullOrEmpty(key) && string.IsNullOrEmpty(keyBase64))
-					return Task.FromResult(new Error("RedisValue.EmptyKey", "Redis key cannot be empty.").ToProblemDetails(httpContext));
+					return Task.FromResult(new DomainError("RedisValue.EmptyKey", "Redis key cannot be empty.").ToProblemDetails(httpContext));
 				return HandleGet(sender, httpContext, connectionId, key ?? string.Empty, keyBase64, database);
 			}).RequireAuthorization(Policies.Authenticated).WithName("GetRedisValueByQuery").WithOpenApi();
 

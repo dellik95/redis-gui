@@ -1,9 +1,8 @@
 using DispatchWeave;
-using RedisGUI.Application.Core.Behaviors;
-using RedisGUI.Shared.Mediator;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using RedisGUI.Application.Core.Behaviors;
 using RedisGUI.Application.Core.Services;
 using System.Linq;
 
@@ -23,11 +22,9 @@ public static class DependencyInjection
 	{
 		services.AddDispatchWeave(builder => builder
 			.RegisterHandlers(typeof(DependencyInjection).Assembly)
-			.AddBehavior(typeof(ResultErrorBehavior<,>))
-			.AddBehavior(typeof(ValidationBehavior<,>))
-			.AddBehavior(typeof(LoggingBehavior<,>))
+			.WithValidation()
+			.WithLogging()
 			.AddBehavior(typeof(AuditingBehavior<,>)));
-		services.TryAddSingleton<INotificationPublisher>(new IsolatedNotificationPublisher(new()));
 		return services;
 	}
 

@@ -59,13 +59,13 @@ public class RedisMetricsBackgroundJob : BackgroundService
 				foreach (var subscriber in this.hubSubscribersManager.GetSubscribersMap().GroupBy(x => x.Value))
 				{
 					var connectionResult = await connections.GetConnectionByIdAsync(subscriber.Key, stoppingToken);
-					if (connectionResult.IsFailure)
+					if (connectionResult.IsFailed)
 					{
 						continue;
 					}
 
 					var metrics = await collector.CollectMetrics(connectionResult.Value, stoppingToken);
-					if (metrics.IsFailure)
+					if (metrics.IsFailed)
 					{
 						continue;
 					}

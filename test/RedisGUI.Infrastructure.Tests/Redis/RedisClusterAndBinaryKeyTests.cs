@@ -24,12 +24,12 @@ public class RedisClusterAndBinaryKeyTests
 		Assert.That(RedisServerResolver.IsLosslessUtf8(utf8Slash), Is.True);
 
 		var invalid = RedisServerResolver.ResolveKey("fallback", "not-valid-base64!!!");
-		Assert.That(invalid.IsFailure, Is.True);
-		Assert.That(invalid.Error.Code, Is.EqualTo("RedisValue.InvalidKeyEncoding"));
+		Assert.That(invalid.IsFailed, Is.True);
+		Assert.That(invalid.GetDomainError().Code, Is.EqualTo("RedisValue.InvalidKeyEncoding"));
 
 		var emptyRaw = RedisServerResolver.ResolveKey("", Convert.ToBase64String(Array.Empty<byte>()));
-		Assert.That(emptyRaw.IsFailure, Is.True);
-		Assert.That(emptyRaw.Error.Code, Is.EqualTo("RedisValue.EmptyKey"));
+		Assert.That(emptyRaw.IsFailed, Is.True);
+		Assert.That(emptyRaw.GetDomainError().Code, Is.EqualTo("RedisValue.EmptyKey"));
 
 		var fallbackWhenBase64Empty = RedisServerResolver.ResolveKey("fallback", Convert.ToBase64String(Array.Empty<byte>()));
 		Assert.That(fallbackWhenBase64Empty.IsSuccess, Is.True);

@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,7 +22,7 @@ public class StreamDeleteKeysByPatternTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(connection)).ReturnsAsync(true);
 		var keys = new Mock<IRedisKeyService>();
@@ -32,7 +33,7 @@ public class StreamDeleteKeysByPatternTests
 				await report(3);
 				cancellation.Cancel();
 				token.ThrowIfCancellationRequested();
-				return Result.Success(3);
+				return Result.Ok(3);
 			});
 		var handler = new StreamDeleteKeysByPatternCommandHandler(repository.Object, access.Object, keys.Object);
 		var logs = new Mock<IAuditLogRepository>();
@@ -40,7 +41,7 @@ public class StreamDeleteKeysByPatternTests
 		var pipeline = new AuditingBehavior<StreamDeleteKeysByPatternCommand, Result<StreamDeleteKeysByPatternResult>>(
 			logs.Object, unit.Object, Mock.Of<ICurrentUserService>());
 		var command = new StreamDeleteKeysByPatternCommand(connection.Id, "prefix:*", 1, _ => Task.CompletedTask);
-		var result = await pipeline.Handle(command, cancellation.Token, () => handler.Handle(command, cancellation.Token));
+		var result = await pipeline.Handle(command, () => handler.Handle(command, cancellation.Token), cancellation.Token);
 		Assert.That(result.Value.Cancelled, Is.True);
 		Assert.That(result.Value.DeletedCount, Is.EqualTo(3));
 		logs.Verify(x => x.Add(It.Is<AuditLog>(log => log.EntityId == connection.Id &&

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using StackExchange.Redis;
 using System.Linq;
@@ -18,7 +19,7 @@ public sealed class SetTypeHandler : IRedisTypeHandler
 	public async Task<Result<object?>> ReadRawAsync(IDatabase database, RedisKey key)
 	{
 		StackExchange.Redis.RedisValue[] members = await database.SetMembersAsync(key);
-		return Result.Success<object?>(members);
+		return Result.Ok<object?>(members);
 	}
 
 	public string Serialize(object? rawValue)
@@ -37,7 +38,7 @@ public sealed class SetTypeHandler : IRedisTypeHandler
 	{
 		if (value is not IEnumerable<string> setValues)
 		{
-			return Result.Failure(DomainErrors.Redis.InvalidValueType);
+			return Result.Fail(DomainErrors.Redis.InvalidValueType);
 		}
 
 		await database.KeyDeleteAsync(key);
@@ -56,6 +57,6 @@ public sealed class SetTypeHandler : IRedisTypeHandler
 			await database.KeyPersistAsync(key);
 		}
 
-		return Result.Success();
+		return Result.Ok();
 	}
 }

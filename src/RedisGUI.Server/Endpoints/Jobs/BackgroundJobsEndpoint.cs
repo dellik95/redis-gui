@@ -132,7 +132,7 @@ public sealed class BackgroundJobsEndpoint : IEndpoint
 				return Results.Forbid();
 
 			var validation = await handler.ValidateAsync(request.ConnectionId, request.Parameters, cancellationToken);
-			if (validation.IsFailure) return validation.Error.ToProblemDetails(context);
+			if (validation.IsFailed) return validation.GetDomainError().ToProblemDetails(context);
 
 			if (!jobs.TryStart(ownerId, context.User, request.ConnectionId, request.Kind, request.Parameters, out var snapshot, handler.DisplayName))
 			{

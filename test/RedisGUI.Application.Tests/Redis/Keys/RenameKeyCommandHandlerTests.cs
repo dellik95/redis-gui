@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,12 +40,12 @@ public class RenameKeyCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(conn));
+			.ReturnsAsync(Result.Ok(conn));
 
 		var result = await _handler.Handle(new RenameKeyCommand(connectionId, "old", "new"), CancellationToken.None);
 
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.Connection.ReadOnlyMode);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.Connection.ReadOnlyMode);
 	}
 
 	[Test]
@@ -60,11 +61,11 @@ public class RenameKeyCommandHandlerTests
 
 		_repositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(conn));
+			.ReturnsAsync(Result.Ok(conn));
 
 		_valueServiceMock
 			.Setup(x => x.RenameKeyAsync(conn, "old", "new", false, null, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 
 		var result = await _handler.Handle(new RenameKeyCommand(connectionId, "old", "new"), CancellationToken.None);
 

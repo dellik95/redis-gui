@@ -1,8 +1,10 @@
+using FluentResults;
 using RedisGUI.Domain.Audit;
 using RedisGUI.Application.Core.Services;
 using System;
 using System.Collections.Generic;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Primitives;
@@ -112,9 +114,9 @@ internal sealed class UpdateRedisValueCommandHandler(
 			cancellationToken,
 			requireWritable: true);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return connectionResult;
+			return connectionResult.ToResult();
 		}
 
 		var connection = connectionResult.Value;
@@ -132,7 +134,7 @@ internal sealed class UpdateRedisValueCommandHandler(
 
 		if (valueToSet == null)
 		{
-			return Result.Failure(new Error("RedisValue.InvalidData", "Invalid value data for the specified type"));
+			return Result.Fail(new DomainError("RedisValue.InvalidData", "Invalid value data for the specified type"));
 		}
 
 		return string.IsNullOrEmpty(request.KeyBase64)

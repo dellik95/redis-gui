@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using RedisGUI.Application.Core.Services;
 using Moq;
@@ -48,12 +49,12 @@ public class DeleteMultipleKeysCommandHandlerTests
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		var failedKeys = new List<string> { "key3" }.AsReadOnly();
 		connectionServiceMock
 			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
+			.ReturnsAsync(Result.Ok<(int, IReadOnlyList<string>)>((2, failedKeys)));
 
 		// Act
 		var result = await handler.Handle(command, CancellationToken.None);
@@ -83,12 +84,12 @@ public class DeleteMultipleKeysCommandHandlerTests
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		var failedKeys = new List<string>().AsReadOnly();
 		connectionServiceMock
 			.Setup(x => x.DeleteMultipleKeysAsync(It.IsAny<RedisConnection>(), It.IsAny<IReadOnlyList<string>>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success<(int, IReadOnlyList<string>)>((2, failedKeys)));
+			.ReturnsAsync(Result.Ok<(int, IReadOnlyList<string>)>((2, failedKeys)));
 
 		// Act
 		var result = await handler.Handle(command, CancellationToken.None);

@@ -1,3 +1,4 @@
+using FluentResults;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
@@ -62,12 +63,12 @@ public class RedisConnectionManager : IRedisConnectionManager
 	{
 		if (disposeState != 0)
 		{
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
 		}
 
 		if (string.IsNullOrWhiteSpace(configuration))
 		{
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.Connection.InvalidConfiguration);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.Connection.InvalidConfiguration);
 		}
 
 		string stableKey = RedisConfigurationSanitizer.GetStableKey(key, configuration);
@@ -113,7 +114,7 @@ public class RedisConnectionManager : IRedisConnectionManager
 			return await AwaitOrReturnMultiplexerAsync(actualEntry, cancellationToken);
 		}
 
-		return Result.Failure<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
+		return Result.Fail<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
 	}
 
 	/// <inheritdoc />
@@ -183,33 +184,33 @@ public class RedisConnectionManager : IRedisConnectionManager
 		if (entry.Multiplexer != null && entry.State != RedisConnectionState.Faulted)
 		{
 			entry.LastUsedAt = DateTimeOffset.UtcNow;
-			return Result.Success(entry.Multiplexer);
+			return Result.Ok(entry.Multiplexer);
 		}
 
 		try
 		{
 			ConnectionMultiplexer mux = await entry.MultiplexerTask.WaitAsync(cancellationToken);
 			entry.LastUsedAt = DateTimeOffset.UtcNow;
-			return Result.Success(mux);
+			return Result.Ok(mux);
 		}
 		catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
 		{
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.ConnectionManager.Cancelled);
 		}
 		catch (RedisConnectionException ex)
 		{
 			logger.LogError(ex, "Failed to establish Redis connection for server {ServerKey}", entry.SanitizedKey);
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.Connection.ConnectionNotEstablished);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.Connection.ConnectionNotEstablished);
 		}
 		catch (TimeoutException ex)
 		{
 			logger.LogError(ex, "Timeout establishing Redis connection for server {ServerKey}", entry.SanitizedKey);
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.Connection.ConnectionNotEstablished);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.Connection.ConnectionNotEstablished);
 		}
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Unexpected error establishing Redis connection for server {ServerKey}", entry.SanitizedKey);
-			return Result.Failure<ConnectionMultiplexer>(DomainErrors.ConnectionManager.UnexpectedError);
+			return Result.Fail<ConnectionMultiplexer>(DomainErrors.ConnectionManager.UnexpectedError);
 		}
 	}
 

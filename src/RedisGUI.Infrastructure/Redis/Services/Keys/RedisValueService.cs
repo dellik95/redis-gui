@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Domain.Redis;
 using RedisGUI.Infrastructure.Redis.Common;
@@ -127,22 +128,22 @@ public class RedisValueService(
 		int? database = null)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to get connection for set value: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure(multiplexerResult.Error);
+			logger.LogError("Failed to get connection for set value: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return dbValidation;
+		if (dbValidation.IsFailed) return dbValidation;
 
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 		bool success = expiry.HasValue && expiry.Value.TotalSeconds > 0
 			? await db.StringSetAsync(key, value, (Expiration)expiry.Value).WaitAsync(cancellationToken)
 			: await db.StringSetAsync(key, value).WaitAsync(cancellationToken);
 
-		return success ? Result.Success() : Result.Failure(DomainErrors.Redis.UpdateFailed);
+		return success ? Result.Ok() : Result.Fail(DomainErrors.Redis.UpdateFailed);
 	}
 
 	/// <inheritdoc />
@@ -162,17 +163,17 @@ public class RedisValueService(
 		int? database = null)
 	{
 		var resolvedKey = RedisServerResolver.ResolveKey(key, keyBase64);
-		if (resolvedKey.IsFailure) return Result.Failure<RedisValue>(resolvedKey.Error);
+		if (resolvedKey.IsFailed) return Result.Fail<RedisValue>(resolvedKey.Errors);
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<RedisValue>(multiplexerResult.Error);
+			return Result.Fail<RedisValue>(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<RedisValue>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<RedisValue>(dbValidation.Errors);
 
 		IDatabase databaseInstance = multiplexerResult.Value.GetDatabase(targetDb);
 
@@ -181,19 +182,19 @@ public class RedisValueService(
 			RedisType type = await databaseInstance.KeyTypeAsync(resolvedKey.Value).WaitAsync(cancellationToken);
 			if (type == RedisType.None)
 			{
-				return Result.Failure<RedisValue>(DomainErrors.Redis.KeyNotFound);
+				return Result.Fail<RedisValue>(DomainErrors.Redis.KeyNotFound);
 			}
 
 			var handler = typeHandlerFactory.GetHandler(type);
 			if (handler is null)
 			{
-				return Result.Failure<RedisValue>(DomainErrors.Redis.UnsupportedKeyType);
+				return Result.Fail<RedisValue>(DomainErrors.Redis.UnsupportedKeyType);
 			}
 
 			var valueResult = await handler.ReadRawAsync(databaseInstance, resolvedKey.Value).WaitAsync(cancellationToken);
-			if (valueResult.IsFailure)
+			if (valueResult.IsFailed)
 			{
-				return Result.Failure<RedisValue>(valueResult.Error);
+				return Result.Fail<RedisValue>(valueResult.Errors);
 			}
 
 			TimeSpan? ttl = await databaseInstance.KeyTimeToLiveAsync(resolvedKey.Value).WaitAsync(cancellationToken);
@@ -213,7 +214,7 @@ public class RedisValueService(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to get value for key {Key}", key);
-			return Result.Failure<RedisValue>(DomainErrors.Redis.ValueRetrievalFailed);
+			return Result.Fail<RedisValue>(DomainErrors.Redis.ValueRetrievalFailed);
 		}
 	}
 
@@ -227,9 +228,9 @@ public class RedisValueService(
 		int? database = null)
 	{
 		Result<IEnumerable<string>> keysResult = await keyService.GetKeysAsync(connection, cancellationToken, database);
-		if (keysResult.IsFailure)
+		if (keysResult.IsFailed)
 		{
-			return Result.Failure<PagedRedisValues>(keysResult.Error);
+			return Result.Fail<PagedRedisValues>(keysResult.Errors);
 		}
 
 		List<string> keys = keysResult.Value.ToList();
@@ -257,7 +258,7 @@ public class RedisValueService(
 		}
 
 		PagedRedisValues pagedResult = PagedRedisValues.Create(values, totalCount, actualPageNumber, actualPageSize);
-		return Result.Success(pagedResult);
+		return Result.Ok(pagedResult);
 	}
 
 	/// <inheritdoc />
@@ -283,18 +284,18 @@ public class RedisValueService(
 		int? database = null)
 	{
 		var resolvedKey = RedisServerResolver.ResolveKey(key, keyBase64);
-		if (resolvedKey.IsFailure) return resolvedKey;
+		if (resolvedKey.IsFailed) return resolvedKey.ToResult();
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			logger.LogError("Failed to get connection for update value: {Error}", multiplexerResult.Error.Message);
-			return Result.Failure(multiplexerResult.Error);
+			logger.LogError("Failed to get connection for update value: {Error}", multiplexerResult.GetDomainError().Message);
+			return Result.Fail(multiplexerResult.Errors);
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return dbValidation;
+		if (dbValidation.IsFailed) return dbValidation;
 
 		IDatabase db = multiplexerResult.Value.GetDatabase(targetDb);
 
@@ -303,7 +304,7 @@ public class RedisValueService(
 			var handler = typeHandlerFactory.GetHandler(type);
 			if (handler is null)
 			{
-				return Result.Failure(DomainErrors.Redis.UnsupportedKeyType);
+				return Result.Fail(DomainErrors.Redis.UnsupportedKeyType);
 			}
 
 			return await handler.WriteAsync(db, resolvedKey.Value, value, ttl).WaitAsync(cancellationToken);
@@ -315,7 +316,7 @@ public class RedisValueService(
 		catch (Exception ex)
 		{
 			logger.LogError(ex, "Failed to update value for key {Key}", key);
-			return Result.Failure(DomainErrors.Redis.ValueUpdateFailed);
+			return Result.Fail(DomainErrors.Redis.ValueUpdateFailed);
 		}
 	}
 
@@ -341,24 +342,24 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default)
 	{
 		var resolvedOld = RedisServerResolver.ResolveKey(oldKey, oldKeyBase64);
-		if (resolvedOld.IsFailure) return resolvedOld;
+		if (resolvedOld.IsFailed) return resolvedOld.ToResult();
 		var resolvedNew = RedisServerResolver.ResolveKey(newKey, newKeyBase64);
-		if (resolvedNew.IsFailure) return resolvedNew;
+		if (resolvedNew.IsFailed) return resolvedNew.ToResult();
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail(multiplexerResult.Errors);
 
 		var multiplexer = multiplexerResult.Value;
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexer.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return dbValidation;
+		if (dbValidation.IsFailed) return dbValidation;
 
 		var db = multiplexer.GetDatabase(targetDb);
 		if (resolvedOld.Value == resolvedNew.Value)
 		{
 			return await db.KeyExistsAsync(resolvedOld.Value).WaitAsync(cancellationToken)
-				? Result.Success()
-				: Result.Failure(DomainErrors.Redis.KeyNotFound);
+				? Result.Ok()
+				: Result.Fail(DomainErrors.Redis.KeyNotFound);
 		}
 
 		// On Redis Cluster, RENAME across different hash slots fails with CROSSSLOT.
@@ -373,13 +374,13 @@ public class RedisValueService(
 				.WaitAsync(cancellationToken);
 			if (!renamed && !overwrite)
 			{
-				return Result.Failure(new Error("Storage.KeyAlreadyExists", $"Key '{newKey}' already exists."));
+				return Result.Fail(new DomainError("Storage.KeyAlreadyExists", $"Key '{newKey}' already exists."));
 			}
-			return Result.Success();
+			return Result.Ok();
 		}
 		catch (RedisServerException ex) when (ex.Message.Contains("no such key", StringComparison.OrdinalIgnoreCase))
 		{
-			return Result.Failure(DomainErrors.Redis.KeyNotFound);
+			return Result.Fail(DomainErrors.Redis.KeyNotFound);
 		}
 	}
 
@@ -394,12 +395,12 @@ public class RedisValueService(
 		byte[]? dumped = await db.KeyDumpAsync(oldKey).WaitAsync(cancellationToken);
 		if (dumped is null)
 		{
-			return Result.Failure(DomainErrors.Redis.KeyNotFound);
+			return Result.Fail(DomainErrors.Redis.KeyNotFound);
 		}
 
 		if (!overwrite && await db.KeyExistsAsync(newKey).WaitAsync(cancellationToken))
 		{
-			return Result.Failure(new Error("Storage.KeyAlreadyExists", $"Key '{newKeyDisplay}' already exists."));
+			return Result.Fail(new DomainError("Storage.KeyAlreadyExists", $"Key '{newKeyDisplay}' already exists."));
 		}
 
 		TimeSpan? ttl = await db.KeyTimeToLiveAsync(oldKey).WaitAsync(cancellationToken);
@@ -417,7 +418,7 @@ public class RedisValueService(
 		}
 		catch (RedisServerException ex) when (!overwrite && ex.Message.StartsWith("BUSYKEY", StringComparison.OrdinalIgnoreCase))
 		{
-			return Result.Failure(new Error("Storage.KeyAlreadyExists", $"Key '{newKeyDisplay}' already exists."));
+			return Result.Fail(new DomainError("Storage.KeyAlreadyExists", $"Key '{newKeyDisplay}' already exists."));
 		}
 
 		if (!await db.KeyDeleteAsync(oldKey).WaitAsync(cancellationToken))
@@ -425,7 +426,7 @@ public class RedisValueService(
 			logger.LogWarning("Cross-slot rename restored '{NewKey}' but could not delete source key", newKeyDisplay);
 		}
 
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <inheritdoc />
@@ -448,33 +449,33 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default)
 	{
 		var resolvedSource = RedisServerResolver.ResolveKey(sourceKey, sourceKeyBase64);
-		if (resolvedSource.IsFailure) return resolvedSource;
+		if (resolvedSource.IsFailed) return resolvedSource.ToResult();
 		var resolvedTarget = RedisServerResolver.ResolveKey(targetKey, targetKeyBase64);
-		if (resolvedTarget.IsFailure) return resolvedTarget;
+		if (resolvedTarget.IsFailed) return resolvedTarget.ToResult();
 
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail(multiplexerResult.Errors);
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return dbValidation;
+		if (dbValidation.IsFailed) return dbValidation;
 
 		var db = multiplexerResult.Value.GetDatabase(targetDb);
 		byte[]? dumped = await db.KeyDumpAsync(resolvedSource.Value).WaitAsync(cancellationToken);
 		if (dumped is null)
 		{
-			return Result.Failure(DomainErrors.Storage.ItemNotFound);
+			return Result.Fail(DomainErrors.Storage.ItemNotFound);
 		}
 
 		TimeSpan? ttl = await db.KeyTimeToLiveAsync(resolvedSource.Value).WaitAsync(cancellationToken);
 		try
 		{
 			await db.KeyRestoreAsync(resolvedTarget.Value, dumped, ttl).WaitAsync(cancellationToken);
-			return Result.Success();
+			return Result.Ok();
 		}
 		catch (RedisServerException ex) when (ex.Message.StartsWith("BUSYKEY", StringComparison.OrdinalIgnoreCase))
 		{
-			return Result.Failure(new Error("Storage.KeyAlreadyExists", $"Key '{targetKey}' already exists."));
+			return Result.Fail(new DomainError("Storage.KeyAlreadyExists", $"Key '{targetKey}' already exists."));
 		}
 	}
 
@@ -497,11 +498,11 @@ public class RedisValueService(
 		CancellationToken cancellationToken = default)
 	{
 		Result<ConnectionMultiplexer> multiplexerResult = await GetConnectionAsync(connection, cancellationToken);
-		if (multiplexerResult.IsFailure) return Result.Failure<RedisBulkTtlResult>(multiplexerResult.Error);
+		if (multiplexerResult.IsFailed) return Result.Fail<RedisBulkTtlResult>(multiplexerResult.Errors);
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure) return Result.Failure<RedisBulkTtlResult>(dbValidation.Error);
+		if (dbValidation.IsFailed) return Result.Fail<RedisBulkTtlResult>(dbValidation.Errors);
 
 		var db = multiplexerResult.Value.GetDatabase(targetDb);
 		int updatedCount = 0;
@@ -514,7 +515,7 @@ public class RedisValueService(
 			string displayKey = keys[i];
 			string? rawB64 = keysBase64 is not null && i < keysBase64.Count ? keysBase64[i] : null;
 			var resolved = RedisServerResolver.ResolveKey(displayKey, rawB64);
-			if (resolved.IsFailure)
+			if (resolved.IsFailed)
 			{
 				failedKeys.Add(displayKey);
 				continue;
@@ -539,7 +540,7 @@ public class RedisValueService(
 			}
 		}
 
-		return Result.Success(new RedisBulkTtlResult(updatedCount, unchangedCount, failedKeys));
+		return Result.Ok(new RedisBulkTtlResult(updatedCount, unchangedCount, failedKeys));
 	}
 
 	#endregion

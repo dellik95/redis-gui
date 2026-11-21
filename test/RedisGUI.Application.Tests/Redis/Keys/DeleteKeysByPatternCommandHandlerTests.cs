@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using RedisGUI.Application.Core.Services;
 using Moq;
@@ -48,11 +49,11 @@ public class DeleteKeysByPatternCommandHandlerTests
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		connectionServiceMock
 			.Setup(x => x.DeleteKeysByPatternAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(5));
+			.ReturnsAsync(Result.Ok(5));
 
 		// Act
 		var result = await handler.Handle(command, CancellationToken.None);
@@ -70,17 +71,17 @@ public class DeleteKeysByPatternCommandHandlerTests
 		var connectionId = Guid.NewGuid();
 		var command = new DeleteKeysByPatternCommand(connectionId, "test:*");
 
-		var error = new Error("Connection.NotFound", "Connection not found");
+		var error = new DomainError("Connection.NotFound", "Connection not found");
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<RedisConnection>(error));
+			.ReturnsAsync(Result.Fail<RedisConnection>(error));
 
 		// Act
 		var result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(error);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(error);
 	}
 
 	[Test]
@@ -99,19 +100,19 @@ public class DeleteKeysByPatternCommandHandlerTests
 
 		connectionRepositoryMock
 			.Setup(x => x.GetConnectionByIdAsync(connectionId, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
-		var error = new Error("Redis.DeleteFailed", "Delete operation failed");
+		var error = new DomainError("Redis.DeleteFailed", "Delete operation failed");
 		connectionServiceMock
 			.Setup(x => x.DeleteKeysByPatternAsync(It.IsAny<RedisConnection>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<int>(error));
+			.ReturnsAsync(Result.Fail<int>(error));
 
 		// Act
 		var result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(error);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(error);
 	}
 }
 

@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Errors;
 using System.Linq;
 using System.Linq.Expressions;
@@ -45,12 +46,12 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 
 		if (connection is null)
 		{
-			return Result.Failure(DomainErrors.Storage.ItemNotFound);
+			return Result.Fail(DomainErrors.Storage.ItemNotFound);
 		}
 
 		DbSet.Remove(connection);
 
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	/// <summary>
@@ -97,7 +98,7 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 			.ToListAsync(cancellationToken);
 
 		PagedResult<T> pagedResult = new(items, totalCount, pageNumber, pageSize);
-		return Result.Success(pagedResult);
+		return Result.Ok(pagedResult);
 	}
 
 	/// <inheritdoc />
@@ -105,7 +106,7 @@ public class RepositoryBase<T> : IRepository<T> where T : Entity
 	{
 		T? entity = await DbSet.FindAsync([id], cancellationToken);
 		return entity is null
-			? Result.Failure<T?>(DomainErrors.Storage.ItemNotFound)
-			: Result.Success<T?>(entity);
+			? Result.Fail<T?>(DomainErrors.Storage.ItemNotFound)
+			: Result.Ok<T?>(entity);
 	}
 }

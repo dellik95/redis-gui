@@ -1,3 +1,4 @@
+using FluentResults;
 using DispatchWeave;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,10 +24,10 @@ public class MediatorCompositionTests
 		var connection = RedisConnection.Create(new ConnectionName("Test"), new ConnectionHost("localhost"),
 			new ConnectionPort(6379), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(Result.Success(connection));
+		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(Result.Ok(connection));
 		var values = new Mock<IRedisValueService>();
 		values.Setup(x => x.RenameKeyAsync(connection, "old", "new", false, null, It.IsAny<System.Threading.CancellationToken>()))
-			.ReturnsAsync(Result.Success());
+			.ReturnsAsync(Result.Ok());
 		var audit = new Mock<IAuditLogRepository>();
 		var unit = new Mock<IUnitOfWork>();
 		unit.Setup(x => x.SaveChangesAsync(It.IsAny<System.Threading.CancellationToken>())).ReturnsAsync(1);
@@ -67,8 +68,8 @@ public class MediatorCompositionTests
 		var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>()
 			.Send(new ScanRedisKeysQuery(System.Guid.NewGuid(), "", null, null, 0));
 
-		Assert.That(result.Error, Is.InstanceOf<ValidationFailureError>());
-		var failure = (ValidationFailureError)result.Error;
+		Assert.That(result.GetDomainError(), Is.InstanceOf<ValidationFailureError>());
+		var failure = (ValidationFailureError)result.GetDomainError();
 		Assert.That(failure.Errors.Keys, Does.Contain("Pattern"));
 		Assert.That(failure.Errors.Keys, Does.Contain("Count"));
 		repository.VerifyNoOtherCalls();
@@ -91,11 +92,11 @@ public class MediatorCompositionTests
 
 		var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>().Send(new CheckConnectionCommand("", 0));
 
-		Assert.That(result.IsFailure, Is.True);
-		Assert.That(result.Error.Code, Is.EqualTo("Validation.Failed"));
-		Assert.That(result.Error.Message, Does.Contain("validation"));
-		Assert.That(result.Error, Is.InstanceOf<ValidationFailureError>());
-		var validation = (ValidationFailureError)result.Error;
+		Assert.That(result.IsFailed, Is.True);
+		Assert.That(result.GetDomainError().Code, Is.EqualTo("Validation.Failed"));
+		Assert.That(result.GetDomainError().Message, Does.Contain("validation"));
+		Assert.That(result.GetDomainError(), Is.InstanceOf<ValidationFailureError>());
+		var validation = (ValidationFailureError)result.GetDomainError();
 		Assert.That(validation.Errors.Keys, Does.Contain("Host"));
 		Assert.That(validation.Errors.Keys, Does.Contain("Port"));
 		connectionService.VerifyNoOtherCalls();

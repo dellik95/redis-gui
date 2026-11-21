@@ -1,7 +1,9 @@
+using FluentResults;
 using System.Collections.Generic;
 using RedisGUI.Application.Connections.Shared;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System.Threading;
 using System.Threading.Tasks;
 using RedisGUI.Domain.Abstraction.Cryptography;
@@ -40,8 +42,8 @@ internal sealed class GetAllConnectionsQueryHandler : IQueryHandler<GetAllConnec
 	public async Task<Result<IEnumerable<GetConnectionResponse>>> Handle(GetAllConnectionsQuery request, CancellationToken cancellationToken)
 	{
 		var connectionsResult = await this.redisConnectionRepository.GetAsync(null, false, request.PageNumber, request.PageSize);
-		if (connectionsResult.IsFailure)
-			return Result.Failure<IEnumerable<GetConnectionResponse>>(connectionsResult.Error);
+		if (connectionsResult.IsFailed)
+			return Result.Fail<IEnumerable<GetConnectionResponse>>(connectionsResult.Errors);
 
 		var responses = new List<GetConnectionResponse>();
 		foreach (var connection in connectionsResult.Value.Items)
@@ -53,6 +55,6 @@ internal sealed class GetAllConnectionsQueryHandler : IQueryHandler<GetAllConnec
 			responses.Add(GetConnectionResponse.FromRedisConnection(connection, passwordDecrypt, serverMode));
 		}
 
-		return Result.Success<IEnumerable<GetConnectionResponse>>(responses);
+		return Result.Ok<IEnumerable<GetConnectionResponse>>(responses);
 	}
 }

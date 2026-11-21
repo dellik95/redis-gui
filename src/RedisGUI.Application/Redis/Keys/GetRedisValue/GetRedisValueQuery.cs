@@ -1,7 +1,9 @@
+using FluentResults;
 using System;
 using System.Text;
 using RedisGUI.Application.Core.Services;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Shared.Primitives;
 using System.Text.Json;
@@ -33,9 +35,9 @@ internal sealed class GetRedisValueQueryHandler(
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
 
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<GetRedisValueResponse>(connectionResult.Error);
+			return Result.Fail<GetRedisValueResponse>(connectionResult.Errors);
 		}
 
 		var (displayKey, keyBase64, isBinary) = DescribeIdentity(request.Key, request.KeyBase64);
@@ -53,9 +55,9 @@ internal sealed class GetRedisValueQueryHandler(
 				cancellationToken,
 				request.Database);
 
-		if (result.IsFailure)
+		if (result.IsFailed)
 		{
-			return Result.Failure<GetRedisValueResponse>(result.Error);
+			return Result.Fail<GetRedisValueResponse>(result.Errors);
 		}
 
 		object parsedValue;
@@ -81,7 +83,7 @@ internal sealed class GetRedisValueQueryHandler(
 			? (long)result.Value.TimeToLive.Value.TotalSeconds
 			: null;
 
-		return Result.Success(new GetRedisValueResponse(
+		return Result.Ok(new GetRedisValueResponse(
 			displayKey,
 			parsedValue,
 			result.Value.Type,

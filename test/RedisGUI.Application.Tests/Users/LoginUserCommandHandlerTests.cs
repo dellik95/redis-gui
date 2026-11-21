@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Users.Commands.LoginUser;
@@ -45,7 +46,7 @@ public class LoginUserCommandHandlerTests
 		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
-		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
+		if (emailResult.IsFailed || passwordHashResult.IsFailed || profileResult.IsFailed)
 		{
 			Assert.Fail("Failed to create test data");
 			return;
@@ -57,7 +58,7 @@ public class LoginUserCommandHandlerTests
 			profileResult.Value,
 			UserRole.User);
 
-		if (userResult.IsFailure)
+		if (userResult.IsFailed)
 		{
 			Assert.Fail("Failed to create user");
 			return;
@@ -79,7 +80,7 @@ public class LoginUserCommandHandlerTests
 
 		unitOfWorkMock
 			.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Shared.Primitives.Result.Success(1));
+			.ReturnsAsync(1);
 
 		// Act
 		Result<LoginUserResponse> result = await handler.Handle(command, CancellationToken.None);
@@ -108,8 +109,8 @@ public class LoginUserCommandHandlerTests
 		Result<LoginUserResponse> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.InvalidCredentials);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.InvalidCredentials);
 	}
 
 	[Test]
@@ -124,7 +125,7 @@ public class LoginUserCommandHandlerTests
 		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
-		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
+		if (emailResult.IsFailed || passwordHashResult.IsFailed || profileResult.IsFailed)
 		{
 			Assert.Fail("Failed to create test data");
 			return;
@@ -136,7 +137,7 @@ public class LoginUserCommandHandlerTests
 			profileResult.Value,
 			UserRole.User);
 
-		if (userResult.IsFailure)
+		if (userResult.IsFailed)
 		{
 			Assert.Fail("Failed to create user");
 			return;
@@ -156,8 +157,8 @@ public class LoginUserCommandHandlerTests
 		Result<LoginUserResponse> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.InvalidCredentials);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.InvalidCredentials);
 	}
 
 	[Test]
@@ -172,7 +173,7 @@ public class LoginUserCommandHandlerTests
 		var passwordHashResult = PasswordHash.Create("hashed_password", passwordHasherMock.Object);
 		var profileResult = UserProfile.Create("John", "Doe");
 
-		if (emailResult.IsFailure || passwordHashResult.IsFailure || profileResult.IsFailure)
+		if (emailResult.IsFailed || passwordHashResult.IsFailed || profileResult.IsFailed)
 		{
 			Assert.Fail("Failed to create test data");
 			return;
@@ -184,7 +185,7 @@ public class LoginUserCommandHandlerTests
 			profileResult.Value,
 			UserRole.User);
 
-		if (userResult.IsFailure)
+		if (userResult.IsFailed)
 		{
 			Assert.Fail("Failed to create user");
 			return;
@@ -205,8 +206,8 @@ public class LoginUserCommandHandlerTests
 		Result<LoginUserResponse> result = await handler.Handle(command, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
-		result.Error.Should().Be(DomainErrors.User.Deactivated);
+		result.IsFailed.Should().BeTrue();
+		result.GetDomainError().Should().Be(DomainErrors.User.Deactivated);
 	}
 }
 

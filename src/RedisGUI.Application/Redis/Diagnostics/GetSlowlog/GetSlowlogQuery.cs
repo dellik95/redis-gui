@@ -1,6 +1,8 @@
+using FluentResults;
 using RedisGUI.Application.Core.Services;
 using RedisGUI.Domain.Redis;
-using RedisGUI.Shared.Mediator;
+using DispatchWeave;
+using DispatchWeave.Results;
 using System;
 using System.Collections.Generic;
 using RedisGUI.Domain.Connection;
@@ -23,9 +25,9 @@ internal sealed class GetSlowlogQueryHandler(
 	public async Task<Result<List<SlowlogEntryInfo>>> Handle(GetSlowlogQuery request, CancellationToken cancellationToken)
 	{
 		var connectionResult = await connectionRepository.GetAuthorizedConnectionAsync(request.ConnectionId, access, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<List<SlowlogEntryInfo>>(connectionResult.Error);
+			return Result.Fail<List<SlowlogEntryInfo>>(connectionResult.Errors);
 		}
 
 		return await diagnosticsService.GetSlowlogAsync(connectionResult.Value, request.Count, cancellationToken);

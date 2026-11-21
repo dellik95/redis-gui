@@ -1,3 +1,4 @@
+using FluentResults;
 using Moq;
 using RedisGUI.Domain.Abstraction.Cryptography;
 using RedisGUI.Domain.Connection;

@@ -1,3 +1,4 @@
+using FluentResults;
 using System.Linq;
 using System.Text;
 using StackExchange.Redis;
@@ -31,19 +32,19 @@ internal static class RedisServerResolver
 		CancellationToken cancellationToken)
 	{
 		var multiplexerResult = await connectionManager.GetConnectionAsync(connection, topology, cancellationToken);
-		if (multiplexerResult.IsFailure)
+		if (multiplexerResult.IsFailed)
 		{
-			return Result.Failure<(ConnectionMultiplexer, IDatabase, int)>(multiplexerResult.Error);
+			return Result.Fail<(ConnectionMultiplexer, IDatabase, int)>(multiplexerResult.GetDomainError());
 		}
 
 		int targetDb = database ?? connection.DatabaseNumber.Value;
 		var dbValidation = multiplexerResult.Value.ValidateDatabase(targetDb);
-		if (dbValidation.IsFailure)
+		if (dbValidation.IsFailed)
 		{
-			return Result.Failure<(ConnectionMultiplexer, IDatabase, int)>(dbValidation.Error);
+			return Result.Fail<(ConnectionMultiplexer, IDatabase, int)>(dbValidation.GetDomainError());
 		}
 
-		return Result.Success((multiplexerResult.Value, multiplexerResult.Value.GetDatabase(targetDb), targetDb));
+		return Result.Ok((multiplexerResult.Value, multiplexerResult.Value.GetDatabase(targetDb), targetDb));
 	}
 
 	internal static IServer GetConnectedServer(this ConnectionMultiplexer multiplexer, RedisConnection connection)
@@ -97,15 +98,15 @@ internal static class RedisServerResolver
 	{
 		if (database is < 0 or > 15)
 		{
-			return Result.Failure(new Error("Redis.InvalidDatabase", "Redis database index must be between 0 and 15."));
+			return Result.Fail(new DomainError("Redis.InvalidDatabase", "Redis database index must be between 0 and 15."));
 		}
 
 		if (multiplexer.IsCluster() && database != 0)
 		{
-			return Result.Failure(new Error("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."));
+			return Result.Fail(new DomainError("Redis.InvalidDatabase", "Redis Cluster supports database 0 only."));
 		}
 
-		return Result.Success();
+		return Result.Ok();
 	}
 
 	internal static IServer[] GetConnectedPrimaryServers(this ConnectionMultiplexer multiplexer) =>
@@ -122,22 +123,22 @@ internal static class RedisServerResolver
 				byte[] raw = Convert.FromBase64String(keyBase64);
 				if (raw.Length == 0)
 				{
-					return Result.Failure<RedisKey>(new Error("RedisValue.EmptyKey", "Redis key cannot be empty."));
+					return Result.Fail<RedisKey>(new DomainError("RedisValue.EmptyKey", "Redis key cannot be empty."));
 				}
-				return Result.Success((RedisKey)raw);
+				return Result.Ok((RedisKey)raw);
 			}
 			catch (FormatException)
 			{
-				return Result.Failure<RedisKey>(new Error("RedisValue.InvalidKeyEncoding", "KeyBase64 must be valid Base64."));
+				return Result.Fail<RedisKey>(new DomainError("RedisValue.InvalidKeyEncoding", "KeyBase64 must be valid Base64."));
 			}
 		}
 
 		if (string.IsNullOrEmpty(key))
 		{
-			return Result.Failure<RedisKey>(new Error("RedisValue.EmptyKey", "Redis key cannot be empty."));
+			return Result.Fail<RedisKey>(new DomainError("RedisValue.EmptyKey", "Redis key cannot be empty."));
 		}
 
-		return Result.Success((RedisKey)key);
+		return Result.Ok((RedisKey)key);
 	}
 
 	internal static bool IsLosslessUtf8(byte[] rawKey)

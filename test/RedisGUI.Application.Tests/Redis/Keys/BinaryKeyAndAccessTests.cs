@@ -1,3 +1,4 @@
+using FluentResults;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -29,7 +30,7 @@ public class BinaryKeyAndAccessTests
 
 		var repository = new Mock<IRedisConnectionRepository>();
 		repository.Setup(x => x.GetConnectionByIdAsync(connection.Id, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(connection));
+			.ReturnsAsync(Result.Ok(connection));
 
 		var valueService = new Mock<IRedisValueService>();
 		valueService.Setup(x => x.GetValueByIdentityAsync(connection, It.Is<string>(k => !string.IsNullOrEmpty(k)), base64, It.IsAny<CancellationToken>(), null))
@@ -56,10 +57,10 @@ public class BinaryKeyAndAccessTests
 			new ConnectionPort(6380), new DatabaseNumber(0), ConnectionOwnerId.None()).Value;
 
 		var repository = new Mock<IRedisConnectionRepository>();
-		repository.Setup(x => x.GetConnectionByIdAsync(allowedConn.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(allowedConn));
-		repository.Setup(x => x.GetConnectionByIdAsync(blockedConn.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success(blockedConn));
+		repository.Setup(x => x.GetConnectionByIdAsync(allowedConn.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(allowedConn));
+		repository.Setup(x => x.GetConnectionByIdAsync(blockedConn.Id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Ok(blockedConn));
 		repository.Setup(x => x.GetAsync(null, false, 1, 10))
-			.ReturnsAsync(Result.Success(new PagedResult<RedisConnection>([allowedConn, blockedConn], 2, 1, 10)));
+			.ReturnsAsync(Result.Ok(new PagedResult<RedisConnection>([allowedConn, blockedConn], 2, 1, 10)));
 
 		var access = new Mock<IConnectionAccessService>();
 		access.Setup(x => x.CanAccessAsync(allowedConn)).ReturnsAsync(true);
@@ -78,8 +79,8 @@ public class BinaryKeyAndAccessTests
 
 		var byIdHandler = new GetConnectionByIdQueryHandler(repository.Object, Mock.Of<IPasswordDecrypt>(), topology, access.Object);
 		var denied = await byIdHandler.Handle(new GetConnectionByIdQuery(blockedConn.Id), CancellationToken.None);
-		Assert.That(denied.IsFailure, Is.True);
-		Assert.That(denied.Error.Code, Is.EqualTo("Connection.Forbidden"));
+		Assert.That(denied.IsFailed, Is.True);
+		Assert.That(denied.GetDomainError().Code, Is.EqualTo("Connection.Forbidden"));
 
 		var monitor = new Mock<IConnectionHealthMonitor>();
 		monitor.Setup(x => x.GetHealth(allowedConn.Id)).Returns(ConnectionHealth.Healthy(allowedConn.Id, 4.2));

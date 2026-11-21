@@ -1,3 +1,4 @@
+using FluentResults;
 using RedisGUI.Domain.Connection;
 using RedisGUI.Domain.Errors;
 using RedisGUI.Shared.Primitives;
@@ -22,30 +23,30 @@ public static class ConnectionAccessExtensions
 		IConnectionAccessService? access,
 		CancellationToken cancellationToken,
 		bool requireWritable = false,
-		Error? readOnlyError = null)
+		DomainError? readOnlyError = null)
 	{
 		var connectionResult = await connectionRepository.GetConnectionByIdAsync(connectionId, cancellationToken);
-		if (connectionResult.IsFailure)
+		if (connectionResult.IsFailed)
 		{
-			return Result.Failure<RedisConnection>(connectionResult.Error);
+			return Result.Fail<RedisConnection>(connectionResult.Errors);
 		}
 
 		var connection = connectionResult.Value;
 		if (connection is null)
 		{
-			return Result.Failure<RedisConnection>(DomainErrors.Connection.NotFound);
+			return Result.Fail<RedisConnection>(DomainErrors.Connection.NotFound);
 		}
 
 		if (access is not null && !await access.CanAccessAsync(connection))
 		{
-			return Result.Failure<RedisConnection>(new Error("Connection.Forbidden", "Access to the connection is denied."));
+			return Result.Fail<RedisConnection>(new DomainError("Connection.Forbidden", "Access to the connection is denied."));
 		}
 
 		if (requireWritable && connection.IsReadOnly)
 		{
-			return Result.Failure<RedisConnection>(readOnlyError ?? DomainErrors.Connection.ReadOnlyMode);
+			return Result.Fail<RedisConnection>(readOnlyError ?? DomainErrors.Connection.ReadOnlyMode);
 		}
 
-		return Result.Success(connection);
+		return Result.Ok(connection);
 	}
 }

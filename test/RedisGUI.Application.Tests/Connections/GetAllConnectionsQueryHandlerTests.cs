@@ -1,3 +1,4 @@
+using FluentResults;
 using FluentAssertions;
 using Moq;
 using RedisGUI.Application.Connections.GetAllConnections;
@@ -58,7 +59,7 @@ public class GetAllConnectionsQueryHandlerTests
 
 		repositoryMock
 			.Setup(x => x.GetAsync(null, false, 1, 10, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(pagedResult));
+			.ReturnsAsync(Result.Ok(pagedResult));
 
 		passwordDecryptMock
 			.Setup(x => x.DecryptPassword(It.IsAny<string>()))
@@ -86,7 +87,7 @@ public class GetAllConnectionsQueryHandlerTests
 
 		repositoryMock
 			.Setup(x => x.GetAsync(null, false, 1, 10, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Success(pagedResult));
+			.ReturnsAsync(Result.Ok(pagedResult));
 
 		// Act
 		Result<IEnumerable<GetConnectionResponse>> result = await handler.Handle(query, CancellationToken.None);
@@ -103,13 +104,13 @@ public class GetAllConnectionsQueryHandlerTests
 		GetAllConnectionsQuery query = new(1, 10);
 		repositoryMock
 			.Setup(x => x.GetAsync(null, false, 1, 10, It.IsAny<CancellationToken>()))
-			.ReturnsAsync(Result.Failure<PagedResult<RedisConnection>>(DomainErrors.Storage.ItemNotFound));
+			.ReturnsAsync(Result.Fail<PagedResult<RedisConnection>>(DomainErrors.Storage.ItemNotFound));
 
 		// Act
 		Result<IEnumerable<GetConnectionResponse>> result = await handler.Handle(query, CancellationToken.None);
 
 		// Assert
-		result.IsFailure.Should().BeTrue();
+		result.IsFailed.Should().BeTrue();
 	}
 }
 
