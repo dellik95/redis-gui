@@ -26,13 +26,8 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
 			return await next();
 		}
 
-		var context = new ValidationContext<TRequest>(request);
-		var validationResults = await Task.WhenAll(
-			validators.Select(validator => validator.ValidateAsync(context, cancellationToken)));
-
-		var validationErrors = validationResults
-			.SelectMany(result => result.Errors)
-			.Where(error => error is not null)
+		var failures = await DispatchWeave.Results.RequestValidation.Validate(request, validators, cancellationToken);
+		var validationErrors = failures
 			.Select(error => new ValidationError(error.PropertyName, error.ErrorMessage))
 			.ToList();
 

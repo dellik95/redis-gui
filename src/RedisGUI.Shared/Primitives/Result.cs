@@ -1,5 +1,10 @@
 namespace RedisGUI.Shared.Primitives;
 
+internal sealed class DomainFailure(Error error) : FluentResults.Error(error.Message)
+{
+	public Error Detail { get; } = error;
+}
+
 /// <summary>
 ///     Represent Success/Failed result.
 /// </summary>
@@ -23,8 +28,8 @@ public class Result
 			throw new InvalidOperationException();
 		}
 
-		IsSuccess = isSuccess;
-		Error = error;
+		outcome = isSuccess ? FluentResults.Result.Ok() : FluentResults.Result.Fail(new DomainFailure(error));
+
 	}
 
 	/// <summary>
@@ -35,12 +40,14 @@ public class Result
 	/// <summary>
 	///     Indicates whether result is successful
 	/// </summary>
-	public bool IsSuccess { get; }
+	private readonly FluentResults.Result outcome;
+
+	public bool IsSuccess => outcome.IsSuccess;
 
 	/// <summary>
 	///     Contains error of result
 	/// </summary>
-	public Error Error { get; }
+	public Error Error => outcome.IsFailed ? ((DomainFailure)outcome.Errors[0]).Detail : Error.None;
 
 	/// <summary>
 	///     Create successful result

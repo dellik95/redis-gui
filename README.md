@@ -210,3 +210,14 @@ dotnet test RedisGUI.slnx
 ## 📄 License
 
 This project is licensed under the MIT License.
+
+
+### Restoring DispatchWeave
+
+The backend restores DispatchWeave from GitHub Packages. Authenticate with a GitHub personal access token (classic) with `read:packages`. NuGet reads the feed credential from the environment. For example, in PowerShell with an authenticated GitHub CLI:
+
+```powershell
+$env:NuGetPackageSourceCredentials_github = "Username=$(gh api user --jq .login);Password=$(gh auth token);ValidAuthenticationTypes=Basic"
+```
+
+For local Docker builds, pass `--secret id=nuget_credentials,env=NuGetPackageSourceCredentials_github` to Docker BuildKit.

@@ -4,6 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- Application and Infrastructure -->
+    <PackageVersion Include="DispatchWeave.DependencyInjection" Version="1.1.1" />
     <PackageVersion Include="Asp.Versioning.Http" Version="10.2.3" />
     <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
     <PackageVersion Include="BCrypt.Net-Next" Version="4.2.1" />

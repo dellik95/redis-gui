@@ -8,7 +8,7 @@ namespace RedisGUI.Shared.Mediator
 	/// Represents a request with a response of type TResult. TResult must be either Result or Result{T}.
 	/// </summary>
 	/// <typeparam name="TResult">The wrapped result type.</typeparam>
-	public interface IRequest<TResult> { }
+	public interface IRequest<TResult> : DispatchWeave.IRequest<TResult> { }
 
 	/// <summary>
 	/// Represents a command with no response (returns Result).
@@ -31,9 +31,8 @@ namespace RedisGUI.Shared.Mediator
 	/// Handles a command with no result and returns Result.
 	/// </summary>
 	/// <typeparam name="TCommand">The command type.</typeparam>
-	public interface ICommandHandler<TCommand> where TCommand : ICommand
+	public interface ICommandHandler<TCommand> : DispatchWeave.IRequestHandler<TCommand, Result> where TCommand : ICommand
 	{
-		Task<Result> Handle(TCommand command, CancellationToken cancellationToken);
 	}
 
 	/// <summary>
@@ -41,9 +40,8 @@ namespace RedisGUI.Shared.Mediator
 	/// </summary>
 	/// <typeparam name="TCommand">The command type.</typeparam>
 	/// <typeparam name="TResult">The result type.</typeparam>
-	public interface ICommandHandler<TCommand, TResult> where TCommand : ICommand<TResult>
+	public interface ICommandHandler<TCommand, TResult> : DispatchWeave.IRequestHandler<TCommand, Result<TResult>> where TCommand : ICommand<TResult>
 	{
-		Task<Result<TResult>> Handle(TCommand command, CancellationToken cancellationToken);
 	}
 
 	/// <summary>
@@ -51,23 +49,21 @@ namespace RedisGUI.Shared.Mediator
 	/// </summary>
 	/// <typeparam name="TQuery">The query type.</typeparam>
 	/// <typeparam name="TResult">The result type.</typeparam>
-	public interface IQueryHandler<TQuery, TResult> where TQuery : IQuery<TResult>
+	public interface IQueryHandler<TQuery, TResult> : DispatchWeave.IRequestHandler<TQuery, Result<TResult>> where TQuery : IQuery<TResult>
 	{
-		Task<Result<TResult>> Handle(TQuery query, CancellationToken cancellationToken);
 	}
 
 	/// <summary>
 	/// Represents a notification (event) with no response.
 	/// </summary>
-	public interface INotification { }
+	public interface INotification : DispatchWeave.INotification { }
 
 	/// <summary>
 	/// Handles a notification of type TNotification.
 	/// </summary>
 	/// <typeparam name="TNotification">The notification type.</typeparam>
-	public interface INotificationHandler<TNotification> where TNotification : INotification
+	public interface INotificationHandler<TNotification> : DispatchWeave.INotificationHandler<TNotification> where TNotification : DispatchWeave.INotification
 	{
-		Task Handle(TNotification notification, CancellationToken cancellationToken);
 	}
 
 	/// <summary>
@@ -75,8 +71,12 @@ namespace RedisGUI.Shared.Mediator
 	/// </summary>
 	/// <typeparam name="TRequest">The request type.</typeparam>
 	/// <typeparam name="TResult">The result type.</typeparam>
-	public interface IPipelineBehavior<TRequest, TResult> where TRequest : IRequest<TResult>
+	public interface IPipelineBehavior<TRequest, TResult> : DispatchWeave.IPipelineBehavior<TRequest, TResult> where TRequest : DispatchWeave.IRequest<TResult>
 	{
 		Task<TResult> Handle(TRequest request, CancellationToken cancellationToken, Func<Task<TResult>> next);
+
+		Task<TResult> DispatchWeave.IPipelineBehavior<TRequest, TResult>.Handle(
+			TRequest request, DispatchWeave.RequestHandlerDelegate<TResult> next, CancellationToken token)
+			=> Handle(request, token, next.Invoke);
 	}
 }

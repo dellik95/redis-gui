@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ==========================================
 # Stage 1: Build Angular 22 Client Application
 # ==========================================
@@ -20,7 +21,7 @@ WORKDIR /src
 
 # Copy MSBuild properties and package definitions required for TargetFramework and CPM
 COPY Directory.Build.props ./
-COPY Directory.Packages.props ./
+COPY Directory.Packages.props NuGet.Config ./
 COPY RedisGUI.slnx ./
 COPY ["build/Code Analysis/", "build/Code Analysis/"]
 COPY src/RedisGUI.Shared/RedisGUI.Shared.csproj src/RedisGUI.Shared/
@@ -29,7 +30,7 @@ COPY src/RedisGUI.Application/RedisGUI.Application.csproj src/RedisGUI.Applicati
 COPY src/RedisGUI.Infrastructure/RedisGUI.Infrastructure.csproj src/RedisGUI.Infrastructure/
 COPY src/RedisGUI.Server/RedisGUI.Server.csproj src/RedisGUI.Server/
 
-RUN dotnet restore src/RedisGUI.Server/RedisGUI.Server.csproj /p:BuildingInsideDocker=true
+RUN --mount=type=secret,id=nuget_credentials,env=NuGetPackageSourceCredentials_github dotnet restore src/RedisGUI.Server/RedisGUI.Server.csproj /p:BuildingInsideDocker=true
 
 # Copy all source files
 COPY src/ src/
@@ -39,7 +40,7 @@ COPY --from=client-build /app/client/dist/RedisGUI.Client/browser/ src/RedisGUI.
 
 # Publish Server in Release mode
 WORKDIR /src/src/RedisGUI.Server
-RUN dotnet publish -c Release -o /app/publish /p:UseAppHost=false /p:BuildingInsideDocker=true
+RUN dotnet publish --no-restore -c Release -o /app/publish /p:UseAppHost=false /p:BuildingInsideDocker=true
 
 # ==========================================
 # Stage 3: Production Runtime
